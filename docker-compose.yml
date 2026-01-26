@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: pythia-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pythia_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-pythia}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ML Predictions Backend (pythia_divination)
+  divination-api:
+    build:
+      context: ./pythia_divination
+      dockerfile: Dockerfile
+    container_name: pythia-divination
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
+      ALPACA_KEY_ID: ${ALPACA_KEY_ID}
+      ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY}
+      DATA_SOURCE: ${DATA_SOURCE:-alpaca}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # Auth/User Management Backend (pythia_prophecy)
+  prophecy-api:
+    build:
+      context: ./pythia_prophecy
+      dockerfile: Dockerfile
+    container_name: pythia-prophecy
+    environment:
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_me_in_production}
+      EMAIL_DEV_MODE: ${EMAIL_DEV_MODE:-true}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      PYTHIA_API_URL: http://divination-api:8000
+    ports:
+      - "8001:8001"
+    volumes:
+      - prophecy_data:/app/data
+    depends_on:
+      - divination-api
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # React Frontend (nginx)
+  frontend:
+    build:
+      context: ./pythia_prophecy/frontend
+      dockerfile: Dockerfile
+    container_name: pythia-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - divination-api
+      - prophecy-api
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  prophecy_data:
+
+networks:
+  default:
+    name: pythia-network

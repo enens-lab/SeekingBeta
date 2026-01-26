@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Pythia - Stock Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <link rel="stylesheet" href="/static/css/analyze.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/analyze.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Pythia</h1>
+    <nav class="nav">
+      <a href="/static/" class="nav-link">Dashboard</a>
+      <a href="/static/analyze.html" class="nav-link active">Analyze</a>
+    </nav>
+    <div id="user-info" class="user-info"></div>
+  </header>
+
+  <!-- Login Modal -->
+  <div id="login-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Login</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <input type="text" name="username" placeholder="Username" required />
+        </div>
+        <div class="form-group">
+          <input type="password" name="password" placeholder="Password" required />
+        </div>
+        <p id="login-error" class="error hidden"></p>
+        <button type="submit" class="btn btn-primary btn-full">Login</button>
+      </form>
+      <p class="hint">Test accounts: free_user, pro_user, enterprise_user (password: [tier]123)</p>
+    </div>
+  </div>
+
+  <!-- Login Required Message -->
+  <div id="login-required" class="login-required hidden">
+    <div class="login-required-content">
+      <h2>Login Required</h2>
+      <p>Please login to use the stock analysis features.</p>
+      <button id="login-required-btn" class="btn btn-primary">Login</button>
+    </div>
+  </div>
+
+  <main id="main-content">
+    <div class="analyze-grid">
+      <!-- Stock Selection Panel -->
+      <section class="card stock-panel">
+        <h3>Select Stocks</h3>
+        <div class="stock-search-row">
+          <input type="text" id="stock-search" placeholder="Search stocks..." />
+          <span class="stock-limit" id="stock-limit">0/5 selected</span>
+        </div>
+        <div class="stock-categories" id="stock-categories">
+          <!-- Categories loaded dynamically -->
+        </div>
+        <div class="selected-stocks">
+          <h4>Selected Stocks</h4>
+          <div id="selected-list" class="selected-list">
+            <span class="placeholder">No stocks selected</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Configuration Panel -->
+      <section class="card config-panel">
+        <h3>Analysis Settings</h3>
+        <div class="config-form">
+          <div class="config-row">
+            <label>Model</label>
+            <select id="model-select">
+              <option value="gradient_boosting">Gradient Boosting</option>
+              <option value="linear_regression">Linear Regression</option>
+              <option value="random_forest" disabled>Random Forest (PRO)</option>
+              <option value="lstm" disabled>LSTM (PRO)</option>
+            </select>
+          </div>
+          <div class="config-row">
+            <label>Task</label>
+            <select id="task-select">
+              <option value="classifier">Classification (Buy/Hold/Sell)</option>
+              <option value="regressor" disabled>Regression (Return %)</option>
+            </select>
+          </div>
+          <div class="config-row">
+            <label>Time Period</label>
+            <select id="period-select">
+              <option value="1M">1 Month</option>
+              <option value="3M">3 Months</option>
+              <option value="6M" disabled>6 Months (PRO)</option>
+              <option value="1Y" disabled>1 Year (PRO)</option>
+            </select>
+          </div>
+          <div class="config-row">
+            <label>Horizon</label>
+            <select id="horizon-select">
+              <option value="1d">1 Day</option>
+              <option value="1w">1 Week</option>
+            </select>
+          </div>
+          <button id="run-analysis" class="btn btn-primary btn-full">Run Analysis</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- Results Panel -->
+    <section class="card results-panel" id="results-panel">
+      <div class="row">
+        <h3>Analysis Results</h3>
+        <div class="spacer"></div>
+        <button id="export-csv" class="btn btn-secondary hidden">Export CSV</button>
+      </div>
+      <div id="results-empty" class="results-empty">
+        <p>Select stocks and run analysis to see results</p>
+      </div>
+      <div id="results-content" class="hidden">
+        <div class="results-chart">
+          <canvas id="resultsChart"></canvas>
+        </div>
+        <div class="table-wrap">
+          <table id="results-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Last Close</th>
+                <th>Prob. Up</th>
+                <th>Signal</th>
+                <th>Pred. Return</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Rate Limit Banner -->
+  <div id="rate-limit-banner" class="banner hidden">
+    <span id="rate-limit-text">0/10 requests used today</span>
+    <span class="upgrade-link">Upgrade for more requests</span>
+  </div>
+
+  <footer class="site-footer">
+    <span>Tier: <strong id="user-tier">-</strong></span>
+    <span>Requests: <strong id="requests-remaining">-</strong></span>
+  </footer>
+</body>
+</html>

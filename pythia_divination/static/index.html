@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Pythia Paper Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <h1>Pythia</h1>
+    <nav class="nav">
+      <a href="/static/" class="nav-link active">Dashboard</a>
+      <a href="/static/analyze.html" class="nav-link">Analyze</a>
+    </nav>
+    <div id="user-info" class="user-info"></div>
+    <div id="health" class="health health--unknown">checking...</div>
+  </header>
+
+  <!-- Login Modal -->
+  <div id="login-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Login</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <input type="text" name="username" placeholder="Username" required />
+        </div>
+        <div class="form-group">
+          <input type="password" name="password" placeholder="Password" required />
+        </div>
+        <p id="login-error" class="error hidden"></p>
+        <button type="submit" class="btn btn-primary btn-full">Login</button>
+      </form>
+      <p class="hint">Test accounts: free_user, pro_user, enterprise_user (password: [tier]123)</p>
+    </div>
+  </div>
+
+  <main>
+    <section class="card">
+      <h3>Equity Curve</h3>
+      <canvas id="equityChart" aria-label="Equity curve chart"></canvas>
+    </section>
+
+    <section class="card">
+      <div class="row">
+        <h3>Latest Metrics</h3>
+        <div class="spacer"></div>
+        <button id="refreshBtn" class="btn">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table id="metricsTable">
+          <thead>
+            <tr>
+              <th>Time</th><th>Equity</th><th>Cash</th><th>PNL</th>
+              <th>Win Rate</th><th>Turnover</th><th>Max DD</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>Data Source: <strong id="dataSource">-</strong></span>
+    <span>Universe Size: <strong id="uniSize">-</strong></span>
+  </footer>
+</body>
+</html>

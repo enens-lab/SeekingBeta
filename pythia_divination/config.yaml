@@ -1,0 +1,290 @@
+start: "2019-01-01"
+
+# =============================================================================
+# EXPANDED UNIVERSE (~150 symbols)
+# Organized by sector and type for comprehensive market coverage
+# =============================================================================
+
+universe:
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP TECHNOLOGY (25 symbols)
+  # ---------------------------------------------------------------------------
+  # Mega-Cap Tech (FAANG+)
+  - AAPL    # Apple - consumer electronics, services
+  - MSFT    # Microsoft - software, cloud
+  - GOOGL   # Alphabet - search, advertising, cloud
+  - AMZN    # Amazon - e-commerce, cloud (AWS)
+  - META    # Meta Platforms - social media, advertising
+  - NVDA    # NVIDIA - GPUs, AI chips
+  - TSLA    # Tesla - EVs, energy
+
+  # Semiconductors
+  - AMD     # AMD - CPUs, GPUs
+  - INTC    # Intel - CPUs, foundry
+  - AVGO    # Broadcom - networking chips
+  - QCOM    # Qualcomm - mobile chips
+  - TXN     # Texas Instruments - analog chips
+  - MU      # Micron - memory chips
+  - AMAT    # Applied Materials - chip equipment
+  - LRCX    # Lam Research - chip equipment
+
+  # Enterprise Software & Cloud
+  - CRM     # Salesforce - CRM software
+  - ORCL    # Oracle - database, cloud
+  - ADBE    # Adobe - creative software
+  - NOW     # ServiceNow - IT workflows
+  - INTU    # Intuit - financial software
+  - IBM     # IBM - enterprise IT
+
+  # Hardware & Networking
+  - CSCO    # Cisco - networking
+  - HPQ     # HP Inc - PCs, printers
+  - DELL    # Dell - PCs, servers
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP FINANCIALS (18 symbols)
+  # ---------------------------------------------------------------------------
+  # Banks
+  - JPM     # JP Morgan Chase - diversified bank
+  - BAC     # Bank of America - consumer bank
+  - WFC     # Wells Fargo - consumer bank
+  - C       # Citigroup - global bank
+  - GS      # Goldman Sachs - investment bank
+  - MS      # Morgan Stanley - investment bank
+  - USB     # US Bancorp - regional bank
+  - PNC     # PNC Financial - regional bank
+
+  # Insurance
+  - BRK-B   # Berkshire Hathaway - conglomerate/insurance
+  - AIG     # AIG - insurance
+  - MET     # MetLife - life insurance
+  - PRU     # Prudential - insurance
+
+  # Asset Management & Fintech
+  - BLK     # BlackRock - asset management
+  - SCHW    # Charles Schwab - brokerage
+  - AXP     # American Express - payments
+  - V       # Visa - payments
+  - MA      # Mastercard - payments
+  - PYPL    # PayPal - digital payments
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP HEALTHCARE (15 symbols)
+  # ---------------------------------------------------------------------------
+  # Pharmaceuticals
+  - JNJ     # Johnson & Johnson - diversified pharma
+  - PFE     # Pfizer - pharma
+  - MRK     # Merck - pharma
+  - ABBV    # AbbVie - pharma (immunology)
+  - LLY     # Eli Lilly - pharma (diabetes, oncology)
+  - BMY     # Bristol-Myers Squibb - pharma
+
+  # Biotech
+  - AMGN    # Amgen - biotech
+  - GILD    # Gilead Sciences - biotech
+  - REGN    # Regeneron - biotech
+  - MRNA    # Moderna - mRNA biotech
+
+  # Healthcare Services & Equipment
+  - UNH     # UnitedHealth - health insurance
+  - CVS     # CVS Health - pharmacy, insurance
+  - CI      # Cigna - health insurance
+  - MDT     # Medtronic - medical devices
+  - ABT     # Abbott Labs - diagnostics, devices
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP CONSUMER DISCRETIONARY (12 symbols)
+  # ---------------------------------------------------------------------------
+  - HD      # Home Depot - home improvement
+  - LOW     # Lowe's - home improvement
+  - NKE     # Nike - athletic apparel
+  - SBUX    # Starbucks - coffee retail
+  - MCD     # McDonald's - fast food
+  - TGT     # Target - retail
+  - TJX     # TJ Maxx - off-price retail
+  - BKNG    # Booking Holdings - travel
+  - MAR     # Marriott - hotels
+  - F       # Ford - automotive
+  - GM      # General Motors - automotive
+  - LULU    # Lululemon - athletic apparel
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP CONSUMER STAPLES (8 symbols)
+  # ---------------------------------------------------------------------------
+  - WMT     # Walmart - retail
+  - COST    # Costco - wholesale retail
+  - PG      # Procter & Gamble - consumer products
+  - KO      # Coca-Cola - beverages
+  - PEP     # PepsiCo - beverages, snacks
+  - PM      # Philip Morris - tobacco
+  - MO      # Altria - tobacco
+  - CL      # Colgate-Palmolive - consumer products
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP ENERGY (8 symbols)
+  # ---------------------------------------------------------------------------
+  - XOM     # Exxon Mobil - integrated oil
+  - CVX     # Chevron - integrated oil
+  - COP     # ConocoPhillips - exploration & production
+  - SLB     # Schlumberger - oilfield services
+  - EOG     # EOG Resources - shale oil
+  - PXD     # Pioneer Natural Resources - shale oil
+  - OXY     # Occidental Petroleum - oil & gas
+  - KMI     # Kinder Morgan - pipelines
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP INDUSTRIALS (10 symbols)
+  # ---------------------------------------------------------------------------
+  - CAT     # Caterpillar - heavy equipment
+  - BA      # Boeing - aerospace
+  - UPS     # UPS - logistics
+  - FDX     # FedEx - logistics
+  - HON     # Honeywell - diversified industrial
+  - RTX     # RTX (Raytheon) - defense
+  - LMT     # Lockheed Martin - defense
+  - GE      # GE Aerospace - aerospace
+  - DE      # Deere & Co - agricultural equipment
+  - UNP     # Union Pacific - railroad
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP COMMUNICATIONS (6 symbols)
+  # ---------------------------------------------------------------------------
+  - DIS     # Disney - entertainment
+  - NFLX    # Netflix - streaming
+  - CMCSA   # Comcast - cable, media
+  - T       # AT&T - telecom
+  - VZ      # Verizon - telecom
+  - TMUS    # T-Mobile - telecom
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP UTILITIES (4 symbols)
+  # ---------------------------------------------------------------------------
+  - NEE     # NextEra Energy - utilities, renewables
+  - DUK     # Duke Energy - utilities
+  - SO      # Southern Company - utilities
+  - D       # Dominion Energy - utilities
+
+  # ---------------------------------------------------------------------------
+  # LARGE-CAP MATERIALS (4 symbols)
+  # ---------------------------------------------------------------------------
+  - LIN     # Linde - industrial gases
+  - APD     # Air Products - industrial gases
+  - NEM     # Newmont - gold mining
+  - FCX     # Freeport-McMoRan - copper mining
+
+  # ---------------------------------------------------------------------------
+  # MID-CAP GROWTH / TECH (12 symbols)
+  # ---------------------------------------------------------------------------
+  - CRWD    # CrowdStrike - cybersecurity
+  - DDOG    # Datadog - observability
+  - NET     # Cloudflare - edge computing
+  - SNOW    # Snowflake - data cloud
+  - ZS      # Zscaler - cloud security
+  - PANW    # Palo Alto Networks - cybersecurity
+  - OKTA    # Okta - identity management
+  - MDB     # MongoDB - database
+  - TEAM    # Atlassian - collaboration software
+  - HUBS    # HubSpot - marketing software
+  - VEEV    # Veeva Systems - life sciences software
+  - WDAY    # Workday - HR software
+
+  # ---------------------------------------------------------------------------
+  # SMALL-CAP / EMERGING (6 symbols)
+  # ---------------------------------------------------------------------------
+  - PLTR    # Palantir - data analytics
+  - SOFI    # SoFi - fintech
+  - AFRM    # Affirm - BNPL fintech
+  - RIVN    # Rivian - EV manufacturer
+  - LCID    # Lucid - EV manufacturer
+  - COIN    # Coinbase - crypto exchange
+
+  # ---------------------------------------------------------------------------
+  # INTERNATIONAL ADRs (12 symbols)
+  # ---------------------------------------------------------------------------
+  # Asia
+  - TSM     # Taiwan Semiconductor - chips (Taiwan)
+  - BABA    # Alibaba - e-commerce (China)
+  - JD      # JD.com - e-commerce (China)
+  - SONY    # Sony - electronics (Japan)
+  - TM      # Toyota - automotive (Japan)
+
+  # Europe
+  - NVO     # Novo Nordisk - pharma (Denmark)
+  - ASML    # ASML - chip equipment (Netherlands)
+  - SAP     # SAP - enterprise software (Germany)
+  - NVS     # Novartis - pharma (Switzerland)
+  - SHEL    # Shell - oil & gas (UK/Netherlands)
+  - BP      # BP - oil & gas (UK)
+  - UL      # Unilever - consumer goods (UK/Netherlands)
+
+  # ---------------------------------------------------------------------------
+  # ETFs - BROAD MARKET (8 symbols)
+  # ---------------------------------------------------------------------------
+  - SPY     # S&P 500
+  - QQQ     # Nasdaq 100
+  - IWM     # Russell 2000 (small cap)
+  - DIA     # Dow Jones Industrial
+  - VTI     # Total US Stock Market
+  - VOO     # Vanguard S&P 500
+  - IVV     # iShares S&P 500
+  - MDY     # S&P MidCap 400
+
+  # ---------------------------------------------------------------------------
+  # ETFs - SECTOR (11 symbols)
+  # ---------------------------------------------------------------------------
+  - XLF     # Financials Select
+  - XLK     # Technology Select
+  - XLV     # Healthcare Select
+  - XLE     # Energy Select
+  - XLI     # Industrials Select
+  - XLY     # Consumer Discretionary Select
+  - XLP     # Consumer Staples Select
+  - XLU     # Utilities Select
+  - XLB     # Materials Select
+  - XLRE    # Real Estate Select
+  - XLC     # Communication Services Select
+
+  # ---------------------------------------------------------------------------
+  # ETFs - FIXED INCOME & BONDS (5 symbols)
+  # ---------------------------------------------------------------------------
+  - BND     # Total Bond Market
+  - TLT     # 20+ Year Treasury
+  - IEF     # 7-10 Year Treasury
+  - LQD     # Investment Grade Corporate
+  - HYG     # High Yield Corporate
+
+  # ---------------------------------------------------------------------------
+  # ETFs - COMMODITIES (4 symbols)
+  # ---------------------------------------------------------------------------
+  - GLD     # Gold
+  - SLV     # Silver
+  - USO     # Oil
+  - UNG     # Natural Gas
+
+  # ---------------------------------------------------------------------------
+  # ETFs - INTERNATIONAL (5 symbols)
+  # ---------------------------------------------------------------------------
+  - EFA     # Developed Markets (ex-US)
+  - EEM     # Emerging Markets
+  - VWO     # Vanguard Emerging Markets
+  - FXI     # China Large-Cap
+  - EWJ     # Japan
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+threshold: 0.55
+k_top: 15  # increased for larger universe
+lookback_download: "120d"
+
+data_source: alpaca
+
+alpaca:
+  base_url: "https://data.alpaca.markets/v2"
+  key_id_env: "ALPACA_KEY_ID"
+  secret_key_env: "ALPACA_SECRET_KEY"
+  feed: "iex"
+
+database_url: "postgresql://<user>:<password>@<host>:<port>/<db>"

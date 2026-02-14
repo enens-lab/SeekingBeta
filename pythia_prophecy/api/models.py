@@ -3,6 +3,7 @@ Pydantic models for authentication and users
 """
 from datetime import datetime
 from enum import Enum
+from typing import Optional, List, Dict
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -103,7 +104,7 @@ class UserInDB(UserBase):
     hashed_password: str
     tier: SubscriptionTier
     email_verified: bool
-    verification_token: str | None
+    verification_token: Optional[str]
     created_at: datetime
     updated_at: datetime
 
@@ -119,8 +120,8 @@ class TierInfo(BaseModel):
     name: str
     price: int
     stocks_limit: int
-    timeframes: list[str]
-    features: list[str]
+    timeframes: List[str]
+    features: List[str]
 
 
 class MessageResponse(BaseModel):
@@ -150,23 +151,23 @@ class PredictResponse(BaseModel):
 class UserOracle(BaseModel):
     """User's personalized oracle settings (watchlist and timeframes)."""
     user_id: str
-    watchlist: list[str] = []
-    timeframes: list[str] = ["1d"]
+    watchlist: List[str] = []
+    timeframes: List[str] = ["1d"]
     updated_at: datetime
 
 
 class OracleResponse(BaseModel):
     """Response for oracle endpoints."""
-    watchlist: list[str]
-    timeframes: list[str]
-    available_stocks: list[str]
-    available_categories: dict[str, list[str]]
-    available_timeframes: list[str]
+    watchlist: List[str]
+    timeframes: List[str]
+    available_stocks: List[str]
+    available_categories: Dict[str, List[str]]
+    available_timeframes: List[str]
 
 
 class UpdateWatchlistRequest(BaseModel):
     """Request to update entire watchlist."""
-    watchlist: list[str]
+    watchlist: List[str]
 
 
 class AddToWatchlistRequest(BaseModel):
@@ -176,7 +177,7 @@ class AddToWatchlistRequest(BaseModel):
 
 class UpdateTimeframesRequest(BaseModel):
     """Request to update preferred timeframes."""
-    timeframes: list[str]
+    timeframes: List[str]
 
 
 # ============================================================
@@ -185,7 +186,7 @@ class UpdateTimeframesRequest(BaseModel):
 
 class AnalyzeRequest(BaseModel):
     """Request to run stock analysis."""
-    tickers: list[str] = Field(..., min_length=1)
+    tickers: List[str] = Field(..., min_length=1)
     model: str = "gradient_boosting"
     task: str = "classifier"
     period: str = "1M"
@@ -195,22 +196,22 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeResultItem(BaseModel):
     """Single result item from analysis."""
     ticker: str
-    last_close: float | None
-    prob_up: float | None
-    signal: str | None
-    predicted_return: float | None = None
+    last_close: Optional[float]
+    prob_up: Optional[float]
+    signal: Optional[str]
+    predicted_return: Optional[float] = None
 
 
 class AnalyzeResponse(BaseModel):
     """Response from analysis endpoint."""
-    results: list[AnalyzeResultItem]
+    results: List[AnalyzeResultItem]
     metadata: dict
 
 
 class ModelsAvailableResponse(BaseModel):
     """Available models for user's tier."""
-    models: list[str]
-    tasks: list[str]
+    models: List[str]
+    tasks: List[str]
     can_use_custom: bool = False
 
 
@@ -228,53 +229,53 @@ class UserFeaturesResponse(BaseModel):
 class CompanyResponse(BaseModel):
     """Basic company info."""
     ticker: str
-    name: str | None = None
-    asset_type: str | None = None
-    created_at: str | None = None
-    updated_at: str | None = None
+    name: Optional[str] = None
+    asset_type: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class CompanyInfoResponse(BaseModel):
     """Company fundamentals."""
     ticker: str
-    sector: str | None = None
-    industry: str | None = None
-    description: str | None = None
-    market_cap: int | None = None
-    enterprise_value: int | None = None
-    employees: int | None = None
-    website: str | None = None
-    country: str | None = None
-    state: str | None = None
-    city: str | None = None
-    exchange: str | None = None
-    currency: str | None = None
-    dividend_yield: float | None = None
-    beta: float | None = None
-    pe_ratio: float | None = None
-    forward_pe: float | None = None
-    price_to_book: float | None = None
-    fifty_two_week_high: float | None = None
-    fifty_two_week_low: float | None = None
-    avg_volume: int | None = None
-    fetched_at: str | None = None
-    updated_at: str | None = None
+    sector: Optional[str] = None
+    industry: Optional[str] = None
+    description: Optional[str] = None
+    market_cap: Optional[int] = None
+    enterprise_value: Optional[int] = None
+    employees: Optional[int] = None
+    website: Optional[str] = None
+    country: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    exchange: Optional[str] = None
+    currency: Optional[str] = None
+    dividend_yield: Optional[float] = None
+    beta: Optional[float] = None
+    pe_ratio: Optional[float] = None
+    forward_pe: Optional[float] = None
+    price_to_book: Optional[float] = None
+    fifty_two_week_high: Optional[float] = None
+    fifty_two_week_low: Optional[float] = None
+    avg_volume: Optional[int] = None
+    fetched_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
 
 class CompanyNewsItem(BaseModel):
     """Single news article."""
-    article_id: str | None = None
-    title: str | None = None
-    publisher: str | None = None
-    link: str | None = None
-    published_at: str | None = None
-    article_type: str | None = None
-    thumbnail_url: str | None = None
-    related_tickers: list[str] | None = None
+    article_id: Optional[str] = None
+    title: Optional[str] = None
+    publisher: Optional[str] = None
+    link: Optional[str] = None
+    published_at: Optional[str] = None
+    article_type: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    related_tickers: Optional[List[str]] = None
 
 
 class CompanyDetailResponse(BaseModel):
     """Full company detail including info and recent news."""
     company: CompanyResponse
-    info: CompanyInfoResponse | None = None
-    news: list[CompanyNewsItem] = []
+    info: Optional[CompanyInfoResponse] = None
+    news: List[CompanyNewsItem] = []

@@ -2,12 +2,14 @@
 Pythia Claude - FastAPI Service
 Serves the React frontend, prediction endpoints, and authentication
 """
+from __future__ import annotations
+
 import sys
 import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, List, Tuple
 
 from .logging_config import setup_logging, get_logger
 

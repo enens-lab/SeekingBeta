@@ -2,6 +2,8 @@
 Stock info fetcher service.
 Fetches company fundamentals and news from yfinance and stores in the database.
 """
+from __future__ import annotations
+
 import time
 import json
 from datetime import datetime

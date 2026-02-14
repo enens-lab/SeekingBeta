@@ -29,8 +29,13 @@ Thumbs.db
 logs/
 *.log
 
-venv/
-.venv/
+# Data files
+*.db
 
 artifacts/
-models/
+
+# Trained model files (but not the models/ source code)
+*.joblib
+*.pkl
+*.pt
+*.pth

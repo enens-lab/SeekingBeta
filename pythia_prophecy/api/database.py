@@ -2,6 +2,8 @@
 Database layer for user management
 Uses SQLite for simplicity - can be swapped for PostgreSQL
 """
+from __future__ import annotations
+
 import sqlite3
 import json
 from datetime import datetime

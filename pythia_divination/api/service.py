@@ -77,7 +77,10 @@ DEFAULT_TASK = "classifier"
 LOADED_MODELS: Dict[Tuple[str, str], any] = {}
 
 # Legacy global model (for backward compatibility)
-MODEL, SCALER, FEATS, _ = load_artifacts()
+try:
+    MODEL, SCALER, FEATS, _ = load_artifacts()
+except FileNotFoundError:
+    MODEL = SCALER = FEATS = None
 UNIVERSE = settings.universe
 DATA_SOURCE = settings.data_source
 CFG_LOOKBACK = settings.lookback_download
@@ -459,7 +462,7 @@ async def paper_metrics(limit: int = 200):
 
 
 @app.post("/paper/snapshot")
-async def paper_snapshot(notes: str | None = None):
+async def paper_snapshot(notes: Optional[str] = None):
     """Save portfolio snapshot and compute metrics."""
     try:
         acct = await run_in_threadpool(alp_account)

@@ -27,6 +27,8 @@ from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+import httpx
+
 
 from .models import (
     UserCreate,
@@ -574,31 +576,35 @@ async def predict(
 @app.get("/predict/lstm_5d/{ticker}", response_model=PredictResponse)
 async def predict_lstm_5d(ticker: str):
     """Proxy LSTM 5-Day predictions from divination backend."""
-    import httpx
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"http://localhost:8000/predict/lstm_5d/{ticker}")
             if response.status_code != 200:
                 raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
             return response.json()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"LSTM 5D prediction error for {ticker}: {e}")
         raise HTTPException(500, detail=str(e))
 
 
+
 @app.get("/predict/lstm_jackpot/{ticker}", response_model=PredictResponse)
 async def predict_lstm_jackpot(ticker: str):
     """Proxy LSTM Jackpot predictions from divination backend."""
-    import httpx
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"http://localhost:8000/predict/lstm_jackpot/{ticker}")
             if response.status_code != 200:
                 raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
             return response.json()
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"LSTM Jackpot prediction error for {ticker}: {e}")
         raise HTTPException(500, detail=str(e))
+
 
 
 @app.get("/api/universe")

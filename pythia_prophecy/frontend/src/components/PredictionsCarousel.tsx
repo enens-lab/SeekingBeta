@@ -14,14 +14,51 @@ const ChevronRight = () => (
   </svg>
 );
 
-// Model configurations
+const InfoIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4M12 8h.01" />
+  </svg>
+);
+
+// Model configurations with descriptions
 const MODELS = [
-  { name: 'gradient_boosting', displayName: 'Gradient Boosting', endpoint: '/predict' },
-  { name: 'lstm_5d', displayName: 'LSTM 5-Day', endpoint: '/predict/lstm_5d' },
-  { name: 'lstm_jackpot', displayName: 'LSTM Jackpot', endpoint: '/predict/lstm_jackpot' },
-  { name: 'random_forest', displayName: 'Random Forest', endpoint: '/predict' },
-  { name: 'linear_regression', displayName: 'Linear Regression', endpoint: '/predict' },
-  { name: 'lstm', displayName: 'LSTM Classic', endpoint: '/predict' },
+  {
+    name: 'gradient_boosting',
+    displayName: 'Gradient Boosting',
+    endpoint: '/predict',
+    description: 'Ensemble learning method that combines weak learners iteratively. Best overall classifier for balanced predictions across market conditions.'
+  },
+  {
+    name: 'lstm_5d',
+    displayName: 'LSTM 5-Day',
+    endpoint: '/predict/lstm_5d',
+    description: 'Deep learning model optimized for short-term consistency. Predicts stocks likely to move >2% within 5 days.'
+  },
+  {
+    name: 'lstm_jackpot',
+    displayName: 'LSTM Jackpot',
+    endpoint: '/predict/lstm_jackpot',
+    description: 'Aggressive LSTM targeting high-return opportunities. Identifies stocks expected to move >20% within 20 days.'
+  },
+  {
+    name: 'random_forest',
+    displayName: 'Random Forest',
+    endpoint: '/predict',
+    description: 'Ensemble of decision trees. Captures non-linear patterns and feature interactions effectively.'
+  },
+  {
+    name: 'linear_regression',
+    displayName: 'Linear Regression',
+    endpoint: '/predict',
+    description: 'Simple baseline model assumes linear relationships. Fast and interpretable predictions.'
+  },
+  {
+    name: 'lstm',
+    displayName: 'LSTM Classic',
+    endpoint: '/predict',
+    description: 'Standard recurrent neural network capturing temporal dependencies. Balances complexity with performance.'
+  },
 ];
 
 // Magnificent 7 stocks
@@ -39,6 +76,7 @@ function PredictionsCarousel() {
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [carouselStates, setCarouselStates] = useState<{ [key: string]: number }>({});
+  const [activeInfoModal, setActiveInfoModal] = useState<string | null>(null);
 
   const fetchPredictionsForModel = useCallback(async (model: typeof MODELS[0]): Promise<ModelRow> => {
     try {
@@ -156,7 +194,17 @@ function PredictionsCarousel() {
           return (
             <div key={row.model.name} className="model-row">
               <div className="model-row-header">
-                <h3 className="model-row-title">{row.model.displayName}</h3>
+                <div className="model-row-title-container">
+                  <h3 className="model-row-title">{row.model.displayName}</h3>
+                  <button
+                    className="model-info-btn"
+                    onClick={() => setActiveInfoModal(row.model.name)}
+                    aria-label={`Info about ${row.model.displayName}`}
+                    title={`Learn more about ${row.model.displayName}`}
+                  >
+                    <InfoIcon />
+                  </button>
+                </div>
                 <span className="model-row-count">
                   {row.predictions.length} of {MAGNIFICENT_7.length} stocks
                 </span>
@@ -225,6 +273,30 @@ function PredictionsCarousel() {
           >
             Show Less
           </button>
+        </div>
+      )}
+
+      {activeInfoModal && (
+        <div className="modal-overlay" onClick={() => setActiveInfoModal(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close"
+              onClick={() => setActiveInfoModal(null)}
+              aria-label="Close modal"
+            >
+              ×
+            </button>
+            {MODELS.find((m) => m.name === activeInfoModal) && (
+              <>
+                <h2 className="modal-title">
+                  {MODELS.find((m) => m.name === activeInfoModal)?.displayName}
+                </h2>
+                <p className="modal-description">
+                  {MODELS.find((m) => m.name === activeInfoModal)?.description}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
     </section>

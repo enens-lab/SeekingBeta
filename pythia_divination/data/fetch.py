@@ -332,6 +332,40 @@ def fetch_ohlcv(
             time.sleep(SLEEP_SEC)
     raise RuntimeError(f"Failed to fetch OHLCV for {ticker} after retries and fallbacks")
 
+def fetch_ohlcv_for_lstm(
+    ticker: str,
+    sequence_length: int = 60,
+    retries: int = DEFAULT_RETRIES,
+    data_source: str = "auto",
+) -> pd.DataFrame:
+    """
+    Fetch OHLCV data for LSTM models with extended history for proper scaling.
+
+    LSTM models need enough data for:
+    1. Feature calculation (requires ~60 days for indicators)
+    2. Sequence creation (requires sequence_length days)
+    3. Scaling window (Stock_Prediction_Model uses 252 days for StandardScaler fit)
+
+    Args:
+        ticker: Stock ticker symbol
+        sequence_length: Number of timesteps in LSTM sequence (default: 60)
+        retries: Number of retry attempts
+        data_source: Data source to use ("auto", "yahoo", "alpaca", "stooq")
+
+    Returns:
+        DataFrame with OHLCV data, at least 252 days of history
+    """
+    # Fetch at least 400 days to ensure we have 252+ after feature engineering dropna
+    period = "400d"
+    return fetch_ohlcv(
+        ticker=ticker,
+        period=period,
+        retries=retries,
+        data_source=data_source,
+        timeframe="1Day",
+    )
+
+
 def fetch_panel(
     tickers: Sequence[str],
     start: str,

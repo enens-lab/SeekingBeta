@@ -24,6 +24,8 @@ def _lazy_imports() -> Dict[str, Type[BaseModel]]:
         "linear_regression": LinearRegressionModel,
         "random_forest": RandomForestModel,
         "lstm": LSTMModel,
+        "lstm_5d": LSTMModel,
+        "lstm_jackpot": LSTMModel,
     }
 
 
@@ -33,6 +35,8 @@ MODEL_REGISTRY: Dict[str, str] = {
     "linear_regression": "models.linear_regression.LinearRegressionModel",
     "random_forest": "models.random_forest.RandomForestModel",
     "lstm": "models.lstm.LSTMModel",
+    "lstm_5d": "models.lstm.LSTMModel",
+    "lstm_jackpot": "models.lstm.LSTMModel",
 }
 
 
@@ -59,8 +63,8 @@ def model_exists(model_name: str, task: str) -> bool:
     """Check whether trained artifacts exist for a model/task pair."""
     task_enum = ModelTask(task)
     path = get_artifacts_path(model_name, task_enum)
-    # Check for either joblib (sklearn) or pt (pytorch) model files
-    return (path / "model.joblib").exists() or (path / "model.pt").exists()
+    # Check for joblib (sklearn), pt (pytorch), or keras (tensorflow) model files
+    return (path / "model.joblib").exists() or (path / "model.pt").exists() or (path / "model.keras").exists()
 
 
 def get_trained_models() -> List[Dict[str, str]]:

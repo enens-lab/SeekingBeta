@@ -13,7 +13,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from typing import Dict, Tuple, List, Optional
 
-from data.fetch import fetch_ohlcv, fetch_panel
+from data.fetch import fetch_ohlcv, fetch_panel, fetch_ohlcv_for_lstm
 from features.technical import make_features, get_feature_columns
 from features.sequences import create_inference_sequence
 from models.utils import load_artifacts, model_exists
@@ -215,8 +215,18 @@ def predict_for_ticker(
         raise HTTPException(404, f"Model not found: {model_type}/{task}")
 
     # Prepare features for the model
+    # If the model provides its own feature computation (LSTM wrappers), use it.
+    if hasattr(model, "compute_features"):
+        try:
+            feat = model.compute_features(raw)
+            feat_cols = list(feat.columns)
+        except Exception as exc:
+            raise HTTPException(400, detail=f"Model feature computation failed: {exc}")
+
     X = feat[feat_cols].values
-    scaler = model.get_scaler()
+    scaler = None
+    if hasattr(model, "get_scaler"):
+        scaler = model.get_scaler()
 
     if model.requires_sequences:
         seq_len = model.config.sequence_length
@@ -285,6 +295,157 @@ def predict(
             model=model,
             task=task
         )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@app.get("/predict/lstm_5d/{ticker}")
+def predict_lstm_5d(ticker: str):
+    """
+    Get prediction from LSTM 5-day consistency model.
+
+    This model predicts stocks likely to gain >2% in the next 5 trading days.
+    Uses 60 timesteps of 38 technical features with Conv1D + LSTM + MultiHeadAttention architecture.
+
+    Returns:
+        - ticker: Stock symbol
+        - model: "lstm_5d"
+        - description: Model description
+        - horizon: "5 days"
+        - target_return: ">2%"
+        - probability: Probability of achieving target return (0-100)
+        - signal: "buy" (>60%), "hold" (40-60%), "sell" (<40%)
+        - last_close: Current stock price
+        - recommendation: Human-readable recommendation
+    """
+    try:
+        ticker = ticker.upper()
+
+        # Fetch extended historical data (252+ days for proper scaling)
+        raw = fetch_ohlcv_for_lstm(ticker, sequence_length=60, data_source=DATA_SOURCE)
+
+        # Load model
+        model = load_model("lstm_5d", "classifier")
+
+        # Compute features using model's feature engineering
+        feat = model.compute_features(raw)
+        feat_cols = list(feat.columns)
+
+        if len(feat) < 60:
+            raise HTTPException(400, f"Not enough data after feature engineering (need 60 samples, got {len(feat)})")
+
+        # Prepare sequence
+        X = feat[feat_cols].values
+        scaler = model.get_scaler()
+        X_scaled = scaler.transform(X) if scaler else X
+        X_seq = create_inference_sequence(X_scaled, 60)
+
+        # Predict
+        result = model.predict(X_seq)
+        prob_up = result.prob_up
+        last_close = float(raw["Close"].iloc[-1])
+
+        # Generate signal and recommendation
+        if prob_up >= 0.60:
+            signal = "buy"
+            recommendation = f"Strong buy signal ({prob_up*100:.1f}% probability of >2% gain in 5 days)"
+        elif prob_up >= 0.40:
+            signal = "hold"
+            recommendation = f"Neutral signal ({prob_up*100:.1f}% probability)"
+        else:
+            signal = "sell"
+            recommendation = f"Weak signal ({prob_up*100:.1f}% probability, consider avoiding)"
+
+        return {
+            "ticker": ticker,
+            "model": "lstm_5d",
+            "description": "5-Day Consistency Model (Production LSTM)",
+            "horizon": "5 days",
+            "target_return": ">2%",
+            "probability": round(prob_up * 100, 2),
+            "signal": signal,
+            "last_close": last_close,
+            "recommendation": recommendation,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@app.get("/predict/lstm_jackpot/{ticker}")
+def predict_lstm_jackpot(ticker: str):
+    """
+    Get prediction from LSTM jackpot model.
+
+    This model predicts rare high-conviction opportunities: stocks likely to gain >20% in the next 20 trading days.
+    Uses 60 timesteps of 30 specialized features including Bollinger Band squeeze indicators,
+    relative volume, and momentum metrics with Conv1D + LSTM + MultiHeadAttention architecture.
+
+    Returns:
+        - ticker: Stock symbol
+        - model: "lstm_jackpot"
+        - description: Model description
+        - horizon: "20 days"
+        - target_return: ">20%"
+        - probability: Probability of achieving target return (0-100)
+        - signal: "strong_buy" (>55%), "hold" (45-55%), "avoid" (<45%)
+        - last_close: Current stock price
+        - recommendation: Human-readable recommendation
+    """
+    try:
+        ticker = ticker.upper()
+
+        # Fetch extended historical data (252+ days for proper scaling)
+        raw = fetch_ohlcv_for_lstm(ticker, sequence_length=60, data_source=DATA_SOURCE)
+
+        # Load model
+        model = load_model("lstm_jackpot", "classifier")
+
+        # Compute features using model's feature engineering
+        feat = model.compute_features(raw)
+        feat_cols = list(feat.columns)
+
+        if len(feat) < 60:
+            raise HTTPException(400, f"Not enough data after feature engineering (need 60 samples, got {len(feat)})")
+
+        # Prepare sequence
+        X = feat[feat_cols].values
+        scaler = model.get_scaler()
+        X_scaled = scaler.transform(X) if scaler else X
+        X_seq = create_inference_sequence(X_scaled, 60)
+
+        # Predict
+        result = model.predict(X_seq)
+        prob_up = result.prob_up
+        last_close = float(raw["Close"].iloc[-1])
+
+        # Generate signal and recommendation (jackpot uses higher threshold)
+        if prob_up >= 0.55:
+            signal = "strong_buy"
+            recommendation = f"High-conviction jackpot opportunity ({prob_up*100:.1f}% probability of >20% gain in 20 days)"
+        elif prob_up >= 0.45:
+            signal = "hold"
+            recommendation = f"Moderate signal ({prob_up*100:.1f}% probability, monitor for entry)"
+        else:
+            signal = "avoid"
+            recommendation = f"Low probability ({prob_up*100:.1f}%), not a jackpot candidate"
+
+        return {
+            "ticker": ticker,
+            "model": "lstm_jackpot",
+            "description": "20-Day Jackpot Model (High-Return Hunter)",
+            "horizon": "20 days",
+            "target_return": ">20%",
+            "probability": round(prob_up * 100, 2),
+            "signal": signal,
+            "last_close": last_close,
+            "recommendation": recommendation,
+        }
+
     except HTTPException:
         raise
     except Exception as e:

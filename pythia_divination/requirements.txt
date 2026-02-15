@@ -14,6 +14,10 @@ asyncpg==0.29.0
 
 # Deep learning
 torch>=2.0.0
+tensorflow>=2.10.0
+
+# Technical indicators
+pandas_ta>=0.3.14b0
 
 # Authentication
 python-jose[cryptography]>=3.3.0

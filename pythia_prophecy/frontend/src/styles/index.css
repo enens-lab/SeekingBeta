@@ -909,6 +909,11 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  align-items: start;
+}
+
+.form-row .form-group {
+  width: 100%;
 }
 
 .form-error {

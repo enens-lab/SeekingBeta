@@ -46,9 +46,11 @@ function PredictionsCarousel() {
         MAGNIFICENT_7.map(async (ticker) => {
           let url = '';
           if (model.endpoint === '/predict') {
+            // Standard models: fetch from prophecy backend (port 8001)
             url = `/predict/${ticker}?horizon=1d&model=${model.name}`;
           } else {
-            url = `${model.endpoint}/${ticker}`;
+            // LSTM models: fetch from divination backend (port 8000)
+            url = `http://localhost:8000${model.endpoint}/${ticker}`;
           }
 
           const res = await fetch(url);

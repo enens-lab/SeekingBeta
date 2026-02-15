@@ -1,10 +1,13 @@
 """Pythia Signals API - Multi-model ML Backend."""
 
+import logging
 import yaml
 from pathlib import Path
 from collections import Counter
 from datetime import datetime, timezone
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Body, Depends, Form
 from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
@@ -117,9 +120,13 @@ app.include_router(analytics_router)
 
 @app.on_event("startup")
 async def _startup():
-    await init_db()
-    # Seed test accounts
-    await seed_test_accounts()
+    # Temporarily disable database for LSTM testing
+    try:
+        await init_db()
+        # Seed test accounts
+        await seed_test_accounts()
+    except Exception as e:
+        logger.warning(f"Database initialization skipped: {e}")
 
 
 async def seed_test_accounts():

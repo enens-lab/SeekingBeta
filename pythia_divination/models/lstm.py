@@ -208,10 +208,41 @@ class LSTMModel(BaseModel):
         if keras_path.exists():
             try:
                 import tensorflow as tf
-                self.tf_model = tf.keras.models.load_model(str(keras_path))
+                from tensorflow import keras
+                import warnings
+                warnings.filterwarnings('ignore')
+
+                # Monkey-patch Dense layer to accept quantization_config
+                original_dense_init = keras.layers.Dense.__init__
+
+                def patched_dense_init(self, *args, **kwargs):
+                    # Remove quantization_config if present
+                    kwargs.pop('quantization_config', None)
+                    original_dense_init(self, *args, **kwargs)
+
+                keras.layers.Dense.__init__ = patched_dense_init
+
+                # Also patch other layers that might have quantization_config
+                for layer_class in [keras.layers.Conv1D, keras.layers.LSTM, keras.layers.BatchNormalization,
+                                   keras.layers.Dropout, keras.layers.LayerNormalization]:
+                    if hasattr(layer_class, '__init__'):
+                        original_init = layer_class.__init__
+
+                        def make_patched_init(orig):
+                            def patched_init(self, *args, **kwargs):
+                                kwargs.pop('quantization_config', None)
+                                orig(self, *args, **kwargs)
+                            return patched_init
+
+                        layer_class.__init__ = make_patched_init(original_init)
+
+                # Load model
+                self.tf_model = tf.keras.models.load_model(str(keras_path), compile=False)
                 self.model = self.tf_model
+                logger.info("Successfully loaded Keras model from %s", keras_path)
+
             except Exception as exc:  # pragma: no cover - runtime safety
-                logger.exception("Failed to load Keras model: %s", exc)
+                logger.warning("Failed to load Keras model (%s), will try PyTorch fallback", exc)
 
         # If no TF model loaded, fall back to PyTorch
         if getattr(self, "tf_model", None) is None:

@@ -24,42 +24,30 @@ const MODELS = [
   { name: 'lstm', displayName: 'LSTM Classic', endpoint: '/predict' },
 ];
 
+// Magnificent 7 stocks
+const MAGNIFICENT_7 = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META'];
+
+interface ModelRow {
+  model: typeof MODELS[0];
+  predictions: Prediction[];
+  loading: boolean;
+  error: boolean;
+}
+
 function PredictionsCarousel() {
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [modelRows, setModelRows] = useState<ModelRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [cardsPerView, setCardsPerView] = useState(4);
   const [showAll, setShowAll] = useState(false);
-  const [ticker, setTicker] = useState('AAPL'); // Default ticker
+  const [carouselStates, setCarouselStates] = useState<{ [key: string]: number }>({});
 
-  const updateCardsPerView = useCallback(() => {
-    const width = window.innerWidth;
-    if (width < 640) {
-      setCardsPerView(1);
-    } else if (width < 900) {
-      setCardsPerView(2);
-    } else if (width < 1100) {
-      setCardsPerView(3);
-    } else {
-      setCardsPerView(4);
-    }
-  }, []);
-
-  const fetchPredictions = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
+  const fetchPredictionsForModel = useCallback(async (model: typeof MODELS[0]): Promise<ModelRow> => {
     try {
-      // Fetch predictions from all 6 models for the same ticker
       const results = await Promise.allSettled(
-        MODELS.map(async (model) => {
+        MAGNIFICENT_7.map(async (ticker) => {
           let url = '';
           if (model.endpoint === '/predict') {
-            // Standard models use /predict/{ticker}?model=...
             url = `/predict/${ticker}?horizon=1d&model=${model.name}`;
           } else {
-            // LSTM 5d and Jackpot have their own endpoints
             url = `${model.endpoint}/${ticker}`;
           }
 
@@ -76,55 +64,57 @@ function PredictionsCarousel() {
         })
       );
 
-      const successfulPredictions = results
+      const predictions = results
         .filter((r): r is PromiseFulfilledResult<Prediction> => r.status === 'fulfilled')
         .map((r) => r.value);
 
-      if (successfulPredictions.length === 0) {
-        throw new Error('No predictions available');
-      }
-
-      setPredictions(successfulPredictions);
-      setLoading(false);
+      return {
+        model,
+        predictions,
+        loading: false,
+        error: predictions.length === 0,
+      };
     } catch (err) {
-      console.error('Failed to fetch predictions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load predictions');
-      setLoading(false);
+      console.error(`Failed to fetch predictions for ${model.name}:`, err);
+      return {
+        model,
+        predictions: [],
+        loading: false,
+        error: true,
+      };
     }
-  }, [ticker]);
+  }, []);
+
+  const fetchAllPredictions = useCallback(async () => {
+    setLoading(true);
+
+    const rows = await Promise.all(
+      MODELS.map((model) => fetchPredictionsForModel(model))
+    );
+
+    setModelRows(rows);
+    setLoading(false);
+  }, [fetchPredictionsForModel]);
 
   useEffect(() => {
-    updateCardsPerView();
-    fetchPredictions();
+    fetchAllPredictions();
+  }, [fetchAllPredictions]);
 
-    window.addEventListener('resize', updateCardsPerView);
-    return () => window.removeEventListener('resize', updateCardsPerView);
-  }, [updateCardsPerView, fetchPredictions]);
+  const displayedRows = showAll ? modelRows : modelRows.slice(0, 2);
 
-  // Reset slide when cards per view changes
-  useEffect(() => {
-    setCurrentSlide(0);
-  }, [cardsPerView]);
-
-  // Filter predictions based on showAll state
-  const displayedPredictions = showAll ? predictions : predictions.slice(0, 2);
-  const totalSlides = Math.max(1, Math.ceil(displayedPredictions.length / cardsPerView));
-
-  const goToPrev = () => {
-    if (currentSlide > 0) {
-      setCurrentSlide(currentSlide - 1);
-    }
+  const goToPrev = (modelName: string) => {
+    setCarouselStates((prev) => ({
+      ...prev,
+      [modelName]: Math.max(0, (prev[modelName] || 0) - 1),
+    }));
   };
 
-  const goToNext = () => {
-    if (currentSlide < totalSlides - 1) {
-      setCurrentSlide(currentSlide + 1);
-    }
+  const goToNext = (modelName: string, maxSlide: number) => {
+    setCarouselStates((prev) => ({
+      ...prev,
+      [modelName]: Math.min(maxSlide - 1, (prev[modelName] || 0) + 1),
+    }));
   };
-
-  const cardWidth = 280;
-  const gap = 20;
-  const offset = currentSlide * cardsPerView * (cardWidth + gap);
 
   if (loading) {
     return (
@@ -132,7 +122,7 @@ function PredictionsCarousel() {
         <div className="section-header">
           <h2 className="section-title">Daily Prediction Signals</h2>
           <p className="section-subtitle">
-            Multi-model predictions for {ticker} - See how different AI models analyze the same stock
+            Comparing 6 AI models across the Magnificent 7 stocks
           </p>
         </div>
         <div className="predictions-loading">
@@ -143,89 +133,84 @@ function PredictionsCarousel() {
     );
   }
 
-  if (error) {
-    return (
-      <section className="predictions-section" id="predictions">
-        <div className="section-header">
-          <h2 className="section-title">Daily Prediction Signals</h2>
-          <p className="section-subtitle">
-            Multi-model predictions for {ticker} - See how different AI models analyze the same stock
-          </p>
-        </div>
-        <div className="predictions-error">
-          <p>Unable to load predictions. Please try again later.</p>
-          <button className="btn btn-outline" onClick={fetchPredictions}>
-            Retry
-          </button>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="predictions-section" id="predictions">
       <div className="section-header">
         <h2 className="section-title">Daily Prediction Signals</h2>
         <p className="section-subtitle">
-          Comparing 6 AI models on {ticker} - Each model brings unique insights
+          6 AI models analyzing the Magnificent 7 stocks - Each row shows one model's view
         </p>
       </div>
 
-      <div className="carousel-container">
-        <button
-          className="carousel-btn carousel-btn-prev"
-          onClick={goToPrev}
-          disabled={currentSlide === 0}
-          aria-label="Previous"
-        >
-          <ChevronLeft />
-        </button>
+      <div className="model-rows-container">
+        {displayedRows.map((row) => {
+          const currentSlide = carouselStates[row.model.name] || 0;
+          const cardsPerView = 4; // Adjust based on screen size
+          const totalSlides = Math.max(1, Math.ceil(row.predictions.length / cardsPerView));
+          const cardWidth = 280;
+          const gap = 20;
+          const offset = currentSlide * cardsPerView * (cardWidth + gap);
 
-        <div className="carousel-viewport">
-          <div
-            className="carousel-track"
-            style={{ transform: `translateX(-${offset}px)` }}
-          >
-            {displayedPredictions.map((prediction, index) => (
-              <PredictionCard
-                key={`${prediction.ticker}-${prediction.model || index}`}
-                prediction={prediction}
-              />
-            ))}
-          </div>
-        </div>
+          return (
+            <div key={row.model.name} className="model-row">
+              <div className="model-row-header">
+                <h3 className="model-row-title">{row.model.displayName}</h3>
+                <span className="model-row-count">
+                  {row.predictions.length} of {MAGNIFICENT_7.length} stocks
+                </span>
+              </div>
 
-        <button
-          className="carousel-btn carousel-btn-next"
-          onClick={goToNext}
-          disabled={currentSlide >= totalSlides - 1}
-          aria-label="Next"
-        >
-          <ChevronRight />
-        </button>
+              {row.error ? (
+                <div className="model-row-error">
+                  <p>Failed to load predictions for this model</p>
+                </div>
+              ) : (
+                <div className="carousel-container">
+                  <button
+                    className="carousel-btn carousel-btn-prev"
+                    onClick={() => goToPrev(row.model.name)}
+                    disabled={currentSlide === 0}
+                    aria-label="Previous"
+                  >
+                    <ChevronLeft />
+                  </button>
+
+                  <div className="carousel-viewport">
+                    <div
+                      className="carousel-track"
+                      style={{ transform: `translateX(-${offset}px)` }}
+                    >
+                      {row.predictions.map((prediction) => (
+                        <PredictionCard
+                          key={`${row.model.name}-${prediction.ticker}`}
+                          prediction={prediction}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    className="carousel-btn carousel-btn-next"
+                    onClick={() => goToNext(row.model.name, totalSlides)}
+                    disabled={currentSlide >= totalSlides - 1}
+                    aria-label="Next"
+                  >
+                    <ChevronRight />
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      <div className="carousel-dots">
-        {Array.from({ length: totalSlides }, (_, i) => (
-          <button
-            key={i}
-            className={`carousel-dot ${i === currentSlide ? 'active' : ''}`}
-            onClick={() => setCurrentSlide(i)}
-            aria-label={`Go to slide ${i + 1}`}
-          />
-        ))}
-      </div>
-
-      {!showAll && predictions.length > 2 && (
+      {!showAll && modelRows.length > 2 && (
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button
             className="btn btn-primary"
-            onClick={() => {
-              setShowAll(true);
-              setCurrentSlide(0);
-            }}
+            onClick={() => setShowAll(true)}
           >
-            View More Models ({predictions.length - 2} more)
+            View More Models ({modelRows.length - 2} more)
           </button>
         </div>
       )}
@@ -234,10 +219,7 @@ function PredictionsCarousel() {
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button
             className="btn btn-outline"
-            onClick={() => {
-              setShowAll(false);
-              setCurrentSlide(0);
-            }}
+            onClick={() => setShowAll(false)}
           >
             Show Less
           </button>

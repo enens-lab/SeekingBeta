@@ -323,6 +323,46 @@ body {
   border-radius: 4px;
 }
 
+/* Model Rows Container */
+.model-rows-container {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.model-row {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.model-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-row-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.model-row-count {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.model-row-error {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 /* Prediction Card */
 .prediction-card {
   flex: 0 0 280px;

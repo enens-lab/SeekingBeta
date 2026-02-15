@@ -581,7 +581,15 @@ async def predict_lstm_5d(ticker: str):
             response = await client.get(f"http://localhost:8000/predict/lstm_5d/{ticker}")
             if response.status_code != 200:
                 raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
-            return response.json()
+            data = response.json()
+            # Transform LSTM response to match PredictResponse schema
+            return PredictResponse(
+                ticker=data.get("ticker", ticker),
+                horizon=data.get("horizon", "5 days"),
+                prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
+                signal=data.get("signal", "hold"),
+                last_close=data.get("last_close", 0.0),
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -598,7 +606,15 @@ async def predict_lstm_jackpot(ticker: str):
             response = await client.get(f"http://localhost:8000/predict/lstm_jackpot/{ticker}")
             if response.status_code != 200:
                 raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
-            return response.json()
+            data = response.json()
+            # Transform LSTM response to match PredictResponse schema
+            return PredictResponse(
+                ticker=data.get("ticker", ticker),
+                horizon=data.get("horizon", "20 days"),
+                prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
+                signal=data.get("signal", "hold"),
+                last_close=data.get("last_close", 0.0),
+            )
     except HTTPException:
         raise
     except Exception as e:

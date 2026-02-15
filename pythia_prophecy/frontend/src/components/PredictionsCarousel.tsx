@@ -14,12 +14,24 @@ const ChevronRight = () => (
   </svg>
 );
 
+// Model configurations
+const MODELS = [
+  { name: 'gradient_boosting', displayName: 'Gradient Boosting', endpoint: '/predict' },
+  { name: 'lstm_5d', displayName: 'LSTM 5-Day', endpoint: '/predict/lstm_5d' },
+  { name: 'lstm_jackpot', displayName: 'LSTM Jackpot', endpoint: '/predict/lstm_jackpot' },
+  { name: 'random_forest', displayName: 'Random Forest', endpoint: '/predict' },
+  { name: 'linear_regression', displayName: 'Linear Regression', endpoint: '/predict' },
+  { name: 'lstm', displayName: 'LSTM Classic', endpoint: '/predict' },
+];
+
 function PredictionsCarousel() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [cardsPerView, setCardsPerView] = useState(4);
+  const [showAll, setShowAll] = useState(false);
+  const [ticker, setTicker] = useState('AAPL'); // Default ticker
 
   const updateCardsPerView = useCallback(() => {
     const width = window.innerWidth;
@@ -39,32 +51,29 @@ function PredictionsCarousel() {
     setError(null);
 
     try {
-      // Default universe (free tier)
-      let universe = ['AAPL', 'MSFT', 'GOOGL'];
-
-      // Try to fetch universe from API (respects tier limits)
-      try {
-        const universeRes = await fetch('/api/universe');
-        if (universeRes.ok) {
-          const data = await universeRes.json();
-          if (data.universe) {
-            universe = data.universe;
-          }
-        }
-      } catch {
-        console.warn('Could not fetch universe, using default');
-      }
-
-      // Fetch predictions for each ticker
+      // Fetch predictions from all 6 models for the same ticker
       const results = await Promise.allSettled(
-        universe.map((ticker) =>
-          fetch(`/predict/${ticker}?horizon=1d`)
-            .then((res) => {
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              return res.json();
-            })
-            .then((data) => ({ ...data, ticker }))
-        )
+        MODELS.map(async (model) => {
+          let url = '';
+          if (model.endpoint === '/predict') {
+            // Standard models use /predict/{ticker}?model=...
+            url = `/predict/${ticker}?horizon=1d&model=${model.name}`;
+          } else {
+            // LSTM 5d and Jackpot have their own endpoints
+            url = `${model.endpoint}/${ticker}`;
+          }
+
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          return {
+            ...data,
+            ticker,
+            model: model.name,
+            modelDisplayName: model.displayName,
+          };
+        })
       );
 
       const successfulPredictions = results
@@ -82,7 +91,7 @@ function PredictionsCarousel() {
       setError(err instanceof Error ? err.message : 'Failed to load predictions');
       setLoading(false);
     }
-  }, []);
+  }, [ticker]);
 
   useEffect(() => {
     updateCardsPerView();
@@ -97,7 +106,9 @@ function PredictionsCarousel() {
     setCurrentSlide(0);
   }, [cardsPerView]);
 
-  const totalSlides = Math.max(1, Math.ceil(predictions.length / cardsPerView));
+  // Filter predictions based on showAll state
+  const displayedPredictions = showAll ? predictions : predictions.slice(0, 2);
+  const totalSlides = Math.max(1, Math.ceil(displayedPredictions.length / cardsPerView));
 
   const goToPrev = () => {
     if (currentSlide > 0) {
@@ -120,11 +131,13 @@ function PredictionsCarousel() {
       <section className="predictions-section" id="predictions">
         <div className="section-header">
           <h2 className="section-title">Daily Prediction Signals</h2>
-          <p className="section-subtitle">Real-time ML predictions for stocks in our universe</p>
+          <p className="section-subtitle">
+            Multi-model predictions for {ticker} - See how different AI models analyze the same stock
+          </p>
         </div>
         <div className="predictions-loading">
           <div className="spinner" />
-          <p>Loading predictions...</p>
+          <p>Loading predictions from 6 models...</p>
         </div>
       </section>
     );
@@ -135,7 +148,9 @@ function PredictionsCarousel() {
       <section className="predictions-section" id="predictions">
         <div className="section-header">
           <h2 className="section-title">Daily Prediction Signals</h2>
-          <p className="section-subtitle">Real-time ML predictions for stocks in our universe</p>
+          <p className="section-subtitle">
+            Multi-model predictions for {ticker} - See how different AI models analyze the same stock
+          </p>
         </div>
         <div className="predictions-error">
           <p>Unable to load predictions. Please try again later.</p>
@@ -151,7 +166,9 @@ function PredictionsCarousel() {
     <section className="predictions-section" id="predictions">
       <div className="section-header">
         <h2 className="section-title">Daily Prediction Signals</h2>
-        <p className="section-subtitle">Real-time ML predictions for stocks in our universe</p>
+        <p className="section-subtitle">
+          Comparing 6 AI models on {ticker} - Each model brings unique insights
+        </p>
       </div>
 
       <div className="carousel-container">
@@ -169,8 +186,11 @@ function PredictionsCarousel() {
             className="carousel-track"
             style={{ transform: `translateX(-${offset}px)` }}
           >
-            {predictions.map((prediction, index) => (
-              <PredictionCard key={prediction.ticker || index} prediction={prediction} />
+            {displayedPredictions.map((prediction, index) => (
+              <PredictionCard
+                key={`${prediction.ticker}-${prediction.model || index}`}
+                prediction={prediction}
+              />
             ))}
           </div>
         </div>
@@ -195,6 +215,34 @@ function PredictionsCarousel() {
           />
         ))}
       </div>
+
+      {!showAll && predictions.length > 2 && (
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setShowAll(true);
+              setCurrentSlide(0);
+            }}
+          >
+            View More Models ({predictions.length - 2} more)
+          </button>
+        </div>
+      )}
+
+      {showAll && (
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              setShowAll(false);
+              setCurrentSlide(0);
+            }}
+          >
+            Show Less
+          </button>
+        </div>
+      )}
     </section>
   );
 }

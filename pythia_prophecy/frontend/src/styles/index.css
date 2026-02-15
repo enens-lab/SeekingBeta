@@ -374,6 +374,31 @@ body {
   color: var(--warning);
 }
 
+.prediction-signal.strong_buy {
+  background: var(--success-bg);
+  color: var(--success);
+  font-weight: 700;
+}
+
+.prediction-signal.avoid {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.prediction-model-badge {
+  margin: 12px 0 16px 0;
+  padding: 8px 12px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .prediction-stats {
   display: flex;
   flex-direction: column;
@@ -638,6 +663,13 @@ body {
   }
 }
 
+/* Stack form-row on narrow viewports so name fields don't get cramped */
+@media (max-width: 560px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
 /* ============================================================
    Auth Pages
    ============================================================ */

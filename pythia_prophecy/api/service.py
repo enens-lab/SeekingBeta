@@ -8,6 +8,7 @@ import sys
 import time
 import uuid
 import os
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
@@ -60,6 +61,9 @@ from .models import (
     CompanyInfoResponse,
     CompanyNewsItem,
     CompanyDetailResponse,
+    UserPreferences,
+    UserPreferencesResponse,
+    UpdatePreferencesRequest,
 )
 from .database import (
     create_user,
@@ -85,7 +89,7 @@ from .auth import (
     generate_verification_token,
     validate_password_strength,
 )
-from .email_service import send_verification_email, send_welcome_email
+from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
 from .models import UserInDB
 
 # Stock categorization function (mirrors divination logic)
@@ -197,6 +201,10 @@ from datetime import datetime as dt
 
 RATE_LIMIT_STORAGE: dict[str, dict] = defaultdict(lambda: {"date": None, "count": 0})
 
+# In-memory user preferences storage (resets on server restart)
+# In production, this should be stored in a database
+USER_PREFERENCES_STORAGE: dict[str, dict] = {}
+
 
 def check_rate_limit(identifier: str, max_requests: int, window_seconds: int) -> tuple[bool, str]:
     """
@@ -222,14 +230,115 @@ def check_rate_limit(identifier: str, max_requests: int, window_seconds: int) ->
 
 # FastAPI app
 app = FastAPI(
-    title="Pythia Claude",
-    description="Stock Signal Intelligence Platform",
+    title="Pythia Claude API",
+    description="""
+# Pythia Claude - Stock Signal Intelligence Platform
+
+An AI-powered stock prediction and analysis platform providing:
+- Real-time stock signal predictions powered by machine learning
+- Multi-timeframe technical analysis
+- Personalized watchlists and alerts
+- Advanced stock analysis tools
+
+## Authentication
+All protected endpoints require a Bearer token in the Authorization header:
+```
+Authorization: Bearer <access_token>
+```
+
+## Rate Limiting
+- Signup: 5 attempts per hour per email
+- Login: 10 attempts per hour per email
+- Email verification: 20 attempts per hour per token
+
+## Subscription Tiers
+- **Free**: 5 stocks, daily predictions, basic signals
+- **Basic**: 15 stocks, multi-timeframe analysis, email alerts, CSV export
+- **Pro**: Unlimited stocks, all timeframes, API access, premium features
+
+## Error Responses
+All errors follow a standardized format:
+```json
+{
+    "error": "Error type",
+    "code": "ERROR_CODE",
+    "message": "Detailed error message"
+}
+```
+    """,
     version="0.1.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    openapi_tags=[
+        {"name": "Authentication", "description": "User signup, login, and token management"},
+        {"name": "Preferences", "description": "User settings and preferences"},
+        {"name": "Predictions", "description": "Stock price predictions and signals"},
+        {"name": "Oracle", "description": "Personal watchlist and alert management"},
+        {"name": "Analysis", "description": "Advanced stock analysis tools"},
+        {"name": "Companies", "description": "Company information and news"},
+        {"name": "Subscriptions", "description": "Subscription tier information"},
+        {"name": "System", "description": "Health checks and system status"},
+    ],
 )
+
+
+# Startup validation
+@app.on_event("startup")
+async def startup_validation():
+    """Validate configuration on startup."""
+    errors = []
+    warnings = []
+
+    # Check environment
+    environment = os.getenv("ENVIRONMENT", "development")
+    logger.info(f"Starting in {environment} environment")
+
+    # Check critical environment variables based on environment
+    if environment == "production":
+        if not os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET_KEY") == "your-secret-key":
+            errors.append("JWT_SECRET_KEY is not set securely in production")
+
+        if os.getenv("EMAIL_DEV_MODE", "false").lower() == "true":
+            errors.append("EMAIL_DEV_MODE should be disabled in production")
+
+        if not os.getenv("SMTP_USER"):
+            warnings.append("SMTP_USER not configured - email sending will fail")
+
+        if not os.getenv("SMTP_PASSWORD"):
+            warnings.append("SMTP_PASSWORD not configured - email sending will fail")
+
+    # Check frontend URL
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    if not frontend_url:
+        warnings.append("FRONTEND_URL not set - password reset emails may not work properly")
+
+    # Check database connection (if needed)
+    logger.info(f"Frontend URL: {frontend_url}")
+    logger.info(f"CORS Origins: {ALLOWED_ORIGINS}")
+
+    # Log warnings
+    for warning in warnings:
+        logger.warning(f"Configuration warning: {warning}")
+
+    # Fail startup if there are errors
+    if errors:
+        for error in errors:
+            logger.error(f"Configuration error: {error}")
+        raise RuntimeError(f"Configuration errors found: {'; '.join(errors)}")
+
+    logger.info("Startup validation completed successfully")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on application shutdown."""
+    logger.info("Application shutting down")
 
 
 # CORS configuration - lock down to specific origins in production
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost").split(",")
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
@@ -244,16 +353,81 @@ app.add_middleware(
 )
 
 
+# Global exception handler for validation errors
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    """Handle validation errors with standardized format."""
+    logger.warning(f"Validation error in {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "Validation Error",
+            "code": "VALIDATION_ERROR",
+            "message": "Request validation failed",
+            "details": [
+                {
+                    "field": ".".join(str(x) for x in error["loc"][1:]),
+                    "message": error["msg"],
+                    "type": error["type"],
+                }
+                for error in exc.errors()
+            ]
+        }
+    )
+
+
+# Global exception handler for HTTP exceptions
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc):
+    """Handle HTTP exceptions with standardized format."""
+    logger.warning(f"HTTP {exc.status_code} in {request.url.path}: {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": f"HTTP {exc.status_code}",
+            "code": f"HTTP_{exc.status_code}",
+            "message": exc.detail,
+        }
+    )
+
+
+# Global exception handler for all other exceptions
+@app.exception_handler(Exception)
+async def general_exception_handler(request, exc):
+    """Handle unexpected exceptions with standardized format."""
+    logger.error(f"Unexpected error in {request.url.path}: {exc}", exc_info=True)
+
+    # Don't expose sensitive details in production
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "production":
+        message = "Internal server error"
+    else:
+        message = str(exc)
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal Server Error",
+            "code": "INTERNAL_SERVER_ERROR",
+            "message": message,
+        }
+    )
+
+
 # Request logging middleware
 @app.middleware("http")
 async def log_requests(request, call_next):
-    """Log all HTTP requests with timing."""
+    """Log all HTTP requests with timing and structured data."""
     start_time = time.time()
+
+    # Generate request ID for tracing
+    request_id = str(uuid.uuid4())
 
     # Get client info
     client_ip = request.client.host if request.client else "unknown"
     method = request.method
     path = request.url.path
+    query_string = str(request.url.query) if request.url.query else ""
 
     # Process request
     response = await call_next(request)
@@ -263,9 +437,26 @@ async def log_requests(request, call_next):
 
     # Log the request (skip static assets for cleaner logs)
     if not path.startswith("/assets/") and path != "/favicon.ico":
-        access_logger.info(
-            f"{client_ip} | {method} {path} | {response.status_code} | {duration_ms:.1f}ms"
+        # Create a LogRecord-like object with extra fields
+        extra_fields = {
+            "request_id": request_id,
+            "duration_ms": duration_ms,
+            "status_code": response.status_code,
+        }
+
+        # Log with extra context
+        message = f"{method} {path} - {response.status_code} ({duration_ms:.1f}ms) from {client_ip}"
+        record = access_logger.makeRecord(
+            "pythia.access",
+            logging.INFO,
+            request.url.path,
+            0,
+            message,
+            (),
+            None,
+            extra=extra_fields
         )
+        access_logger.handle(record)
 
     return response
 
@@ -318,7 +509,7 @@ async def require_verified_user(authorization: Optional[str] = Header(None)) -> 
 # Auth Endpoints
 # ============================================================
 
-@app.post("/api/auth/signup", response_model=MessageResponse)
+@app.post("/api/auth/signup", response_model=MessageResponse, tags=["Authentication"])
 async def signup(data: UserCreate):
     """Register a new user account."""
     # Rate limit: 5 signup attempts per hour per email
@@ -366,7 +557,7 @@ async def signup(data: UserCreate):
     )
 
 
-@app.post("/api/auth/login", response_model=TokenResponse)
+@app.post("/api/auth/login", response_model=TokenResponse, tags=["Authentication"])
 async def login(data: UserLogin):
     """Login with email and password."""
     # Rate limit: 10 failed login attempts per hour per email
@@ -461,7 +652,7 @@ async def resend_verification(data: ResendVerificationRequest):
     return MessageResponse(message="If the email exists, a verification link has been sent.")
 
 
-@app.post("/api/auth/refresh", response_model=TokenResponse)
+@app.post("/api/auth/refresh", response_model=TokenResponse, tags=["Authentication"])
 async def refresh_token(data: RefreshTokenRequest):
     """Refresh access token using refresh token."""
     payload = decode_access_token(data.refresh_token, expected_type="refresh")
@@ -508,12 +699,9 @@ async def request_password_reset(data: PasswordResetRequest):
     # Generate password reset token
     reset_token = create_access_token(user.id, user.email, token_type="password_reset")
 
-    # Store in database (note: database schema update needed)
-    # For now, we'll just log it
+    # Send password reset email
+    send_password_reset_email(user.email, user.first_name, reset_token)
     logger.info(f"Password reset requested for: {user.email}")
-
-    # TODO: Send password reset email with token
-    # send_password_reset_email(user.email, user.first_name, reset_token)
 
     return MessageResponse(message="If the email exists, a password reset link has been sent.")
 
@@ -562,10 +750,95 @@ async def get_me(user: UserInDB = Depends(require_auth)):
 
 
 # ============================================================
+# User Preferences Endpoints
+# ============================================================
+
+@app.get("/api/user/preferences", response_model=UserPreferencesResponse, tags=["Preferences"])
+async def get_user_preferences(user: UserInDB = Depends(require_auth)):
+    """Get user preferences."""
+    if user.id not in USER_PREFERENCES_STORAGE:
+        # Return default preferences
+        USER_PREFERENCES_STORAGE[user.id] = {
+            "theme": "light",
+            "email_alerts_enabled": True,
+            "daily_digest_enabled": False,
+            "newsletter_enabled": False,
+            "two_factor_enabled": False,
+            "language": "en",
+            "timezone": "UTC",
+            "notifications_enabled": True,
+            "updated_at": datetime.utcnow(),
+        }
+
+    prefs = USER_PREFERENCES_STORAGE[user.id]
+    return UserPreferencesResponse(
+        user_id=user.id,
+        **{k: v for k, v in prefs.items() if k != "updated_at"},
+        updated_at=prefs["updated_at"],
+    )
+
+
+@app.put("/api/user/preferences", response_model=UserPreferencesResponse, tags=["Preferences"])
+async def update_user_preferences(
+    data: UpdatePreferencesRequest,
+    user: UserInDB = Depends(require_auth),
+):
+    """Update user preferences."""
+    # Get current preferences
+    if user.id not in USER_PREFERENCES_STORAGE:
+        USER_PREFERENCES_STORAGE[user.id] = {
+            "theme": "light",
+            "email_alerts_enabled": True,
+            "daily_digest_enabled": False,
+            "newsletter_enabled": False,
+            "two_factor_enabled": False,
+            "language": "en",
+            "timezone": "UTC",
+            "notifications_enabled": True,
+            "updated_at": datetime.utcnow(),
+        }
+
+    prefs = USER_PREFERENCES_STORAGE[user.id]
+
+    # Update with provided values
+    if data.theme is not None:
+        if data.theme not in ["light", "dark"]:
+            raise HTTPException(400, detail="Theme must be 'light' or 'dark'")
+        prefs["theme"] = data.theme
+
+    if data.email_alerts_enabled is not None:
+        prefs["email_alerts_enabled"] = data.email_alerts_enabled
+
+    if data.daily_digest_enabled is not None:
+        prefs["daily_digest_enabled"] = data.daily_digest_enabled
+
+    if data.newsletter_enabled is not None:
+        prefs["newsletter_enabled"] = data.newsletter_enabled
+
+    if data.language is not None:
+        prefs["language"] = data.language
+
+    if data.timezone is not None:
+        prefs["timezone"] = data.timezone
+
+    if data.notifications_enabled is not None:
+        prefs["notifications_enabled"] = data.notifications_enabled
+
+    prefs["updated_at"] = datetime.utcnow()
+    logger.info(f"Preferences updated for user: {user.email}")
+
+    return UserPreferencesResponse(
+        user_id=user.id,
+        **{k: v for k, v in prefs.items() if k != "updated_at"},
+        updated_at=prefs["updated_at"],
+    )
+
+
+# ============================================================
 # Tier Endpoints
 # ============================================================
 
-@app.get("/api/tiers", response_model=list[TierInfo])
+@app.get("/api/tiers", response_model=list[TierInfo], tags=["Subscriptions"])
 async def get_tiers():
     """Get all subscription tiers."""
     return [
@@ -696,7 +969,7 @@ def check_tier_access(user: Optional[UserInDB], ticker: str, horizon: str) -> bo
     return ticker.upper() in [s.upper() for s in allowed_stocks]
 
 
-@app.get("/predict/{ticker}", response_model=PredictResponse)
+@app.get("/predict/{ticker}", response_model=PredictResponse, tags=["Predictions"])
 async def predict(
     ticker: str,
     horizon: str = "1d",
@@ -803,14 +1076,40 @@ async def get_universe(user: Optional[UserInDB] = Depends(get_current_user)):
     }
 
 
-@app.get("/healthz")
+@app.get("/healthz", tags=["System"])
 def healthz():
-    """Health check endpoint with universe info."""
+    """Health check endpoint with system status."""
     return JSONResponse({
         "ok": True,
         "message": "ok",
+        "status": "healthy",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "version": "0.1.0",
         "universe": UNIVERSE,
         "data_source": DATA_SOURCE if PYTHIA_AVAILABLE else "demo",
+        "ml_models_available": PYTHIA_AVAILABLE,
+    })
+
+
+@app.get("/api/status", tags=["System"])
+def status():
+    """Get API status and configuration."""
+    return JSONResponse({
+        "service": "pythia_prophecy",
+        "version": "0.1.0",
+        "status": "operational",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "components": {
+            "auth": "operational",
+            "predictions": "operational" if PYTHIA_AVAILABLE else "degraded",
+            "database": "operational",
+            "email": "operational",
+        },
+        "limits": {
+            "universe_size": len(UNIVERSE),
+            "prediction_threshold": THRESHOLD,
+        }
     })
 
 

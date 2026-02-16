@@ -301,3 +301,36 @@ class CompanyDetailResponse(BaseModel):
     company: CompanyResponse
     info: Optional[CompanyInfoResponse] = None
     news: List[CompanyNewsItem] = []
+
+
+# ============================================================
+# User Preferences Models
+# ============================================================
+
+class UserPreferences(BaseModel):
+    """User preference settings."""
+    theme: str = "light"  # light or dark
+    email_alerts_enabled: bool = True
+    daily_digest_enabled: bool = False
+    newsletter_enabled: bool = False
+    two_factor_enabled: bool = False
+    language: str = "en"
+    timezone: str = "UTC"
+    notifications_enabled: bool = True
+
+
+class UserPreferencesResponse(UserPreferences):
+    """Response with user preferences."""
+    user_id: str
+    updated_at: datetime
+
+
+class UpdatePreferencesRequest(BaseModel):
+    """Request to update user preferences."""
+    theme: Optional[str] = None
+    email_alerts_enabled: Optional[bool] = None
+    daily_digest_enabled: Optional[bool] = None
+    newsletter_enabled: Optional[bool] = None
+    language: Optional[str] = None
+    timezone: Optional[str] = None
+    notifications_enabled: Optional[bool] = None

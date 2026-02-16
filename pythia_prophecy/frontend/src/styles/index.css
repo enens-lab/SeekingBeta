@@ -1033,6 +1033,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tier-option {
@@ -1045,6 +1047,8 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tier-option:hover {

@@ -77,8 +77,9 @@ def decode_access_token(token: str) -> Optional[dict]:
 
 
 def generate_verification_token() -> str:
-    """Generate a random verification token."""
-    return secrets.token_urlsafe(32)
+    """Generate a 6-digit verification code."""
+    code = secrets.randbelow(1000000)
+    return f"{code:06d}"
 
 
 def _encode_jwt(payload: dict) -> str:

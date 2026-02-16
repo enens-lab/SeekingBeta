@@ -28,10 +28,8 @@ DEV_MODE = os.getenv("EMAIL_DEV_MODE", "true").lower() == "true"
 
 
 def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
-    """Send email verification link to user."""
-    verification_url = f"{FRONTEND_URL}/verify-email?token={token}"
-
-    subject = "Verify your Pythia account"
+    """Send email verification code to user."""
+    subject = "Your Pythia Verification Code"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -43,7 +41,8 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
             .header {{ text-align: center; padding: 20px 0; }}
             .logo {{ font-size: 32px; font-weight: bold; color: #6366f1; }}
             .content {{ background: #f9fafb; border-radius: 8px; padding: 30px; margin: 20px 0; }}
-            .button {{ display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 500; }}
+            .code-box {{ background: white; border: 2px solid #6366f1; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }}
+            .code {{ font-size: 36px; font-weight: bold; color: #6366f1; letter-spacing: 2px; font-family: monospace; }}
             .footer {{ text-align: center; color: #6b7280; font-size: 14px; padding: 20px 0; }}
         </style>
     </head>
@@ -54,15 +53,15 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
             </div>
             <div class="content">
                 <h2>Welcome, {first_name}!</h2>
-                <p>Thanks for signing up for Pythia. Please verify your email address to activate your account and start receiving stock predictions.</p>
-                <p style="text-align: center; margin: 30px 0;">
-                    <a href="{verification_url}" class="button">Verify Email Address</a>
+                <p>Thanks for signing up for Pythia. Use the verification code below to activate your account:</p>
+                <div class="code-box">
+                    <div class="code">{token}</div>
+                </div>
+                <p style="text-align: center; color: #6b7280; font-size: 14px;">
+                    This code expires in 24 hours
                 </p>
                 <p style="color: #6b7280; font-size: 14px;">
                     If you didn't create an account, you can safely ignore this email.
-                </p>
-                <p style="color: #6b7280; font-size: 14px;">
-                    Or copy this link: {verification_url}
                 </p>
             </div>
             <div class="footer">
@@ -77,9 +76,11 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
     text_content = f"""
     Welcome to Pythia, {first_name}!
 
-    Thanks for signing up. Please verify your email address by clicking the link below:
+    Thanks for signing up. Use this code to verify your email:
 
-    {verification_url}
+    {token}
+
+    This code expires in 24 hours.
 
     If you didn't create an account, you can safely ignore this email.
 

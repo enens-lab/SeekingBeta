@@ -154,7 +154,7 @@ def _send_email(
     """Send an email using SMTP or log in dev mode."""
     if DEV_MODE:
         logger.info(f"[DEV MODE] Email to {to_email}: {subject}")
-        logger.debug(f"[DEV MODE] Email content:\n{text_content}")
+        logger.info(f"[DEV MODE] Email content:\n{text_content}")
         return True
 
     try:

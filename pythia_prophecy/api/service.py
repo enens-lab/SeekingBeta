@@ -578,7 +578,7 @@ async def predict_lstm_5d(ticker: str):
     """Proxy LSTM 5-Day predictions from divination backend."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://localhost:8000/predict/lstm_5d/{ticker}")
+            response = await client.get(f"http://pythia-divination:8000/predict/lstm_5d/{ticker}")
             if response.status_code != 200:
                 raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
             data = response.json()
@@ -603,7 +603,7 @@ async def predict_lstm_jackpot(ticker: str):
     """Proxy LSTM Jackpot predictions from divination backend."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://localhost:8000/predict/lstm_jackpot/{ticker}")
+            response = await client.get(f"http://pythia-divination:8000/predict/lstm_jackpot/{ticker}")
             if response.status_code != 200:
                 raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
             data = response.json()

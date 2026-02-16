@@ -973,9 +973,17 @@ def check_tier_access(user: Optional[UserInDB], ticker: str, horizon: str) -> bo
 async def predict(
     ticker: str,
     horizon: str = "1d",
+    model: Optional[str] = None,
     user: Optional[UserInDB] = Depends(get_current_user),
 ):
-    """Get prediction for a single ticker."""
+    """Get prediction for a single ticker.
+
+    Supports optional model parameter to use specific ML model:
+    - gradient_boosting (default)
+    - random_forest
+    - linear_regression
+    - lstm
+    """
     user_email = user.email if user else "anonymous"
 
     # Check tier access (but allow anonymous users basic access)
@@ -988,6 +996,25 @@ async def predict(
         )
 
     try:
+        # If model-specific prediction requested, try to proxy to divination backend
+        if model and model.lower() in ["random_forest", "linear_regression", "lstm"]:
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    model_endpoint = f"http://pythia-divination:8000/predict/{model}/{ticker.upper()}?horizon={horizon}"
+                    response = await client.get(model_endpoint)
+                    if response.status_code == 200:
+                        data = response.json()
+                        return PredictResponse(
+                            ticker=data.get("ticker", ticker.upper()),
+                            horizon=data.get("horizon", _horizon_to_display(horizon)),
+                            prob_up=data.get("prob_up", 0.0),
+                            signal=data.get("signal", "hold"),
+                            last_close=data.get("last_close", 0.0),
+                        )
+            except Exception as e:
+                logger.warning(f"Failed to fetch {model} prediction from divination: {e}, using fallback")
+
+        # Default: use local prediction (gradient boosting)
         prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon=horizon)
         logger.debug(f"Prediction: {ticker.upper()} ({horizon}) = {signal} ({prob_up:.2%}) for {user_email}")
         return PredictResponse(

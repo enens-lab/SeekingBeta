@@ -2,38 +2,51 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-type VerificationStatus = 'verifying' | 'success' | 'error';
+type VerificationStatus = 'form' | 'verifying' | 'success' | 'error';
 
 function VerifyEmail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { verifyEmail } = useAuth();
 
-  const [status, setStatus] = useState<VerificationStatus>('verifying');
+  const [status, setStatus] = useState<VerificationStatus>('form');
   const [error, setError] = useState('');
+  const [code, setCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const token = searchParams.get('token');
 
+  // If token is in URL, use it automatically
   useEffect(() => {
-    if (!token) {
+    if (token) {
+      handleVerify(token);
+    }
+  }, [token]);
+
+  const handleVerify = async (verificationCode: string) => {
+    setIsLoading(true);
+    setStatus('verifying');
+    try {
+      await verifyEmail(verificationCode);
+      setStatus('success');
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+    } catch (err) {
       setStatus('error');
-      setError('No verification token provided');
+      setError(err instanceof Error ? err.message : 'Verification failed');
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.trim().length !== 6) {
+      setError('Please enter a 6-digit code');
       return;
     }
-
-    verifyEmail(token)
-      .then(() => {
-        setStatus('success');
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-      })
-      .catch((err) => {
-        setStatus('error');
-        setError(err instanceof Error ? err.message : 'Verification failed');
-      });
-  }, [token, verifyEmail, navigate]);
+    handleVerify(code.trim());
+  };
 
   return (
     <div className="auth-page">
@@ -46,6 +59,55 @@ function VerifyEmail() {
         </div>
 
         <div className="auth-card">
+          {status === 'form' && (
+            <>
+              <h1>Verify your email</h1>
+              <p className="auth-subtitle">
+                Enter the 6-digit code sent to your email
+              </p>
+
+              <form onSubmit={handleSubmit} className="auth-form">
+                <div className="form-group">
+                  <label htmlFor="code">Verification Code</label>
+                  <input
+                    id="code"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="000000"
+                    value={code}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setCode(value);
+                      setError('');
+                    }}
+                    maxLength={6}
+                    disabled={isLoading}
+                    className="code-input"
+                  />
+                </div>
+
+                {error && <div className="form-error">{error}</div>}
+
+                <button
+                  type="submit"
+                  disabled={isLoading || code.length !== 6}
+                  className="btn btn-primary btn-block"
+                >
+                  {isLoading ? 'Verifying...' : 'Verify Code'}
+                </button>
+              </form>
+
+              <div className="auth-footer">
+                <p className="auth-subtitle">
+                  Didn&apos;t receive the code?{' '}
+                  <Link to="/login" className="link">
+                    Back to login
+                  </Link>
+                </p>
+              </div>
+            </>
+          )}
+
           {status === 'verifying' && (
             <>
               <div className="spinner" />
@@ -81,9 +143,16 @@ function VerifyEmail() {
               <h1>Verification failed</h1>
               <p className="auth-subtitle">{error}</p>
               <div className="auth-actions">
-                <Link to="/login" className="btn btn-primary">
-                  Go to Login
-                </Link>
+                <button
+                  onClick={() => {
+                    setStatus('form');
+                    setCode('');
+                    setError('');
+                  }}
+                  className="btn btn-primary"
+                >
+                  Try again
+                </button>
               </div>
             </>
           )}

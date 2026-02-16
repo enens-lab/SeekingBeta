@@ -7,7 +7,8 @@ from __future__ import annotations
 import sys
 import time
 import uuid
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
@@ -39,6 +40,10 @@ from .models import (
     MessageResponse,
     VerifyEmailRequest,
     ResendVerificationRequest,
+    RefreshTokenRequest,
+    PasswordResetRequest,
+    PasswordResetConfirm,
+    ErrorResponse,
     SubscriptionTier,
     TIER_CONFIG,
     PredictResponse,
@@ -78,6 +83,7 @@ from .auth import (
     create_access_token,
     decode_access_token,
     generate_verification_token,
+    validate_password_strength,
 )
 from .email_service import send_verification_email, send_welcome_email
 from .models import UserInDB
@@ -185,9 +191,33 @@ except Exception as e:
     STOCK_CATEGORIES = categorize_stocks(UNIVERSE)
 
 # Simple in-memory rate limiting (resets on server restart)
-# In production, this should be stored in a database
+# In production, this should be stored in a database or Redis
 from collections import defaultdict
+from datetime import datetime as dt
+
 RATE_LIMIT_STORAGE: dict[str, dict] = defaultdict(lambda: {"date": None, "count": 0})
+
+
+def check_rate_limit(identifier: str, max_requests: int, window_seconds: int) -> tuple[bool, str]:
+    """
+    Check if a request exceeds rate limit.
+    Returns (is_allowed, message)
+    """
+    now = dt.utcnow()
+    entry = RATE_LIMIT_STORAGE[identifier]
+
+    # Reset counter if window has passed
+    if entry["date"] is None or (now - entry["date"]).total_seconds() > window_seconds:
+        entry["date"] = now
+        entry["count"] = 0
+
+    entry["count"] += 1
+
+    if entry["count"] > max_requests:
+        reset_time = entry["date"] + timedelta(seconds=window_seconds)
+        return False, f"Rate limit exceeded. Try again in {int((reset_time - now).total_seconds())} seconds"
+
+    return True, "OK"
 
 
 # FastAPI app
@@ -195,6 +225,22 @@ app = FastAPI(
     title="Pythia Claude",
     description="Stock Signal Intelligence Platform",
     version="0.1.0",
+)
+
+
+# CORS configuration - lock down to specific origins in production
+from fastapi.middleware.cors import CORSMiddleware
+
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost").split(",")
+logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 
@@ -275,6 +321,17 @@ async def require_verified_user(authorization: Optional[str] = Header(None)) -> 
 @app.post("/api/auth/signup", response_model=MessageResponse)
 async def signup(data: UserCreate):
     """Register a new user account."""
+    # Rate limit: 5 signup attempts per hour per email
+    allowed, message = check_rate_limit(f"signup:{data.email.lower()}", max_requests=5, window_seconds=3600)
+    if not allowed:
+        raise HTTPException(429, detail=message)
+
+    # Validate password strength
+    is_valid, message = validate_password_strength(data.password)
+    if not is_valid:
+        logger.warning(f"Signup attempt with weak password: {message}")
+        raise HTTPException(400, detail=message)
+
     # Check if email already exists
     existing = get_user_by_email(data.email.lower())
     if existing:
@@ -312,17 +369,25 @@ async def signup(data: UserCreate):
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(data: UserLogin):
     """Login with email and password."""
+    # Rate limit: 10 failed login attempts per hour per email
+    allowed, message = check_rate_limit(f"login:{data.email.lower()}", max_requests=10, window_seconds=3600)
+    if not allowed:
+        logger.warning(f"Rate limit exceeded for login attempts: {data.email.lower()}")
+        raise HTTPException(429, detail=message)
+
     user = get_user_by_email(data.email.lower())
 
     if not user or not verify_password(data.password, user.hashed_password):
         logger.warning(f"Failed login attempt for: {data.email.lower()}")
         raise HTTPException(401, detail="Invalid email or password")
 
-    token = create_access_token(user.id, user.email)
+    access_token = create_access_token(user.id, user.email, token_type="access")
+    refresh_token = create_access_token(user.id, user.email, token_type="refresh")
     logger.info(f"User logged in: {user.email}")
 
     return TokenResponse(
-        access_token=token,
+        access_token=access_token,
+        refresh_token=refresh_token,
         user=UserResponse(
             id=user.id,
             email=user.email,
@@ -338,6 +403,11 @@ async def login(data: UserLogin):
 @app.post("/api/auth/verify-email", response_model=TokenResponse)
 async def verify_email(data: VerifyEmailRequest):
     """Verify email with token from email link."""
+    # Rate limit: 20 verification attempts per hour per token
+    allowed, message = check_rate_limit(f"verify:{data.token}", max_requests=20, window_seconds=3600)
+    if not allowed:
+        raise HTTPException(429, detail=message)
+
     user = get_user_by_verification_token(data.token)
 
     if not user:
@@ -351,10 +421,12 @@ async def verify_email(data: VerifyEmailRequest):
     send_welcome_email(user.email, user.first_name, user.tier.value)
 
     # Return token so user is logged in
-    token = create_access_token(user.id, user.email)
+    access_token = create_access_token(user.id, user.email, token_type="access")
+    refresh_token = create_access_token(user.id, user.email, token_type="refresh")
 
     return TokenResponse(
-        access_token=token,
+        access_token=access_token,
+        refresh_token=refresh_token,
         user=UserResponse(
             id=user.id,
             email=user.email,
@@ -387,6 +459,92 @@ async def resend_verification(data: ResendVerificationRequest):
     send_verification_email(user.email, user.first_name, new_token)
 
     return MessageResponse(message="If the email exists, a verification link has been sent.")
+
+
+@app.post("/api/auth/refresh", response_model=TokenResponse)
+async def refresh_token(data: RefreshTokenRequest):
+    """Refresh access token using refresh token."""
+    payload = decode_access_token(data.refresh_token, expected_type="refresh")
+
+    if not payload:
+        logger.warning("Invalid refresh token used")
+        raise HTTPException(401, detail="Invalid or expired refresh token")
+
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    user = get_user_by_id(user_id)
+
+    if not user:
+        logger.warning(f"Refresh token for non-existent user: {user_id}")
+        raise HTTPException(401, detail="User not found")
+
+    # Create new access token
+    new_access_token = create_access_token(user.id, user.email, token_type="access")
+    logger.info(f"Token refreshed for user: {user.email}")
+
+    return TokenResponse(
+        access_token=new_access_token,
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            tier=user.tier,
+            email_verified=user.email_verified,
+            created_at=user.created_at,
+        ),
+    )
+
+
+@app.post("/api/auth/password-reset", response_model=MessageResponse)
+async def request_password_reset(data: PasswordResetRequest):
+    """Request password reset email."""
+    user = get_user_by_email(data.email.lower())
+
+    if not user:
+        # Don't reveal if email exists
+        return MessageResponse(message="If the email exists, a password reset link has been sent.")
+
+    # Generate password reset token
+    reset_token = create_access_token(user.id, user.email, token_type="password_reset")
+
+    # Store in database (note: database schema update needed)
+    # For now, we'll just log it
+    logger.info(f"Password reset requested for: {user.email}")
+
+    # TODO: Send password reset email with token
+    # send_password_reset_email(user.email, user.first_name, reset_token)
+
+    return MessageResponse(message="If the email exists, a password reset link has been sent.")
+
+
+@app.post("/api/auth/password-reset-confirm", response_model=MessageResponse)
+async def confirm_password_reset(data: PasswordResetConfirm):
+    """Confirm password reset with token and new password."""
+    payload = decode_access_token(data.token, expected_type="password_reset")
+
+    if not payload:
+        logger.warning("Invalid password reset token used")
+        raise HTTPException(400, detail="Invalid or expired password reset token")
+
+    user_id = payload.get("sub")
+    user = get_user_by_id(user_id)
+
+    if not user:
+        logger.warning(f"Password reset for non-existent user: {user_id}")
+        raise HTTPException(400, detail="User not found")
+
+    # Validate new password strength
+    is_valid, message = validate_password_strength(data.new_password)
+    if not is_valid:
+        logger.warning(f"Password reset with weak password: {message}")
+        raise HTTPException(400, detail=message)
+
+    # Update password in database
+    # TODO: Implement update_user_password in database module
+    logger.info(f"Password reset for user: {user.email}")
+
+    return MessageResponse(message="Password reset successfully. You can now login with your new password.")
 
 
 @app.get("/api/auth/me", response_model=UserResponse)

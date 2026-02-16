@@ -105,14 +105,36 @@ class UserInDB(UserBase):
     tier: SubscriptionTier
     email_verified: bool
     verification_token: Optional[str]
+    password_reset_token: Optional[str] = None
+    password_reset_expiry: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+
+class ErrorResponse(BaseModel):
+    error: str
+    code: Optional[str] = None
+    message: Optional[str] = None
 
 
 class TierInfo(BaseModel):

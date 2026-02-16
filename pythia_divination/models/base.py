@@ -84,6 +84,29 @@ class BaseModel:
 
         logger.info("Loaded artifacts from %s", path)
 
+    def get_scaler(self) -> Optional[StandardScaler]:
+        """Return the scaler for this model.
+
+        If the scaler is already loaded in-memory return it. Otherwise attempt
+        to locate and load `scaler.joblib` from the repository `artifacts/`
+        directory using the model config (works for containerized runtime).
+        """
+        if self.scaler is not None:
+            return self.scaler
+
+        try:
+            repo_root = Path(__file__).resolve().parents[1]
+            artifacts_dir = repo_root / "artifacts" / self.config.model_type / self.config.task.value
+            scaler_path = artifacts_dir / "scaler.joblib"
+            if scaler_path.exists():
+                self.scaler = joblib.load(scaler_path)
+                logger.info("Loaded scaler from %s", scaler_path)
+                return self.scaler
+        except Exception as exc:  # pragma: no cover - runtime safety
+            logger.debug("get_scaler failed: %s", exc)
+
+        return None
+
     def _classify_signal(self, prob_up: float, threshold: float = 0.55) -> str:
         if prob_up >= threshold:
             return "buy"

@@ -18,6 +18,10 @@ from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
+import os
+import json
+import psycopg2
+import psycopg2.extras
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -64,6 +68,78 @@ def _fetch_training_data(tickers: List[str], include_regression: bool = False) -
     return combined
 
 
+def _save_training_df_to_db(df: pd.DataFrame, table: str = "training_samples") -> None:
+    """
+    Save combined training DataFrame into Postgres `training_samples` table as JSONB.
+
+    Each row will be inserted as (ts, ticker, data_json).
+    Requires `DATABASE_URL` configured in `config.settings.settings.database_url` and
+    `psycopg2` available (present in requirements.txt).
+    """
+    if df is None or df.empty:
+        logger.info("No training data to save to DB.")
+        return
+
+    # Ensure index is datetime-like
+    if not hasattr(df.index, 'tz'):
+        # assume index is already naive datetime or string
+        pass
+
+    try:
+        from config.settings import settings
+        dsn = settings.database_url
+    except Exception:
+        logger.warning("Database URL not configured; skipping saving training data.")
+        return
+
+    # Prepare rows: (ts_iso, ticker, json)
+    rows = []
+    # Ensure 'ticker' column exists
+    if 'ticker' not in df.columns:
+        logger.warning("DataFrame missing 'ticker' column; skipping DB save.")
+        return
+
+    for idx, row in df.reset_index().iterrows():
+        ts = row.get('Date') or row.get('date') or row.get('index') or row.get('ts')
+        # fallback: use DataFrame's index value if available
+        if ts is None:
+            ts_val = df.index[idx] if idx < len(df.index) else None
+        else:
+            ts_val = ts
+        try:
+            # convert timestamp to ISO string
+            if hasattr(ts_val, 'isoformat'):
+                ts_iso = ts_val.isoformat()
+            else:
+                ts_iso = str(ts_val)
+        except Exception:
+            ts_iso = str(ts_val)
+
+        ticker = str(row['ticker'])
+        # build row dict excluding ticker and any index-like fields
+        payload = {k: (None if pd.isna(v) else v) for k, v in row.items() if k != 'ticker'}
+        try:
+            rows.append((ts_iso, ticker, json.dumps(payload, default=str)))
+        except Exception as e:
+            logger.debug("Skipping row serialization error: %s", e)
+
+    if not rows:
+        logger.info("No rows prepared for DB insert.")
+        return
+
+    insert_sql = f"INSERT INTO {table} (ts, ticker, data) VALUES %s ON CONFLICT (ts, ticker) DO UPDATE SET data = EXCLUDED.data"
+
+    try:
+        conn = psycopg2.connect(dsn)
+        with conn:
+            with conn.cursor() as cur:
+                psycopg2.extras.execute_values(cur, insert_sql, rows, template=None, page_size=1000)
+        conn.close()
+        logger.info("Saved %d training rows to table %s", len(rows), table)
+    except Exception as e:
+        logger.exception("Failed to save training data to DB: %s", e)
+
+
 def train_model(model_name: str, task: ModelTask, tickers: List[str] = None) -> dict:
     tickers = tickers or _get_train_tickers()
     include_regression = task == ModelTask.REGRESSION
@@ -71,6 +147,13 @@ def train_model(model_name: str, task: ModelTask, tickers: List[str] = None) -> 
     logger.info("Training %s / %s on %d tickers ...", model_name, task.value, len(tickers))
 
     data = _fetch_training_data(tickers, include_regression=include_regression)
+    # Optionally persist the combined training DataFrame into Postgres
+    store_flag = os.getenv("STORE_TRAINING", "0").lower()
+    if store_flag in ("1", "true", "yes"):
+        try:
+            _save_training_df_to_db(data)
+        except Exception as e:
+            logger.warning("Failed to persist training data to DB: %s", e)
     feat_cols = get_feature_columns()
 
     target_col = "y_return" if task == ModelTask.REGRESSION else "y_class"

@@ -547,9 +547,9 @@ async def predict(
     """Get prediction for a single ticker."""
     user_email = user.email if user else "anonymous"
 
-    # Check tier access
-    if not check_tier_access(user, ticker, horizon):
-        tier_name = user.tier.value if user else "free"
+    # Check tier access (but allow anonymous users basic access)
+    if user and not check_tier_access(user, ticker, horizon):
+        tier_name = user.tier.value
         logger.info(f"Prediction access denied: {ticker} ({horizon}) for {user_email} (tier={tier_name})")
         raise HTTPException(
             403,

@@ -916,6 +916,11 @@ body {
   width: 100%;
 }
 
+.form-row .form-group label {
+  display: block;
+  min-height: 1.4em;
+}
+
 .form-error {
   background: var(--danger-bg);
   color: var(--danger);

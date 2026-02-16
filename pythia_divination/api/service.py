@@ -82,7 +82,7 @@ LOADED_MODELS: Dict[Tuple[str, str], any] = {}
 # Legacy global model (for backward compatibility)
 try:
     MODEL, SCALER, FEATS, _ = load_artifacts()
-except FileNotFoundError:
+except (FileNotFoundError, ValueError):
     MODEL = SCALER = FEATS = None
 UNIVERSE = settings.universe
 DATA_SOURCE = settings.data_source

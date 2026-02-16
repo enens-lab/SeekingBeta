@@ -2,7 +2,7 @@ fastapi==0.115.0
 uvicorn==0.30.6
 pydantic==2.8.2
 pandas==2.2.2
-numpy==2.0.1
+numpy==1.26.4
 scikit-learn==1.5.1
 yfinance==0.2.43
 joblib==1.4.2
@@ -16,8 +16,8 @@ asyncpg==0.29.0
 torch>=2.0.0
 tensorflow>=2.10.0
 
-# Technical indicators
-pandas_ta>=0.3.14b0
+# Technical indicators (fallback in code, not required)
+# pandas_ta>=0.3.14b0
 
 # Authentication
 python-jose[cryptography]>=3.3.0

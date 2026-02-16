@@ -1033,48 +1033,69 @@ async def predict(
 
 @app.get("/predict/lstm_5d/{ticker}", response_model=PredictResponse)
 async def predict_lstm_5d(ticker: str):
-    """Proxy LSTM 5-Day predictions from divination backend."""
+    """Proxy LSTM 5-Day predictions from divination backend, or use fallback."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"http://pythia-divination:8000/predict/lstm_5d/{ticker}")
-            if response.status_code != 200:
-                raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
-            data = response.json()
-            # Transform LSTM response to match PredictResponse schema
-            return PredictResponse(
-                ticker=data.get("ticker", ticker),
-                horizon=data.get("horizon", "5 days"),
-                prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
-                signal=data.get("signal", "hold"),
-                last_close=data.get("last_close", 0.0),
-            )
-    except HTTPException:
-        raise
+            if response.status_code == 200:
+                data = response.json()
+                # Transform LSTM response to match PredictResponse schema
+                return PredictResponse(
+                    ticker=data.get("ticker", ticker),
+                    horizon=data.get("horizon", "5 days"),
+                    prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
+                    signal=data.get("signal", "hold"),
+                    last_close=data.get("last_close", 0.0),
+                )
+    except Exception as e:
+        logger.debug(f"LSTM 5D prediction from divination failed: {e}, using fallback")
+
+    # Fallback to local prediction
+    try:
+        prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon="5d")
+        return PredictResponse(
+            ticker=ticker.upper(),
+            horizon="5d",
+            prob_up=prob_up,
+            signal=signal,
+            last_close=last_close,
+        )
     except Exception as e:
         logger.error(f"LSTM 5D prediction error for {ticker}: {e}")
         raise HTTPException(500, detail=str(e))
 
 
 
+
 @app.get("/predict/lstm_jackpot/{ticker}", response_model=PredictResponse)
 async def predict_lstm_jackpot(ticker: str):
-    """Proxy LSTM Jackpot predictions from divination backend."""
+    """Proxy LSTM Jackpot predictions from divination backend, or use fallback."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(f"http://pythia-divination:8000/predict/lstm_jackpot/{ticker}")
-            if response.status_code != 200:
-                raise HTTPException(response.status_code, detail="Failed to fetch LSTM prediction")
-            data = response.json()
-            # Transform LSTM response to match PredictResponse schema
-            return PredictResponse(
-                ticker=data.get("ticker", ticker),
-                horizon=data.get("horizon", "20 days"),
-                prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
-                signal=data.get("signal", "hold"),
-                last_close=data.get("last_close", 0.0),
-            )
-    except HTTPException:
-        raise
+            if response.status_code == 200:
+                data = response.json()
+                # Transform LSTM response to match PredictResponse schema
+                return PredictResponse(
+                    ticker=data.get("ticker", ticker),
+                    horizon=data.get("horizon", "20 days"),
+                    prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
+                    signal=data.get("signal", "hold"),
+                    last_close=data.get("last_close", 0.0),
+                )
+    except Exception as e:
+        logger.debug(f"LSTM Jackpot prediction from divination failed: {e}, using fallback")
+
+    # Fallback to local prediction
+    try:
+        prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon="20d")
+        return PredictResponse(
+            ticker=ticker.upper(),
+            horizon="20d",
+            prob_up=prob_up,
+            signal=signal,
+            last_close=last_close,
+        )
     except Exception as e:
         logger.error(f"LSTM Jackpot prediction error for {ticker}: {e}")
         raise HTTPException(500, detail=str(e))

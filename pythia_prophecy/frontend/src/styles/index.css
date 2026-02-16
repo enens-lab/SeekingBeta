@@ -888,6 +888,8 @@ body {
   font-size: 15px;
   font-family: inherit;
   transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -910,10 +912,13 @@ body {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-row .form-group {
   width: 100%;
+  min-width: 0;
 }
 
 .form-row .form-group label {

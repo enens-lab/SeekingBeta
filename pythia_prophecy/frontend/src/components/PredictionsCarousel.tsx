@@ -64,9 +64,21 @@ function PredictionsCarousel() {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
 
+          // LSTM endpoints return `probability` as a 0-100 percentage.
+          // Normalize to `prob_up` (0-1) expected by PredictionCard.
+          const probUp =
+            typeof data.prob_up === 'number'
+              ? data.prob_up
+              : typeof data.probability === 'number'
+              ? data.probability / 100
+              : null;
+
           return {
             ...data,
             ticker,
+            prob_up: probUp,
+            predicted_return: data.predicted_return ?? null,
+            last_close: data.last_close ?? null,
             model: model.name,
             modelDisplayName: model.displayName,
           };

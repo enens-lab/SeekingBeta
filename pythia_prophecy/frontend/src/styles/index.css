@@ -1049,6 +1049,7 @@ body {
   transition: all 0.2s;
   width: 100%;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .tier-option:hover {
@@ -1068,13 +1069,13 @@ body {
 .tier-option-content {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .tier-option-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   margin-bottom: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -1095,6 +1096,7 @@ body {
   color: var(--accent);
   white-space: nowrap;
   flex-shrink: 0;
+  justify-self: end;
 }
 
 .tier-features-mini {
@@ -1114,6 +1116,16 @@ body {
   min-width: 0;
   overflow-wrap: break-word;
   word-break: break-word;
+}
+
+@media (max-width: 520px) {
+  .tier-option-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tier-price {
+    justify-self: start;
+  }
 }
 
 /* Success/Error Icons */

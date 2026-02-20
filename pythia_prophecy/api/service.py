@@ -1448,7 +1448,7 @@ async def get_available_models(user: UserInDB = Depends(require_verified_user)):
     tier_config = TIER_CONFIG[user.tier]
 
     return ModelsAvailableResponse(
-        models=tier_config.get("models", ["gradient_boosting", "linear_regression"]),
+        models=tier_config.get("models", ["lstm_5d", "lstm_jackpot"]),
         tasks=tier_config.get("tasks", ["classifier"]),
         can_use_custom=user.tier == SubscriptionTier.PRO,
     )
@@ -1550,6 +1550,32 @@ async def run_analysis(
     async with httpx.AsyncClient(timeout=30.0) as client:
         for ticker in data.tickers:
             try:
+                if data.model == "lstm_5d":
+                    response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_5d/{ticker.upper()}")
+                    response.raise_for_status()
+                    payload = response.json()
+                    results.append(AnalyzeResultItem(
+                        ticker=ticker.upper(),
+                        last_close=payload.get("last_close"),
+                        prob_up=(payload.get("probability", 0.0) / 100.0),
+                        signal=payload.get("signal"),
+                        predicted_return=None,
+                    ))
+                    continue
+
+                if data.model == "lstm_jackpot":
+                    response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_jackpot/{ticker.upper()}")
+                    response.raise_for_status()
+                    payload = response.json()
+                    results.append(AnalyzeResultItem(
+                        ticker=ticker.upper(),
+                        last_close=payload.get("last_close"),
+                        prob_up=(payload.get("probability", 0.0) / 100.0),
+                        signal=payload.get("signal"),
+                        predicted_return=None,
+                    ))
+                    continue
+
                 response = await client.get(
                     f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
                     params={

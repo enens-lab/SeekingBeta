@@ -45,34 +45,23 @@ function Analysis() {
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [model, setModel] = useState('gradient_boosting');
+  const [model, setModel] = useState('lstm_5d');
   const [task, setTask] = useState('classifier');
   const [period, setPeriod] = useState('1M');
   const [horizon, setHorizon] = useState('1d');
 
   // All possible options
   const modelIcons: Record<string, ReactNode> = {
-    gradient_boosting: (
+    lstm_5d: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        <circle cx="6" cy="6" r="2" />
+        <circle cx="6" cy="18" r="2" />
+        <circle cx="18" cy="12" r="2" />
+        <line x1="8" y1="6" x2="16" y2="12" />
+        <line x1="8" y1="18" x2="16" y2="12" />
       </svg>
     ),
-    linear_regression: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="3" y1="20" x2="21" y2="4" />
-        <circle cx="6" cy="17" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="10" cy="14" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="14" cy="10" r="1.5" fill="currentColor" stroke="none" />
-        <circle cx="18" cy="7" r="1.5" fill="currentColor" stroke="none" />
-      </svg>
-    ),
-    random_forest: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22v-7" />
-        <path d="M12 15l-4-4 2 0-2-3 3 0-1-3 2 0 0-2 0 2 2 0-1 3 3 0-2 3 2 0z" />
-      </svg>
-    ),
-    lstm: (
+    lstm_jackpot: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="6" cy="6" r="2" />
         <circle cx="6" cy="18" r="2" />
@@ -84,15 +73,12 @@ function Analysis() {
   };
 
   const allModels: ModelOption[] = [
-    { value: 'gradient_boosting', label: 'Gradient Boosting' },
-    { value: 'linear_regression', label: 'Linear Regression' },
-    { value: 'random_forest', label: 'Random Forest' },
-    { value: 'lstm', label: 'LSTM' },
+    { value: 'lstm_5d', label: 'LSTM 5-Day' },
+    { value: 'lstm_jackpot', label: 'LSTM Jackpot' },
   ];
 
   const allTasks: TaskOption[] = [
     { value: 'classifier', label: 'Classification (Buy/Hold/Sell)' },
-    { value: 'regressor', label: 'Regression (Return %)' },
   ];
 
   const allPeriods: PeriodOption[] = [

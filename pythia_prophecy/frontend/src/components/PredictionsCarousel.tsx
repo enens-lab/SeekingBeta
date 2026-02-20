@@ -24,12 +24,6 @@ const InfoIcon = () => (
 // Model configurations with descriptions
 const MODELS = [
   {
-    name: 'gradient_boosting',
-    displayName: 'Gradient Boosting',
-    endpoint: '/predict',
-    description: 'Ensemble learning method that combines weak learners iteratively. Best overall classifier for balanced predictions across market conditions.'
-  },
-  {
     name: 'lstm_5d',
     displayName: 'LSTM 5-Day',
     endpoint: '/predict/lstm_5d',
@@ -40,24 +34,6 @@ const MODELS = [
     displayName: 'LSTM Jackpot',
     endpoint: '/predict/lstm_jackpot',
     description: 'Aggressive LSTM targeting high-return opportunities. Identifies stocks expected to move >20% within 20 days.'
-  },
-  {
-    name: 'random_forest',
-    displayName: 'Random Forest',
-    endpoint: '/predict',
-    description: 'Ensemble of decision trees. Captures non-linear patterns and feature interactions effectively.'
-  },
-  {
-    name: 'linear_regression',
-    displayName: 'Linear Regression',
-    endpoint: '/predict',
-    description: 'Simple baseline model assumes linear relationships. Fast and interpretable predictions.'
-  },
-  {
-    name: 'lstm',
-    displayName: 'LSTM Classic',
-    endpoint: '/predict',
-    description: 'Standard recurrent neural network capturing temporal dependencies. Balances complexity with performance.'
   },
 ];
 
@@ -82,14 +58,7 @@ function PredictionsCarousel() {
     try {
       const results = await Promise.allSettled(
         MAGNIFICENT_7.map(async (ticker) => {
-          let url = '';
-          if (model.endpoint === '/predict') {
-            // Standard models: fetch from prophecy backend
-            url = `/predict/${ticker}?horizon=1d&model=${model.name}`;
-          } else {
-            // LSTM models: fetch via prophecy backend proxy (e.g., /predict/lstm_5d/AAPL)
-            url = `${model.endpoint}/${ticker}`;
-          }
+          const url = `${model.endpoint}/${ticker}`;
 
           const res = await fetch(url);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -162,12 +131,12 @@ function PredictionsCarousel() {
         <div className="section-header">
           <h2 className="section-title">Daily Prediction Signals</h2>
           <p className="section-subtitle">
-            Comparing 6 AI models across the Magnificent 7 stocks
+            Comparing 2 LSTM models across the Magnificent 7 stocks
           </p>
         </div>
         <div className="predictions-loading">
           <div className="spinner" />
-          <p>Loading predictions from 6 models...</p>
+          <p>Loading predictions from 2 models...</p>
         </div>
       </section>
     );
@@ -178,7 +147,7 @@ function PredictionsCarousel() {
       <div className="section-header">
         <h2 className="section-title">Daily Prediction Signals</h2>
         <p className="section-subtitle">
-          6 AI models analyzing the Magnificent 7 stocks - Each row shows one model's view
+          2 LSTM models analyzing the Magnificent 7 stocks - Each row shows one model's view
         </p>
       </div>
 

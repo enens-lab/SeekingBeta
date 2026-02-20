@@ -29,7 +29,7 @@ TIER_CONFIG = {
         "daily_requests": 10,
         "max_stocks_per_request": 5,
         "max_historical_days": 30,
-        "models": ["gradient_boosting", "linear_regression"],
+        "models": ["lstm_5d", "lstm_jackpot"],
         "tasks": ["classifier"],
         "export_csv": False,
     },
@@ -48,8 +48,8 @@ TIER_CONFIG = {
         "daily_requests": 50,
         "max_stocks_per_request": 10,
         "max_historical_days": 90,
-        "models": ["gradient_boosting", "linear_regression", "random_forest"],
-        "tasks": ["classifier", "regressor"],
+        "models": ["lstm_5d", "lstm_jackpot"],
+        "tasks": ["classifier"],
         "export_csv": True,
     },
     SubscriptionTier.PRO: {
@@ -69,8 +69,8 @@ TIER_CONFIG = {
         "daily_requests": None,  # unlimited
         "max_stocks_per_request": 50,
         "max_historical_days": 365,
-        "models": ["gradient_boosting", "linear_regression", "random_forest", "lstm"],
-        "tasks": ["classifier", "regressor"],
+        "models": ["lstm_5d", "lstm_jackpot"],
+        "tasks": ["classifier"],
         "export_csv": True,
     },
 }
@@ -209,7 +209,7 @@ class UpdateTimeframesRequest(BaseModel):
 class AnalyzeRequest(BaseModel):
     """Request to run stock analysis."""
     tickers: List[str] = Field(..., min_length=1)
-    model: str = "gradient_boosting"
+    model: str = "lstm_5d"
     task: str = "classifier"
     period: str = "1M"
     horizon: str = "1d"

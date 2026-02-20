@@ -227,8 +227,19 @@ export const tiers = {
 };
 
 export const predictions = {
-  get: (ticker: string, horizon = '1d'): Promise<Prediction> =>
-    request(`/predict/${ticker}?horizon=${horizon}`),
+  get: (ticker: string, horizon = '1d'): Promise<Prediction> => {
+    const normalized = horizon.toLowerCase();
+
+    if (normalized === '5d' || normalized === '5day' || normalized === '5days') {
+      return request(`/predict/lstm_5d/${ticker}`);
+    }
+
+    if (normalized === '20d' || normalized === '20day' || normalized === '20days') {
+      return request(`/predict/lstm_jackpot/${ticker}`);
+    }
+
+    return request(`/predict/${ticker}?horizon=${horizon}`);
+  },
 
   getUniverse: (): Promise<string[]> => request('/api/universe'),
 };

@@ -64,6 +64,22 @@ function Signup() {
       setFormError('Password must be at least 8 characters');
       return;
     }
+    if (!/[A-Z]/.test(formData.password)) {
+      setFormError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setFormError('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setFormError('Password must contain at least one number');
+      return;
+    }
+    if (!/[!@#$%^&*()_\-+=[\]{};:'",.<>?/\\|`~]/.test(formData.password)) {
+      setFormError('Password must contain at least one special character');
+      return;
+    }
 
     setLoading(true);
 
@@ -189,7 +205,9 @@ function Signup() {
                 minLength={8}
                 autoComplete="new-password"
               />
-              <span className="form-hint">At least 8 characters</span>
+              <span className="form-hint">
+                Min 8 chars, with uppercase, lowercase, number, and special character
+              </span>
             </div>
 
             <div className="form-group">

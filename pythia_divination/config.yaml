@@ -279,7 +279,7 @@ threshold: 0.55
 k_top: 15  # increased for larger universe
 lookback_download: "120d"
 
-data_source: alpaca
+data_source: yahoo
 
 alpaca:
   base_url: "https://data.alpaca.markets/v2"

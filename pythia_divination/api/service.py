@@ -654,11 +654,13 @@ async def healthz():
         db_ok = False
         broker_msg = f"db_error: {e}"
 
-    try:
-        await run_in_threadpool(alp_account)
-    except Exception as e:
-        broker_ok = False
-        broker_msg = f"broker_error: {e}"
+    # Broker checks are only relevant for Alpaca-backed trading mode.
+    if settings.data_source.lower() == "alpaca":
+        try:
+            await run_in_threadpool(alp_account)
+        except Exception as e:
+            broker_ok = False
+            broker_msg = f"broker_error: {e}"
 
     return JSONResponse({
         "ok": db_ok and broker_ok,

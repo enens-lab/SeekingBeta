@@ -79,7 +79,7 @@ class Settings:
             raise RuntimeError("DATABASE_URL is not set (define it in .env)")
 
         # Data source + core knobs
-        data_source = (env("DATA_SOURCE", None) or yget("data_source", "alpaca")).lower()
+        data_source = (env("DATA_SOURCE", None) or yget("data_source", "yahoo")).lower()
         universe = yget("universe", ["AAPL","MSFT","GOOGL","AMZN","META"])
         start = yget("start", "2016-01-01")
         threshold = float(yget("threshold", 0.55))

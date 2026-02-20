@@ -15,6 +15,33 @@ from sklearn.preprocessing import StandardScaler
 logger = logging.getLogger(__name__)
 
 
+def _ensure_numpy_pickle_compat() -> None:
+    """
+    Patch NumPy's private bit-generator ctor for older pickles.
+
+    Some persisted sklearn/joblib artifacts may store the bit-generator as a
+    class object instead of a string name. Newer NumPy expects a string and
+    raises ValueError during unpickle.
+    """
+    try:
+        import numpy.random._pickle as np_pickle  # type: ignore[attr-defined]
+
+        orig = getattr(np_pickle, "__bit_generator_ctor", None)
+        if not callable(orig) or getattr(orig, "_pythia_compat_patched", False):
+            return
+
+        def _compat_ctor(bit_generator_name="MT19937"):
+            if isinstance(bit_generator_name, type):
+                bit_generator_name = bit_generator_name.__name__
+            return orig(bit_generator_name)
+
+        setattr(_compat_ctor, "_pythia_compat_patched", True)
+        np_pickle.__bit_generator_ctor = _compat_ctor
+    except Exception:
+        # Best effort compatibility shim; proceed with normal loading if patch fails.
+        pass
+
+
 class ModelTask(str, Enum):
     CLASSIFICATION = "classifier"
     REGRESSION = "regressor"
@@ -69,6 +96,8 @@ class BaseModel:
 
     def load(self, path: Path) -> None:
         """Load model, scaler, and metrics from disk."""
+        _ensure_numpy_pickle_compat()
+
         model_path = path / "model.joblib"
         if model_path.exists():
             self.model = joblib.load(model_path)

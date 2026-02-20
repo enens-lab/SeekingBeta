@@ -30,8 +30,14 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
       ALPACA_KEY_ID: ${ALPACA_KEY_ID}
       ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY}
-      ALPACA_BASE_URL: ${ALPACA_BASE_URL:-https://paper-api.alpaca.markets/v2}
+      ALPACA_BASE_URL: ${ALPACA_BASE_URL:-https://data.alpaca.markets/v2}
       DATA_SOURCE: ${DATA_SOURCE:-alpaca}
+      # S3 Configuration
+      S3_BUCKET: ${S3_BUCKET:-pythia-ml-artifacts}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      ARTIFACTS_DIR: /app/artifacts
     ports:
       - "8000:8000"
     depends_on:
@@ -42,7 +48,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
 
   # Auth/User Management Backend (pythia_prophecy)

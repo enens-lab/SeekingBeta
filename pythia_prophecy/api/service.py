@@ -463,6 +463,7 @@ async def log_requests(request, call_next):
 
 # Path to React build output
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
+DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").rstrip("/")
 
 
 # ============================================================
@@ -996,12 +997,18 @@ async def predict(
         )
 
     try:
-        # If model-specific prediction requested, try to proxy to divination backend
-        if model and model.lower() in ["random_forest", "linear_regression", "lstm"]:
+        # Use divination backend for model-specific predictions
+        if model and model.lower() in ["gradient_boosting", "random_forest", "linear_regression", "lstm"]:
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
-                    model_endpoint = f"http://pythia-divination:8000/predict/{model}/{ticker.upper()}?horizon={horizon}"
-                    response = await client.get(model_endpoint)
+                    response = await client.get(
+                        f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
+                        params={
+                            "horizon": horizon,
+                            "model": model.lower(),
+                            "task": "classifier",
+                        },
+                    )
                     if response.status_code == 200:
                         data = response.json()
                         return PredictResponse(
@@ -1036,7 +1043,7 @@ async def predict_lstm_5d(ticker: str):
     """Proxy LSTM 5-Day predictions from divination backend, or use fallback."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://pythia-divination:8000/predict/lstm_5d/{ticker}")
+            response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_5d/{ticker}")
             if response.status_code == 200:
                 data = response.json()
                 # Transform LSTM response to match PredictResponse schema
@@ -1072,7 +1079,7 @@ async def predict_lstm_jackpot(ticker: str):
     """Proxy LSTM Jackpot predictions from divination backend, or use fallback."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(f"http://pythia-divination:8000/predict/lstm_jackpot/{ticker}")
+            response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_jackpot/{ticker}")
             if response.status_code == 200:
                 data = response.json()
                 # Transform LSTM response to match PredictResponse schema
@@ -1538,34 +1545,38 @@ async def run_analysis(
             detail=f"Tickers not available in your tier: {', '.join(invalid_tickers)}",
         )
 
-    # Run analysis for each ticker
+    # Run analysis for each ticker against divination so selected model/task are respected.
     results = []
-    for ticker in data.tickers:
-        try:
-            prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon=data.horizon)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for ticker in data.tickers:
+            try:
+                response = await client.get(
+                    f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
+                    params={
+                        "horizon": data.horizon,
+                        "model": data.model,
+                        "task": data.task,
+                    },
+                )
+                response.raise_for_status()
+                payload = response.json()
 
-            # For regression task, calculate a mock predicted return
-            predicted_return = None
-            if data.task == "regressor":
-                import random
-                predicted_return = (prob_up - 0.5) * 0.1 + random.uniform(-0.02, 0.02)
-
-            results.append(AnalyzeResultItem(
-                ticker=ticker.upper(),
-                last_close=last_close,
-                prob_up=prob_up,
-                signal=signal,
-                predicted_return=predicted_return,
-            ))
-        except Exception as e:
-            # Add failed result
-            results.append(AnalyzeResultItem(
-                ticker=ticker.upper(),
-                last_close=None,
-                prob_up=None,
-                signal=None,
-                predicted_return=None,
-            ))
+                results.append(AnalyzeResultItem(
+                    ticker=ticker.upper(),
+                    last_close=payload.get("last_close"),
+                    prob_up=payload.get("prob_up"),
+                    signal=payload.get("signal"),
+                    predicted_return=payload.get("predicted_return"),
+                ))
+            except Exception as e:
+                logger.warning(f"Analysis prediction failed for {ticker.upper()}: {e}")
+                results.append(AnalyzeResultItem(
+                    ticker=ticker.upper(),
+                    last_close=None,
+                    prob_up=None,
+                    signal=None,
+                    predicted_return=None,
+                ))
 
     # Increment rate limit
     _increment_rate_limit(user)

@@ -33,6 +33,7 @@ logs/
 *.db
 
 artifacts/
+pythia_prophecy/frontend/Stock_Prediction_Model/
 
 # Trained model files (but not the models/ source code)
 *.joblib

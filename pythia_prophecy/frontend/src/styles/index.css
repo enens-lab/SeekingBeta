@@ -1067,12 +1067,14 @@ body {
 
 .tier-option-content {
   flex: 1;
+  min-width: 0;
 }
 
 .tier-option-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   margin-bottom: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -1083,7 +1085,9 @@ body {
   font-weight: 600;
   min-width: 0;
   flex-shrink: 1;
+  max-width: 100%;
   overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .tier-price {
@@ -1102,6 +1106,14 @@ body {
   color: var(--text-secondary);
   width: 100%;
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.tier-features-mini li {
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Success/Error Icons */

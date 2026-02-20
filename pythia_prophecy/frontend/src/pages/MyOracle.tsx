@@ -1,5 +1,5 @@
 import { useState, useEffect, ChangeEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import StockTooltip from '../components/StockTooltip';
@@ -8,6 +8,7 @@ import { oracle, OracleData } from '../api/client';
 
 function MyOracle() {
   const { user, isVerified } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
 
   const [oracleData, setOracleData] = useState<OracleData | null>(null);
@@ -268,9 +269,13 @@ function MyOracle() {
 
             {/* Quick Actions */}
             <div className="oracle-actions">
-              <Link to="/dashboard" className="btn btn-primary">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => navigate('/analysis')}
+              >
                 View Predictions
-              </Link>
+              </button>
             </div>
           </div>
         )}

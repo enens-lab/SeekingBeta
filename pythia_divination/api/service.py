@@ -214,6 +214,11 @@ def predict_for_ticker(
     except (ValueError, FileNotFoundError):
         # Fall back to legacy model for backward compatibility
         if model_type == DEFAULT_MODEL and task == DEFAULT_TASK:
+            if MODEL is None or SCALER is None or FEATS is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Model artifacts are not loaded. Ensure artifacts are present at /app/artifacts.",
+                )
             X = feat[FEATS].values
             Xs = SCALER.transform(X)
             prob_up = float(MODEL.predict_proba(Xs)[:, 1][-1])

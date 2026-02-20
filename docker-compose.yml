@@ -40,6 +40,8 @@ services:
       ARTIFACTS_DIR: /app/artifacts
     ports:
       - "8000:8000"
+    volumes:
+      - ./pythia_divination/artifacts:/app/artifacts
     depends_on:
       postgres:
         condition: service_healthy

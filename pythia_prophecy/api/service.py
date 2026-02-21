@@ -118,9 +118,14 @@ def _dedupe_tickers(values: list[str]) -> list[str]:
 
 
 def _load_local_universe(base_universe: list[str]) -> list[str]:
-    csv_path = Path(__file__).parent.parent / "data" / "universe.csv"
     csv_tickers: list[str] = []
-    if csv_path.exists():
+    candidate_paths = [
+        Path(__file__).parent / "universe.csv",              # bundled with prophecy api image
+        Path(__file__).parent.parent / "data" / "universe.csv",  # runtime data volume override
+    ]
+    for csv_path in candidate_paths:
+        if not csv_path.exists():
+            continue
         import csv
 
         with csv_path.open(newline="", encoding="utf-8") as csv_file:
@@ -133,6 +138,8 @@ def _load_local_universe(base_universe: list[str]) -> list[str]:
                 ticker = _normalize_ticker(row[0])
                 if ticker:
                     csv_tickers.append(ticker)
+        if csv_tickers:
+            break
 
     merged = _dedupe_tickers([*base_universe, *csv_tickers])
     return merged or ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]

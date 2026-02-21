@@ -1,8 +1,9 @@
 start: "2019-01-01"
 
 # =============================================================================
-# EXPANDED UNIVERSE (~150 symbols)
-# Organized by sector and type for comprehensive market coverage
+# CURATED BASE UNIVERSE (~170 symbols)
+# This curated list is kept first (used by limited tiers), and then optionally
+# expanded with additional symbols from `pythia_divination/data/universe.csv`.
 # =============================================================================
 
 universe:

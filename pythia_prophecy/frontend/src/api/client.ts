@@ -111,7 +111,38 @@ export interface ModelsResponse {
 }
 
 export interface UniverseResponse {
+  stocks: string[];
   categories: Record<string, string[]>;
+}
+
+export interface RegimePerformance {
+  trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  avg_return_net: number | null;
+}
+
+export interface TrackRecordSummary {
+  source_file: string;
+  as_of: string;
+  sample_size: number;
+  transaction_cost_bps: number;
+  hit_rate: number | null;
+  sharpe_ratio: number | null;
+  max_drawdown: number | null;
+  total_return_gross: number | null;
+  total_return_net: number | null;
+  avg_trade_return_net: number | null;
+  avg_holding_days: number | null;
+  regime_breakdown: Record<string, RegimePerformance>;
+  notes: string[];
+}
+
+export interface TrackRecordResponse {
+  available: boolean;
+  summary: TrackRecordSummary | null;
+  message?: string;
 }
 
 type AuthErrorCallback = (() => void) | null;
@@ -301,4 +332,9 @@ export const analysis = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+};
+
+export const performance = {
+  getTrackRecord: (): Promise<TrackRecordResponse> =>
+    request('/api/performance/track-record'),
 };

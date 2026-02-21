@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef, ChangeEvent, ReactNode, MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { analysis, UserFeatures, AnalysisResponse } from '../api/client';
+import {
+  analysis,
+  performance,
+  UserFeatures,
+  AnalysisResponse,
+  TrackRecordResponse,
+} from '../api/client';
 import DashboardHeader from '../components/DashboardHeader';
 import type { Chart as ChartJS } from 'chart.js';
 
@@ -42,6 +48,7 @@ function Analysis() {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState<AnalysisResponse | null>(null);
+  const [trackRecord, setTrackRecord] = useState<TrackRecordResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -108,6 +115,9 @@ function Analysis() {
         setStockCategories(universeRes.categories);
         setAvailableModels(modelsRes.models);
         setAvailableTasks(modelsRes.tasks);
+
+        const trackRecordRes = await performance.getTrackRecord().catch(() => null);
+        setTrackRecord(trackRecordRes);
       } catch (err) {
         console.error('Failed to load analysis data:', err);
         setError('Failed to load analysis data');
@@ -299,6 +309,12 @@ function Analysis() {
   const dailyLimit = userFeatures?.limits?.daily_requests;
   const showRateBanner = dailyLimit && requestsUsed >= dailyLimit * 0.8;
 
+  const formatPct = (value: number | null | undefined, digits = 1) =>
+    value == null || Number.isNaN(value) ? '--' : `${(value * 100).toFixed(digits)}%`;
+
+  const formatNum = (value: number | null | undefined, digits = 2) =>
+    value == null || Number.isNaN(value) ? '--' : value.toFixed(digits);
+
   return (
     <div className="dashboard-page">
       <DashboardHeader activePage="analysis" />
@@ -311,6 +327,78 @@ function Analysis() {
           </div>
         ) : (
           <>
+            <section className="card track-record-panel">
+              <div className="track-record-header">
+                <h3>Track Record</h3>
+                {trackRecord?.summary && (
+                  <span className="track-record-stamp">
+                    As of {new Date(trackRecord.summary.as_of).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              {!trackRecord?.available || !trackRecord.summary ? (
+                <p className="track-record-empty">
+                  {trackRecord?.message || 'Track record data is not available yet.'}
+                </p>
+              ) : (
+                <>
+                  <div className="track-record-grid">
+                    <div className="track-record-metric">
+                      <span className="label">Sample Size</span>
+                      <strong>{trackRecord.summary.sample_size}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Hit Rate</span>
+                      <strong>{formatPct(trackRecord.summary.hit_rate)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Sharpe</span>
+                      <strong>{formatNum(trackRecord.summary.sharpe_ratio)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Max Drawdown</span>
+                      <strong>{formatPct(trackRecord.summary.max_drawdown)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Return (Gross)</span>
+                      <strong>{formatPct(trackRecord.summary.total_return_gross)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Return (Net)</span>
+                      <strong>{formatPct(trackRecord.summary.total_return_net)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Avg Trade Return (Net)</span>
+                      <strong>{formatPct(trackRecord.summary.avg_trade_return_net)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Transaction Cost</span>
+                      <strong>{trackRecord.summary.transaction_cost_bps} bps (round-trip)</strong>
+                    </div>
+                  </div>
+
+                  <div className="track-record-regimes">
+                    {Object.entries(trackRecord.summary.regime_breakdown).map(([name, stats]) => (
+                      <div key={name} className="regime-chip">
+                        <span className="regime-name">{name}</span>
+                        <span>{stats.wins}/{stats.trades} wins</span>
+                        <span>{formatPct(stats.win_rate)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {trackRecord.summary.notes.length > 0 && (
+                    <ul className="track-record-notes">
+                      {trackRecord.summary.notes.map((note) => (
+                        <li key={note}>{note}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </section>
+
             <div className="analyze-grid">
               {/* Stock Selection Panel */}
               <section className="card stock-panel">

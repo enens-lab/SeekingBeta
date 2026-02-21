@@ -58,7 +58,7 @@ TIER_CONFIG = {
         "stocks_limit": -1,  # unlimited
         "timeframes": ["1mo", "1w", "3d", "2d", "1d", "4h", "1h", "30m", "15m", "5m", "1m"],
         "features": [
-            "Full universe access (43+ stocks)",
+            "Full universe access (6,000+ stocks)",
             "All timeframes (1m to monthly)",
             "Priority email alerts",
             "API access",
@@ -242,6 +242,43 @@ class UserFeaturesResponse(BaseModel):
     tier: str
     features: dict
     limits: dict
+
+
+# ============================================================
+# Performance / Track Record Models
+# ============================================================
+
+class RegimeBreakdown(BaseModel):
+    """Win/loss stats for a market regime bucket."""
+    trades: int
+    wins: int
+    losses: int
+    win_rate: Optional[float] = None
+    avg_return_net: Optional[float] = None
+
+
+class TrackRecordSummary(BaseModel):
+    """Computed performance summary from backtest/live records."""
+    source_file: str
+    as_of: str
+    sample_size: int
+    transaction_cost_bps: float
+    hit_rate: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+    max_drawdown: Optional[float] = None
+    total_return_gross: Optional[float] = None
+    total_return_net: Optional[float] = None
+    avg_trade_return_net: Optional[float] = None
+    avg_holding_days: Optional[float] = None
+    regime_breakdown: Dict[str, RegimeBreakdown] = {}
+    notes: List[str] = []
+
+
+class TrackRecordResponse(BaseModel):
+    """Response wrapper for public performance track record."""
+    available: bool
+    summary: Optional[TrackRecordSummary] = None
+    message: Optional[str] = None
 
 
 # ============================================================

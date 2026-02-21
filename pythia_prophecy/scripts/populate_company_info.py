@@ -23,11 +23,17 @@ def load_universe() -> list[str]:
     """Load the stock universe from pythia_divination config."""
     try:
         import yaml
+        import sys
         config_path = Path(__file__).parent.parent.parent / "pythia_divination" / "config.yaml"
+        divination_path = Path(__file__).parent.parent.parent / "pythia_divination"
+        if divination_path.exists() and str(divination_path) not in sys.path:
+            sys.path.insert(0, str(divination_path))
+        from universe import load_universe as load_divination_universe
+
         if config_path.exists():
             with open(config_path, "r") as f:
                 config = yaml.safe_load(f) or {}
-            universe = config.get("universe", [])
+            universe = load_divination_universe(base_universe=config.get("universe", []))
             if universe:
                 return universe
     except ImportError:

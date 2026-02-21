@@ -64,6 +64,7 @@ from .models import (
     UserPreferences,
     UserPreferencesResponse,
     UpdatePreferencesRequest,
+    TrackRecordResponse,
 )
 from .database import (
     create_user,
@@ -90,28 +91,178 @@ from .auth import (
     validate_password_strength,
 )
 from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
+from .performance import get_track_record
 from .models import UserInDB
 
-# Stock categorization function (mirrors divination logic)
-def categorize_stocks(stocks: list[str]) -> dict[str, list[str]]:
-    """Categorize stocks by sector."""
-    tech = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "AMD", "INTC",
-            "AVGO", "QCOM", "TXN", "MU", "AMAT", "LRCX", "CRM", "ORCL", "ADBE",
-            "NOW", "INTU", "IBM", "CSCO", "HPQ", "DELL"]
-    financials = ["JPM", "BAC", "WFC", "C", "GS", "MS", "USB", "PNC", "BRK-B",
-                  "AIG", "MET", "PRU", "BLK", "SCHW", "AXP", "V", "MA", "PYPL"]
-    healthcare = ["JNJ", "PFE", "MRK", "ABBV", "LLY", "BMY", "AMGN", "GILD",
-                  "REGN", "MRNA", "UNH", "CVS", "CI", "MDT", "ABT"]
-    consumer = ["HD", "LOW", "NKE", "SBUX", "MCD", "TGT", "TJX", "BKNG", "MAR",
-                "F", "GM", "LULU", "WMT", "COST", "PG", "KO", "PEP", "PM", "MO", "CL"]
+
+def _normalize_ticker(value: str) -> str | None:
+    ticker = value.strip().upper()
+    if not ticker:
+        return None
+    for char in ticker:
+        if not (char.isalnum() or char in ".-"):
+            return None
+    return ticker
+
+
+def _dedupe_tickers(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in values:
+        ticker = _normalize_ticker(raw)
+        if not ticker or ticker in seen:
+            continue
+        seen.add(ticker)
+        out.append(ticker)
+    return out
+
+
+def _load_local_universe(base_universe: list[str]) -> list[str]:
+    csv_path = Path(__file__).parent.parent / "data" / "universe.csv"
+    csv_tickers: list[str] = []
+    if csv_path.exists():
+        import csv
+
+        with csv_path.open(newline="", encoding="utf-8") as csv_file:
+            reader = csv.reader(csv_file)
+            for row in reader:
+                if not row:
+                    continue
+                if row[0].strip().lower() in {"ticker", "symbol", "a"}:
+                    continue
+                ticker = _normalize_ticker(row[0])
+                if ticker:
+                    csv_tickers.append(ticker)
+
+    merged = _dedupe_tickers([*base_universe, *csv_tickers])
+    return merged or ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+
+
+def _categorize_local(stocks: list[str]) -> dict[str, list[str]]:
+    tech = [
+        "AAPL",
+        "MSFT",
+        "GOOGL",
+        "AMZN",
+        "META",
+        "NVDA",
+        "TSLA",
+        "AMD",
+        "INTC",
+        "AVGO",
+        "QCOM",
+        "TXN",
+        "MU",
+        "AMAT",
+        "LRCX",
+        "CRM",
+        "ORCL",
+        "ADBE",
+        "NOW",
+        "INTU",
+        "IBM",
+        "CSCO",
+        "HPQ",
+        "DELL",
+    ]
+    financials = [
+        "JPM",
+        "BAC",
+        "WFC",
+        "C",
+        "GS",
+        "MS",
+        "USB",
+        "PNC",
+        "BRK-B",
+        "AIG",
+        "MET",
+        "PRU",
+        "BLK",
+        "SCHW",
+        "AXP",
+        "V",
+        "MA",
+        "PYPL",
+    ]
+    healthcare = [
+        "JNJ",
+        "PFE",
+        "MRK",
+        "ABBV",
+        "LLY",
+        "BMY",
+        "AMGN",
+        "GILD",
+        "REGN",
+        "MRNA",
+        "UNH",
+        "CVS",
+        "CI",
+        "MDT",
+        "ABT",
+    ]
+    consumer = [
+        "HD",
+        "LOW",
+        "NKE",
+        "SBUX",
+        "MCD",
+        "TGT",
+        "TJX",
+        "BKNG",
+        "MAR",
+        "F",
+        "GM",
+        "LULU",
+        "WMT",
+        "COST",
+        "PG",
+        "KO",
+        "PEP",
+        "PM",
+        "MO",
+        "CL",
+    ]
     energy = ["XOM", "CVX", "COP", "SLB", "EOG", "PXD", "OXY", "KMI"]
     industrials = ["CAT", "BA", "UPS", "FDX", "HON", "RTX", "LMT", "GE", "DE", "UNP"]
-    etfs = ["SPY", "QQQ", "IWM", "DIA", "VTI", "VOO", "IVV", "MDY", "XLF", "XLK",
-            "XLV", "XLE", "XLI", "XLY", "XLP", "XLU", "XLB", "XLRE", "XLC",
-            "BND", "TLT", "IEF", "LQD", "HYG", "GLD", "SLV", "USO", "UNG",
-            "EFA", "EEM", "VWO", "FXI", "EWJ"]
+    etfs = [
+        "SPY",
+        "QQQ",
+        "IWM",
+        "DIA",
+        "VTI",
+        "VOO",
+        "IVV",
+        "MDY",
+        "XLF",
+        "XLK",
+        "XLV",
+        "XLE",
+        "XLI",
+        "XLY",
+        "XLP",
+        "XLU",
+        "XLB",
+        "XLRE",
+        "XLC",
+        "BND",
+        "TLT",
+        "IEF",
+        "LQD",
+        "HYG",
+        "GLD",
+        "SLV",
+        "USO",
+        "UNG",
+        "EFA",
+        "EEM",
+        "VWO",
+        "FXI",
+        "EWJ",
+    ]
 
-    categories = {}
+    categories: dict[str, list[str]] = {}
     stock_set = set(stocks)
 
     if tech_in := [s for s in tech if s in stock_set]:
@@ -129,14 +280,25 @@ def categorize_stocks(stocks: list[str]) -> dict[str, list[str]]:
     if etf_in := [s for s in etfs if s in stock_set]:
         categories["ETFs"] = etf_in
 
-    # Other - anything not categorized
     categorized = set()
     for cat_stocks in categories.values():
         categorized.update(cat_stocks)
-    other = [s for s in stocks if s not in categorized]
-    if other:
-        categories["Other"] = other
 
+    other = [s for s in stocks if s not in categorized]
+    if not other:
+        return categories
+
+    if len(other) > 200:
+        buckets: dict[str, list[str]] = {}
+        for symbol in other:
+            lead = symbol[0] if symbol else "#"
+            key = lead if lead.isalpha() else "#"
+            buckets.setdefault(key, []).append(symbol)
+        for key in sorted(buckets):
+            categories[f"Other ({key})"] = buckets[key]
+        return categories
+
+    categories["Other"] = other
     return categories
 
 
@@ -153,15 +315,23 @@ def load_divination_config() -> dict:
 
 # Import from pythia_divination for predictions
 try:
-    import sys
-    import yaml
     DIVINATION_PATH = Path(__file__).parent.parent.parent / "pythia_divination"
     if DIVINATION_PATH.exists() and str(DIVINATION_PATH) not in sys.path:
         sys.path.insert(0, str(DIVINATION_PATH))
+    try:
+        from universe import load_universe as shared_load_universe
+        from universe import categorize_stocks as shared_categorize_stocks
+    except Exception:
+        shared_load_universe = None
+        shared_categorize_stocks = None
 
-    # Load universe directly from config.yaml (doesn't require DATABASE_URL)
+    # Load universe from config.yaml + optional CSV expansion (doesn't require DATABASE_URL)
     divination_config = load_divination_config()
-    UNIVERSE = divination_config.get("universe", [])
+    base_universe = divination_config.get("universe", [])
+    if shared_load_universe:
+        UNIVERSE = shared_load_universe(base_universe=base_universe)
+    else:
+        UNIVERSE = _load_local_universe(base_universe)
     THRESHOLD = float(divination_config.get("threshold", 0.55))
     CFG_LOOKBACK = divination_config.get("lookback_download", "120d")
     DATA_SOURCE = divination_config.get("data_source", "alpaca")
@@ -182,7 +352,10 @@ try:
         MODEL = SCALER = FEATS = None
 
     # Build stock categories dynamically from universe
-    STOCK_CATEGORIES = categorize_stocks(UNIVERSE)
+    if shared_categorize_stocks:
+        STOCK_CATEGORIES = shared_categorize_stocks(UNIVERSE)
+    else:
+        STOCK_CATEGORIES = _categorize_local(UNIVERSE)
 
     logger.info(f"Loaded universe with {len(UNIVERSE)} stocks from pythia_divination")
     logger.info(f"Categories: {', '.join(f'{k} ({len(v)})' for k, v in STOCK_CATEGORIES.items())}")
@@ -190,9 +363,9 @@ except Exception as e:
     logger.warning(f"Could not load from pythia_divination: {e}")
     logger.info("Running in demo mode with mock data")
     PYTHIA_AVAILABLE = False
-    UNIVERSE = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "JPM", "V", "UNH"]
+    UNIVERSE = _load_local_universe([])
     THRESHOLD = 0.55
-    STOCK_CATEGORIES = categorize_stocks(UNIVERSE)
+    STOCK_CATEGORIES = _categorize_local(UNIVERSE)
 
 # Simple in-memory rate limiting (resets on server restart)
 # In production, this should be stored in a database or Redis
@@ -1168,6 +1341,12 @@ def status():
     })
 
 
+@app.get("/api/performance/track-record", response_model=TrackRecordResponse, tags=["Performance"])
+def performance_track_record():
+    """Public track record summary for investor/user transparency."""
+    return get_track_record()
+
+
 # ============================================================
 # Oracle (Watchlist) Endpoints
 # ============================================================
@@ -1461,19 +1640,21 @@ async def get_analysis_universe(user: UserInDB = Depends(require_verified_user))
     stocks_limit = tier_config["stocks_limit"]
 
     if stocks_limit == -1:
-        available_stocks = set(UNIVERSE)
+        available_stocks = list(UNIVERSE)
     else:
-        available_stocks = set(UNIVERSE[:stocks_limit])
+        available_stocks = list(UNIVERSE[:stocks_limit])
+
+    available_set = set(available_stocks)
 
     # Filter categories to only include stocks user has access to
     filtered_categories = {}
     for category, stocks in STOCK_CATEGORIES.items():
-        available_in_category = [s for s in stocks if s in available_stocks]
+        available_in_category = [s for s in stocks if s in available_set]
         if available_in_category:
             filtered_categories[category] = available_in_category
 
     return {
-        "stocks": list(available_stocks),
+        "stocks": available_stocks,
         "categories": filtered_categories,
     }
 

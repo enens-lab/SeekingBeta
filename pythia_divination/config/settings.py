@@ -17,6 +17,7 @@ from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
+from universe import load_universe
 
 # Load .env once, early
 load_dotenv()
@@ -80,7 +81,8 @@ class Settings:
 
         # Data source + core knobs
         data_source = (env("DATA_SOURCE", None) or yget("data_source", "yahoo")).lower()
-        universe = yget("universe", ["AAPL","MSFT","GOOGL","AMZN","META"])
+        base_universe = yget("universe", ["AAPL", "MSFT", "GOOGL", "AMZN", "META"])
+        universe = load_universe(base_universe=base_universe)
         start = yget("start", "2016-01-01")
         threshold = float(yget("threshold", 0.55))
         k_top = int(yget("k_top", 10))

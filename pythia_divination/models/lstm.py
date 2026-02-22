@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 import joblib
@@ -300,7 +300,7 @@ class LSTMModel(BaseModel):
         scaled = self.scaler.transform(flat)
         return scaled.reshape(n_samples, seq_len, n_features)
 
-    def compute_features(self, raw: "pd.DataFrame") -> "pd.DataFrame":
+    def compute_features(self, raw: "pd.DataFrame", ticker: Optional[str] = None) -> "pd.DataFrame":
         """Compute feature DataFrame expected by the LSTM model.
 
         This computes features for both lstm_5d (38 features) and lstm_jackpot (30 features).
@@ -320,6 +320,20 @@ class LSTMModel(BaseModel):
         df.index = pd.to_datetime(df.index)
 
         cols = getattr(self, "feature_columns", None)
+        sentiment_score = 0.0
+        sentiment_articles = 0
+        sentiment_source = "default"
+        if ticker and cols and any(c in cols for c in ("sentiment", "sentiment_change", "num_articles")):
+            try:
+                from features.sentiment import get_sentiment_snapshot
+
+                snapshot = get_sentiment_snapshot(ticker)
+                sentiment_score = float(snapshot.score)
+                sentiment_articles = int(snapshot.num_articles)
+                sentiment_source = snapshot.source
+            except Exception as exc:
+                logger.debug("Sentiment feature fetch failed for %s: %s", ticker, exc)
+
         if not cols:
             # Fallback: compute basic features using existing helpers
             feat = pd.DataFrame(index=df.index)
@@ -428,9 +442,9 @@ class LSTMModel(BaseModel):
             out["insider_own"] = 0.0
             out["inst_own"] = 0.0
             out["market_cap"] = 0.0
-            out["num_articles"] = 0
+            out["num_articles"] = sentiment_articles
             out["pe_ratio"] = 0.0
-            out["sentiment"] = 0.0
+            out["sentiment"] = sentiment_score
             out["short_float"] = 0.0
 
         else:
@@ -495,8 +509,8 @@ class LSTMModel(BaseModel):
             out["insider_shares"] = 0.0
             out["insider_amount"] = 0.0
             out["insider_buy_flag"] = 0
-            out["sentiment"] = 0.0
-            out["num_articles"] = 0
+            out["sentiment"] = sentiment_score
+            out["num_articles"] = sentiment_articles
             out["sentiment_change"] = 0.0
 
         # Ensure all expected columns present and ordered
@@ -505,4 +519,9 @@ class LSTMModel(BaseModel):
                 out[c] = 0.0
 
         out = out[cols]
+        out.attrs["sentiment"] = {
+            "score": sentiment_score,
+            "num_articles": sentiment_articles,
+            "source": sentiment_source,
+        }
         return out.dropna()

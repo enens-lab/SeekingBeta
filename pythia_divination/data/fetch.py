@@ -175,7 +175,6 @@ def _stooq_http(ticker: str, start: Optional[str]) -> pd.DataFrame:
     sym = _stooq_symbol(ticker)
     urls = [
         f"https://stooq.com/q/d/l/?s={sym}&i=d",
-        f"https://stooq.com/q/l/?s={sym}&f=sd2t2ohlcv&h&e=csv",
     ]
     errors: list[str] = []
 
@@ -187,6 +186,8 @@ def _stooq_http(ticker: str, start: Optional[str]) -> pd.DataFrame:
             body = resp.text.strip()
             if not body:
                 raise ValueError("empty response body")
+            if "exceeded the daily hits limit" in body.lower():
+                raise RuntimeError("stooq rate limit exceeded for this source IP")
 
             # Stooq sometimes serves HTML challenge/rate-limit pages to bots.
             sample = body.lstrip()[:256].lower()
@@ -231,6 +232,10 @@ def _stooq_http(ticker: str, start: Optional[str]) -> pd.DataFrame:
 
             # Volume can be missing for some instruments; default to 0.
             normalized["Volume"] = normalized["Volume"].fillna(0)
+            if start is None and len(normalized.index) < 120:
+                raise ValueError(
+                    f"insufficient historical rows ({len(normalized.index)}) from Stooq"
+                )
             return normalized[["Open", "High", "Low", "Close", "Volume"]]
 
         except Exception as exc:

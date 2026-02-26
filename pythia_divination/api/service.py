@@ -1,10 +1,16 @@
 """Pythia Signals API - Multi-model ML Backend."""
 
+import asyncio
+import contextlib
+import json
 import logging
+import os
+import time
 import yaml
 from pathlib import Path
 from collections import Counter
 from datetime import datetime, timezone
+from threading import Lock
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -14,7 +20,7 @@ from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.concurrency import run_in_threadpool
 
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional, Any
 
 from data.fetch import fetch_ohlcv, fetch_panel, fetch_ohlcv_for_lstm
 from features.technical import make_features, get_feature_columns
@@ -91,6 +97,185 @@ THRESHOLD = settings.threshold
 
 EXTRA_FEATS: Dict[Tuple[str, str], Dict[str, float]] = {}
 
+# Lightweight in-memory caches to reduce repeated market-data provider calls.
+# Primary target: homepage Magnificent 7 LSTM endpoints.
+HOME_CACHE_TICKERS = {
+    t.strip().upper()
+    for t in os.getenv("HOME_CACHE_TICKERS", "AAPL,MSFT,GOOGL,AMZN,NVDA,TSLA,META").split(",")
+    if t.strip()
+}
+CACHE_DEFAULT_MODELS = os.getenv("HOME_CACHE_MODELS", "lstm_5d,lstm_jackpot")
+HOME_CACHE_MODELS = tuple(m.strip() for m in CACHE_DEFAULT_MODELS.split(",") if m.strip())
+CACHE_ALL_LSTM = os.getenv("CACHE_ALL_LSTM_PREDICTIONS", "false").lower() == "true"
+LSTM_RESPONSE_CACHE_TTL = int(os.getenv("LSTM_RESPONSE_CACHE_TTL_SECONDS", "900"))
+LSTM_STALE_CACHE_TTL = int(os.getenv("LSTM_STALE_CACHE_TTL_SECONDS", "3600"))
+LSTM_RAW_DATA_CACHE_TTL = int(os.getenv("LSTM_RAW_DATA_CACHE_TTL_SECONDS", "600"))
+LSTM_RAW_DATA_STALE_TTL = int(os.getenv("LSTM_RAW_DATA_STALE_TTL_SECONDS", "86400"))
+LSTM_CACHE_MAX_ITEMS = int(os.getenv("LSTM_CACHE_MAX_ITEMS", "512"))
+LSTM_SINGLEFLIGHT_WAIT_SECONDS = float(os.getenv("LSTM_SINGLEFLIGHT_WAIT_SECONDS", "3.0"))
+HOME_CACHE_WARM_ENABLED = os.getenv("HOME_CACHE_WARM_ENABLED", "true").lower() == "true"
+HOME_CACHE_WARM_ON_STARTUP = os.getenv("HOME_CACHE_WARM_ON_STARTUP", "true").lower() == "true"
+HOME_CACHE_WARM_INTERVAL_SECONDS = int(os.getenv("HOME_CACHE_WARM_INTERVAL_SECONDS", "900"))
+HOME_CACHE_SNAPSHOT_PATH = Path(os.getenv("HOME_CACHE_SNAPSHOT_PATH", "/app/artifacts/home_cache_snapshot.json"))
+
+_LSTM_RESPONSE_CACHE: Dict[Tuple[str, str, str], Tuple[float, dict]] = {}
+_LSTM_RAW_DATA_CACHE: Dict[Tuple[str, str], Tuple[float, pd.DataFrame]] = {}
+_LSTM_SINGLEFLIGHT_LOCKS: Dict[Tuple[str, str, str], Lock] = {}
+_LSTM_CACHE_LOCK = Lock()
+_HOME_CACHE_WARMER_TASK: Optional[asyncio.Task] = None
+
+LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
+    "lstm_5d": {
+        "description": "5-Day Consistency Model (Production LSTM)",
+        "horizon": "5 days",
+        "target_return": ">2%",
+        "high_cutoff": 0.60,
+        "medium_cutoff": 0.40,
+        "high_signal": "buy",
+        "medium_signal": "hold",
+        "low_signal": "sell",
+        "high_reco": "Strong buy signal ({prob:.1f}% probability of >2% gain in 5 days)",
+        "medium_reco": "Neutral signal ({prob:.1f}% probability)",
+        "low_reco": "Weak signal ({prob:.1f}% probability, consider avoiding)",
+    },
+    "lstm_jackpot": {
+        "description": "20-Day Jackpot Model (High-Return Hunter)",
+        "horizon": "20 days",
+        "target_return": ">20%",
+        "high_cutoff": 0.55,
+        "medium_cutoff": 0.45,
+        "high_signal": "strong_buy",
+        "medium_signal": "hold",
+        "low_signal": "avoid",
+        "high_reco": "High-conviction jackpot opportunity ({prob:.1f}% probability of >20% gain in 20 days)",
+        "medium_reco": "Moderate signal ({prob:.1f}% probability, monitor for entry)",
+        "low_reco": "Low probability ({prob:.1f}%), not a jackpot candidate",
+    },
+}
+
+
+def _should_cache_ticker(ticker: str) -> bool:
+    return CACHE_ALL_LSTM or ticker.upper() in HOME_CACHE_TICKERS
+
+
+def _cache_key(model_name: str, ticker: str) -> Tuple[str, str, str]:
+    return (DATA_SOURCE.lower(), model_name, ticker.upper())
+
+
+def _cache_get_entry(model_name: str, ticker: str) -> Optional[Tuple[float, dict]]:
+    key = _cache_key(model_name, ticker)
+    with _LSTM_CACHE_LOCK:
+        entry = _LSTM_RESPONSE_CACHE.get(key)
+        if not entry:
+            return None
+        ts, payload = entry
+        return ts, dict(payload)
+
+
+def _cache_get(model_name: str, ticker: str, max_age_seconds: int) -> Optional[dict]:
+    now = time.time()
+    entry = _cache_get_entry(model_name, ticker)
+    if not entry:
+        return None
+    ts, payload = entry
+    if now - ts > max_age_seconds:
+        return None
+    return payload
+
+
+def _cache_set(model_name: str, ticker: str, payload: dict) -> None:
+    key = _cache_key(model_name, ticker)
+    now = time.time()
+    with _LSTM_CACHE_LOCK:
+        _LSTM_RESPONSE_CACHE[key] = (now, dict(payload))
+        if len(_LSTM_RESPONSE_CACHE) > LSTM_CACHE_MAX_ITEMS:
+            oldest = min(_LSTM_RESPONSE_CACHE.items(), key=lambda kv: kv[1][0])[0]
+            _LSTM_RESPONSE_CACHE.pop(oldest, None)
+
+
+def _singleflight_lock(model_name: str, ticker: str) -> Lock:
+    key = _cache_key(model_name, ticker)
+    with _LSTM_CACHE_LOCK:
+        lock = _LSTM_SINGLEFLIGHT_LOCKS.get(key)
+        if lock is None:
+            lock = Lock()
+            _LSTM_SINGLEFLIGHT_LOCKS[key] = lock
+        return lock
+
+
+def _load_home_cache_snapshot() -> None:
+    if not HOME_CACHE_SNAPSHOT_PATH.exists():
+        return
+    try:
+        payload = json.loads(HOME_CACHE_SNAPSHOT_PATH.read_text(encoding="utf-8"))
+        loaded = 0
+        with _LSTM_CACHE_LOCK:
+            for raw_key, value in payload.items():
+                if not isinstance(raw_key, str) or not isinstance(value, dict):
+                    continue
+                parts = raw_key.split("|", 2)
+                if len(parts) != 3:
+                    continue
+                ts = float(value.get("ts", 0))
+                data = value.get("payload")
+                if ts <= 0 or not isinstance(data, dict):
+                    continue
+                _LSTM_RESPONSE_CACHE[(parts[0], parts[1], parts[2])] = (ts, data)
+                loaded += 1
+        if loaded:
+            logger.info("Loaded %d cached LSTM predictions from snapshot", loaded)
+    except Exception as exc:
+        logger.warning("Failed loading cache snapshot at %s: %s", HOME_CACHE_SNAPSHOT_PATH, exc)
+
+
+def _save_home_cache_snapshot() -> None:
+    try:
+        serialized: Dict[str, dict] = {}
+        with _LSTM_CACHE_LOCK:
+            for key, (ts, payload) in _LSTM_RESPONSE_CACHE.items():
+                serialized["|".join(key)] = {"ts": ts, "payload": payload}
+        HOME_CACHE_SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        HOME_CACHE_SNAPSHOT_PATH.write_text(
+            json.dumps(serialized, separators=(",", ":")),
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        logger.warning("Failed writing cache snapshot at %s: %s", HOME_CACHE_SNAPSHOT_PATH, exc)
+
+
+def _get_cached_lstm_raw_data(ticker: str) -> pd.DataFrame:
+    """Return cached OHLCV raw data for LSTM endpoints to avoid duplicate provider hits."""
+    cache_key = (DATA_SOURCE.lower(), ticker.upper())
+    now = time.time()
+    stale_df: Optional[pd.DataFrame] = None
+    with _LSTM_CACHE_LOCK:
+        entry = _LSTM_RAW_DATA_CACHE.get(cache_key)
+        if entry:
+            ts, df = entry
+            if now - ts <= LSTM_RAW_DATA_CACHE_TTL:
+                return df.copy()
+            if now - ts <= LSTM_RAW_DATA_STALE_TTL:
+                stale_df = df.copy()
+
+    try:
+        raw = fetch_ohlcv_for_lstm(ticker, sequence_length=60, data_source=DATA_SOURCE)
+    except Exception:
+        if stale_df is not None:
+            logger.warning(
+                "Using stale OHLCV cache for %s after provider fetch failure (stale age <= %ss)",
+                ticker,
+                LSTM_RAW_DATA_STALE_TTL,
+            )
+            return stale_df
+        raise
+
+    with _LSTM_CACHE_LOCK:
+        _LSTM_RAW_DATA_CACHE[cache_key] = (now, raw.copy())
+        if len(_LSTM_RAW_DATA_CACHE) > LSTM_CACHE_MAX_ITEMS:
+            oldest = min(_LSTM_RAW_DATA_CACHE.items(), key=lambda kv: kv[1][0])[0]
+            _LSTM_RAW_DATA_CACHE.pop(oldest, None)
+    return raw
+
 
 def load_model(model_type: str, task: str):
     """Load a model from artifacts (with caching)."""
@@ -118,6 +303,64 @@ app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 app.include_router(analytics_router)
 
 
+def _configured_home_models() -> Tuple[str, ...]:
+    models = []
+    for model_name in HOME_CACHE_MODELS:
+        if model_name not in LSTM_MODEL_METADATA:
+            logger.warning("Ignoring unknown HOME_CACHE model: %s", model_name)
+            continue
+        models.append(model_name)
+    return tuple(models)
+
+
+def _warm_home_cache_once(force_refresh: bool = False) -> Dict[str, Any]:
+    tickers = sorted(HOME_CACHE_TICKERS)
+    models = _configured_home_models()
+    summary: Dict[str, Any] = {
+        "tickers": len(tickers),
+        "models": len(models),
+        "success": 0,
+        "failed": 0,
+        "errors": [],
+        "force_refresh": force_refresh,
+        "as_of": datetime.now(timezone.utc).isoformat(),
+    }
+
+    for model_name in models:
+        for ticker in tickers:
+            try:
+                _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
+                summary["success"] += 1
+            except Exception as exc:
+                summary["failed"] += 1
+                if len(summary["errors"]) < 20:
+                    summary["errors"].append({"model": model_name, "ticker": ticker, "error": str(exc)})
+
+    _save_home_cache_snapshot()
+    return summary
+
+
+async def _home_cache_warmer_loop() -> None:
+    if HOME_CACHE_WARM_ON_STARTUP:
+        summary = await run_in_threadpool(_warm_home_cache_once, False)
+        logger.info("Initial homepage cache warm complete: %s", summary)
+
+    while True:
+        await asyncio.sleep(max(30, HOME_CACHE_WARM_INTERVAL_SECONDS))
+        summary = await run_in_threadpool(_warm_home_cache_once, True)
+        logger.info("Periodic homepage cache warm complete: %s", summary)
+
+
+def _start_home_cache_warmer() -> None:
+    global _HOME_CACHE_WARMER_TASK
+    if not HOME_CACHE_WARM_ENABLED:
+        logger.info("Homepage cache warmer disabled via HOME_CACHE_WARM_ENABLED=false")
+        return
+    if _HOME_CACHE_WARMER_TASK is not None and not _HOME_CACHE_WARMER_TASK.done():
+        return
+    _HOME_CACHE_WARMER_TASK = asyncio.create_task(_home_cache_warmer_loop())
+
+
 @app.on_event("startup")
 async def _startup():
     # Temporarily disable database for LSTM testing
@@ -127,6 +370,21 @@ async def _startup():
         await seed_test_accounts()
     except Exception as e:
         logger.warning(f"Database initialization skipped: {e}")
+
+    _load_home_cache_snapshot()
+    _start_home_cache_warmer()
+
+
+@app.on_event("shutdown")
+async def _shutdown():
+    global _HOME_CACHE_WARMER_TASK
+    if _HOME_CACHE_WARMER_TASK is None:
+        return
+    _HOME_CACHE_WARMER_TASK.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await _HOME_CACHE_WARMER_TASK
+    _HOME_CACHE_WARMER_TASK = None
+    _save_home_cache_snapshot()
 
 
 async def seed_test_accounts():
@@ -179,6 +437,124 @@ def _fallback_prediction_from_features(feat: pd.DataFrame, last_close: float, ta
 
     predicted_return = float(last.get("ret_1d", 0.0))
     return None, None, last_close, predicted_return
+
+
+def _lstm_signal_and_recommendation(model_name: str, prob_up: float) -> Tuple[str, str]:
+    meta = LSTM_MODEL_METADATA[model_name]
+    prob_pct = prob_up * 100.0
+    if prob_up >= float(meta["high_cutoff"]):
+        signal = str(meta["high_signal"])
+        recommendation = str(meta["high_reco"]).format(prob=prob_pct)
+    elif prob_up >= float(meta["medium_cutoff"]):
+        signal = str(meta["medium_signal"])
+        recommendation = str(meta["medium_reco"]).format(prob=prob_pct)
+    else:
+        signal = str(meta["low_signal"])
+        recommendation = str(meta["low_reco"]).format(prob=prob_pct)
+    return signal, recommendation
+
+
+def _compute_lstm_prediction(model_name: str, ticker: str) -> dict:
+    if model_name not in LSTM_MODEL_METADATA:
+        raise HTTPException(404, detail=f"Unknown LSTM model: {model_name}")
+
+    ticker = ticker.upper()
+    meta = LSTM_MODEL_METADATA[model_name]
+
+    raw = _get_cached_lstm_raw_data(ticker)
+    model = load_model(model_name, "classifier")
+
+    try:
+        feat = model.compute_features(raw, ticker=ticker)
+    except TypeError:
+        feat = model.compute_features(raw)
+    feat_cols = list(feat.columns)
+
+    if len(feat) < 60:
+        raise HTTPException(400, f"Not enough data after feature engineering (need 60 samples, got {len(feat)})")
+
+    X = feat[feat_cols].values
+    scaler = model.get_scaler()
+    X_scaled = scaler.transform(X) if scaler else X
+    X_seq = create_inference_sequence(X_scaled, 60)
+
+    result = model.predict(X_seq)
+    prob_up = float(result.prob_up)
+    last_close = float(raw["Close"].iloc[-1])
+    signal, recommendation = _lstm_signal_and_recommendation(model_name, prob_up)
+
+    response = {
+        "ticker": ticker,
+        "model": model_name,
+        "description": str(meta["description"]),
+        "horizon": str(meta["horizon"]),
+        "target_return": str(meta["target_return"]),
+        "probability": round(prob_up * 100, 2),
+        "signal": signal,
+        "last_close": last_close,
+        "recommendation": recommendation,
+        "sentiment_score": round(float(feat.attrs.get("sentiment", {}).get("score", 0.0)), 4),
+        "sentiment_articles": int(feat.attrs.get("sentiment", {}).get("num_articles", 0)),
+        "sentiment_source": feat.attrs.get("sentiment", {}).get("source", "default"),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_source": DATA_SOURCE,
+    }
+    return response
+
+
+def _predict_lstm_cached(model_name: str, ticker: str, force_refresh: bool = False) -> dict:
+    ticker = ticker.upper()
+    use_cache = _should_cache_ticker(ticker)
+
+    if use_cache and not force_refresh:
+        cached = _cache_get(model_name, ticker, LSTM_RESPONSE_CACHE_TTL)
+        if cached:
+            cached["cache_status"] = "hit"
+            return cached
+
+    lock = _singleflight_lock(model_name, ticker)
+    acquired = lock.acquire(timeout=LSTM_SINGLEFLIGHT_WAIT_SECONDS)
+    if not acquired:
+        if use_cache:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale_inflight"
+                stale["warning"] = "Refresh in progress; returned cached prediction"
+                return stale
+        raise HTTPException(503, detail="Prediction refresh in progress. Please retry shortly.")
+
+    try:
+        if use_cache and not force_refresh:
+            cached = _cache_get(model_name, ticker, LSTM_RESPONSE_CACHE_TTL)
+            if cached:
+                cached["cache_status"] = "hit"
+                return cached
+
+        response = _compute_lstm_prediction(model_name, ticker)
+        response["cache_status"] = "miss" if not force_refresh else "refreshed"
+        if use_cache:
+            _cache_set(model_name, ticker, response)
+        return response
+    except HTTPException as exc:
+        if use_cache:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale"
+                stale["warning"] = "Returning stale cached result due live data fetch failure"
+                stale["last_error"] = str(exc.detail)
+                return stale
+        raise
+    except Exception as exc:
+        if use_cache:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale"
+                stale["warning"] = "Returning stale cached result due live data fetch failure"
+                stale["last_error"] = str(exc)
+                return stale
+        raise HTTPException(400, detail=str(exc))
+    finally:
+        lock.release()
 
 
 def predict_for_ticker(
@@ -332,165 +708,98 @@ def predict(
 
 @app.get("/predict/lstm_5d/{ticker}")
 def predict_lstm_5d(ticker: str):
-    """
-    Get prediction from LSTM 5-day consistency model.
-
-    This model predicts stocks likely to gain >2% in the next 5 trading days.
-    Uses 60 timesteps of 38 technical features with Conv1D + LSTM + MultiHeadAttention architecture.
-
-    Returns:
-        - ticker: Stock symbol
-        - model: "lstm_5d"
-        - description: Model description
-        - horizon: "5 days"
-        - target_return: ">2%"
-        - probability: Probability of achieving target return (0-100)
-        - signal: "buy" (>60%), "hold" (40-60%), "sell" (<40%)
-        - last_close: Current stock price
-        - recommendation: Human-readable recommendation
-    """
-    try:
-        ticker = ticker.upper()
-
-        # Fetch extended historical data (252+ days for proper scaling)
-        raw = fetch_ohlcv_for_lstm(ticker, sequence_length=60, data_source=DATA_SOURCE)
-
-        # Load model
-        model = load_model("lstm_5d", "classifier")
-
-        # Compute features using model's feature engineering
-        try:
-            feat = model.compute_features(raw, ticker=ticker)
-        except TypeError:
-            feat = model.compute_features(raw)
-        feat_cols = list(feat.columns)
-
-        if len(feat) < 60:
-            raise HTTPException(400, f"Not enough data after feature engineering (need 60 samples, got {len(feat)})")
-
-        # Prepare sequence
-        X = feat[feat_cols].values
-        scaler = model.get_scaler()
-        X_scaled = scaler.transform(X) if scaler else X
-        X_seq = create_inference_sequence(X_scaled, 60)
-
-        # Predict
-        result = model.predict(X_seq)
-        prob_up = result.prob_up
-        last_close = float(raw["Close"].iloc[-1])
-
-        # Generate signal and recommendation
-        if prob_up >= 0.60:
-            signal = "buy"
-            recommendation = f"Strong buy signal ({prob_up*100:.1f}% probability of >2% gain in 5 days)"
-        elif prob_up >= 0.40:
-            signal = "hold"
-            recommendation = f"Neutral signal ({prob_up*100:.1f}% probability)"
-        else:
-            signal = "sell"
-            recommendation = f"Weak signal ({prob_up*100:.1f}% probability, consider avoiding)"
-
-        return {
-            "ticker": ticker,
-            "model": "lstm_5d",
-            "description": "5-Day Consistency Model (Production LSTM)",
-            "horizon": "5 days",
-            "target_return": ">2%",
-            "probability": round(prob_up * 100, 2),
-            "signal": signal,
-            "last_close": last_close,
-            "recommendation": recommendation,
-            "sentiment_score": round(float(feat.attrs.get("sentiment", {}).get("score", 0.0)), 4),
-            "sentiment_articles": int(feat.attrs.get("sentiment", {}).get("num_articles", 0)),
-            "sentiment_source": feat.attrs.get("sentiment", {}).get("source", "default"),
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(400, detail=str(e))
+    return _predict_lstm_cached("lstm_5d", ticker)
 
 
 @app.get("/predict/lstm_jackpot/{ticker}")
 def predict_lstm_jackpot(ticker: str):
-    """
-    Get prediction from LSTM jackpot model.
+    return _predict_lstm_cached("lstm_jackpot", ticker)
 
-    This model predicts rare high-conviction opportunities: stocks likely to gain >20% in the next 20 trading days.
-    Uses 60 timesteps of 30 specialized features including Bollinger Band squeeze indicators,
-    relative volume, and momentum metrics with Conv1D + LSTM + MultiHeadAttention architecture.
 
-    Returns:
-        - ticker: Stock symbol
-        - model: "lstm_jackpot"
-        - description: Model description
-        - horizon: "20 days"
-        - target_return: ">20%"
-        - probability: Probability of achieving target return (0-100)
-        - signal: "strong_buy" (>55%), "hold" (45-55%), "avoid" (<45%)
-        - last_close: Current stock price
-        - recommendation: Human-readable recommendation
-    """
-    try:
-        ticker = ticker.upper()
+@app.get("/predict/homepage")
+def predict_homepage(
+    force_refresh: bool = False,
+    tickers: Optional[str] = None,
+    models: Optional[str] = None,
+):
+    """Batch endpoint for homepage cards to avoid one-request-per-card traffic spikes."""
+    requested_tickers = (
+        [t.strip().upper() for t in tickers.split(",") if t.strip()]
+        if tickers
+        else sorted(HOME_CACHE_TICKERS)
+    )
+    requested_models = (
+        [m.strip() for m in models.split(",") if m.strip()]
+        if models
+        else list(_configured_home_models())
+    )
 
-        # Fetch extended historical data (252+ days for proper scaling)
-        raw = fetch_ohlcv_for_lstm(ticker, sequence_length=60, data_source=DATA_SOURCE)
+    invalid_models = [m for m in requested_models if m not in LSTM_MODEL_METADATA]
+    if invalid_models:
+        raise HTTPException(400, detail=f"Unsupported model(s): {', '.join(invalid_models)}")
 
-        # Load model
-        model = load_model("lstm_jackpot", "classifier")
+    rows = []
+    for model_name in requested_models:
+        model_predictions = []
+        failures = []
+        for ticker in requested_tickers:
+            try:
+                model_predictions.append(
+                    _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
+                )
+            except Exception as exc:
+                failures.append({"ticker": ticker, "error": str(exc)})
 
-        # Compute features using model's feature engineering
-        try:
-            feat = model.compute_features(raw, ticker=ticker)
-        except TypeError:
-            feat = model.compute_features(raw)
-        feat_cols = list(feat.columns)
+        rows.append({
+            "model": model_name,
+            "predictions": model_predictions,
+            "requested_tickers": len(requested_tickers),
+            "successful_predictions": len(model_predictions),
+            "failures": failures,
+        })
 
-        if len(feat) < 60:
-            raise HTTPException(400, f"Not enough data after feature engineering (need 60 samples, got {len(feat)})")
+    return {
+        "available": any(row["successful_predictions"] > 0 for row in rows),
+        "as_of": datetime.now(timezone.utc).isoformat(),
+        "data_source": DATA_SOURCE,
+        "rows": rows,
+    }
 
-        # Prepare sequence
-        X = feat[feat_cols].values
-        scaler = model.get_scaler()
-        X_scaled = scaler.transform(X) if scaler else X
-        X_seq = create_inference_sequence(X_scaled, 60)
 
-        # Predict
-        result = model.predict(X_seq)
-        prob_up = result.prob_up
-        last_close = float(raw["Close"].iloc[-1])
-
-        # Generate signal and recommendation (jackpot uses higher threshold)
-        if prob_up >= 0.55:
-            signal = "strong_buy"
-            recommendation = f"High-conviction jackpot opportunity ({prob_up*100:.1f}% probability of >20% gain in 20 days)"
-        elif prob_up >= 0.45:
-            signal = "hold"
-            recommendation = f"Moderate signal ({prob_up*100:.1f}% probability, monitor for entry)"
-        else:
-            signal = "avoid"
-            recommendation = f"Low probability ({prob_up*100:.1f}%), not a jackpot candidate"
-
-        return {
+@app.get("/predict/cache/status")
+def prediction_cache_status():
+    """Operational visibility for cached homepage prediction entries."""
+    now = time.time()
+    entries = []
+    with _LSTM_CACHE_LOCK:
+        snapshot = list(_LSTM_RESPONSE_CACHE.items())
+    for key, (ts, payload) in snapshot:
+        source, model_name, ticker = key
+        entries.append({
+            "source": source,
+            "model": model_name,
             "ticker": ticker,
-            "model": "lstm_jackpot",
-            "description": "20-Day Jackpot Model (High-Return Hunter)",
-            "horizon": "20 days",
-            "target_return": ">20%",
-            "probability": round(prob_up * 100, 2),
-            "signal": signal,
-            "last_close": last_close,
-            "recommendation": recommendation,
-            "sentiment_score": round(float(feat.attrs.get("sentiment", {}).get("score", 0.0)), 4),
-            "sentiment_articles": int(feat.attrs.get("sentiment", {}).get("num_articles", 0)),
-            "sentiment_source": feat.attrs.get("sentiment", {}).get("source", "default"),
-        }
+            "age_seconds": round(now - ts, 2),
+            "signal": payload.get("signal"),
+            "probability": payload.get("probability"),
+            "generated_at": payload.get("generated_at"),
+        })
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(400, detail=str(e))
+    entries.sort(key=lambda row: (row["model"], row["ticker"]))
+    return {
+        "count": len(entries),
+        "fresh_ttl_seconds": LSTM_RESPONSE_CACHE_TTL,
+        "stale_ttl_seconds": LSTM_STALE_CACHE_TTL,
+        "warm_interval_seconds": HOME_CACHE_WARM_INTERVAL_SECONDS,
+        "entries": entries,
+    }
+
+
+@app.post("/predict/cache/warm")
+async def warm_prediction_cache(force_refresh: bool = True):
+    """Manual operational endpoint for warming homepage prediction cache."""
+    summary = await run_in_threadpool(_warm_home_cache_once, force_refresh)
+    return summary
 
 
 @app.post("/predict/multi", response_model=MultiModelPredictResponse)

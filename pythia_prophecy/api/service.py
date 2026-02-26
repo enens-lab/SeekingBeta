@@ -83,6 +83,12 @@ from .database import (
     get_company_info,
     get_company_news,
 )
+from .price_cache_store import (
+    ensure_table as ensure_price_cache_table,
+    upsert_last_close as upsert_last_close_pg,
+    get_last_close as get_last_close_pg,
+    is_enabled as price_cache_enabled,
+)
 from .auth import (
     hash_password,
     verify_password,
@@ -498,6 +504,15 @@ async def startup_validation():
     logger.info(f"Frontend URL: {frontend_url}")
     logger.info(f"CORS Origins: {ALLOWED_ORIGINS}")
 
+    # Ensure Postgres-backed price cache table for dashboard last_close persistence.
+    if price_cache_enabled():
+        try:
+            ensure_price_cache_table()
+        except Exception as e:
+            errors.append(f"Postgres price cache initialization failed: {e}")
+    else:
+        warnings.append("DATABASE_URL not set - dashboard last_close cache disabled")
+
     # Log warnings
     for warning in warnings:
         logger.warning(f"Configuration warning: {warning}")
@@ -645,6 +660,7 @@ async def log_requests(request, call_next):
 # Path to React build output
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").rstrip("/")
+PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 
 
 # ============================================================
@@ -1135,6 +1151,63 @@ def predict_for_ticker(ticker: str, horizon: str = "1d"):
     return prob_up, signal, last_close
 
 
+def _cache_last_close_for_dashboard(
+    ticker: str,
+    horizon: str,
+    last_close: float,
+    source: str,
+) -> None:
+    """Persist last_close for dashboard fallback use."""
+    if last_close is None:
+        return
+    try:
+        value = float(last_close)
+        if value <= 0:
+            return
+        upsert_last_close_pg(
+            ticker=ticker.upper(),
+            timeframe=_horizon_to_display(horizon),
+            last_close=value,
+            source=source,
+        )
+    except Exception as exc:
+        logger.debug("Failed to cache last_close for %s (%s): %s", ticker, horizon, exc)
+
+
+def _cached_price_fallback_response(
+    ticker: str,
+    horizon: str,
+    reason: str,
+) -> Optional[PredictResponse]:
+    """Return neutral prediction with cached last_close when live prediction fails."""
+    try:
+        cached = get_last_close_pg(
+            ticker=ticker.upper(),
+            timeframe=_horizon_to_display(horizon),
+            max_age_hours=PRICE_CACHE_MAX_AGE_HOURS,
+        )
+    except Exception as exc:
+        logger.debug("Failed reading cached price for %s (%s): %s", ticker, horizon, exc)
+        return None
+
+    if not cached:
+        return None
+
+    logger.warning(
+        "Using cached last_close for %s (%s) due to live prediction failure: %s",
+        ticker.upper(),
+        horizon,
+        reason,
+    )
+    return PredictResponse(
+        ticker=ticker.upper(),
+        horizon=_horizon_to_display(horizon),
+        prob_up=0.5,
+        signal="hold",
+        last_close=float(cached["last_close"]),
+    )
+
+
 def check_tier_access(user: Optional[UserInDB], ticker: str, horizon: str) -> bool:
     """Check if user's tier allows access to this ticker/horizon."""
     if not user:
@@ -1199,30 +1272,48 @@ async def predict(
                     )
                     if response.status_code == 200:
                         data = response.json()
-                        return PredictResponse(
+                        result = PredictResponse(
                             ticker=data.get("ticker", ticker.upper()),
                             horizon=data.get("horizon", _horizon_to_display(horizon)),
                             prob_up=data.get("prob_up", 0.0),
                             signal=data.get("signal", "hold"),
                             last_close=data.get("last_close", 0.0),
                         )
+                        _cache_last_close_for_dashboard(
+                            ticker=ticker.upper(),
+                            horizon=horizon,
+                            last_close=result.last_close,
+                            source=f"divination:{model.lower()}",
+                        )
+                        return result
             except Exception as e:
                 logger.warning(f"Failed to fetch {model} prediction from divination: {e}, using fallback")
 
         # Default: use local prediction (gradient boosting)
         prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon=horizon)
         logger.debug(f"Prediction: {ticker.upper()} ({horizon}) = {signal} ({prob_up:.2%}) for {user_email}")
-        return PredictResponse(
+        result = PredictResponse(
             ticker=ticker.upper(),
             horizon=_horizon_to_display(horizon),
             prob_up=prob_up,
             signal=signal,
             last_close=last_close,
         )
+        if PYTHIA_AVAILABLE:
+            _cache_last_close_for_dashboard(
+                ticker=ticker.upper(),
+                horizon=horizon,
+                last_close=result.last_close,
+                source="local:model",
+            )
+        return result
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Prediction error for {ticker}: {e}")
+        fallback = _cached_price_fallback_response(ticker=ticker, horizon=horizon, reason=str(e))
+        if fallback:
+            return fallback
         raise HTTPException(400, detail=str(e))
 
 
@@ -1235,28 +1326,46 @@ async def predict_lstm_5d(ticker: str):
             if response.status_code == 200:
                 data = response.json()
                 # Transform LSTM response to match PredictResponse schema
-                return PredictResponse(
+                result = PredictResponse(
                     ticker=data.get("ticker", ticker),
                     horizon=data.get("horizon", "5 days"),
                     prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
                     signal=data.get("signal", "hold"),
                     last_close=data.get("last_close", 0.0),
                 )
+                _cache_last_close_for_dashboard(
+                    ticker=ticker.upper(),
+                    horizon="5d",
+                    last_close=result.last_close,
+                    source="divination:lstm_5d",
+                )
+                return result
     except Exception as e:
         logger.debug(f"LSTM 5D prediction from divination failed: {e}, using fallback")
 
     # Fallback to local prediction
     try:
         prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon="5d")
-        return PredictResponse(
+        result = PredictResponse(
             ticker=ticker.upper(),
             horizon="5d",
             prob_up=prob_up,
             signal=signal,
             last_close=last_close,
         )
+        if PYTHIA_AVAILABLE:
+            _cache_last_close_for_dashboard(
+                ticker=ticker.upper(),
+                horizon="5d",
+                last_close=result.last_close,
+                source="local:lstm_5d_fallback",
+            )
+        return result
     except Exception as e:
         logger.error(f"LSTM 5D prediction error for {ticker}: {e}")
+        fallback = _cached_price_fallback_response(ticker=ticker, horizon="5d", reason=str(e))
+        if fallback:
+            return fallback
         raise HTTPException(500, detail=str(e))
 
 
@@ -1271,28 +1380,46 @@ async def predict_lstm_jackpot(ticker: str):
             if response.status_code == 200:
                 data = response.json()
                 # Transform LSTM response to match PredictResponse schema
-                return PredictResponse(
+                result = PredictResponse(
                     ticker=data.get("ticker", ticker),
                     horizon=data.get("horizon", "20 days"),
                     prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
                     signal=data.get("signal", "hold"),
                     last_close=data.get("last_close", 0.0),
                 )
+                _cache_last_close_for_dashboard(
+                    ticker=ticker.upper(),
+                    horizon="20d",
+                    last_close=result.last_close,
+                    source="divination:lstm_jackpot",
+                )
+                return result
     except Exception as e:
         logger.debug(f"LSTM Jackpot prediction from divination failed: {e}, using fallback")
 
     # Fallback to local prediction
     try:
         prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon="20d")
-        return PredictResponse(
+        result = PredictResponse(
             ticker=ticker.upper(),
             horizon="20d",
             prob_up=prob_up,
             signal=signal,
             last_close=last_close,
         )
+        if PYTHIA_AVAILABLE:
+            _cache_last_close_for_dashboard(
+                ticker=ticker.upper(),
+                horizon="20d",
+                last_close=result.last_close,
+                source="local:lstm_jackpot_fallback",
+            )
+        return result
     except Exception as e:
         logger.error(f"LSTM Jackpot prediction error for {ticker}: {e}")
+        fallback = _cached_price_fallback_response(ticker=ticker, horizon="20d", reason=str(e))
+        if fallback:
+            return fallback
         raise HTTPException(500, detail=str(e))
 
 

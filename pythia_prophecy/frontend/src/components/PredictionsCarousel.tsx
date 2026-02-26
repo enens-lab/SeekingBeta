@@ -47,12 +47,41 @@ interface ModelRow {
   error: boolean;
 }
 
+interface HomepageBatchRow {
+  model: string;
+  predictions: any[];
+}
+
+interface HomepageBatchResponse {
+  available: boolean;
+  rows: HomepageBatchRow[];
+}
+
 function PredictionsCarousel() {
   const [modelRows, setModelRows] = useState<ModelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAll, setShowAll] = useState(false);
   const [carouselStates, setCarouselStates] = useState<{ [key: string]: number }>({});
   const [activeInfoModal, setActiveInfoModal] = useState<string | null>(null);
+
+  const normalizePrediction = useCallback((model: typeof MODELS[0], ticker: string, data: any): Prediction => {
+    const probUp =
+      typeof data.prob_up === 'number'
+        ? data.prob_up
+        : typeof data.probability === 'number'
+        ? data.probability / 100
+        : null;
+
+    return {
+      ...data,
+      ticker,
+      prob_up: probUp,
+      predicted_return: data.predicted_return ?? null,
+      last_close: data.last_close ?? null,
+      model: model.name,
+      modelDisplayName: model.displayName,
+    };
+  }, []);
 
   const fetchPredictionsForModel = useCallback(async (model: typeof MODELS[0]): Promise<ModelRow> => {
     try {
@@ -63,25 +92,7 @@ function PredictionsCarousel() {
           const res = await fetch(url);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-
-          // LSTM endpoints return `probability` as a 0-100 percentage.
-          // Normalize to `prob_up` (0-1) expected by PredictionCard.
-          const probUp =
-            typeof data.prob_up === 'number'
-              ? data.prob_up
-              : typeof data.probability === 'number'
-              ? data.probability / 100
-              : null;
-
-          return {
-            ...data,
-            ticker,
-            prob_up: probUp,
-            predicted_return: data.predicted_return ?? null,
-            last_close: data.last_close ?? null,
-            model: model.name,
-            modelDisplayName: model.displayName,
-          };
+          return normalizePrediction(model, ticker, data);
         })
       );
 
@@ -104,18 +115,50 @@ function PredictionsCarousel() {
         error: true,
       };
     }
-  }, []);
+  }, [normalizePrediction]);
+
+  const fetchHomepageBatch = useCallback(async (): Promise<ModelRow[] | null> => {
+    const res = await fetch('/predict/homepage');
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const payload = await res.json() as HomepageBatchResponse;
+    if (!payload?.rows || !Array.isArray(payload.rows)) {
+      throw new Error('Invalid homepage payload');
+    }
+
+    const rowsByModel = new Map(payload.rows.map((row) => [row.model, row]));
+    return MODELS.map((model) => {
+      const row = rowsByModel.get(model.name);
+      const predictions = Array.isArray(row?.predictions)
+        ? row!.predictions.map((item) => normalizePrediction(model, item.ticker || '', item))
+        : [];
+      return {
+        model,
+        predictions,
+        loading: false,
+        error: predictions.length === 0,
+      };
+    });
+  }, [normalizePrediction]);
 
   const fetchAllPredictions = useCallback(async () => {
     setLoading(true);
 
-    const rows = await Promise.all(
-      MODELS.map((model) => fetchPredictionsForModel(model))
-    );
-
-    setModelRows(rows);
+    try {
+      const batchRows = await fetchHomepageBatch();
+      if (batchRows) {
+        setModelRows(batchRows);
+      }
+    } catch (batchError) {
+      console.warn('Batch homepage prediction fetch failed; falling back to per-model requests', batchError);
+      const rows = await Promise.all(
+        MODELS.map((model) => fetchPredictionsForModel(model))
+      );
+      setModelRows(rows);
+    }
     setLoading(false);
-  }, [fetchPredictionsForModel]);
+  }, [fetchHomepageBatch, fetchPredictionsForModel]);
 
   useEffect(() => {
     fetchAllPredictions();

@@ -34,7 +34,9 @@ docker compose logs --tail=300 divination-api
 
 - `No artifacts found for lstm_*`: artifacts are missing or not mounted correctly.
 - `Failed to fetch OHLCV (Yahoo)...JSONDecodeError`: Yahoo API response is invalid/blocked.
-- `Failed to fetch OHLCV (Stooq)...`: Stooq CSV endpoint unavailable/challenged.
+- `Failed to fetch OHLCV (Stooq)...`: Stooq historical CSV endpoint unavailable/challenged/rate-limited.
+- `stooq rate limit exceeded for this source IP`: daily hit limit for current egress IP.
+- `Not enough data after feature engineering (need 60 samples, got 0)`: upstream returned quote-like or too-short history (single-row data is not usable for LSTM).
 - `502` at public URL with `200` from `:8000`: nginx upstream/proxy mismatch.
 
 ## 4) Artifact verification
@@ -72,6 +74,15 @@ for src in ["stooq","auto"]:
         print("lstm fetch err:", src, repr(e))
 PY
 ```
+
+## 5.1) Cache visibility during incident
+
+```bash
+curl -s http://localhost:8000/predict/cache/status
+curl -s http://localhost:8000/predict/homepage
+```
+
+If cache has entries, homepage should still return stale predictions even while live provider calls fail.
 
 ## 6) Known-good health criteria
 

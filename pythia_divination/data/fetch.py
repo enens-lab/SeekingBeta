@@ -29,6 +29,15 @@ STOOQ_HEADERS = {
     "Pragma": "no-cache",
 }
 
+YAHOO_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json,text/plain,*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
 # -------- Shared helpers --------
 
 # Timeframes that require aggregation from a base timeframe
@@ -162,6 +171,42 @@ def _yf_history(ticker: str, start: Optional[str], period: Optional[str]) -> pd.
     if start:
         return t.history(start=start, interval="1d")
     return t.history(period=period or "120d", interval="1d")
+
+
+def _probe_yahoo_chart_api(ticker: str, period: Optional[str], interval: str) -> str:
+    """
+    Lightweight probe to make Yahoo failures explicit in logs/errors.
+    Returns a short diagnostic string and never raises.
+    """
+    try:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/" + ticker
+        params = {
+            "interval": interval,
+            "range": period or "1mo",
+            "events": "div,splits",
+        }
+        resp = requests.get(url, params=params, headers=YAHOO_HEADERS, timeout=HTTP_TIMEOUT)
+        text_preview = " ".join(resp.text[:120].split())
+        content_type = (resp.headers.get("content-type") or "").lower()
+        try:
+            payload = resp.json()
+            chart_error = (payload.get("chart") or {}).get("error")
+            if chart_error:
+                return (
+                    f"probe status={resp.status_code} content_type={content_type} "
+                    f"chart_error={chart_error}"
+                )
+            return (
+                f"probe status={resp.status_code} content_type={content_type} "
+                f"json_ok=true"
+            )
+        except Exception as json_exc:
+            return (
+                f"probe status={resp.status_code} content_type={content_type} "
+                f"json_ok=false json_error={json_exc} body_preview='{text_preview}'"
+            )
+    except Exception as exc:
+        return f"probe failed: {exc}"
 
 # --- Stooq CSV fallback (no pandas-datareader) ---
 
@@ -363,7 +408,10 @@ def fetch_ohlcv(
                 df = _aggregate_ohlcv(df, n_bars)
             return df
         except Exception as e:
-            raise RuntimeError(f"Failed to fetch OHLCV (Yahoo) for {ticker}. Last error: {e}")
+            probe = _probe_yahoo_chart_api(ticker, period, yf_interval)
+            raise RuntimeError(
+                f"Failed to fetch OHLCV (Yahoo) for {ticker}. Last error: {e}. {probe}"
+            )
 
     # auto: try yahoo → stooq with chosen tf
     if base_tf not in YF_INTERVAL_MAP:
@@ -425,7 +473,9 @@ def fetch_ohlcv(
             time.sleep(SLEEP_SEC)
     raise RuntimeError(
         f"Failed to fetch OHLCV for {ticker} after retries and fallbacks. "
-        f"Yahoo error: {yahoo_err}; Stooq error: {stooq_err}"
+        f"Yahoo error: {yahoo_err}; "
+        f"{_probe_yahoo_chart_api(ticker, period, yf_interval)}; "
+        f"Stooq error: {stooq_err}"
     )
 
 def fetch_ohlcv_for_lstm(

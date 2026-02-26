@@ -89,8 +89,8 @@ function Login() {
       <div className="auth-container">
         <div className="auth-header">
           <Link to="/" className="logo">
-            <span className="logo-icon">P</span>
-            <span className="logo-text">Pythia</span>
+            <span className="logo-icon">β</span>
+            <span className="logo-text">SeekingBeta</span>
           </Link>
         </div>
 

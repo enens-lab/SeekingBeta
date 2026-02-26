@@ -11,21 +11,21 @@ function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1 className="hero-title">AI-Powered Stock Signal Intelligence</h1>
+        <h1 className="hero-title">Stock signals made simple for everyday investors</h1>
         <p className="hero-subtitle">
-          Harness machine learning to analyze market trends across multiple timeframes.
-          Get actionable buy, hold, and sell signals for stocks in our curated universe.
+          SeekingBeta turns complex market data into clear Buy, Hold, and Sell guidance.
+          No finance jargon required, just a clean second opinion before you place a trade.
         </p>
         <div className="hero-cta">
           <Link to="/signup" className="btn btn-primary btn-lg">
-            Start Free Trial
+            Start Free
           </Link>
           <button className="btn btn-outline btn-lg" onClick={scrollToFeatures}>
-            Learn More
+            See How It Works
           </button>
         </div>
         <p className="hero-disclaimer">
-          Educational purposes only. Not financial advice.
+          Built for learning and reference. Always do your own due diligence.
         </p>
       </div>
     </section>

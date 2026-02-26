@@ -105,8 +105,8 @@ function Signup() {
         <div className="auth-container">
           <div className="auth-header">
             <Link to="/" className="logo">
-              <span className="logo-icon">P</span>
-              <span className="logo-text">Pythia</span>
+              <span className="logo-icon">β</span>
+              <span className="logo-text">SeekingBeta</span>
             </Link>
           </div>
 
@@ -137,15 +137,15 @@ function Signup() {
       <div className="auth-container">
         <div className="auth-header">
           <Link to="/" className="logo">
-            <span className="logo-icon">P</span>
-            <span className="logo-text">Pythia</span>
+            <span className="logo-icon">β</span>
+            <span className="logo-text">SeekingBeta</span>
           </Link>
         </div>
 
         <div className="auth-card">
           <h1>Create your account</h1>
           <p className="auth-subtitle">
-            Start getting AI-powered stock predictions
+            Start getting clear stock guidance in plain language
           </p>
 
           <form onSubmit={handleSubmit} className="auth-form">

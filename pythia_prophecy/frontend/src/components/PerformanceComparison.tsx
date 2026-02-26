@@ -227,8 +227,8 @@ function PerformanceComparison() {
     <section className="performance-showcase" id="performance">
       <div className="performance-showcase-inner">
         <div className="performance-header">
-          <h2>Proof of Performance</h2>
-          <p>Public track record benchmarked against the S&amp;P 500 (SPY).</p>
+          <h2>Proof, Not Hype</h2>
+          <p>A public model track record benchmarked against the S&amp;P 500 (SPY).</p>
         </div>
 
         <div className="performance-metrics-row">

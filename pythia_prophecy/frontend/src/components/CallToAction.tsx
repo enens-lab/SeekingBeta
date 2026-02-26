@@ -4,10 +4,10 @@ function CallToAction() {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>Ready to enhance your market analysis?</h2>
-        <p>Join traders using data-driven signals to inform their decisions.</p>
+        <h2>Start with a watchlist. Get signal guidance in minutes.</h2>
+        <p>SeekingBeta helps new investors build confidence with model-backed reference signals.</p>
         <Link to="/signup" className="btn btn-primary btn-lg">
-          Get Started Free
+          Create Free Account
         </Link>
       </div>
     </section>

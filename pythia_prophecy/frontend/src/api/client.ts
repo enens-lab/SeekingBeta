@@ -1,5 +1,5 @@
 /**
- * API client for Pythia backend
+ * API client for SeekingBeta backend
  */
 
 const API_BASE = '';

@@ -141,14 +141,14 @@ function PredictionsCarousel() {
     return (
       <section className="predictions-section" id="predictions">
         <div className="section-header">
-          <h2 className="section-title">Daily Prediction Signals</h2>
+          <h2 className="section-title">Today&apos;s Signals, in Plain English</h2>
           <p className="section-subtitle">
-            Comparing 2 LSTM models across the Magnificent 7 stocks
+            Two AI models covering the Magnificent 7 so beginners can compare views quickly
           </p>
         </div>
         <div className="predictions-loading">
           <div className="spinner" />
-          <p>Loading predictions from 2 models...</p>
+          <p>Loading today&apos;s model guidance...</p>
         </div>
       </section>
     );
@@ -157,9 +157,9 @@ function PredictionsCarousel() {
   return (
     <section className="predictions-section" id="predictions">
       <div className="section-header">
-        <h2 className="section-title">Daily Prediction Signals</h2>
+        <h2 className="section-title">Today&apos;s Signals, in Plain English</h2>
         <p className="section-subtitle">
-          2 LSTM models analyzing the Magnificent 7 stocks - Each row shows one model's view
+          Two AI models across the Magnificent 7. Each row is one model&apos;s perspective.
         </p>
       </div>
 

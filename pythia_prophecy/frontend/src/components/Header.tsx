@@ -23,8 +23,8 @@ function Header() {
     <header className="site-header">
       <div className="header-content">
         <Link to="/" className="logo">
-          <span className="logo-icon">P</span>
-          <span className="logo-text">Pythia</span>
+          <span className="logo-icon">β</span>
+          <span className="logo-text">SeekingBeta</span>
         </Link>
 
         <nav className="nav">
@@ -33,14 +33,21 @@ function Header() {
             className="nav-link"
             onClick={(e) => scrollToSection(e, 'predictions')}
           >
-            Predictions
+            Signals
+          </a>
+          <a
+            href="#performance"
+            className="nav-link"
+            onClick={(e) => scrollToSection(e, 'performance')}
+          >
+            Track Record
           </a>
           <a
             href="#features"
             className="nav-link"
             onClick={(e) => scrollToSection(e, 'features')}
           >
-            Features
+            How It Works
           </a>
           <Link to="/pricing" className="nav-link">
             Pricing

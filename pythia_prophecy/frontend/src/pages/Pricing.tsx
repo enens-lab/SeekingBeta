@@ -45,12 +45,13 @@ function Pricing() {
       <header className="site-header">
         <div className="header-content">
           <Link to="/" className="logo">
-            <span className="logo-icon">P</span>
-            <span className="logo-text">Pythia</span>
+            <span className="logo-icon">β</span>
+            <span className="logo-text">SeekingBeta</span>
           </Link>
           <nav className="nav">
-            <Link to="/#predictions" className="nav-link">Predictions</Link>
-            <Link to="/#features" className="nav-link">Features</Link>
+            <Link to="/#predictions" className="nav-link">Signals</Link>
+            <Link to="/#performance" className="nav-link">Track Record</Link>
+            <Link to="/#features" className="nav-link">How It Works</Link>
             <Link to="/pricing" className="nav-link">Pricing</Link>
           </nav>
           <div className="header-actions">
@@ -68,8 +69,8 @@ function Pricing() {
 
       <main>
         <section className="pricing-hero">
-          <h1>Simple, transparent pricing</h1>
-          <p>Choose the plan that fits your trading style</p>
+          <h1>Simple pricing for everyday investors</h1>
+          <p>Choose the level of guidance that fits your goals</p>
         </section>
 
         <section className="pricing-cards">
@@ -172,10 +173,10 @@ function Pricing() {
         </section>
 
         <section className="pricing-cta">
-          <h2>Ready to get started?</h2>
-          <p>Join thousands of traders using Pythia for smarter decisions</p>
+          <h2>Ready to trade with more confidence?</h2>
+          <p>Join investors using SeekingBeta as a daily decision support layer</p>
           <Link to="/signup" className="btn btn-primary btn-lg">
-            Start Free Trial
+            Start Free
           </Link>
         </section>
       </main>
@@ -183,15 +184,15 @@ function Pricing() {
       <footer className="site-footer">
         <div className="footer-content">
           <div className="footer-brand">
-            <span className="logo-icon">P</span>
-            <span className="logo-text">Pythia</span>
+            <span className="logo-icon">β</span>
+            <span className="logo-text">SeekingBeta</span>
           </div>
           <p className="footer-disclaimer">
-            Pythia is for educational and research purposes only.
+            SeekingBeta is for educational and research purposes only.
             Past performance does not guarantee future results.
           </p>
           <p className="footer-copyright">
-            &copy; {new Date().getFullYear()} Pythia. All rights reserved.
+            &copy; {new Date().getFullYear()} SeekingBeta. All rights reserved.
           </p>
         </div>
       </footer>

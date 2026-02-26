@@ -20,8 +20,8 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
   return (
     <header className="dashboard-header">
       <Link to="/" className="logo">
-        <span className="logo-icon">P</span>
-        <span className="logo-text">Pythia</span>
+        <span className="logo-icon">β</span>
+        <span className="logo-text">SeekingBeta</span>
       </Link>
 
       {showNav && (

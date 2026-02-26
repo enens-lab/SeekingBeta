@@ -15,8 +15,8 @@ const features: Feature[] = [
         <path d="M2 12l10 5 10-5" />
       </svg>
     ),
-    title: 'Multiple Timeframes',
-    description: 'Analyze stocks across 1-minute to daily intervals. Choose the granularity that fits your strategy.',
+    title: 'Plain-Language Signals',
+    description: 'Each stock is translated into a clear Buy, Hold, or Sell view with confidence attached.',
   },
   {
     icon: (
@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'ML-Powered Signals',
-    description: 'Gradient boosting models trained on technical indicators deliver probability-based buy/sell signals.',
+    title: 'AI as Your Second Opinion',
+    description: 'Our models scan technical patterns so you can make faster decisions without spreadsheet overload.',
   },
   {
     icon: (
@@ -40,8 +40,8 @@ const features: Feature[] = [
         <line x1="6" y1="20" x2="6" y2="16" />
       </svg>
     ),
-    title: 'Curated Universe',
-    description: 'Focus on high-quality stocks hand-picked for liquidity and coverage. No noise, just signals.',
+    title: 'Confidence + Context',
+    description: 'See upside probability, model horizon, and recent price context in one card before you act.',
   },
   {
     icon: (
@@ -51,8 +51,8 @@ const features: Feature[] = [
         <line x1="9" y1="21" x2="9" y2="9" />
       </svg>
     ),
-    title: 'Clean Dashboard',
-    description: 'Intuitive interface to monitor your watchlist, view historical predictions, and track performance.',
+    title: 'Track Record Transparency',
+    description: 'Benchmark strategy performance against the S&P 500 so users can verify results, not just promises.',
   },
 ];
 
@@ -60,8 +60,8 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">Why Choose Pythia?</h2>
-        <p className="section-subtitle">Advanced analytics meets intuitive design</p>
+        <h2 className="section-title">Built for real people, not just quants</h2>
+        <p className="section-subtitle">Everything is designed to be understandable in under a minute</p>
       </div>
 
       <div className="features-grid">

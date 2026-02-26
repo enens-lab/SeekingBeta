@@ -754,6 +754,13 @@ async def login(data: UserLogin):
         logger.warning(f"Failed login attempt for: {data.email.lower()}")
         raise HTTPException(401, detail="Invalid email or password")
 
+    if not user.email_verified:
+        logger.info(f"Blocked login for unverified email: {user.email}")
+        raise HTTPException(
+            403,
+            detail="Email not verified. Please verify your email before logging in.",
+        )
+
     access_token = create_access_token(user.id, user.email, token_type="access")
     refresh_token = create_access_token(user.id, user.email, token_type="refresh")
     logger.info(f"User logged in: {user.email}")

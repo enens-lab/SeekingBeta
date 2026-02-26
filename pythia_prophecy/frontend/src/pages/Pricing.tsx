@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tiers as tiersApi } from '../api/client';
+import ThemeToggle from '../components/ThemeToggle';
 
 interface TierData {
   tier: string;
@@ -55,6 +56,7 @@ function Pricing() {
             <Link to="/pricing" className="nav-link">Pricing</Link>
           </nav>
           <div className="header-actions">
+            <ThemeToggle />
             {isAuthenticated ? (
               <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
             ) : (

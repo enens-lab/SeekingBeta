@@ -9,6 +9,7 @@
   --accent: #008f7a;
   --accent-hover: #007563;
   --accent-muted: rgba(0, 143, 122, 0.14);
+  --accent-soft: rgba(0, 143, 122, 0.18);
   --brand-secondary: #2563eb;
   --brand-secondary-soft: rgba(37, 99, 235, 0.16);
   --success: #0f766e;
@@ -26,6 +27,70 @@
   --font-display: 'Sora', 'Public Sans', sans-serif;
   --primary: var(--accent);
   --text: var(--text-primary);
+  --page-radial-a: rgba(0, 143, 122, 0.16);
+  --page-radial-b: var(--brand-secondary-soft);
+  --header-bg: rgba(244, 251, 249, 0.9);
+  --btn-outline-bg: rgba(255, 255, 255, 0.72);
+  --btn-ghost-bg-hover: rgba(255, 255, 255, 0.76);
+  --hero-radial-a: rgba(0, 143, 122, 0.16);
+  --hero-radial-b: var(--brand-secondary-soft);
+  --hero-title-start: #0d3b40;
+  --hero-title-mid: #008f7a;
+  --hero-title-end: #2563eb;
+  --performance-chart-bg-start: #f8fefd;
+  --performance-chart-bg-end: #f1f8f6;
+  --chart-grid-line: #c6dbd8;
+  --chart-axis-label: #5e7b80;
+  --chart-model-area: rgba(0, 143, 122, 0.2);
+  --chart-model-line: #008f7a;
+  --chart-benchmark-line: #516e74;
+  --auth-radial-a: rgba(0, 143, 122, 0.14);
+  --auth-radial-b: var(--brand-secondary-soft);
+  --focus-ring: 0 0 0 3px var(--accent-soft);
+}
+
+:root[data-theme='dark'] {
+  --bg-primary: #070b12;
+  --bg-secondary: #0d1420;
+  --bg-card: #121b2a;
+  --bg-card-hover: #182336;
+  --text-primary: #eef4ff;
+  --text-secondary: #adc0df;
+  --text-muted: #7f95b8;
+  --accent: #2dd4bf;
+  --accent-hover: #22bba7;
+  --accent-muted: rgba(45, 212, 191, 0.16);
+  --accent-soft: rgba(45, 212, 191, 0.2);
+  --brand-secondary: #60a5fa;
+  --brand-secondary-soft: rgba(96, 165, 250, 0.2);
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.16);
+  --danger: #fb7185;
+  --danger-bg: rgba(251, 113, 133, 0.14);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --border: #24364f;
+  --border-light: #385377;
+  --shadow: 0 16px 42px rgba(0, 0, 0, 0.45);
+  --page-radial-a: rgba(45, 212, 191, 0.12);
+  --page-radial-b: rgba(96, 165, 250, 0.14);
+  --header-bg: rgba(9, 16, 28, 0.86);
+  --btn-outline-bg: rgba(18, 27, 42, 0.7);
+  --btn-ghost-bg-hover: rgba(27, 40, 60, 0.7);
+  --hero-radial-a: rgba(45, 212, 191, 0.12);
+  --hero-radial-b: rgba(96, 165, 250, 0.18);
+  --hero-title-start: #f0f7ff;
+  --hero-title-mid: #8ee3d4;
+  --hero-title-end: #8ac5ff;
+  --performance-chart-bg-start: #0e1624;
+  --performance-chart-bg-end: #0d1b2d;
+  --chart-grid-line: #2b4566;
+  --chart-axis-label: #8ca5c9;
+  --chart-model-area: rgba(45, 212, 191, 0.2);
+  --chart-model-line: #2dd4bf;
+  --chart-benchmark-line: #8ca5c9;
+  --auth-radial-a: rgba(45, 212, 191, 0.12);
+  --auth-radial-b: rgba(96, 165, 250, 0.15);
 }
 
 * {
@@ -71,8 +136,8 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   background-image:
-    radial-gradient(1200px 500px at -20% -10%, rgba(0, 143, 122, 0.16), transparent 60%),
-    radial-gradient(900px 420px at 110% -25%, var(--brand-secondary-soft), transparent 60%);
+    radial-gradient(1200px 500px at -20% -10%, var(--page-radial-a), transparent 60%),
+    radial-gradient(900px 420px at 110% -25%, var(--page-radial-b), transparent 60%);
 }
 
 h1,
@@ -90,7 +155,7 @@ h4 {
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(244, 251, 249, 0.9);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
@@ -152,7 +217,33 @@ h4 {
 .header-actions {
   margin-left: auto;
   display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--btn-outline-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--border-light);
+  background: var(--bg-card-hover);
+}
+
+.theme-toggle-label {
+  font-weight: 600;
 }
 
 /* Buttons */
@@ -184,7 +275,7 @@ h4 {
 }
 
 .btn-outline {
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--btn-outline-bg);
   color: var(--text-primary);
   border: 1px solid var(--border-light);
 }
@@ -201,7 +292,7 @@ h4 {
 
 .btn-ghost:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--btn-ghost-bg-hover);
 }
 
 .btn-lg {
@@ -214,8 +305,8 @@ h4 {
   padding: 160px 24px 80px;
   text-align: center;
   background:
-    radial-gradient(circle at 20% 20%, rgba(0, 143, 122, 0.16), transparent 40%),
-    radial-gradient(circle at 75% 5%, var(--brand-secondary-soft), transparent 42%);
+    radial-gradient(circle at 20% 20%, var(--hero-radial-a), transparent 40%),
+    radial-gradient(circle at 75% 5%, var(--hero-radial-b), transparent 42%);
 }
 
 .hero-content {
@@ -228,7 +319,7 @@ h4 {
   font-weight: 800;
   line-height: 1.1;
   margin-bottom: 20px;
-  background: linear-gradient(135deg, #0d3b40 0%, #008f7a 58%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--hero-title-start) 0%, var(--hero-title-mid) 58%, var(--hero-title-end) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -317,7 +408,7 @@ h4 {
 }
 
 .performance-chart-wrap {
-  background: linear-gradient(180deg, #f8fefd 0%, #f1f8f6 100%);
+  background: linear-gradient(180deg, var(--performance-chart-bg-start) 0%, var(--performance-chart-bg-end) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 14px;
@@ -329,28 +420,28 @@ h4 {
 }
 
 .chart-grid-line {
-  stroke: #c6dbd8;
+  stroke: var(--chart-grid-line);
   stroke-width: 1;
 }
 
 .chart-y-label,
 .chart-x-label {
-  fill: #5e7b80;
+  fill: var(--chart-axis-label);
   font-size: 11px;
 }
 
 .chart-model-area {
-  fill: rgba(0, 143, 122, 0.2);
+  fill: var(--chart-model-area);
 }
 
 .chart-model-line {
-  stroke: #008f7a;
+  stroke: var(--chart-model-line);
   stroke-width: 2.8;
   fill: none;
 }
 
 .chart-benchmark-line {
-  stroke: #516e74;
+  stroke: var(--chart-benchmark-line);
   stroke-width: 2.2;
   fill: none;
   opacity: 0.9;
@@ -378,11 +469,11 @@ h4 {
 }
 
 .legend-model {
-  background: #008f7a;
+  background: var(--chart-model-line);
 }
 
 .legend-benchmark {
-  background: #516e74;
+  background: var(--chart-benchmark-line);
 }
 
 .performance-footnote {
@@ -931,6 +1022,10 @@ h4 {
     gap: 8px;
   }
 
+  .theme-toggle-label {
+    display: none;
+  }
+
   .btn {
     padding: 8px 16px;
     font-size: 13px;
@@ -995,8 +1090,8 @@ h4 {
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(ellipse at top, rgba(0, 143, 122, 0.14) 0%, transparent 55%),
-    radial-gradient(ellipse at bottom right, rgba(242, 153, 74, 0.12) 0%, transparent 55%);
+    radial-gradient(ellipse at top, var(--auth-radial-a) 0%, transparent 55%),
+    radial-gradient(ellipse at bottom right, var(--auth-radial-b) 0%, transparent 55%);
 }
 
 .auth-container {
@@ -1007,6 +1102,13 @@ h4 {
 .auth-header {
   text-align: center;
   margin-bottom: 32px;
+}
+
+.auth-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .auth-header .logo {
@@ -2921,8 +3023,8 @@ h4 {
 }
 
 .company-type-badge.type-adr {
-  background: rgba(242, 153, 74, 0.18);
-  color: #9f5b15;
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .company-detail-info {
@@ -3126,12 +3228,12 @@ h4 {
 }
 
 .toast-success {
-  background: rgba(34, 197, 94, 0.95);
+  background: var(--success);
   color: #fff;
 }
 
 .toast-error {
-  background: rgba(239, 68, 68, 0.95);
+  background: var(--danger);
   color: #fff;
 }
 
@@ -3248,18 +3350,18 @@ h4 {
 }
 
 .stock-tooltip-type.type-stock {
-  background: rgba(0, 143, 122, 0.2);
-  color: #007563;
+  background: var(--accent-muted);
+  color: var(--accent-hover);
 }
 
 .stock-tooltip-type.type-etf {
-  background: rgba(15, 118, 110, 0.2);
-  color: #0f766e;
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 .stock-tooltip-type.type-adr {
-  background: rgba(242, 153, 74, 0.2);
-  color: #b7791f;
+  background: var(--warning-bg);
+  color: var(--warning);
 }
 
 .stock-tooltip-name {

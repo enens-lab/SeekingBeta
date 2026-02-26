@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tiers as tiersApi } from '../api/client';
+import ThemeToggle from '../components/ThemeToggle';
 
 interface TierData {
   tier: string;
@@ -14,7 +15,7 @@ interface TierData {
 function Signup() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signup, isAuthenticated, error, clearError } = useAuth();
+  const { signup, resendVerification, isAuthenticated, error, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -28,6 +29,8 @@ function Signup() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [formError, setFormError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -100,14 +103,30 @@ function Signup() {
   };
 
   if (success) {
+    const handleResendVerification = async () => {
+      setResendLoading(true);
+      setResendMessage('');
+      try {
+        const response = await resendVerification(formData.email);
+        setResendMessage(response.message);
+      } catch (err) {
+        setResendMessage(err instanceof Error ? err.message : 'Failed to resend verification email');
+      } finally {
+        setResendLoading(false);
+      }
+    };
+
     return (
       <div className="auth-page">
         <div className="auth-container">
           <div className="auth-header">
-            <Link to="/" className="logo">
-              <span className="logo-icon">β</span>
-              <span className="logo-text">SeekingBeta</span>
-            </Link>
+            <div className="auth-header-row">
+              <Link to="/" className="logo">
+                <span className="logo-icon">β</span>
+                <span className="logo-text">SeekingBeta</span>
+              </Link>
+              <ThemeToggle />
+            </div>
           </div>
 
           <div className="auth-card">
@@ -123,8 +142,22 @@ function Signup() {
               Click the link to activate your account.
             </p>
             <p className="auth-note">
-              Didn't receive the email? Check your spam folder or{' '}
-              <Link to="/login">try logging in</Link> to resend.
+              Didn&apos;t receive the email? Check your spam folder or use resend below.
+            </p>
+            <div className="auth-actions">
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+              >
+                {resendLoading ? 'Resending...' : 'Resend verification email'}
+              </button>
+            </div>
+            {resendMessage && <p className="auth-note">{resendMessage}</p>}
+            <p className="auth-note">
+              You can also verify manually at{' '}
+              <Link to={`/verify-email?email=${encodeURIComponent(formData.email)}`}>/verify-email</Link>.
             </p>
           </div>
         </div>
@@ -136,10 +169,13 @@ function Signup() {
     <div className="auth-page">
       <div className="auth-container">
         <div className="auth-header">
-          <Link to="/" className="logo">
-            <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta</span>
-          </Link>
+          <div className="auth-header-row">
+            <Link to="/" className="logo">
+              <span className="logo-icon">β</span>
+              <span className="logo-text">SeekingBeta</span>
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="auth-card">

@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
+import ThemeToggle from '../components/ThemeToggle';
 
 interface LocationState {
   from?: {
@@ -88,10 +89,13 @@ function Login() {
     <div className="auth-page">
       <div className="auth-container">
         <div className="auth-header">
-          <Link to="/" className="logo">
-            <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta</span>
-          </Link>
+          <div className="auth-header-row">
+            <Link to="/" className="logo">
+              <span className="logo-icon">β</span>
+              <span className="logo-text">SeekingBeta</span>
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="auth-card">

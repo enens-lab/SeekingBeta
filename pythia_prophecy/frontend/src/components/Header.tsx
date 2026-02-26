@@ -1,6 +1,7 @@
 import { MouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 function Header() {
   const navigate = useNavigate();
@@ -55,6 +56,7 @@ function Header() {
         </nav>
 
         <div className="header-actions">
+          <ThemeToggle />
           {isAuthenticated ? (
             <>
               <Link to="/dashboard" className="btn btn-ghost">

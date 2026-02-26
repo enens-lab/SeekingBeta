@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
 from time import sleep
+from urllib.parse import quote_plus
 
 from .logging_config import get_logger
 
@@ -19,8 +20,8 @@ SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@pythia.example.com")
-FROM_NAME = os.getenv("FROM_NAME", "Pythia")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@seekingbeta.ai")
+FROM_NAME = os.getenv("FROM_NAME", "SeekingBeta")
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -46,7 +47,8 @@ if ENVIRONMENT == "production" and not SMTP_PASSWORD:
 
 def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
     """Send email verification code to user."""
-    subject = "Your Pythia Verification Code"
+    subject = "Verify your SeekingBeta account"
+    verify_url = f"{FRONTEND_URL.rstrip('/')}/verify-email?token={quote_plus(token)}&email={quote_plus(to_email)}"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -56,24 +58,32 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
             body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
             .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
             .header {{ text-align: center; padding: 20px 0; }}
-            .logo {{ font-size: 32px; font-weight: bold; color: #6366f1; }}
+            .logo {{ font-size: 32px; font-weight: bold; color: #008f7a; }}
             .content {{ background: #f9fafb; border-radius: 8px; padding: 30px; margin: 20px 0; }}
-            .code-box {{ background: white; border: 2px solid #6366f1; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }}
-            .code {{ font-size: 36px; font-weight: bold; color: #6366f1; letter-spacing: 2px; font-family: monospace; }}
+            .code-box {{ background: white; border: 2px solid #008f7a; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }}
+            .code {{ font-size: 36px; font-weight: bold; color: #008f7a; letter-spacing: 2px; font-family: monospace; }}
+            .button {{ display: inline-block; background: #008f7a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 500; }}
             .footer {{ text-align: center; color: #6b7280; font-size: 14px; padding: 20px 0; }}
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <div class="logo">Pythia</div>
+                <div class="logo">SeekingBeta</div>
             </div>
             <div class="content">
                 <h2>Welcome, {first_name}!</h2>
-                <p>Thanks for signing up for Pythia. Use the verification code below to activate your account:</p>
+                <p>Thanks for signing up for SeekingBeta. Click below to verify your account:</p>
+                <p style="text-align: center; margin: 24px 0;">
+                    <a href="{verify_url}" class="button">Verify Email</a>
+                </p>
+                <p>If the button doesn&apos;t work, use this code in the app:</p>
                 <div class="code-box">
                     <div class="code">{token}</div>
                 </div>
+                <p style="color: #6b7280; font-size: 14px;">
+                    Direct link: <a href="{verify_url}">{verify_url}</a>
+                </p>
                 <p style="text-align: center; color: #6b7280; font-size: 14px;">
                     This code expires in 24 hours
                 </p>
@@ -82,7 +92,7 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
                 </p>
             </div>
             <div class="footer">
-                <p>&copy; 2025 Pythia. All rights reserved.</p>
+                <p>&copy; 2026 SeekingBeta. All rights reserved.</p>
                 <p>This is an automated message. Please do not reply.</p>
             </div>
         </div>
@@ -91,9 +101,12 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
     """
 
     text_content = f"""
-    Welcome to Pythia, {first_name}!
+    Welcome to SeekingBeta, {first_name}!
 
-    Thanks for signing up. Use this code to verify your email:
+    Verify your account using this link:
+    {verify_url}
+
+    Or enter this code in the app:
 
     {token}
 
@@ -101,8 +114,12 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
 
     If you didn't create an account, you can safely ignore this email.
 
-    - The Pythia Team
+    - The SeekingBeta Team
     """
+
+    if EMAIL_DEV_MODE:
+        logger.info(f"[DEV MODE] Verification code for {to_email}: {token}")
+        logger.info(f"[DEV MODE] Verification URL for {to_email}: {verify_url}")
 
     return _send_email(to_email, subject, text_content, html_content)
 

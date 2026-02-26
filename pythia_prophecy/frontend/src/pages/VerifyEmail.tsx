@@ -1,20 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 type VerificationStatus = 'form' | 'verifying' | 'success' | 'error';
 
 function VerifyEmail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { verifyEmail } = useAuth();
+  const { verifyEmail, resendVerification } = useAuth();
 
   const [status, setStatus] = useState<VerificationStatus>('form');
   const [error, setError] = useState('');
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   const token = searchParams.get('token');
+  const email = searchParams.get('email') || '';
 
   // If token is in URL, use it automatically
   useEffect(() => {
@@ -48,14 +52,35 @@ function VerifyEmail() {
     handleVerify(code.trim());
   };
 
+  const handleResend = async () => {
+    if (!email) {
+      setError('No email provided. Return to login and request a new verification email.');
+      return;
+    }
+
+    setResendLoading(true);
+    setResendMessage('');
+    try {
+      const response = await resendVerification(email);
+      setResendMessage(response.message);
+    } catch (err) {
+      setResendMessage(err instanceof Error ? err.message : 'Failed to resend verification email');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-container">
         <div className="auth-header">
-          <Link to="/" className="logo">
-            <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta</span>
-          </Link>
+          <div className="auth-header-row">
+            <Link to="/" className="logo">
+              <span className="logo-icon">β</span>
+              <span className="logo-text">SeekingBeta</span>
+            </Link>
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="auth-card">
@@ -65,6 +90,7 @@ function VerifyEmail() {
               <p className="auth-subtitle">
                 Enter the 6-digit code sent to your email
               </p>
+              {email && <p className="auth-note">Verifying: <strong>{email}</strong></p>}
 
               <form onSubmit={handleSubmit} className="auth-form">
                 <div className="form-group">
@@ -98,11 +124,20 @@ function VerifyEmail() {
               </form>
 
               <div className="auth-footer">
-                <p className="auth-subtitle">
-                  Didn&apos;t receive the code?{' '}
-                  <Link to="/login" className="link">
-                    Back to login
-                  </Link>
+                <p className="auth-subtitle">Didn&apos;t receive the code?</p>
+                <div className="auth-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleResend}
+                    disabled={resendLoading || !email}
+                  >
+                    {resendLoading ? 'Resending...' : 'Resend verification email'}
+                  </button>
+                </div>
+                {resendMessage && <p className="auth-note">{resendMessage}</p>}
+                <p className="auth-note">
+                  <Link to="/login" className="link">Back to login</Link>
                 </p>
               </div>
             </>
@@ -153,7 +188,18 @@ function VerifyEmail() {
                 >
                   Try again
                 </button>
+                {email && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={handleResend}
+                    disabled={resendLoading}
+                  >
+                    {resendLoading ? 'Resending...' : 'Resend email'}
+                  </button>
+                )}
               </div>
+              {resendMessage && <p className="auth-note">{resendMessage}</p>}
             </>
           )}
         </div>

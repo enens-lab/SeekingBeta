@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 type ActivePage = 'dashboard' | 'oracle' | 'analysis';
 
@@ -59,6 +60,7 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
       )}
 
       <div className="header-actions">
+        <ThemeToggle />
         {showNav && user?.tier !== 'pro' && (
           <Link to="/pricing" className="btn btn-ghost">Upgrade</Link>
         )}

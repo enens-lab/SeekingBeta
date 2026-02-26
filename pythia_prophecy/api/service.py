@@ -839,6 +839,15 @@ async def verify_email(data: VerifyEmailRequest):
 @app.post("/api/auth/resend-verification", response_model=MessageResponse)
 async def resend_verification(data: ResendVerificationRequest):
     """Resend verification email."""
+    # Prevent accidental double-clicks or rapid resend loops.
+    allowed, message = check_rate_limit(
+        f"resend:{data.email.lower()}",
+        max_requests=1,
+        window_seconds=60,
+    )
+    if not allowed:
+        raise HTTPException(429, detail=message)
+
     user = get_user_by_email(data.email.lower())
 
     if not user:

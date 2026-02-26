@@ -249,24 +249,29 @@ def _send_email(
             logger.debug(f"[DEV MODE] Email HTML content:\n{html_content}")
         return True
 
+    # Build message once so retries reuse the same payload/message-id.
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
+    msg["To"] = to_email
+    msg["Reply-To"] = REPLY_TO_EMAIL or FROM_EMAIL
+    msg["Date"] = formatdate(localtime=False)
+    from_domain = FROM_EMAIL.split("@", 1)[-1] if "@" in FROM_EMAIL else None
+    message_id = make_msgid(domain=from_domain)
+    msg["Message-ID"] = message_id
+    msg["Auto-Submitted"] = "auto-generated"
+    msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
+    msg["X-Entity-Ref-ID"] = message_id.strip("<>")
+
+    msg.attach(MIMEText(text_content, "plain"))
+    if html_content:
+        msg.attach(MIMEText(html_content, "html"))
+
+    msg_str = msg.as_string()
+
     # Attempt to send with retries
     for attempt in range(1, EMAIL_RETRY_ATTEMPTS + 1):
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = subject
-            msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
-            msg["To"] = to_email
-            msg["Reply-To"] = REPLY_TO_EMAIL or FROM_EMAIL
-            msg["Date"] = formatdate(localtime=False)
-            from_domain = FROM_EMAIL.split("@", 1)[-1] if "@" in FROM_EMAIL else None
-            msg["Message-ID"] = make_msgid(domain=from_domain)
-            msg["Auto-Submitted"] = "auto-generated"
-            msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
-            msg["X-Entity-Ref-ID"] = make_msgid(domain=from_domain).strip("<>")
-
-            msg.attach(MIMEText(text_content, "plain"))
-            if html_content:
-                msg.attach(MIMEText(html_content, "html"))
 
             # Use SSL/TLS for port 465, STARTTLS for port 587
             if SMTP_PORT == 465:
@@ -274,13 +279,13 @@ def _send_email(
                 with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, context=context) as server:
                     if SMTP_USER and SMTP_PASSWORD:
                         server.login(SMTP_USER, SMTP_PASSWORD)
-                    server.sendmail(FROM_EMAIL, to_email, msg.as_string())
+                    server.sendmail(FROM_EMAIL, to_email, msg_str)
             else:
                 with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
                     if SMTP_USER and SMTP_PASSWORD:
                         server.starttls()
                         server.login(SMTP_USER, SMTP_PASSWORD)
-                    server.sendmail(FROM_EMAIL, to_email, msg.as_string())
+                    server.sendmail(FROM_EMAIL, to_email, msg_str)
 
             logger.info(f"Email sent to {to_email}: {subject}")
             return True

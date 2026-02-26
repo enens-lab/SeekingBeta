@@ -124,7 +124,7 @@ def _build_spy_curve(dates: list[datetime], start_value: float) -> list[float | 
         import yfinance as yf  # type: ignore
         import pandas as pd  # type: ignore
     except Exception:
-        return [None for _ in dates]
+        return _build_spy_curve_from_stooq(dates, start_value)
 
     start = (min(dates) - timedelta(days=7)).strftime("%Y-%m-%d")
     end = (max(dates) + timedelta(days=7)).strftime("%Y-%m-%d")
@@ -132,10 +132,10 @@ def _build_spy_curve(dates: list[datetime], start_value: float) -> list[float | 
     try:
         frame = yf.download("SPY", start=start, end=end, auto_adjust=True, progress=False, interval="1d")
     except Exception:
-        return [None for _ in dates]
+        return _build_spy_curve_from_stooq(dates, start_value)
 
     if frame is None or frame.empty or "Close" not in frame:
-        return [None for _ in dates]
+        return _build_spy_curve_from_stooq(dates, start_value)
 
     closes = frame["Close"]
     if hasattr(closes, "columns"):
@@ -143,7 +143,7 @@ def _build_spy_curve(dates: list[datetime], start_value: float) -> list[float | 
         closes = closes.iloc[:, 0]
     closes = closes.dropna()
     if closes.empty:
-        return [None for _ in dates]
+        return _build_spy_curve_from_stooq(dates, start_value)
 
     close_values: list[float | None] = []
     for dt in dates:
@@ -153,6 +153,53 @@ def _build_spy_curve(dates: list[datetime], start_value: float) -> list[float | 
             close_values.append(None)
         else:
             close_values.append(float(closes.iloc[idx]))
+
+    base_close = next((v for v in close_values if v is not None and v > 0), None)
+    if base_close is None:
+        return _build_spy_curve_from_stooq(dates, start_value)
+
+    return [None if value is None else start_value * (value / base_close) for value in close_values]
+
+
+def _build_spy_curve_from_stooq(dates: list[datetime], start_value: float) -> list[float | None]:
+    if not dates or start_value <= 0:
+        return [None for _ in dates]
+
+    try:
+        import requests  # type: ignore
+    except Exception:
+        return [None for _ in dates]
+
+    try:
+        resp = requests.get("https://stooq.com/q/d/l/?s=spy.us&i=d", timeout=6)
+    except Exception:
+        return [None for _ in dates]
+
+    if resp.status_code != 200 or not resp.text:
+        return [None for _ in dates]
+
+    parsed_rows: list[tuple[datetime, float]] = []
+    reader = csv.DictReader(resp.text.splitlines())
+    for row in reader:
+        dt = _get_datetime(row.get("Date"))
+        close = _get_float(row.get("Close"))
+        if dt is None or close is None or close <= 0:
+            continue
+        parsed_rows.append((dt, close))
+
+    parsed_rows.sort(key=lambda item: item[0])
+    if not parsed_rows:
+        return [None for _ in dates]
+
+    close_values: list[float | None] = []
+    cursor = 0
+    latest_close: float | None = None
+
+    for target in dates:
+        while cursor < len(parsed_rows) and parsed_rows[cursor][0] <= target:
+            latest_close = parsed_rows[cursor][1]
+            cursor += 1
+        close_values.append(latest_close)
 
     base_close = next((v for v in close_values if v is not None and v > 0), None)
     if base_close is None:

@@ -75,6 +75,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       PYTHIA_API_URL: http://divination-api:8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
+      ALLOW_RANDOM_FALLBACK: ${ALLOW_RANDOM_FALLBACK:-false}
     ports:
       - "8001:8001"
     volumes:

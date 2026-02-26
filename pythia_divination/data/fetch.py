@@ -1,8 +1,9 @@
 from typing import Optional, Sequence
-import os, time, datetime as dt
+import io
+import logging
+import time
 import pandas as pd
 import requests
-import yaml
 
 # Primary provider
 import yfinance as yf
@@ -11,9 +12,22 @@ import yfinance as yf
 from data.providers import alpaca as provider_alpaca
 from config.settings import settings
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_RETRIES = 3
 SLEEP_SEC = 1.5
 HTTP_TIMEOUT = 20
+
+STOOQ_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/csv,text/plain;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+}
 
 # -------- Shared helpers --------
 
@@ -159,21 +173,71 @@ def _stooq_symbol(ticker: str) -> str:
 
 def _stooq_http(ticker: str, start: Optional[str]) -> pd.DataFrame:
     sym = _stooq_symbol(ticker)
-    url = f"https://stooq.com/q/d/l/?s={sym}&i=d"
-    resp = requests.get(url, timeout=HTTP_TIMEOUT)
-    resp.raise_for_status()
-    sio = __import__("io").StringIO(resp.text)
-    df = pd.read_csv(sio)
-    if df.empty:
-        raise ValueError(f"Stooq returned empty CSV for {ticker} ({sym}).")
-    df["Date"] = pd.to_datetime(df["Date"], utc=False)
-    df = df.set_index("Date").sort_index()
-    if start:
-        df = df[df.index >= pd.to_datetime(start)]
-    for col in ["Open","High","Low","Close","Volume"]:
-        if col not in df.columns:
-            df[col] = pd.NA
-    return df[["Open","High","Low","Close","Volume"]]
+    urls = [
+        f"https://stooq.com/q/d/l/?s={sym}&i=d",
+        f"https://stooq.com/q/l/?s={sym}&f=sd2t2ohlcv&h&e=csv",
+    ]
+    errors: list[str] = []
+
+    for url in urls:
+        try:
+            resp = requests.get(url, timeout=HTTP_TIMEOUT, headers=STOOQ_HEADERS)
+            resp.raise_for_status()
+
+            body = resp.text.strip()
+            if not body:
+                raise ValueError("empty response body")
+
+            # Stooq sometimes serves HTML challenge/rate-limit pages to bots.
+            sample = body.lstrip()[:256].lower()
+            if sample.startswith("<!doctype html") or sample.startswith("<html"):
+                raise ValueError("received HTML instead of CSV (possible bot challenge)")
+
+            df = pd.read_csv(io.StringIO(body))
+            if df.empty:
+                raise ValueError("parsed CSV is empty")
+
+            cols = {str(c).strip().lower(): str(c).strip() for c in df.columns}
+            if "date" not in cols:
+                raise ValueError(f"missing Date column. columns={list(df.columns)}")
+
+            df["Date"] = pd.to_datetime(df[cols["date"]], utc=False, errors="coerce")
+            df = df[df["Date"].notna()]
+            if df.empty:
+                raise ValueError("no valid dated rows in CSV")
+
+            df = df.set_index("Date").sort_index()
+            if start:
+                df = df[df.index >= pd.to_datetime(start)]
+
+            # Normalize OHLCV columns (case-insensitive)
+            cols = {str(c).strip().lower(): str(c).strip() for c in df.columns}
+            normalized = pd.DataFrame(index=df.index)
+            for src, dst in [
+                ("open", "Open"),
+                ("high", "High"),
+                ("low", "Low"),
+                ("close", "Close"),
+                ("volume", "Volume"),
+            ]:
+                if src not in cols:
+                    raise ValueError(f"missing {src} column. columns={list(df.columns)}")
+                normalized[dst] = pd.to_numeric(df[cols[src]], errors="coerce")
+
+            # Require price rows to be numeric.
+            normalized = normalized.dropna(subset=["Open", "High", "Low", "Close"])
+            if normalized.empty:
+                raise ValueError("no numeric OHLC rows after normalization")
+
+            # Volume can be missing for some instruments; default to 0.
+            normalized["Volume"] = normalized["Volume"].fillna(0)
+            return normalized[["Open", "High", "Low", "Close", "Volume"]]
+
+        except Exception as exc:
+            errors.append(f"{url} -> {exc}")
+
+    msg = " | ".join(errors[-2:]) if errors else "unknown error"
+    raise RuntimeError(f"Stooq fetch failed for {ticker} ({sym}). {msg}")
 
 # -------- Public API: fetch_ohlcv / fetch_panel --------
 
@@ -232,16 +296,25 @@ def fetch_ohlcv(
     if src == "stooq":
         if base_tf != "1Day":
             raise RuntimeError("Stooq provider supports only daily timeframe.")
-        for _ in range(max(1, retries)):
+        last_err: Optional[Exception] = None
+        for attempt in range(max(1, retries)):
             try:
                 d = _stooq_http(ticker, start)
                 df = _ensure_ohlcv(d, ticker)
                 if needs_aggregation:
                     df = _aggregate_ohlcv(df, n_bars)
                 return df
-            except Exception:
+            except Exception as e:
+                last_err = e
+                logger.warning(
+                    "Stooq fetch attempt %d/%d failed for %s: %s",
+                    attempt + 1,
+                    max(1, retries),
+                    ticker,
+                    e,
+                )
                 time.sleep(SLEEP_SEC)
-        raise RuntimeError(f"Failed to fetch OHLCV (Stooq) for {ticker}")
+        raise RuntimeError(f"Failed to fetch OHLCV (Stooq) for {ticker}. Last error: {last_err}")
 
     if src == "yahoo":
         # Map our canonical tf to yfinance interval
@@ -291,6 +364,7 @@ def fetch_ohlcv(
     if base_tf not in YF_INTERVAL_MAP:
         raise RuntimeError(f"Timeframe {base_tf} not supported by auto provider")
     yf_interval = YF_INTERVAL_MAP[base_tf]
+    yahoo_err: Optional[Exception] = None
     for _ in range(max(1, retries)):
         try:
             if yf_interval not in ("1d", "1wk", "1mo"):
@@ -309,7 +383,8 @@ def fetch_ohlcv(
             if needs_aggregation:
                 df = _aggregate_ohlcv(df, n_bars)
             return df
-        except Exception:
+        except Exception as e:
+            yahoo_err = e
             time.sleep(SLEEP_SEC)
     try:
         d = _yf_history(ticker, start, period)
@@ -317,20 +392,36 @@ def fetch_ohlcv(
         if needs_aggregation:
             df = _aggregate_ohlcv(df, n_bars)
         return df
-    except Exception:
+    except Exception as e:
+        yahoo_err = e
         pass
     if base_tf != "1Day":
-        raise RuntimeError("Auto provider fallback to Stooq only supports daily timeframe.")
-    for _ in range(max(1, retries)):
+        raise RuntimeError(
+            f"Auto provider fallback to Stooq only supports daily timeframe. "
+            f"Yahoo error: {yahoo_err}"
+        )
+    stooq_err: Optional[Exception] = None
+    for attempt in range(max(1, retries)):
         try:
             d = _stooq_http(ticker, start)
             df = _ensure_ohlcv(d, ticker)
             if needs_aggregation:
                 df = _aggregate_ohlcv(df, n_bars)
             return df
-        except Exception:
+        except Exception as e:
+            stooq_err = e
+            logger.warning(
+                "Auto fallback Stooq attempt %d/%d failed for %s: %s",
+                attempt + 1,
+                max(1, retries),
+                ticker,
+                e,
+            )
             time.sleep(SLEEP_SEC)
-    raise RuntimeError(f"Failed to fetch OHLCV for {ticker} after retries and fallbacks")
+    raise RuntimeError(
+        f"Failed to fetch OHLCV for {ticker} after retries and fallbacks. "
+        f"Yahoo error: {yahoo_err}; Stooq error: {stooq_err}"
+    )
 
 def fetch_ohlcv_for_lstm(
     ticker: str,

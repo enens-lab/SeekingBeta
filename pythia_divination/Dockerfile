@@ -2,16 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies including AWS CLI
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
-    curl \
-    groff \
     && rm -rf /var/lib/apt/lists/*
-
-# Install AWS CLI
-RUN pip install --no-cache-dir awscli
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
@@ -27,12 +22,9 @@ RUN chmod +x /app/scripts/download_artifacts.sh
 # Create artifacts directory
 RUN mkdir -p /app/artifacts
 
-# Download artifacts from S3 at startup
-RUN /app/scripts/download_artifacts.sh
-
 # Create non-root user
 RUN useradd -m -u 1000 pythia && chown -R pythia:pythia /app
 
 USER pythia
 
-CMD ["python", "main.py", "--host", "0.0.0.0"]
+CMD ["sh", "-c", "if [ \"${AUTO_DOWNLOAD_ARTIFACTS:-false}\" = \"true\" ]; then /app/scripts/download_artifacts.sh; fi; exec python main.py --host 0.0.0.0"]

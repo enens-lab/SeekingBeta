@@ -14,7 +14,8 @@ python-dotenv==1.0.1
 asyncpg==0.29.0
 
 # Deep learning
-torch>=2.0.0
+# TensorFlow is required for .keras LSTM artifacts.
+# Torch is optional and only needed for legacy .pt artifacts/training.
 tensorflow>=2.10.0
 
 # Technical indicators (fallback in code, not required)

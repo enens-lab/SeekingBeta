@@ -667,55 +667,6 @@ def list_models():
     return get_trained_models()
 
 
-@app.get("/predict/{ticker}", response_model=PredictResponse)
-def predict(
-    ticker: str,
-    horizon: str = "1d",
-    model: str = DEFAULT_MODEL,
-    task: str = DEFAULT_TASK
-):
-    """
-    Get prediction from a specific model.
-
-    Args:
-        ticker: Stock ticker symbol
-        horizon: Prediction horizon (1d, 4h, 1w, etc.)
-        model: Model to use (gradient_boosting, linear_regression, random_forest, lstm)
-        task: Task type (classifier, regressor)
-    """
-    try:
-        prob_up, signal, last_close, predicted_return = predict_for_ticker(
-            ticker.upper(),
-            horizon=horizon,
-            model_type=model,
-            task=task
-        )
-        return PredictResponse(
-            ticker=ticker.upper(),
-            horizon=horizon,
-            prob_up=prob_up,
-            signal=signal,
-            last_close=last_close,
-            predicted_return=predicted_return,
-            model=model,
-            task=task
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(400, detail=str(e))
-
-
-@app.get("/predict/lstm_5d/{ticker}")
-def predict_lstm_5d(ticker: str):
-    return _predict_lstm_cached("lstm_5d", ticker)
-
-
-@app.get("/predict/lstm_jackpot/{ticker}")
-def predict_lstm_jackpot(ticker: str):
-    return _predict_lstm_cached("lstm_jackpot", ticker)
-
-
 @app.get("/predict/homepage")
 def predict_homepage(
     force_refresh: bool = False,
@@ -764,6 +715,55 @@ def predict_homepage(
         "data_source": DATA_SOURCE,
         "rows": rows,
     }
+
+
+@app.get("/predict/{ticker}", response_model=PredictResponse)
+def predict(
+    ticker: str,
+    horizon: str = "1d",
+    model: str = DEFAULT_MODEL,
+    task: str = DEFAULT_TASK
+):
+    """
+    Get prediction from a specific model.
+
+    Args:
+        ticker: Stock ticker symbol
+        horizon: Prediction horizon (1d, 4h, 1w, etc.)
+        model: Model to use (gradient_boosting, linear_regression, random_forest, lstm)
+        task: Task type (classifier, regressor)
+    """
+    try:
+        prob_up, signal, last_close, predicted_return = predict_for_ticker(
+            ticker.upper(),
+            horizon=horizon,
+            model_type=model,
+            task=task
+        )
+        return PredictResponse(
+            ticker=ticker.upper(),
+            horizon=horizon,
+            prob_up=prob_up,
+            signal=signal,
+            last_close=last_close,
+            predicted_return=predicted_return,
+            model=model,
+            task=task
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
+
+
+@app.get("/predict/lstm_5d/{ticker}")
+def predict_lstm_5d(ticker: str):
+    return _predict_lstm_cached("lstm_5d", ticker)
+
+
+@app.get("/predict/lstm_jackpot/{ticker}")
+def predict_lstm_jackpot(ticker: str):
+    return _predict_lstm_cached("lstm_jackpot", ticker)
 
 
 @app.get("/predict/cache/status")

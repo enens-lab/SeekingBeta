@@ -7,6 +7,8 @@ import os
 import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate, make_msgid
+from html import escape
 from typing import Optional
 from time import sleep
 from urllib.parse import quote_plus
@@ -22,6 +24,9 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@seekingbeta.ai")
 FROM_NAME = os.getenv("FROM_NAME", "SeekingBeta")
+APP_NAME = os.getenv("APP_NAME", "SeekingBeta")
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "support@seekingbeta.ai")
+REPLY_TO_EMAIL = os.getenv("REPLY_TO_EMAIL", SUPPORT_EMAIL)
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -45,63 +50,93 @@ if ENVIRONMENT == "production" and not SMTP_PASSWORD:
     logger.warning("SMTP_PASSWORD not configured in production. Emails will fail to send.")
 
 
-def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
-    """Send email verification code to user."""
-    subject = "Verify your SeekingBeta account"
-    verify_url = f"{FRONTEND_URL.rstrip('/')}/verify-email?token={quote_plus(token)}&email={quote_plus(to_email)}"
+def _safe_name(name: str) -> str:
+    clean = (name or "").strip()
+    if not clean:
+        return "there"
+    return escape(clean)
 
-    html_content = f"""
+
+def _render_email_html(
+    title: str,
+    body_html: str,
+    cta_label: Optional[str] = None,
+    cta_url: Optional[str] = None,
+) -> str:
+    cta_block = ""
+    if cta_label and cta_url:
+        cta_block = (
+            '<p style="text-align: center; margin: 24px 0;">'
+            f'<a href="{cta_url}" class="button">{cta_label}</a>'
+            "</p>"
+        )
+
+    return f"""
     <!DOCTYPE html>
     <html>
     <head>
         <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ text-align: center; padding: 20px 0; }}
-            .logo {{ font-size: 32px; font-weight: bold; color: #008f7a; }}
-            .content {{ background: #f9fafb; border-radius: 8px; padding: 30px; margin: 20px 0; }}
-            .code-box {{ background: white; border: 2px solid #008f7a; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }}
-            .code {{ font-size: 36px; font-weight: bold; color: #008f7a; letter-spacing: 2px; font-family: monospace; }}
-            .button {{ display: inline-block; background: #008f7a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 500; }}
-            .footer {{ text-align: center; color: #6b7280; font-size: 14px; padding: 20px 0; }}
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #0f172a; background: #f8fafc; margin: 0; padding: 20px; }}
+            .container {{ max-width: 600px; margin: 0 auto; }}
+            .header {{ text-align: center; padding: 12px 0 20px; }}
+            .logo {{ font-size: 30px; font-weight: 700; color: #008f7a; }}
+            .card {{ background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; }}
+            .button {{ display: inline-block; background: #008f7a; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; }}
+            .muted {{ color: #64748b; font-size: 14px; }}
+            .footer {{ text-align: center; color: #64748b; font-size: 13px; padding: 16px 0 0; }}
+            .code-box {{ background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; text-align: center; margin: 16px 0; }}
+            .code {{ font-size: 28px; font-weight: 700; color: #0f766e; letter-spacing: 2px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }}
+            .notice {{ background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px; margin: 16px 0; color: #9a3412; font-size: 14px; }}
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <div class="logo">SeekingBeta</div>
+                <div class="logo">{APP_NAME}</div>
             </div>
-            <div class="content">
-                <h2>Welcome, {first_name}!</h2>
-                <p>Thanks for signing up for SeekingBeta. Click below to verify your account:</p>
-                <p style="text-align: center; margin: 24px 0;">
-                    <a href="{verify_url}" class="button">Verify Email</a>
-                </p>
-                <p>If the button doesn&apos;t work, use this code in the app:</p>
-                <div class="code-box">
-                    <div class="code">{token}</div>
-                </div>
-                <p style="color: #6b7280; font-size: 14px;">
-                    Direct link: <a href="{verify_url}">{verify_url}</a>
-                </p>
-                <p style="text-align: center; color: #6b7280; font-size: 14px;">
-                    This code expires in 24 hours
-                </p>
-                <p style="color: #6b7280; font-size: 14px;">
-                    If you didn't create an account, you can safely ignore this email.
-                </p>
+            <div class="card">
+                <h2>{title}</h2>
+                {body_html}
+                {cta_block}
             </div>
             <div class="footer">
-                <p>&copy; 2026 SeekingBeta. All rights reserved.</p>
-                <p>This is an automated message. Please do not reply.</p>
+                <p>&copy; 2026 {APP_NAME}. All rights reserved.</p>
+                <p>This is an automated transactional message. Please do not reply directly.</p>
             </div>
         </div>
     </body>
     </html>
     """
 
+
+def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
+    """Send email verification code to user."""
+    subject = f"Verify your {APP_NAME} account"
+    verify_url = f"{FRONTEND_URL.rstrip('/')}/verify-email?token={quote_plus(token)}&email={quote_plus(to_email)}"
+    safe_name = _safe_name(first_name)
+    safe_token = escape(token)
+    safe_url = escape(verify_url)
+
+    body_html = f"""
+    <p>Hi {safe_name},</p>
+    <p>Thanks for creating your {APP_NAME} account. Please verify your email address to continue.</p>
+    <p>If the button does not work, enter this code in the app:</p>
+    <div class="code-box">
+        <div class="code">{safe_token}</div>
+    </div>
+    <p class="muted">Verification link: <a href="{safe_url}">{safe_url}</a></p>
+    <p class="muted">This code expires in 24 hours.</p>
+    <p class="muted">If you did not create this account, you can ignore this email.</p>
+    """
+    html_content = _render_email_html(
+        title="Verify your email",
+        body_html=body_html,
+        cta_label="Verify Email",
+        cta_url=safe_url,
+    )
+
     text_content = f"""
-    Welcome to SeekingBeta, {first_name}!
+    Welcome to {APP_NAME}, {first_name}!
 
     Verify your account using this link:
     {verify_url}
@@ -114,8 +149,8 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
 
     If you didn't create an account, you can safely ignore this email.
 
-    - The SeekingBeta Team
-    """
+    - The {APP_NAME} Team
+    """.strip()
 
     if EMAIL_DEV_MODE:
         logger.info(f"[DEV MODE] Verification code for {to_email}: {token}")
@@ -126,115 +161,67 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
 
 def send_welcome_email(to_email: str, first_name: str, tier: str) -> bool:
     """Send welcome email after verification."""
-    subject = "Welcome to Pythia - Your account is ready!"
+    subject = f"Welcome to {APP_NAME} - your account is ready"
 
     tier_name = tier.capitalize()
-    dashboard_url = f"{FRONTEND_URL}/dashboard"
+    dashboard_url = f"{FRONTEND_URL.rstrip('/')}/dashboard"
+    safe_name = _safe_name(first_name)
+    safe_tier = escape(tier_name)
+    safe_url = escape(dashboard_url)
 
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ text-align: center; padding: 20px 0; }}
-            .logo {{ font-size: 32px; font-weight: bold; color: #6366f1; }}
-            .content {{ background: #f9fafb; border-radius: 8px; padding: 30px; margin: 20px 0; }}
-            .button {{ display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 500; }}
-            .tier-badge {{ display: inline-block; background: #6366f1; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; }}
-            .footer {{ text-align: center; color: #6b7280; font-size: 14px; padding: 20px 0; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">Pythia</div>
-            </div>
-            <div class="content">
-                <h2>Your account is ready, {first_name}!</h2>
-                <p>Your email has been verified and your <span class="tier-badge">{tier_name}</span> account is now active.</p>
-                <p>You can now access AI-powered stock predictions and start making more informed decisions.</p>
-                <p style="text-align: center; margin: 30px 0;">
-                    <a href="{dashboard_url}" class="button">Go to Dashboard</a>
-                </p>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 Pythia. All rights reserved.</p>
-            </div>
-        </div>
-    </body>
-    </html>
+    body_html = f"""
+    <p>Hi {safe_name},</p>
+    <p>Your email has been verified and your <strong>{safe_tier}</strong> account is active.</p>
+    <p>You can now access stock predictions and manage your watchlist from the dashboard.</p>
     """
+    html_content = _render_email_html(
+        title="Welcome aboard",
+        body_html=body_html,
+        cta_label="Open Dashboard",
+        cta_url=safe_url,
+    )
 
     text_content = f"""
-    Your Pythia account is ready, {first_name}!
+    Your {APP_NAME} account is ready, {first_name}!
 
     Your email has been verified and your {tier_name} account is now active.
 
     Go to your dashboard: {dashboard_url}
 
-    - The Pythia Team
-    """
+    - The {APP_NAME} Team
+    """.strip()
 
     return _send_email(to_email, subject, text_content, html_content)
 
 
 def send_password_reset_email(to_email: str, first_name: str, token: str) -> bool:
     """Send password reset email."""
-    subject = "Reset Your Pythia Password"
+    subject = f"Reset your {APP_NAME} password"
 
-    reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+    reset_url = f"{FRONTEND_URL.rstrip('/')}/reset-password?token={quote_plus(token)}"
+    safe_name = _safe_name(first_name)
+    safe_url = escape(reset_url)
 
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }}
-            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-            .header {{ text-align: center; padding: 20px 0; }}
-            .logo {{ font-size: 32px; font-weight: bold; color: #6366f1; }}
-            .content {{ background: #f9fafb; border-radius: 8px; padding: 30px; margin: 20px 0; }}
-            .button {{ display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 500; }}
-            .footer {{ text-align: center; color: #6b7280; font-size: 14px; padding: 20px 0; }}
-            .warning {{ background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 15px; margin: 20px 0; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <div class="logo">Pythia</div>
-            </div>
-            <div class="content">
-                <h2>Password Reset Request</h2>
-                <p>Hi {first_name},</p>
-                <p>We received a request to reset your Pythia password. Click the button below to set a new password:</p>
-                <p style="text-align: center; margin: 30px 0;">
-                    <a href="{reset_url}" class="button">Reset Password</a>
-                </p>
-                <p style="color: #6b7280; font-size: 14px;">
-                    Or copy this link: <code>{reset_url}</code>
-                </p>
-                <div class="warning">
-                    <strong>⚠️ Security Notice:</strong> This link expires in 1 hour. If you didn't request a password reset, please ignore this email or contact support.
-                </div>
-            </div>
-            <div class="footer">
-                <p>&copy; 2025 Pythia. All rights reserved.</p>
-                <p>This is an automated message. Please do not reply.</p>
-            </div>
-        </div>
-    </body>
-    </html>
+    body_html = f"""
+    <p>Hi {safe_name},</p>
+    <p>We received a request to reset your password.</p>
+    <p class="muted">If you did not request this, you can ignore this email.</p>
+    <div class="notice"><strong>Security notice:</strong> This reset link expires in 1 hour.</div>
+    <p class="muted">Direct link: <a href="{safe_url}">{safe_url}</a></p>
     """
+    html_content = _render_email_html(
+        title="Password reset request",
+        body_html=body_html,
+        cta_label="Reset Password",
+        cta_url=safe_url,
+    )
 
     text_content = f"""
     Password Reset Request
 
     Hi {first_name},
 
-    We received a request to reset your Pythia password. Use this link to set a new password:
+    We received a request to reset your {APP_NAME} password. Use this link to set a new password:
 
     {reset_url}
 
@@ -242,8 +229,8 @@ def send_password_reset_email(to_email: str, first_name: str, token: str) -> boo
 
     If you didn't request a password reset, please ignore this email.
 
-    - The Pythia Team
-    """
+    - The {APP_NAME} Team
+    """.strip()
 
     return _send_email(to_email, subject, text_content, html_content)
 
@@ -269,6 +256,13 @@ def _send_email(
             msg["Subject"] = subject
             msg["From"] = f"{FROM_NAME} <{FROM_EMAIL}>"
             msg["To"] = to_email
+            msg["Reply-To"] = REPLY_TO_EMAIL or FROM_EMAIL
+            msg["Date"] = formatdate(localtime=False)
+            from_domain = FROM_EMAIL.split("@", 1)[-1] if "@" in FROM_EMAIL else None
+            msg["Message-ID"] = make_msgid(domain=from_domain)
+            msg["Auto-Submitted"] = "auto-generated"
+            msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
+            msg["X-Entity-Ref-ID"] = make_msgid(domain=from_domain).strip("<>")
 
             msg.attach(MIMEText(text_content, "plain"))
             if html_content:

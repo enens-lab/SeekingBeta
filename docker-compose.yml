@@ -70,9 +70,18 @@ services:
       dockerfile: Dockerfile
     container_name: pythia-prophecy
     environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_me_in_production}
       EMAIL_DEV_MODE: ${EMAIL_DEV_MODE:-true}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@seekingbeta.ai}
+      FROM_NAME: ${FROM_NAME:-SeekingBeta}
+      EMAIL_RETRY_ATTEMPTS: ${EMAIL_RETRY_ATTEMPTS:-3}
+      EMAIL_RETRY_DELAY: ${EMAIL_RETRY_DELAY:-5}
       PYTHIA_API_URL: http://divination-api:8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
       ALLOW_RANDOM_FALLBACK: ${ALLOW_RANDOM_FALLBACK:-false}

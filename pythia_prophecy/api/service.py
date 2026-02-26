@@ -65,6 +65,7 @@ from .models import (
     UserPreferencesResponse,
     UpdatePreferencesRequest,
     TrackRecordResponse,
+    TrackRecordCurveResponse,
 )
 from .database import (
     create_user,
@@ -91,7 +92,7 @@ from .auth import (
     validate_password_strength,
 )
 from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
-from .performance import get_track_record
+from .performance import get_track_record, get_track_record_curve
 from .models import UserInDB
 
 
@@ -1352,6 +1353,12 @@ def status():
 def performance_track_record():
     """Public track record summary for investor/user transparency."""
     return get_track_record()
+
+
+@app.get("/api/performance/curve", response_model=TrackRecordCurveResponse, tags=["Performance"])
+def performance_curve():
+    """Public model-vs-benchmark curve for homepage visualization."""
+    return get_track_record_curve()
 
 
 # ============================================================

@@ -6,13 +6,14 @@ import csv
 import math
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BACKTEST_CANDIDATES = [
     ROOT / "frontend" / "Stock_Prediction_Model" / "trade_summary_prob_strategy.csv",
+    ROOT / "data" / "backtests" / "jackpot_trade_log.csv",
     ROOT / "data" / "backtests" / "trade_summary_prob_strategy.csv",
     ROOT / "data" / "backtests" / "trade_summary.csv",
     ROOT / "data" / "backtests" / "backtest_results.csv",
@@ -36,6 +37,18 @@ def _get_float(value: Any) -> float | None:
     text = text.replace("%", "")
     try:
         return float(text)
+    except ValueError:
+        return None
+
+
+def _get_datetime(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).replace(tzinfo=None)
     except ValueError:
         return None
 
@@ -103,6 +116,51 @@ def _max_drawdown(curve: list[float]) -> float | None:
     return drawdown
 
 
+def _build_spy_curve(dates: list[datetime], start_value: float) -> list[float | None]:
+    if not dates or start_value <= 0:
+        return [None for _ in dates]
+
+    try:
+        import yfinance as yf  # type: ignore
+        import pandas as pd  # type: ignore
+    except Exception:
+        return [None for _ in dates]
+
+    start = (min(dates) - timedelta(days=7)).strftime("%Y-%m-%d")
+    end = (max(dates) + timedelta(days=7)).strftime("%Y-%m-%d")
+
+    try:
+        frame = yf.download("SPY", start=start, end=end, auto_adjust=True, progress=False, interval="1d")
+    except Exception:
+        return [None for _ in dates]
+
+    if frame is None or frame.empty or "Close" not in frame:
+        return [None for _ in dates]
+
+    closes = frame["Close"]
+    if hasattr(closes, "columns"):
+        # yfinance can return a DataFrame for single-ticker data in some versions.
+        closes = closes.iloc[:, 0]
+    closes = closes.dropna()
+    if closes.empty:
+        return [None for _ in dates]
+
+    close_values: list[float | None] = []
+    for dt in dates:
+        timestamp = pd.Timestamp(dt)
+        idx = closes.index.searchsorted(timestamp, side="right") - 1
+        if idx < 0:
+            close_values.append(None)
+        else:
+            close_values.append(float(closes.iloc[idx]))
+
+    base_close = next((v for v in close_values if v is not None and v > 0), None)
+    if base_close is None:
+        return [None for _ in dates]
+
+    return [None if value is None else start_value * (value / base_close) for value in close_values]
+
+
 def _candidate_backtest_paths() -> list[Path]:
     candidates: list[Path] = []
     env_path = os.getenv("BACKTEST_RESULTS_PATH")
@@ -121,6 +179,7 @@ def _resolve_backtest_path() -> Path | None:
 
 def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
     rows = _read_rows(path)
+    path_stat = path.stat()
     round_trip_cost = (transaction_cost_bps / 10_000.0) * 2.0
 
     gross_returns: list[float] = []
@@ -128,6 +187,8 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
     daily_returns: list[float] = []
     holding_days: list[float] = []
     regime_rows: dict[str, list[float]] = {}
+    trade_dates: list[datetime] = []
+    reported_balances: list[float | None] = []
     notes: list[str] = []
 
     for row in rows:
@@ -146,6 +207,25 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
 
         if gross is None:
             continue
+
+        trade_dt = _get_datetime(
+            _first_value(
+                row,
+                ["date", "timestamp", "datetime", "sell_date", "exit_date", "closed_at"],
+            )
+        )
+        if trade_dt is None:
+            trade_dt = datetime.utcfromtimestamp(path_stat.st_mtime) + timedelta(minutes=len(gross_returns))
+        trade_dates.append(trade_dt)
+
+        reported_balances.append(
+            _get_float(
+                _first_value(
+                    row,
+                    ["balance", "equity", "portfolio_value", "account_value", "net_liquidation", "ending_balance"],
+                )
+            )
+        )
 
         days = _get_float(_first_value(row, ["days_held", "daysheld", "holding_days", "days"]))
         if days is None or days <= 0:
@@ -179,6 +259,24 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
         gross_curve.append(gross_equity)
         net_curve.append(net_equity)
 
+    start_value = _get_float(os.getenv("BACKTEST_START_CAPITAL")) or 10_000.0
+    first_reported_balance = next((v for v in reported_balances if v is not None and v > 0), None)
+    if first_reported_balance is not None:
+        start_value = first_reported_balance
+
+    model_curve_values: list[float] = []
+    for reported_balance, compounded in zip(reported_balances, net_curve):
+        if reported_balance is not None and reported_balance > 0:
+            model_curve_values.append(reported_balance)
+        else:
+            model_curve_values.append(start_value * compounded)
+
+    benchmark_curve_values = _build_spy_curve(trade_dates, start_value=start_value)
+    benchmark_end_value = next((value for value in reversed(benchmark_curve_values) if value is not None), None)
+    benchmark_total_return = (
+        (benchmark_end_value / start_value - 1.0) if benchmark_end_value is not None and start_value > 0 else None
+    )
+
     wins = sum(1 for r in net_returns if r > 0)
     losses = len(net_returns) - wins
     hit_rate = wins / len(net_returns) if net_returns else None
@@ -208,7 +306,7 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
 
     summary = {
         "source_file": str(path),
-        "as_of": datetime.utcfromtimestamp(path.stat().st_mtime).isoformat() + "Z",
+        "as_of": datetime.utcfromtimestamp(path_stat.st_mtime).isoformat() + "Z",
         "sample_size": len(net_returns),
         "transaction_cost_bps": transaction_cost_bps,
         "hit_rate": hit_rate,
@@ -216,13 +314,36 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
         "max_drawdown": _max_drawdown(net_curve),
         "total_return_gross": gross_curve[-1] - 1.0 if gross_curve else None,
         "total_return_net": net_curve[-1] - 1.0 if net_curve else None,
+        "benchmark_return": benchmark_total_return,
         "avg_trade_return_net": (sum(net_returns) / len(net_returns)) if net_returns else None,
         "avg_holding_days": (sum(holding_days) / len(holding_days)) if holding_days else None,
         "regime_breakdown": regime_breakdown,
         "notes": notes,
     }
 
-    return {"available": True, "summary": summary, "message": None}
+    curve_points: list[dict[str, Any]] = []
+    for dt, model_value, benchmark_value in zip(trade_dates, model_curve_values, benchmark_curve_values):
+        curve_points.append(
+            {
+                "date": dt.date().isoformat(),
+                "model_value": round(float(model_value), 4),
+                "benchmark_value": None if benchmark_value is None else round(float(benchmark_value), 4),
+            }
+        )
+
+    return {
+        "available": True,
+        "summary": summary,
+        "curve": {
+            "series": curve_points,
+            "model_label": "AI Strategy (Jackpot)",
+            "benchmark_label": "S&P 500 (SPY)",
+            "start_value": start_value,
+            "end_value": model_curve_values[-1] if model_curve_values else None,
+            "benchmark_end_value": benchmark_end_value,
+        },
+        "message": None,
+    }
 
 
 def get_track_record() -> dict[str, Any]:
@@ -246,3 +367,32 @@ def get_track_record() -> dict[str, Any]:
     _CACHE["mtime"] = mtime
     _CACHE["response"] = response
     return response
+
+
+def get_track_record_curve() -> dict[str, Any]:
+    payload = get_track_record()
+    if not payload.get("available"):
+        return {
+            "available": False,
+            "series": [],
+            "model_label": "AI Strategy (Jackpot)",
+            "benchmark_label": "S&P 500 (SPY)",
+            "start_value": None,
+            "end_value": None,
+            "benchmark_end_value": None,
+            "message": payload.get("message"),
+        }
+
+    curve = payload.get("curve") or {}
+    series = curve.get("series") or []
+
+    return {
+        "available": len(series) > 0,
+        "series": series,
+        "model_label": curve.get("model_label", "AI Strategy (Jackpot)"),
+        "benchmark_label": curve.get("benchmark_label", "S&P 500 (SPY)"),
+        "start_value": curve.get("start_value"),
+        "end_value": curve.get("end_value"),
+        "benchmark_end_value": curve.get("benchmark_end_value"),
+        "message": None if len(series) > 0 else "Backtest file parsed, but no chartable points were found.",
+    }

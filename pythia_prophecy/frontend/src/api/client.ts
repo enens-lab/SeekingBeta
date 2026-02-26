@@ -133,6 +133,7 @@ export interface TrackRecordSummary {
   max_drawdown: number | null;
   total_return_gross: number | null;
   total_return_net: number | null;
+  benchmark_return: number | null;
   avg_trade_return_net: number | null;
   avg_holding_days: number | null;
   regime_breakdown: Record<string, RegimePerformance>;
@@ -142,6 +143,23 @@ export interface TrackRecordSummary {
 export interface TrackRecordResponse {
   available: boolean;
   summary: TrackRecordSummary | null;
+  message?: string;
+}
+
+export interface TrackRecordCurvePoint {
+  date: string;
+  model_value: number;
+  benchmark_value: number | null;
+}
+
+export interface TrackRecordCurveResponse {
+  available: boolean;
+  series: TrackRecordCurvePoint[];
+  model_label: string;
+  benchmark_label: string;
+  start_value: number | null;
+  end_value: number | null;
+  benchmark_end_value: number | null;
   message?: string;
 }
 
@@ -337,4 +355,6 @@ export const analysis = {
 export const performance = {
   getTrackRecord: (): Promise<TrackRecordResponse> =>
     request('/api/performance/track-record'),
+  getTrackRecordCurve: (): Promise<TrackRecordCurveResponse> =>
+    request('/api/performance/curve'),
 };

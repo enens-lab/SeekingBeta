@@ -268,6 +268,7 @@ class TrackRecordSummary(BaseModel):
     max_drawdown: Optional[float] = None
     total_return_gross: Optional[float] = None
     total_return_net: Optional[float] = None
+    benchmark_return: Optional[float] = None
     avg_trade_return_net: Optional[float] = None
     avg_holding_days: Optional[float] = None
     regime_breakdown: Dict[str, RegimeBreakdown] = {}
@@ -278,6 +279,25 @@ class TrackRecordResponse(BaseModel):
     """Response wrapper for public performance track record."""
     available: bool
     summary: Optional[TrackRecordSummary] = None
+    message: Optional[str] = None
+
+
+class TrackRecordCurvePoint(BaseModel):
+    """Single point in model-vs-benchmark equity curve."""
+    date: str
+    model_value: float
+    benchmark_value: Optional[float] = None
+
+
+class TrackRecordCurveResponse(BaseModel):
+    """Curve data for homepage performance visualization."""
+    available: bool
+    series: List[TrackRecordCurvePoint] = []
+    model_label: str
+    benchmark_label: str
+    start_value: Optional[float] = None
+    end_value: Optional[float] = None
+    benchmark_end_value: Optional[float] = None
     message: Optional[str] = None
 
 

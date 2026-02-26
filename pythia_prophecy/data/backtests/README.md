@@ -1,6 +1,7 @@
 Place backtest CSV files here for the public track-record API.
 
 Supported default filenames:
+- `jackpot_trade_log.csv` (trade ledger with `date`, `balance`, and `return`)
 - `trade_summary_prob_strategy.csv` (from `run_backtest_v4.py`)
 - `trade_summary.csv`
 - `backtest_results.csv`

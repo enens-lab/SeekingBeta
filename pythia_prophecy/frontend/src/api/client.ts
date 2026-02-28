@@ -391,7 +391,7 @@ export const predictions = {
   getAttribution: (
     modelName: 'lstm_5d' | 'lstm_jackpot',
     ticker: string,
-    topK = 5
+    topK = 3
   ): Promise<PredictionAttributionResponse> =>
     request(
       `/predict/lstm/${modelName}/${ticker}/attribution?method=integrated_gradients&top_k=${topK}`

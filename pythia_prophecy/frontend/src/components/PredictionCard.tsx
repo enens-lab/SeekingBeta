@@ -29,13 +29,13 @@ function formatSignalClass(signal?: string | null): 'buy' | 'sell' | 'hold' {
 function buildTopDrivers(probability: string, probValue: number, horizon: string): string[] {
   const directionalSummary =
     probValue >= 0.55
-      ? 'Recent trend/momentum inputs are supportive versus recent volatility.'
+      ? 'Recent price action is leaning upward versus recent volatility.'
       : probValue <= 0.45
-      ? 'Recent trend/momentum inputs are weaker and downside pressure is elevated.'
-      : 'Trend, momentum, and volatility inputs are mixed with limited directional conviction.';
+      ? 'Recent price action is soft, with downside pressure elevated.'
+      : 'Recent momentum is mixed with no clear directional edge.';
 
   return [
-    `Upside probability: ${probability}% over the ${horizon} horizon.`,
+    `Upside probability is ${probability}% over the ${horizon} horizon.`,
     directionalSummary,
   ];
 }
@@ -48,34 +48,61 @@ function prettifyFeatureName(feature: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function friendlyFeatureName(feature: string): string {
+  const normalized = feature.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const labels: Record<string, string> = {
+    bollingerupper: 'Upper Bollinger band',
+    bollingerlower: 'Lower Bollinger band',
+    yesterdayclose: 'Previous close',
+    volume: 'Volume',
+    rsi: 'RSI momentum',
+    macd: 'MACD momentum',
+    numarticles: 'News volume',
+  };
+  return labels[normalized] ?? prettifyFeatureName(feature);
+}
+
 function buildAttributionTopDrivers(
   attribution: PredictionAttribution | null | undefined,
+  probValue: number,
   fallback: string[]
 ): string[] {
   if (!attribution || typeof attribution !== 'object') {
     return fallback;
   }
 
-  const summary = Array.isArray(attribution.summary)
-    ? attribution.summary.filter((s: unknown) => typeof s === 'string' && s.trim())
-    : [];
-
   const rawDrivers = Array.isArray(attribution.top_drivers)
     ? attribution.top_drivers
     : [];
 
-  const drivers = rawDrivers
-    .filter((d: any) => d && typeof d.feature === 'string')
-    .slice(0, 3)
-    .map((d: any) => {
-      const direction = String(d.direction || '').toLowerCase() === 'negative'
-        ? 'adds downside pressure'
-        : 'supports upside momentum';
-      return `${prettifyFeatureName(d.feature)}: ${direction}.`;
-    });
+  const drivers = rawDrivers.filter((d: any) => d && typeof d.feature === 'string').slice(0, 3);
+  if (drivers.length === 0) {
+    return fallback;
+  }
 
-  const merged = [...summary.slice(0, 2), ...drivers];
-  return merged.length > 0 ? merged : fallback;
+  const positiveCount = drivers.filter(
+    (d: any) => String(d.direction || '').toLowerCase() !== 'negative'
+  ).length;
+  const negativeCount = drivers.length - positiveCount;
+  const biasLine =
+    positiveCount > negativeCount
+      ? 'Short-term model bias: mildly bullish.'
+      : negativeCount > positiveCount
+      ? 'Short-term model bias: mildly bearish.'
+      : probValue >= 0.5
+      ? 'Short-term model bias: slightly bullish.'
+      : 'Short-term model bias: mixed to neutral.';
+
+  const keyFactors = drivers
+    .map((d: any) => friendlyFeatureName(String(d.feature)))
+    .filter((name: string, index: number, arr: string[]) => arr.indexOf(name) === index)
+    .slice(0, 3);
+
+  return [
+    biasLine,
+    `Key factors: ${keyFactors.join(', ')}.`,
+    'Interpretation is approximate and can change as new data arrives.',
+  ];
 }
 
 function normalizeLstmModelName(model: string | null | undefined): LstmModelName | null {
@@ -113,6 +140,7 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
   const horizonLabel = horizon || '1d';
   const topDrivers = buildAttributionTopDrivers(
     attribution,
+    probValue,
     buildTopDrivers(probability, probValue, horizonLabel)
   );
 
@@ -123,7 +151,7 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
         setAttributionLoading(true);
         setAttributionError(null);
         predictions
-          .getAttribution(resolvedModelName, ticker, 5)
+          .getAttribution(resolvedModelName, ticker, 3)
           .then((response) => {
             if (response?.attribution) {
               setAttribution(response.attribution);
@@ -230,17 +258,18 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
         <div className="prediction-card-face prediction-card-back">
           <div className="prediction-back-header">
             <span className="prediction-ticker">{ticker}</span>
-            <span className="prediction-back-title">Top Drivers (High-Level)</span>
+            <span className="prediction-back-title">Why this signal?</span>
           </div>
-          {attributionLoading ? (
-            <div className="prediction-drivers-loading">Loading model attribution...</div>
-          ) : (
-            <ul className="prediction-drivers-list">
-              {topDrivers.map((driver, index) => (
-                <li key={`${ticker}-driver-${index}`}>{driver}</li>
-              ))}
-              {attributionError && <li>{attributionError}</li>}
-            </ul>
+          <ul className="prediction-drivers-list">
+            {topDrivers.map((driver, index) => (
+              <li key={`${ticker}-driver-${index}`}>{driver}</li>
+            ))}
+          </ul>
+          {attributionLoading && (
+            <div className="prediction-drivers-loading">Refining factors...</div>
+          )}
+          {attributionError && (
+            <div className="prediction-drivers-loading">Using fallback summary right now.</div>
           )}
 
           <div className="prediction-card-actions">

@@ -1064,9 +1064,9 @@ h4 {
 
 .prediction-drivers-loading {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
-  min-height: 72px;
+  margin-top: 8px;
 }
 
 .prediction-back-header {

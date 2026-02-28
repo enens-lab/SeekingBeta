@@ -2,7 +2,7 @@ import os, requests
 from typing import Optional, Dict, Any, List
 from config.settings import settings
 
-PAPER_BASE = "https://paper-api.alpaca.markets"
+PAPER_BASE = os.getenv("ALPACA_TRADING_BASE_URL", "https://paper-api.alpaca.markets").rstrip("/")
 HTTP_TIMEOUT = 20
 
 def _hdrs():

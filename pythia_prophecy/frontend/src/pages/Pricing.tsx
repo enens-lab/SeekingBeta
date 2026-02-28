@@ -158,7 +158,7 @@ function Pricing() {
 
       <main>
         <section className="pricing-hero">
-          <h1>Simple pricing for investors who want structured learning tools</h1>
+          <h1>Simple pricing for investors who want structured model signals</h1>
           <p>Choose the plan that fits how deeply you want to analyze model output</p>
         </section>
 
@@ -293,8 +293,8 @@ function Pricing() {
         </section>
 
         <section className="pricing-cta">
-          <h2>Ready to learn from model-driven market context?</h2>
-          <p>Use SeekingBeta as an educational decision-support reference in your research workflow.</p>
+          <h2>Ready for model-driven market context?</h2>
+          <p>Use SeekingBeta as a transparent decision-support layer in your research workflow.</p>
           <Link to="/signup" className="btn btn-primary btn-lg">
             Start Free
           </Link>
@@ -308,7 +308,7 @@ function Pricing() {
             <span className="logo-text">SeekingBeta</span>
           </div>
           <p className="footer-disclaimer">
-            SeekingBeta is for educational and research purposes only.
+            SeekingBeta is for informational and research purposes only.
             Past performance does not guarantee future results.
           </p>
           <nav className="footer-links">

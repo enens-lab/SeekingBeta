@@ -28,14 +28,14 @@ const MODELS = [
     displayName: 'LSTM 5-Day',
     endpoint: '/predict/lstm_5d',
     description:
-      'Short-horizon learning model focused on recent trend structure. Useful for studying how model confidence evolves over 5-day windows.'
+      'Short-horizon LSTM focused on recent trend structure and consistency over 5-day windows.'
   },
   {
     name: 'lstm_jackpot',
     displayName: 'LSTM Jackpot',
     endpoint: '/predict/lstm_jackpot',
     description:
-      'Higher-volatility learning model with a wider 20-day horizon. Useful for comparing how signal strength changes under larger moves.'
+      'Higher-volatility LSTM targeting larger 20-day moves with stricter signal thresholds.'
   },
 ];
 
@@ -156,14 +156,14 @@ function PredictionsCarousel() {
     return (
       <section className="predictions-section" id="predictions">
         <div className="section-header">
-          <h2 className="section-title">Today&apos;s Model Views, in Plain English</h2>
+          <h2 className="section-title">Today&apos;s Model Signals, in Plain English</h2>
           <p className="section-subtitle">
-            Two models covering the Magnificent 7 so you can compare outputs as an educational reference
+            Two models covering the Magnificent 7 so you can compare signal quality quickly
           </p>
         </div>
         <div className="predictions-loading">
           <div className="spinner" />
-          <p>Loading today&apos;s model views...</p>
+          <p>Loading today&apos;s model signals...</p>
         </div>
       </section>
     );
@@ -172,9 +172,9 @@ function PredictionsCarousel() {
   return (
     <section className="predictions-section" id="predictions">
       <div className="section-header">
-        <h2 className="section-title">Today&apos;s Model Views, in Plain English</h2>
+        <h2 className="section-title">Today&apos;s Model Signals, in Plain English</h2>
         <p className="section-subtitle">
-          Two AI models across the Magnificent 7. Use these outputs as educational context, not direct trade instructions.
+          Two AI models across the Magnificent 7. Use these outputs as decision-support context, not direct trade instructions.
         </p>
       </div>
 
@@ -196,7 +196,7 @@ function PredictionsCarousel() {
                     className="model-info-btn"
                     onClick={() => setActiveInfoModal(row.model.name)}
                     aria-label={`Info about ${row.model.displayName}`}
-                    title={`Learn more about ${row.model.displayName}`}
+                    title={`More details about ${row.model.displayName}`}
                   >
                     <InfoIcon />
                   </button>

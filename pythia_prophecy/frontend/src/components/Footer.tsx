@@ -11,7 +11,7 @@ function Footer() {
           <span className="logo-text">SeekingBeta</span>
         </div>
         <p className="footer-disclaimer">
-          SeekingBeta is for educational and research purposes only.
+          SeekingBeta is for informational and research purposes only.
           Past performance does not guarantee future results.
           Always do your own research and consult a financial advisor.
         </p>

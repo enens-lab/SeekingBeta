@@ -1,3 +1,4 @@
+import { KeyboardEvent, MouseEvent, useState } from 'react';
 import { Prediction } from '../api/client';
 
 interface PredictionCardProps {
@@ -38,6 +39,8 @@ function buildTopDrivers(probability: string, probValue: number, horizon: string
 
 function PredictionCard({ prediction, onClick }: PredictionCardProps) {
   const { ticker, signal, prob_up, last_close, horizon } = prediction as any;
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const signalClass = formatSignalClass(signal);
   const signalLabel = formatSignalLabel(signal);
@@ -47,47 +50,121 @@ function PredictionCard({ prediction, onClick }: PredictionCardProps) {
   const price = last_close?.toFixed(2) || '—';
   const horizonLabel = horizon || '1d';
   const topDrivers = buildTopDrivers(probability, probValue, horizonLabel);
+
+  const handleFlip = () => {
+    setIsFlipped((prev) => !prev);
+    setShowInfo(false);
+  };
+
+  const handleKeyFlip = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleFlip();
+    }
+  };
+
+  const handleInfoClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setShowInfo((prev) => !prev);
+  };
+
+  const handleOpenCompany = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    if (onClick) {
+      onClick(ticker);
+    }
+  };
+
   return (
     <div
-      className={`prediction-card${onClick ? ' clickable' : ''}`}
-      onClick={() => onClick && onClick(ticker)}
+      className={`prediction-card${onClick ? ' clickable' : ''}${isFlipped ? ' is-flipped' : ''}`}
+      onClick={handleFlip}
+      onKeyDown={handleKeyFlip}
+      role="button"
+      tabIndex={0}
+      aria-label={`${ticker} model card. Press to ${isFlipped ? 'show front' : 'show top drivers'}.`}
+      aria-pressed={isFlipped}
     >
-      <div className="prediction-header">
-        <span className="prediction-ticker">{ticker}</span>
-        <div className="prediction-signal-stack">
-          <span className={`prediction-signal ${signalClass}`}>{signalLabel}</span>
-          <span className="prediction-signal-disclaimer">{MODEL_SIGNAL_DISCLAIMER}</span>
+      <div className="prediction-card-inner">
+        <div className="prediction-card-face prediction-card-front">
+          <div className="prediction-header">
+            <span className="prediction-ticker">{ticker}</span>
+            <div className="prediction-signal-stack">
+              <div className="prediction-signal-row">
+                <span className={`prediction-signal ${signalClass}`}>{signalLabel}</span>
+                <button
+                  type="button"
+                  className="prediction-info-btn"
+                  onClick={handleInfoClick}
+                  aria-label="More info about model signal"
+                  aria-expanded={showInfo}
+                >
+                  i
+                </button>
+              </div>
+              {showInfo && <div className="prediction-signal-popover">{MODEL_SIGNAL_DISCLAIMER}</div>}
+            </div>
+          </div>
+          <div className="prediction-stats">
+            <div className="prediction-stat">
+              <span className="prediction-stat-label">Last Price</span>
+              <span className="prediction-stat-value">${price}</span>
+            </div>
+            <div className="prediction-stat">
+              <span className="prediction-stat-label">Horizon</span>
+              <span className="prediction-stat-value">{horizonLabel}</span>
+            </div>
+          </div>
+          <div className="prediction-probability">
+            <div className="prediction-stat">
+              <span className="prediction-stat-label">Upside Probability</span>
+              <span className="prediction-stat-value">{probability}%</span>
+            </div>
+            <div className="probability-bar-bg">
+              <div className={`probability-bar ${probClass}`} style={{ width: `${probability}%` }} />
+            </div>
+          </div>
+
+          <div className="prediction-card-actions">
+            {onClick && (
+              <button
+                type="button"
+                className="prediction-company-btn"
+                onClick={handleOpenCompany}
+                aria-label={`Open ${ticker} company profile`}
+              >
+                Company Profile
+              </button>
+            )}
+            <span className="prediction-flip-hint">Click card to view top drivers</span>
+          </div>
         </div>
-      </div>
-      <div className="prediction-stats">
-        <div className="prediction-stat">
-          <span className="prediction-stat-label">Last Price</span>
-          <span className="prediction-stat-value">${price}</span>
+
+        <div className="prediction-card-face prediction-card-back">
+          <div className="prediction-back-header">
+            <span className="prediction-ticker">{ticker}</span>
+            <span className="prediction-back-title">Top Drivers (High-Level)</span>
+          </div>
+          <ul className="prediction-drivers-list">
+            {topDrivers.map((driver) => (
+              <li key={driver}>{driver}</li>
+            ))}
+          </ul>
+
+          <div className="prediction-card-actions">
+            {onClick && (
+              <button
+                type="button"
+                className="prediction-company-btn"
+                onClick={handleOpenCompany}
+                aria-label={`Open ${ticker} company profile`}
+              >
+                Company Profile
+              </button>
+            )}
+            <span className="prediction-flip-hint">Click card to return</span>
+          </div>
         </div>
-        <div className="prediction-stat">
-          <span className="prediction-stat-label">Horizon</span>
-          <span className="prediction-stat-value">{horizonLabel}</span>
-        </div>
-      </div>
-      <div className="prediction-probability">
-        <div className="prediction-stat">
-          <span className="prediction-stat-label">Upside Probability</span>
-          <span className="prediction-stat-value">{probability}%</span>
-        </div>
-        <div className="probability-bar-bg">
-          <div
-            className={`probability-bar ${probClass}`}
-            style={{ width: `${probability}%` }}
-          />
-        </div>
-      </div>
-      <div className="prediction-drivers">
-        <span className="prediction-drivers-label">Top Drivers (High-Level)</span>
-        <ul className="prediction-drivers-list">
-          {topDrivers.map((driver) => (
-            <li key={driver}>{driver}</li>
-          ))}
-        </ul>
       </div>
     </div>
   );

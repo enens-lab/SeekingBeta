@@ -83,6 +83,7 @@ function Analysis() {
   const [results, setResults] = useState<AnalysisResponse | null>(null);
   const [trackRecord, setTrackRecord] = useState<TrackRecordResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSignalInfo, setShowSignalInfo] = useState(false);
 
   // Form state
   const [model, setModel] = useState('lstm_5d');
@@ -621,13 +622,23 @@ function Analysis() {
             <section className="card results-panel">
               <div className="results-header">
                 <h3>Analysis Results</h3>
-                {results && userFeatures?.features?.export_csv && (
-                  <button className="btn btn-outline" onClick={exportCSV}>
-                    Export CSV
+                <div className="results-header-actions">
+                  <button
+                    type="button"
+                    className="results-info-btn"
+                    onClick={() => setShowSignalInfo((prev) => !prev)}
+                    aria-expanded={showSignalInfo}
+                  >
+                    More info
                   </button>
-                )}
+                  {results && userFeatures?.features?.export_csv && (
+                    <button className="btn btn-outline" onClick={exportCSV}>
+                      Export CSV
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className="results-signal-disclaimer">{MODEL_SIGNAL_DISCLAIMER}</p>
+              {showSignalInfo && <p className="results-signal-disclaimer">{MODEL_SIGNAL_DISCLAIMER}</p>}
 
               {error && <div className="form-error">{error}</div>}
 

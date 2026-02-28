@@ -11,10 +11,10 @@ function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1 className="hero-title">Learn market behavior with model-based stock ratings</h1>
+        <h1 className="hero-title">Model-Driven Stock Signals for Modern Investors</h1>
         <p className="hero-subtitle">
-          SeekingBeta translates complex market data into clear Bullish, Neutral, and Bearish
-          model views so you can study scenarios faster and make your own informed decisions.
+          SeekingBeta converts market data into clear Bullish, Neutral, and Bearish ratings with
+          probability context and track-record transparency, so you can cut through noise faster.
         </p>
         <div className="hero-cta">
           <Link to="/signup" className="btn btn-primary btn-lg">
@@ -25,7 +25,7 @@ function Hero() {
           </button>
         </div>
         <p className="hero-disclaimer">
-          Built for education and reference. Not investment advice.
+          For informational use only. Not investment advice.
         </p>
       </div>
     </section>

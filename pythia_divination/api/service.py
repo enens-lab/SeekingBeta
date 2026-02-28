@@ -104,6 +104,12 @@ UNIVERSE = settings.universe
 DATA_SOURCE = settings.data_source
 CFG_LOOKBACK = settings.lookback_download
 THRESHOLD = settings.threshold
+BROKER_HEALTHCHECK_ENABLED = os.getenv("ALPACA_BROKER_HEALTHCHECK_ENABLED", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 EXTRA_FEATS: Dict[Tuple[str, str], Dict[str, float]] = {}
 
@@ -1249,8 +1255,8 @@ async def healthz():
         db_ok = False
         broker_msg = f"db_error: {e}"
 
-    # Broker checks are only relevant for Alpaca-backed trading mode.
-    if settings.data_source.lower() == "alpaca":
+    # Broker checks are optional and only needed when paper/live broker routes are in active use.
+    if settings.data_source.lower() == "alpaca" and BROKER_HEALTHCHECK_ENABLED:
         try:
             await run_in_threadpool(alp_account)
         except Exception as e:
@@ -1263,6 +1269,7 @@ async def healthz():
         "broker_ok": broker_ok,
         "message": broker_msg if (not db_ok or not broker_ok) else "ok",
         "data_source": settings.data_source,
+        "broker_healthcheck_enabled": BROKER_HEALTHCHECK_ENABLED,
         "universe_size": len(settings.universe),
         "available_models": list(MODEL_REGISTRY.keys()),
     })

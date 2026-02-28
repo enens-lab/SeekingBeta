@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'Model-Based Learning Layer',
-    description: 'Models scan technical patterns so you can compare perspectives and learn how market structure changes over time.',
+    title: 'Model Intelligence Layer',
+    description: 'Models scan technical patterns so you can compare short-horizon and swing-horizon setups without manual screening.',
   },
   {
     icon: (
@@ -41,7 +41,7 @@ const features: Feature[] = [
       </svg>
     ),
     title: 'Confidence + Context',
-    description: 'See upside probability, model horizon, and high-level driver summaries in one place for educational review.',
+    description: 'See upside probability, model horizon, and high-level driver summaries in one place.',
   },
   {
     icon: (
@@ -60,8 +60,8 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">Built for practical financial education</h2>
-        <p className="section-subtitle">Designed to help you interpret model output before making your own decisions</p>
+        <h2 className="section-title">Built for practical investors, not just quants</h2>
+        <p className="section-subtitle">Structured model output designed for fast decision support</p>
       </div>
 
       <div className="features-grid">

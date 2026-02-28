@@ -111,8 +111,8 @@ function CompanyDetail({ ticker, onClose }: CompanyDetailProps) {
           </div>
         ) : error ? (
           <div className="company-detail-error">
-            <p>No company data available for {ticker}.</p>
-            <p className="company-detail-hint">Run the populate script to fetch data for this ticker.</p>
+            <p>Company profile is temporarily unavailable for {ticker}.</p>
+            <p className="company-detail-hint">Please retry in a few seconds.</p>
           </div>
         ) : data ? (
           <>
@@ -127,6 +127,12 @@ function CompanyDetail({ ticker, onClose }: CompanyDetailProps) {
                 </span>
               )}
             </div>
+
+            {!data.info && (
+              <div className="company-detail-hint-box">
+                Fundamentals are still syncing for this ticker. Basic profile is available.
+              </div>
+            )}
 
             {data.info && (
               <div className="company-detail-info">

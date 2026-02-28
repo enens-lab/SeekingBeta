@@ -81,6 +81,8 @@ from .database import (
     get_company,
     get_company_info,
     get_company_news,
+    upsert_company,
+    upsert_company_info,
 )
 from .price_cache_store import (
     ensure_table as ensure_price_cache_table,
@@ -380,6 +382,7 @@ try:
         STOCK_CATEGORIES = shared_categorize_stocks(UNIVERSE)
     else:
         STOCK_CATEGORIES = _categorize_local(UNIVERSE)
+    UNIVERSE_UPPER = {s.upper() for s in UNIVERSE}
 
     logger.info(f"Loaded universe with {len(UNIVERSE)} stocks from pythia_divination")
     logger.info(f"Categories: {', '.join(f'{k} ({len(v)})' for k, v in STOCK_CATEGORIES.items())}")
@@ -390,6 +393,7 @@ except Exception as e:
     UNIVERSE = _load_local_universe([])
     THRESHOLD = 0.55
     STOCK_CATEGORIES = _categorize_local(UNIVERSE)
+    UNIVERSE_UPPER = {s.upper() for s in UNIVERSE}
 
 # Simple in-memory rate limiting (resets on server restart)
 # In production, this should be stored in a database or Redis
@@ -685,6 +689,14 @@ LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )
 POLICY_VERSION = os.getenv("POLICY_VERSION", "2026-02-27")
+ALPACA_KEY_ID = os.getenv("ALPACA_KEY_ID", "").strip()
+ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "").strip()
+ALPACA_TRADING_BASE_URL = os.getenv(
+    "ALPACA_TRADING_BASE_URL", "https://paper-api.alpaca.markets"
+).rstrip("/")
+COMPANY_AUTO_POPULATE_ON_DEMAND = (
+    os.getenv("COMPANY_AUTO_POPULATE_ON_DEMAND", "true").lower() == "true"
+)
 SES_SNS_ALLOWED_TOPIC_ARNS = {
     arn.strip()
     for arn in os.getenv("SES_SNS_ALLOWED_TOPIC_ARNS", "").split(",")
@@ -704,6 +716,83 @@ def _extract_client_ip(request: Request) -> Optional[str]:
 
 def _extract_user_agent(request: Request) -> Optional[str]:
     return request.headers.get("user-agent")
+
+
+def _looks_like_etf(name: Optional[str]) -> bool:
+    if not name:
+        return False
+    upper_name = name.upper()
+    return " ETF" in upper_name or upper_name.endswith("ETF")
+
+
+def _infer_asset_type_from_alpaca(asset: dict) -> str:
+    asset_class = str(asset.get("class", "")).lower()
+    if asset_class == "crypto":
+        return "crypto"
+    if asset_class == "us_equity":
+        if _looks_like_etf(asset.get("name")):
+            return "etf"
+        return "stock"
+    if asset_class:
+        return asset_class
+    return "stock"
+
+
+async def _hydrate_company_from_alpaca(ticker: str) -> Optional[dict]:
+    if not (ALPACA_KEY_ID and ALPACA_SECRET_KEY):
+        return None
+
+    url = f"{ALPACA_TRADING_BASE_URL}/v2/assets/{ticker.upper()}"
+    headers = {
+        "APCA-API-KEY-ID": ALPACA_KEY_ID,
+        "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 404:
+                return None
+            resp.raise_for_status()
+            payload = resp.json()
+    except Exception as exc:
+        logger.warning(f"Alpaca company hydrate failed for {ticker.upper()}: {exc}")
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    name = payload.get("name") or ticker.upper()
+    asset_type = _infer_asset_type_from_alpaca(payload)
+    upsert_company(ticker.upper(), name=name, asset_type=asset_type)
+
+    # Alpaca asset endpoint does not include full fundamentals; store minimal metadata.
+    upsert_company_info(
+        ticker.upper(),
+        {
+            "exchange": payload.get("exchange"),
+            "country": "United States",
+            "description": "Profile auto-populated from Alpaca asset metadata.",
+            "raw_info": payload,
+        },
+    )
+    return payload
+
+
+async def _ensure_company_profile(ticker: str) -> Tuple[Optional[dict], Optional[dict]]:
+    company = get_company(ticker.upper())
+    info = get_company_info(ticker.upper())
+
+    if company and info:
+        return company, info
+
+    if COMPANY_AUTO_POPULATE_ON_DEMAND:
+        hydrated = await _hydrate_company_from_alpaca(ticker.upper())
+        if hydrated:
+            company = get_company(ticker.upper())
+            info = get_company_info(ticker.upper())
+
+    return company, info
 
 
 # ============================================================
@@ -2233,12 +2322,23 @@ async def run_analysis(
 @app.get("/api/companies/{ticker}", response_model=CompanyDetailResponse)
 async def get_company_detail(ticker: str):
     """Get company detail including info and recent news."""
-    company = get_company(ticker.upper())
-    if not company:
-        raise HTTPException(404, detail=f"Company '{ticker.upper()}' not found")
+    normalized = _normalize_ticker(ticker)
+    if not normalized:
+        raise HTTPException(400, detail="Invalid ticker")
 
-    info = get_company_info(ticker.upper())
-    news_rows = get_company_news(ticker.upper(), limit=20)
+    company, info = await _ensure_company_profile(normalized)
+    if not company:
+        if normalized not in UNIVERSE_UPPER:
+            raise HTTPException(404, detail=f"Company '{normalized}' not found")
+        company = {
+            "ticker": normalized,
+            "name": normalized,
+            "asset_type": "stock",
+            "created_at": None,
+            "updated_at": None,
+        }
+
+    news_rows = get_company_news(normalized, limit=20)
 
     company_resp = CompanyResponse(**company)
 
@@ -2267,11 +2367,15 @@ async def get_company_detail(ticker: str):
 @app.get("/api/companies/{ticker}/news", response_model=list[CompanyNewsItem])
 async def get_company_news_endpoint(ticker: str, limit: int = 50):
     """Get company news articles."""
-    company = get_company(ticker.upper())
-    if not company:
-        raise HTTPException(404, detail=f"Company '{ticker.upper()}' not found")
+    normalized = _normalize_ticker(ticker)
+    if not normalized:
+        raise HTTPException(400, detail="Invalid ticker")
 
-    news_rows = get_company_news(ticker.upper(), limit=limit)
+    company, _ = await _ensure_company_profile(normalized)
+    if not company and normalized not in UNIVERSE_UPPER:
+        raise HTTPException(404, detail=f"Company '{normalized}' not found")
+
+    news_rows = get_company_news(normalized, limit=limit)
     return [
         CompanyNewsItem(
             article_id=n.get("article_id"),

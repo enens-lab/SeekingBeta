@@ -6,15 +6,13 @@ interface PredictionCardProps {
 }
 
 function PredictionCard({ prediction, onClick }: PredictionCardProps) {
-  const { ticker, signal, prob_up, last_close, horizon, modelDisplayName, model } = prediction as any;
+  const { ticker, signal, prob_up, last_close, horizon } = prediction as any;
 
   const signalClass = signal?.toLowerCase() || 'hold';
   const probability = prob_up !== null ? (prob_up * 100).toFixed(1) : '0.0';
   const probValue = prob_up ?? 0;
   const probClass = probValue >= 0.55 ? 'high' : probValue >= 0.45 ? 'medium' : 'low';
   const price = last_close?.toFixed(2) || '—';
-  const displayModel = modelDisplayName || model || 'Unknown Model';
-
   return (
     <div
       className={`prediction-card${onClick ? ' clickable' : ''}`}
@@ -25,9 +23,6 @@ function PredictionCard({ prediction, onClick }: PredictionCardProps) {
         <span className={`prediction-signal ${signalClass}`}>
           {signal || 'Hold'}
         </span>
-      </div>
-      <div className="prediction-model-badge">
-        {displayModel}
       </div>
       <div className="prediction-stats">
         <div className="prediction-stat">

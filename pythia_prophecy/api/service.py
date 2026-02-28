@@ -2043,6 +2043,28 @@ async def get_analysis_universe(user: UserInDB = Depends(require_verified_user))
     }
 
 
+def _analysis_error_detail(exc: Exception) -> str:
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        detail: str | object | None = None
+        try:
+            payload = exc.response.json()
+            if isinstance(payload, dict):
+                detail = payload.get("detail") or payload.get("message") or payload.get("error")
+            else:
+                detail = payload
+        except Exception:
+            detail = None
+        if detail is None:
+            detail = exc.response.text.strip() or str(exc)
+        return f"upstream status {status}: {detail}"
+    if isinstance(exc, httpx.RequestError):
+        return f"upstream request error: {exc}"
+    if isinstance(exc, HTTPException):
+        return str(exc.detail)
+    return str(exc)
+
+
 @app.post("/api/analyze", response_model=AnalyzeResponse)
 async def run_analysis(
     data: AnalyzeRequest,
@@ -2125,6 +2147,7 @@ async def run_analysis(
                         prob_up=(payload.get("probability", 0.0) / 100.0),
                         signal=payload.get("signal"),
                         predicted_return=None,
+                        error=None,
                     ))
                     continue
 
@@ -2138,6 +2161,7 @@ async def run_analysis(
                         prob_up=(payload.get("probability", 0.0) / 100.0),
                         signal=payload.get("signal"),
                         predicted_return=None,
+                        error=None,
                     ))
                     continue
 
@@ -2158,18 +2182,33 @@ async def run_analysis(
                     prob_up=payload.get("prob_up"),
                     signal=payload.get("signal"),
                     predicted_return=payload.get("predicted_return"),
+                    error=None,
                 ))
             except Exception as e:
-                logger.warning(f"Analysis prediction failed for {ticker.upper()}: {e}")
+                error_detail = _analysis_error_detail(e)
+                logger.warning(f"Analysis prediction failed for {ticker.upper()}: {error_detail}")
                 results.append(AnalyzeResultItem(
                     ticker=ticker.upper(),
                     last_close=None,
                     prob_up=None,
                     signal=None,
                     predicted_return=None,
+                    error=error_detail,
                 ))
 
-    # Increment rate limit
+    success_count = sum(1 for row in results if row.error is None)
+    failed_rows = [row for row in results if row.error]
+
+    if success_count == 0:
+        preview = "; ".join(
+            f"{row.ticker}: {row.error}" for row in failed_rows[:3]
+        )
+        raise HTTPException(
+            503,
+            detail=f"Analysis failed for all selected tickers. {preview}",
+        )
+
+    # Increment rate limit only when at least one ticker succeeds.
     _increment_rate_limit(user)
 
     return AnalyzeResponse(
@@ -2180,6 +2219,9 @@ async def run_analysis(
             "period": data.period,
             "horizon": data.horizon,
             "analyzed_at": datetime.utcnow().isoformat(),
+            "requested": len(data.tickers),
+            "successful": success_count,
+            "failed": len(failed_rows),
         },
     )
 

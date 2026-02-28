@@ -87,13 +87,21 @@ export interface AnalysisResult {
   prob_up: number | null;
   signal: 'buy' | 'hold' | 'sell' | null;
   predicted_return: number | null;
+  error?: string | null;
 }
 
 export interface AnalysisResponse {
   results: AnalysisResult[];
-  model: string;
-  task: string;
-  horizon: string;
+  metadata: {
+    model: string;
+    task: string;
+    period: string;
+    horizon: string;
+    analyzed_at: string;
+    requested?: number;
+    successful?: number;
+    failed?: number;
+  };
 }
 
 export interface UserFeatures {

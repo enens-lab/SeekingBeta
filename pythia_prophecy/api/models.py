@@ -226,6 +226,7 @@ class AnalyzeResultItem(BaseModel):
     prob_up: Optional[float]
     signal: Optional[str]
     predicted_return: Optional[float] = None
+    error: Optional[str] = None
 
 
 class AnalyzeResponse(BaseModel):

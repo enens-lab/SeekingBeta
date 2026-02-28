@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   analysis,
+  oracle,
   performance,
   UserFeatures,
   AnalysisResponse,
@@ -105,16 +106,25 @@ function Analysis() {
 
     const loadData = async () => {
       try {
-        const [featuresRes, universeRes, modelsRes] = await Promise.all([
+        const [featuresRes, universeRes, modelsRes, oracleRes] = await Promise.all([
           analysis.getUserFeatures(),
           analysis.getUniverse(),
           analysis.getModels(),
+          oracle.get().catch(() => null),
         ]);
 
         setUserFeatures(featuresRes);
         setStockCategories(universeRes.categories);
         setAvailableModels(modelsRes.models);
         setAvailableTasks(modelsRes.tasks);
+
+        const available = new Set(universeRes.stocks.map((ticker) => ticker.toUpperCase()));
+        const maxStocksForTier = featuresRes.limits?.max_stocks_per_request || 5;
+        const fromOracle = (oracleRes?.watchlist || [])
+          .map((ticker) => ticker.toUpperCase())
+          .filter((ticker) => available.has(ticker))
+          .slice(0, maxStocksForTier);
+        setSelectedStocks(fromOracle);
 
         const trackRecordRes = await performance.getTrackRecord().catch(() => null);
         setTrackRecord(trackRecordRes);
@@ -142,9 +152,10 @@ function Analysis() {
       const ctx = chartRef.current?.getContext('2d');
       if (!ctx) return;
 
-      const labels = results.results.map((r) => r.ticker);
-      const data = results.results.map((r) => (r.prob_up !== null ? r.prob_up * 100 : 0));
-      const colors = results.results.map((r) => {
+      const chartRows = results.results.filter((r) => r.error === null || r.error === undefined);
+      const labels = chartRows.map((r) => r.ticker);
+      const data = chartRows.map((r) => (r.prob_up !== null ? r.prob_up * 100 : 0));
+      const colors = chartRows.map((r) => {
         if (r.signal === 'buy') return 'rgba(34, 197, 94, 0.8)';
         if (r.signal === 'sell') return 'rgba(239, 68, 68, 0.8)';
         return 'rgba(107, 114, 128, 0.8)';
@@ -230,6 +241,14 @@ function Analysis() {
         horizon,
       });
       setResults(data);
+      if ((data.metadata?.failed || 0) > 0) {
+        const failedExamples = data.results
+          .filter((row) => row.error)
+          .slice(0, 3)
+          .map((row) => `${row.ticker}: ${row.error}`)
+          .join(' | ');
+        setError(`Partial analysis: ${data.metadata.failed} ticker(s) failed. ${failedExamples}`);
+      }
 
       // Refresh user features to update rate limit
       const features = await analysis.getUserFeatures();
@@ -575,6 +594,7 @@ function Analysis() {
                           <th>Prob. Up</th>
                           <th>Signal</th>
                           <th>Pred. Return</th>
+                          <th>Error</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -595,6 +615,7 @@ function Analysis() {
                                 ? `${(r.predicted_return * 100).toFixed(2)}%`
                                 : '-'}
                             </td>
+                            <td>{r.error || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import math
 import os
 import re
@@ -11,20 +12,60 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_BACKTEST_CANDIDATES = [
-    ROOT / "frontend" / "Stock_Prediction_Model" / "trade_summary_prob_strategy.csv",
-    ROOT / "data" / "backtests" / "jackpot_trade_log.csv",
+GENERIC_BACKTEST_CANDIDATES = [
     ROOT / "data" / "backtests" / "trade_summary_prob_strategy.csv",
     ROOT / "data" / "backtests" / "trade_summary.csv",
     ROOT / "data" / "backtests" / "backtest_results.csv",
     ROOT / "data" / "backtests" / "results.csv",
 ]
+MODEL_BACKTEST_CANDIDATES = {
+    "lstm_5d": [
+        ROOT / "data" / "backtests" / "production_trade_log.csv",
+        *GENERIC_BACKTEST_CANDIDATES,
+    ],
+    "lstm_jackpot": [
+        ROOT / "data" / "backtests" / "jackpot_trade_log.csv",
+        ROOT / "frontend" / "Stock_Prediction_Model" / "trade_summary_prob_strategy.csv",
+        *GENERIC_BACKTEST_CANDIDATES,
+    ],
+}
+MODEL_METRICS_CANDIDATES = {
+    "lstm_5d": [ROOT / "data" / "backtests" / "production_metrics.json"],
+    "lstm_jackpot": [ROOT / "data" / "backtests" / "jackpot_metrics.json"],
+}
+MODEL_LABELS = {
+    "lstm_5d": "AI Strategy (Production LSTM 5-Day)",
+    "lstm_jackpot": "AI Strategy (Jackpot LSTM 20-Day)",
+}
+_MODEL_ALIASES = {
+    "lstm_5d": "lstm_5d",
+    "production": "lstm_5d",
+    "prod": "lstm_5d",
+    "lstm_jackpot": "lstm_jackpot",
+    "jackpot": "lstm_jackpot",
+}
 
-_CACHE: dict[str, Any] = {"path": None, "mtime": None, "response": None}
+_CACHE: dict[str, dict[str, Any]] = {}
 
 
 def _normalize_key(key: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+
+
+def _normalize_model(model: str | None) -> str:
+    return _MODEL_ALIASES.get((model or "lstm_5d").strip().lower(), "lstm_5d")
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(path)
+    return deduped
 
 
 def _get_float(value: Any) -> float | None:
@@ -68,6 +109,13 @@ def _first_value(row: dict[str, Any], keys: list[str]) -> Any:
         if key in row and row[key] not in (None, ""):
             return row[key]
     return None
+
+
+def _first_key_value(row: dict[str, Any], keys: list[str]) -> tuple[str | None, Any]:
+    for key in keys:
+        if key in row and row[key] not in (None, ""):
+            return key, row[key]
+    return None, None
 
 
 def _to_decimal_return(value: float | None) -> float | None:
@@ -208,26 +256,66 @@ def _build_spy_curve_from_stooq(dates: list[datetime], start_value: float) -> li
     return [None if value is None else start_value * (value / base_close) for value in close_values]
 
 
-def _candidate_backtest_paths() -> list[Path]:
+def _candidate_backtest_paths(model: str) -> list[Path]:
+    model_key = _normalize_model(model)
+    env_suffix = model_key.upper()
     candidates: list[Path] = []
+
+    model_env_path = os.getenv(f"BACKTEST_RESULTS_PATH_{env_suffix}")
+    if model_env_path:
+        candidates.append(Path(model_env_path))
+
     env_path = os.getenv("BACKTEST_RESULTS_PATH")
     if env_path:
         candidates.append(Path(env_path))
-    candidates.extend(DEFAULT_BACKTEST_CANDIDATES)
-    return candidates
+
+    candidates.extend(MODEL_BACKTEST_CANDIDATES.get(model_key, GENERIC_BACKTEST_CANDIDATES))
+    return _dedupe_paths(candidates)
 
 
-def _resolve_backtest_path() -> Path | None:
-    for candidate in _candidate_backtest_paths():
+def _resolve_backtest_path(model: str) -> Path | None:
+    for candidate in _candidate_backtest_paths(model):
         if candidate.exists() and candidate.is_file():
             return candidate
     return None
 
 
-def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
+def _candidate_metrics_paths(model: str) -> list[Path]:
+    model_key = _normalize_model(model)
+    env_suffix = model_key.upper()
+    candidates: list[Path] = []
+
+    model_env_path = os.getenv(f"BACKTEST_METRICS_PATH_{env_suffix}")
+    if model_env_path:
+        candidates.append(Path(model_env_path))
+
+    env_path = os.getenv("BACKTEST_METRICS_PATH")
+    if env_path:
+        candidates.append(Path(env_path))
+
+    candidates.extend(MODEL_METRICS_CANDIDATES.get(model_key, []))
+    return _dedupe_paths(candidates)
+
+
+def _load_metrics(model: str) -> dict[str, Any] | None:
+    for candidate in _candidate_metrics_paths(model):
+        if not candidate.exists() or not candidate.is_file():
+            continue
+        try:
+            with candidate.open(encoding="utf-8") as fh:
+                payload = json.load(fh)
+            if isinstance(payload, dict):
+                return payload
+        except Exception:
+            continue
+    return None
+
+
+def _compute_summary(path: Path, transaction_cost_bps: float, model: str) -> dict[str, Any]:
     rows = _read_rows(path)
     path_stat = path.stat()
     round_trip_cost = (transaction_cost_bps / 10_000.0) * 2.0
+    model_key = _normalize_model(model)
 
     gross_returns: list[float] = []
     net_returns: list[float] = []
@@ -240,17 +328,27 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
 
     for row in rows:
         log_return = _get_float(_first_value(row, ["actual_logr", "actual_log_return", "log_return"]))
-        raw_return = _get_float(
-            _first_value(
-                row,
-                ["actual_return", "actual_return_pct", "strategy_return", "return", "pnl_return"],
-            )
+        raw_return_key, raw_return_value = _first_key_value(
+            row,
+            [
+                "actual_return",
+                "actual_return_pct",
+                "strategy_return",
+                "return",
+                "return_pct",
+                "pnl_return",
+                "pnl_pct",
+                "trade_return",
+            ],
         )
+        raw_return = _get_float(raw_return_value)
 
         if log_return is not None:
             gross = math.exp(log_return) - 1.0
+            returns_are_already_net = False
         else:
             gross = _to_decimal_return(raw_return)
+            returns_are_already_net = raw_return_key in {"return_pct", "pnl_pct"}
 
         if gross is None:
             continue
@@ -279,7 +377,7 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
             days = 1.0
         holding_days.append(days)
 
-        net = gross - round_trip_cost
+        net = gross if returns_are_already_net else (gross - round_trip_cost)
         gross_returns.append(gross)
         net_returns.append(net)
 
@@ -368,6 +466,28 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
         "notes": notes,
     }
 
+    metrics = _load_metrics(model_key)
+    if metrics:
+        mapped_fields = {
+            "n_trades": "sample_size",
+            "win_rate": "hit_rate",
+            "sharpe": "sharpe_ratio",
+            "max_drawdown": "max_drawdown",
+            "total_return": "total_return_net",
+        }
+        for source_key, target_key in mapped_fields.items():
+            value = _get_float(metrics.get(source_key))
+            if value is not None:
+                if target_key == "sample_size":
+                    summary[target_key] = int(value)
+                else:
+                    summary[target_key] = value
+
+        if summary.get("total_return_net") is not None:
+            summary["total_return_gross"] = summary["total_return_net"]
+
+        notes.append("Metrics sidecar loaded for summary fields.")
+
     curve_points: list[dict[str, Any]] = []
     for dt, model_value, benchmark_value in zip(trade_dates, model_curve_values, benchmark_curve_values):
         curve_points.append(
@@ -383,7 +503,7 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
         "summary": summary,
         "curve": {
             "series": curve_points,
-            "model_label": "AI Strategy (Jackpot)",
+            "model_label": MODEL_LABELS.get(model_key, "AI Strategy"),
             "benchmark_label": "S&P 500 (SPY)",
             "start_value": start_value,
             "end_value": model_curve_values[-1] if model_curve_values else None,
@@ -393,36 +513,42 @@ def _compute_summary(path: Path, transaction_cost_bps: float) -> dict[str, Any]:
     }
 
 
-def get_track_record() -> dict[str, Any]:
-    path = _resolve_backtest_path()
+def get_track_record(model: str = "lstm_5d") -> dict[str, Any]:
+    model_key = _normalize_model(model)
+    path = _resolve_backtest_path(model_key)
     if path is None:
         return {
             "available": False,
             "summary": None,
-            "message": "No backtest results found. Set BACKTEST_RESULTS_PATH or place a CSV in data/backtests/.",
+            "message": (
+                "No backtest results found for requested model. "
+                "Set BACKTEST_RESULTS_PATH or place model CSV files in data/backtests/."
+            ),
         }
 
     mtime = path.stat().st_mtime
-    cached_path = _CACHE.get("path")
-    cached_mtime = _CACHE.get("mtime")
-    if cached_path == str(path) and cached_mtime == mtime and _CACHE.get("response") is not None:
-        return _CACHE["response"]
+    cache_entry = _CACHE.setdefault(model_key, {"path": None, "mtime": None, "response": None})
+    cached_path = cache_entry.get("path")
+    cached_mtime = cache_entry.get("mtime")
+    if cached_path == str(path) and cached_mtime == mtime and cache_entry.get("response") is not None:
+        return cache_entry["response"]
 
     transaction_cost_bps = _get_float(os.getenv("BACKTEST_TRANSACTION_COST_BPS")) or 10.0
-    response = _compute_summary(path, transaction_cost_bps=transaction_cost_bps)
-    _CACHE["path"] = str(path)
-    _CACHE["mtime"] = mtime
-    _CACHE["response"] = response
+    response = _compute_summary(path, transaction_cost_bps=transaction_cost_bps, model=model_key)
+    cache_entry["path"] = str(path)
+    cache_entry["mtime"] = mtime
+    cache_entry["response"] = response
     return response
 
 
-def get_track_record_curve() -> dict[str, Any]:
-    payload = get_track_record()
+def get_track_record_curve(model: str = "lstm_5d") -> dict[str, Any]:
+    model_key = _normalize_model(model)
+    payload = get_track_record(model=model_key)
     if not payload.get("available"):
         return {
             "available": False,
             "series": [],
-            "model_label": "AI Strategy (Jackpot)",
+            "model_label": MODEL_LABELS.get(model_key, "AI Strategy"),
             "benchmark_label": "S&P 500 (SPY)",
             "start_value": None,
             "end_value": None,

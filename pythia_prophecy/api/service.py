@@ -26,7 +26,7 @@ PYTHIA_PATH = Path(__file__).parent.parent.parent / "pythia"
 if PYTHIA_PATH.exists() and str(PYTHIA_PATH) not in sys.path:
     sys.path.insert(0, str(PYTHIA_PATH))
 
-from fastapi import FastAPI, HTTPException, Depends, Header, Request
+from fastapi import FastAPI, HTTPException, Depends, Header, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
@@ -1720,15 +1720,15 @@ def status():
 
 
 @app.get("/api/performance/track-record", response_model=TrackRecordResponse, tags=["Performance"])
-def performance_track_record():
+def performance_track_record(model: str = Query("lstm_5d")):
     """Public track record summary for investor/user transparency."""
-    return get_track_record()
+    return get_track_record(model=model)
 
 
 @app.get("/api/performance/curve", response_model=TrackRecordCurveResponse, tags=["Performance"])
-def performance_curve():
+def performance_curve(model: str = Query("lstm_5d")):
     """Public model-vs-benchmark curve for homepage visualization."""
-    return get_track_record_curve()
+    return get_track_record_curve(model=model)
 
 
 # ============================================================

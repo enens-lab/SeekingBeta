@@ -357,8 +357,8 @@ export const analysis = {
 };
 
 export const performance = {
-  getTrackRecord: (): Promise<TrackRecordResponse> =>
-    request('/api/performance/track-record'),
-  getTrackRecordCurve: (): Promise<TrackRecordCurveResponse> =>
-    request('/api/performance/curve'),
+  getTrackRecord: (model = 'lstm_5d'): Promise<TrackRecordResponse> =>
+    request(`/api/performance/track-record?model=${encodeURIComponent(model)}`),
+  getTrackRecordCurve: (model = 'lstm_5d'): Promise<TrackRecordCurveResponse> =>
+    request(`/api/performance/curve?model=${encodeURIComponent(model)}`),
 };

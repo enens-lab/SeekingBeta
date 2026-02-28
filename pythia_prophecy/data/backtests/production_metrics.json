@@ -1,0 +1,17 @@
+{
+  "total_return": 1.037783,
+  "cagr": 0.43158,
+  "sharpe": 1.495833,
+  "sortino": 2.587084,
+  "max_drawdown": -0.138347,
+  "calmar": 3.119557,
+  "beta": 0.0,
+  "alpha": 0.0,
+  "spy_return": null,
+  "win_rate": 0.586652,
+  "n_trades": 929,
+  "avg_win_pct": 4.369297,
+  "avg_loss_pct": -3.88982,
+  "profit_factor": 1.594217,
+  "final_value": 20377.834126
+}

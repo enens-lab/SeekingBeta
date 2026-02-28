@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
+import { useState, useEffect, ChangeEvent, ReactNode, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { oracle, predictions, OracleData, Prediction } from '../api/client';
@@ -20,6 +20,7 @@ function Dashboard() {
   const [viewMode, setViewMode] = useState<ViewMode>('oracle');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pageFetchError, setPageFetchError] = useState<string | null>(null);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
   const pageSize = 12;
 
@@ -46,15 +47,36 @@ function Dashboard() {
     setCurrentPage(1);
   }, [viewMode, selectedTimeframe, searchQuery]);
 
-  const baseTickers = viewMode === 'oracle' && oracleData?.watchlist?.length
-    ? oracleData.watchlist
-    : oracleData?.available_stocks || [];
+  const normalizedSearch = searchQuery.trim().toLowerCase();
 
-  const filteredTickers = searchQuery
-    ? baseTickers.filter((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
-    : baseTickers;
+  const baseTickers = useMemo(
+    () =>
+      viewMode === 'oracle' && oracleData?.watchlist?.length
+        ? oracleData.watchlist
+        : oracleData?.available_stocks || [],
+    [viewMode, oracleData]
+  );
 
-  const totalPages = Math.ceil(filteredTickers.length / pageSize);
+  const filteredTickers = useMemo(
+    () =>
+      normalizedSearch
+        ? baseTickers.filter((t) => t.toLowerCase().includes(normalizedSearch))
+        : baseTickers,
+    [baseTickers, normalizedSearch]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredTickers.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageTickers = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredTickers.slice(start, start + pageSize);
+  }, [filteredTickers, safeCurrentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const removeWatchlistTicker = async (ticker: string) => {
     if (!oracleData || watchlistSaving) return;
@@ -94,10 +116,15 @@ function Dashboard() {
   useEffect(() => {
     if (!oracleData || !isVerified) return;
 
-    setLoading(true);
+    if (pageTickers.length === 0) {
+      setPredictionData([]);
+      setPageFetchError(null);
+      setLoading(false);
+      return;
+    }
 
-    const start = (currentPage - 1) * pageSize;
-    const pageTickers = filteredTickers.slice(start, start + pageSize);
+    setLoading(true);
+    setPageFetchError(null);
 
     Promise.allSettled(
       pageTickers.map((ticker) =>
@@ -105,13 +132,30 @@ function Dashboard() {
       )
     )
       .then((results) => {
-        const successful = results
-          .filter((r): r is PromiseFulfilledResult<Prediction> => r.status === 'fulfilled')
-          .map((r) => r.value);
+        const successful: Prediction[] = [];
+        const failedTickers: string[] = [];
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            successful.push(result.value);
+          } else {
+            failedTickers.push(pageTickers[index]);
+          }
+        });
         setPredictionData(successful);
+        if (failedTickers.length > 0) {
+          if (successful.length === 0) {
+            setPageFetchError(
+              `No predictions available for ${failedTickers.slice(0, 3).join(', ')}${failedTickers.length > 3 ? '...' : ''}.`
+            );
+          } else {
+            setPageFetchError(
+              `Partial results: ${failedTickers.slice(0, 3).join(', ')}${failedTickers.length > 3 ? '...' : ''} unavailable.`
+            );
+          }
+        }
       })
       .finally(() => setLoading(false));
-  }, [oracleData, selectedTimeframe, viewMode, isVerified, currentPage, filteredTickers]);
+  }, [oracleData, selectedTimeframe, isVerified, pageTickers]);
 
   if (!isVerified) {
     return (
@@ -298,12 +342,18 @@ function Dashboard() {
               ))}
             </div>
 
-            {totalPages > 1 && (
+            {pageFetchError && (
+              <div className="dashboard-no-results">
+                <p>{pageFetchError}</p>
+              </div>
+            )}
+
+            {filteredTickers.length > 0 && totalPages > 1 && (
               <div className="pagination">
                 <button
                   className="pagination-btn"
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
+                  disabled={safeCurrentPage === 1}
                 >
                   ← Prev
                 </button>
@@ -312,7 +362,7 @@ function Dashboard() {
                     .filter((page) => {
                       // Show first, last, and pages near current
                       return page === 1 || page === totalPages ||
-                        Math.abs(page - currentPage) <= 2;
+                        Math.abs(page - safeCurrentPage) <= 2;
                     })
                     .reduce<ReactNode[]>((acc, page, idx, arr) => {
                       // Insert ellipsis between gaps
@@ -322,7 +372,7 @@ function Dashboard() {
                       acc.push(
                         <button
                           key={page}
-                          className={`pagination-num ${page === currentPage ? 'active' : ''}`}
+                          className={`pagination-num ${page === safeCurrentPage ? 'active' : ''}`}
                           onClick={() => setCurrentPage(page)}
                         >
                           {page}
@@ -334,7 +384,7 @@ function Dashboard() {
                 <button
                   className="pagination-btn"
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={safeCurrentPage === totalPages}
                 >
                   Next →
                 </button>

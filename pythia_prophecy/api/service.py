@@ -771,6 +771,9 @@ ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "").strip()
 ALPACA_TRADING_BASE_URL = os.getenv(
     "ALPACA_TRADING_BASE_URL", "https://paper-api.alpaca.markets"
 ).rstrip("/")
+ALPACA_COMPANY_HYDRATE_COOLDOWN_SECONDS = int(
+    os.getenv("ALPACA_COMPANY_HYDRATE_COOLDOWN_SECONDS", "900")
+)
 COMPANY_AUTO_POPULATE_ON_DEMAND = (
     os.getenv("COMPANY_AUTO_POPULATE_ON_DEMAND", "true").lower() == "true"
 )
@@ -786,6 +789,10 @@ TERMINAL_STRIPE_SUBSCRIPTION_STATUSES = {"canceled", "unpaid", "incomplete_expir
 
 if stripe and STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
+
+
+_ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL: float = 0.0
+_ALPACA_COMPANY_HYDRATE_LAST_LOG: float = 0.0
 
 
 def _extract_client_ip(request: Request) -> Optional[str]:
@@ -1060,7 +1067,23 @@ def _infer_asset_type_from_alpaca(asset: dict) -> str:
 
 
 async def _hydrate_company_from_alpaca(ticker: str) -> Optional[dict]:
+    global _ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL
+    global _ALPACA_COMPANY_HYDRATE_LAST_LOG
+
     if not (ALPACA_KEY_ID and ALPACA_SECRET_KEY):
+        return None
+
+    now_ts = time.time()
+    if now_ts < _ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL:
+        # Log at most once every 60 seconds while in cooldown to avoid noise.
+        if now_ts - _ALPACA_COMPANY_HYDRATE_LAST_LOG >= 60:
+            remaining = int(_ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL - now_ts)
+            logger.info(
+                "Skipping Alpaca company hydrate for %s during cooldown (%ss remaining)",
+                ticker.upper(),
+                max(0, remaining),
+            )
+            _ALPACA_COMPANY_HYDRATE_LAST_LOG = now_ts
         return None
 
     url = f"{ALPACA_TRADING_BASE_URL}/v2/assets/{ticker.upper()}"
@@ -1073,6 +1096,17 @@ async def _hydrate_company_from_alpaca(ticker: str) -> Optional[dict]:
         async with httpx.AsyncClient(timeout=8.0) as client:
             resp = await client.get(url, headers=headers)
             if resp.status_code == 404:
+                return None
+            if resp.status_code == 429:
+                _ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL = (
+                    time.time() + max(60, ALPACA_COMPANY_HYDRATE_COOLDOWN_SECONDS)
+                )
+                _ALPACA_COMPANY_HYDRATE_LAST_LOG = 0.0
+                logger.warning(
+                    "Alpaca company hydrate rate-limited for %s; entering cooldown for %ss",
+                    ticker.upper(),
+                    max(60, ALPACA_COMPANY_HYDRATE_COOLDOWN_SECONDS),
+                )
                 return None
             resp.raise_for_status()
             payload = resp.json()

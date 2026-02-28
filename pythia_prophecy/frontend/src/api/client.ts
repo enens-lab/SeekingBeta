@@ -90,6 +90,19 @@ export interface PredictionAttribution {
   summary?: string[];
 }
 
+export interface PredictionAttributionResponse {
+  ticker: string;
+  model: string;
+  description: string;
+  horizon: string;
+  target_return: string;
+  probability: number;
+  signal: string;
+  generated_at: string;
+  data_source: string;
+  attribution: PredictionAttribution;
+}
+
 export interface OracleData {
   watchlist: string[];
   timeframes: string[];
@@ -365,15 +378,24 @@ export const predictions = {
     const normalized = horizon.toLowerCase();
 
     if (normalized === '5d' || normalized === '5day' || normalized === '5days') {
-      return request(`/predict/lstm_5d/${ticker}?with_attribution=true&attribution_top_k=5`);
+      return request(`/predict/lstm_5d/${ticker}`);
     }
 
     if (normalized === '20d' || normalized === '20day' || normalized === '20days') {
-      return request(`/predict/lstm_jackpot/${ticker}?with_attribution=true&attribution_top_k=5`);
+      return request(`/predict/lstm_jackpot/${ticker}`);
     }
 
     return request(`/predict/${ticker}?horizon=${horizon}`);
   },
+
+  getAttribution: (
+    modelName: 'lstm_5d' | 'lstm_jackpot',
+    ticker: string,
+    topK = 5
+  ): Promise<PredictionAttributionResponse> =>
+    request(
+      `/predict/lstm/${modelName}/${ticker}/attribution?method=integrated_gradients&top_k=${topK}`
+    ),
 
   getUniverse: (): Promise<string[]> => request('/api/universe'),
 };

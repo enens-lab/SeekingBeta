@@ -1062,6 +1062,13 @@ h4 {
   gap: 8px;
 }
 
+.prediction-drivers-loading {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  min-height: 72px;
+}
+
 .prediction-back-header {
   display: flex;
   align-items: baseline;

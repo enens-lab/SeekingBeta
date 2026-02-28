@@ -28,6 +28,27 @@ def _bars_url(base: str, symbol: str) -> str:
     # Market Data v2
     return f"{base.rstrip('/')}/stocks/{symbol}/bars"
 
+
+def _symbol_candidates(symbol: str) -> list[str]:
+    """Return Alpaca symbol variants to handle class-share formatting."""
+    base = (symbol or "").strip().upper()
+    if not base:
+        return []
+    candidates = [base]
+    if "-" in base:
+        candidates.append(base.replace("-", "."))
+    if "." in base:
+        candidates.append(base.replace(".", "-"))
+    # preserve order while removing duplicates
+    deduped = []
+    seen = set()
+    for s in candidates:
+        if s not in seen:
+            deduped.append(s)
+            seen.add(s)
+    return deduped
+
+
 def _headers(key_id: str, secret_key: str) -> Dict[str, str]:
     if not key_id or not secret_key:
         raise RuntimeError("Alpaca credentials missing")
@@ -83,7 +104,7 @@ def _fetch_symbol_daily(
             js = resp.json()
             if "bars" not in js:
                 raise RuntimeError(f"Alpaca response missing 'bars' (status {resp.status_code}): {js}")
-            items = js.get("bars", [])
+            items = js.get("bars") or []
             for b in items:
                 rows.append({
                     "Date": pd.to_datetime(b["t"], utc=True).tz_convert(None),
@@ -123,7 +144,13 @@ def fetch_ohlcv(
         days = int("".join(ch for ch in period if ch.isdigit()) or "120")
         start_dt = dt.date.today() - dt.timedelta(days=days)
         start = start_dt.isoformat()
-    return _fetch_symbol_daily(base_url, symbol, key_id, secret_key, start, end, feed, timeframe)
+    last_error = None
+    for candidate in _symbol_candidates(symbol):
+        try:
+            return _fetch_symbol_daily(base_url, candidate, key_id, secret_key, start, end, feed, timeframe)
+        except Exception as exc:
+            last_error = exc
+    raise RuntimeError(f"Alpaca fetch failed for {symbol}: {last_error}")
 
 
 def fetch_panel(
@@ -138,7 +165,16 @@ def fetch_panel(
 ) -> pd.DataFrame:
     frames = {}
     for s in symbols:
-        df = _fetch_symbol_daily(base_url, s, key_id, secret_key, start, None, feed, timeframe)
+        last_error = None
+        df = None
+        for candidate in _symbol_candidates(s):
+            try:
+                df = _fetch_symbol_daily(base_url, candidate, key_id, secret_key, start, None, feed, timeframe)
+                break
+            except Exception as exc:
+                last_error = exc
+        if df is None:
+            raise RuntimeError(f"Alpaca fetch failed for {s}: {last_error}")
         frames[s] = df
     panel = pd.concat(frames, axis=1).swaplevel(0,1,axis=1)
     panel.columns = pd.MultiIndex.from_tuples([(c[1], c[0]) for c in panel.columns], names=["Field","Ticker"])

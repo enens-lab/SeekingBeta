@@ -119,7 +119,7 @@ def upsert_ohlcv_dataframe(ticker: str, frame: pd.DataFrame, source: str) -> int
 
     sql = f"""
         INSERT INTO {MARKET_DATA_TABLE} (
-            ticker, trade_date, open, high, low, close, volume, source, fetched_at, updated_at
+            ticker, trade_date, open, high, low, close, volume, source
         )
         VALUES %s
         ON CONFLICT (ticker, trade_date) DO UPDATE SET

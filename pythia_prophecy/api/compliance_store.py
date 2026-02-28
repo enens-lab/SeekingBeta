@@ -345,6 +345,32 @@ def disable_newsletter_by_email(email: str) -> bool:
     return updated > 0
 
 
+def delete_user_records(user_id: str, email: str) -> dict[str, int]:
+    """Delete user-linked preference and consent records."""
+    if not is_enabled():
+        return {"preferences_deleted": 0, "consent_events_deleted": 0}
+
+    safe_email = _normalize_email(email)
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"DELETE FROM {PREFERENCES_TABLE} WHERE user_id = %s OR email = %s",
+                (user_id, safe_email),
+            )
+            preferences_deleted = cur.rowcount
+            cur.execute(
+                f"DELETE FROM {CONSENT_EVENTS_TABLE} WHERE user_id = %s OR email = %s",
+                (user_id, safe_email),
+            )
+            consent_events_deleted = cur.rowcount
+        conn.commit()
+
+    return {
+        "preferences_deleted": int(preferences_deleted),
+        "consent_events_deleted": int(consent_events_deleted),
+    }
+
+
 def record_consent_event(
     user_id: str,
     email: str,

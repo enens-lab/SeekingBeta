@@ -3964,3 +3964,107 @@ h4 {
     transform: translateY(0);
   }
 }
+
+.btn-danger {
+  background: #b42318;
+  color: #fff;
+  border: 1px solid #8f1d16;
+}
+
+.btn-danger:hover {
+  background: #981b14;
+}
+
+.profile-page {
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+
+.profile-section h1,
+.profile-section h2 {
+  margin: 0 0 14px;
+}
+
+.profile-meta {
+  display: grid;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.profile-meta p {
+  margin: 0;
+}
+
+.profile-form {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.profile-form input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  align-items: end;
+}
+
+.profile-tier-select {
+  display: grid;
+  gap: 6px;
+  min-width: 230px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.profile-tier-select select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 9px 10px;
+}
+
+.profile-note {
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.profile-danger {
+  border-color: rgba(180, 35, 24, 0.5);
+}
+
+@media (max-width: 840px) {
+  .profile-page {
+    max-width: 100%;
+  }
+
+  .profile-section {
+    padding: 18px;
+  }
+}

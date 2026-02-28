@@ -660,7 +660,7 @@ def _lstm_signal_and_recommendation(model_name: str, prob_up: float) -> Tuple[st
     return signal, recommendation
 
 
-def _compute_lstm_prediction(model_name: str, ticker: str) -> dict:
+def _prepare_lstm_inference(model_name: str, ticker: str) -> Dict[str, Any]:
     if model_name not in LSTM_MODEL_METADATA:
         raise HTTPException(404, detail=f"Unknown LSTM model: {model_name}")
 
@@ -689,22 +689,181 @@ def _compute_lstm_prediction(model_name: str, ticker: str) -> dict:
     last_close = float(raw["Close"].iloc[-1])
     signal, recommendation = _lstm_signal_and_recommendation(model_name, prob_up)
 
-    response = {
+    return {
         "ticker": ticker,
+        "model_name": model_name,
+        "meta": meta,
+        "raw": raw,
+        "model": model,
+        "feat": feat,
+        "feature_cols": feat_cols,
+        "X_seq": X_seq,
+        "prob_up": prob_up,
+        "last_close": last_close,
+        "signal": signal,
+        "recommendation": recommendation,
+        "sentiment": feat.attrs.get("sentiment", {}),
+    }
+
+
+def _compute_integrated_gradients_tf(tf_model: Any, x_seq: Any, steps: int = 24) -> Any:
+    import tensorflow as tf
+
+    steps = max(8, min(int(steps), 256))
+    x = tf.convert_to_tensor(x_seq, dtype=tf.float32)
+    baseline = tf.zeros_like(x)
+    alphas = tf.linspace(0.0, 1.0, steps + 1)
+
+    grad_acc = tf.zeros_like(x)
+    for alpha in alphas:
+        x_step = baseline + alpha * (x - baseline)
+        with tf.GradientTape() as tape:
+            tape.watch(x_step)
+            preds = tf_model(x_step, training=False)
+            target = tf.reshape(preds, (-1,))[0]
+        grads = tape.gradient(target, x_step)
+        if grads is None:
+            grads = tf.zeros_like(x_step)
+        grad_acc += grads
+
+    avg_grads = grad_acc / tf.cast(steps + 1, tf.float32)
+    integrated_grads = (x - baseline) * avg_grads
+    return integrated_grads.numpy()[0]
+
+
+def _build_lstm_attribution(
+    prepared: Dict[str, Any],
+    method: str = "integrated_gradients",
+    steps: int = 24,
+    top_k: int = 5,
+) -> Dict[str, Any]:
+    import numpy as np
+
+    method_norm = method.strip().lower()
+    if method_norm in {"timeshap", "time_shap"}:
+        raise HTTPException(
+            501,
+            detail="TimeSHAP is not enabled yet in this runtime. Use method=integrated_gradients.",
+        )
+    if method_norm not in {"integrated_gradients", "ig"}:
+        raise HTTPException(400, detail=f"Unsupported attribution method: {method}")
+
+    model = prepared["model"]
+    tf_model = getattr(model, "tf_model", None)
+    if tf_model is None:
+        raise HTTPException(
+            501,
+            detail="Integrated gradients currently support TensorFlow .keras LSTM artifacts only.",
+        )
+
+    ig = _compute_integrated_gradients_tf(tf_model, prepared["X_seq"], steps=steps)
+    feature_cols = list(prepared["feature_cols"])
+    signed = ig.sum(axis=0)
+    magnitude = np.abs(ig).sum(axis=0)
+
+    k = max(1, min(int(top_k), len(feature_cols)))
+    ranked_idx = np.argsort(magnitude)[::-1][:k]
+
+    top_drivers = []
+    for idx in ranked_idx:
+        top_drivers.append({
+            "feature": feature_cols[int(idx)],
+            "signed_contribution": float(signed[int(idx)]),
+            "magnitude": float(magnitude[int(idx)]),
+            "direction": "positive" if signed[int(idx)] >= 0 else "negative",
+        })
+
+    positive_sorted = [d for d in top_drivers if d["signed_contribution"] >= 0]
+    negative_sorted = [d for d in top_drivers if d["signed_contribution"] < 0]
+    positive_sorted.sort(key=lambda d: d["signed_contribution"], reverse=True)
+    negative_sorted.sort(key=lambda d: d["signed_contribution"])
+
+    summary = []
+    if top_drivers:
+        strongest = top_drivers[0]
+        summary.append(
+            f"Strongest local driver: {strongest['feature']} ({strongest['direction']}, magnitude {strongest['magnitude']:.6f})."
+        )
+    if positive_sorted:
+        summary.append(
+            "Top positive contributors: " + ", ".join(d["feature"] for d in positive_sorted[:3]) + "."
+        )
+    if negative_sorted:
+        summary.append(
+            "Top negative contributors: " + ", ".join(d["feature"] for d in negative_sorted[:3]) + "."
+        )
+
+    return {
+        "method": "integrated_gradients",
+        "baseline": "zeros_scaled_space",
+        "steps": max(8, min(int(steps), 256)),
+        "sequence_length": int(ig.shape[0]),
+        "feature_count": int(ig.shape[1]),
+        "top_k": k,
+        "top_drivers": top_drivers,
+        "top_positive_drivers": positive_sorted[:k],
+        "top_negative_drivers": negative_sorted[:k],
+        "summary": summary,
+    }
+
+
+def _compute_lstm_attribution(
+    model_name: str,
+    ticker: str,
+    method: str = "integrated_gradients",
+    steps: int = 24,
+    top_k: int = 5,
+) -> Dict[str, Any]:
+    prepared = _prepare_lstm_inference(model_name, ticker)
+    attribution = _build_lstm_attribution(prepared, method=method, steps=steps, top_k=top_k)
+    return {
+        "ticker": prepared["ticker"],
+        "model": model_name,
+        "description": str(prepared["meta"]["description"]),
+        "horizon": str(prepared["meta"]["horizon"]),
+        "target_return": str(prepared["meta"]["target_return"]),
+        "probability": round(prepared["prob_up"] * 100, 2),
+        "signal": prepared["signal"],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_source": DATA_SOURCE,
+        "attribution": attribution,
+    }
+
+
+def _compute_lstm_prediction(
+    model_name: str,
+    ticker: str,
+    with_attribution: bool = False,
+    attribution_method: str = "integrated_gradients",
+    attribution_steps: int = 24,
+    attribution_top_k: int = 5,
+) -> dict:
+    prepared = _prepare_lstm_inference(model_name, ticker)
+    meta = prepared["meta"]
+    sentiment = prepared["sentiment"]
+    response = {
+        "ticker": prepared["ticker"],
         "model": model_name,
         "description": str(meta["description"]),
         "horizon": str(meta["horizon"]),
         "target_return": str(meta["target_return"]),
-        "probability": round(prob_up * 100, 2),
-        "signal": signal,
-        "last_close": last_close,
-        "recommendation": recommendation,
-        "sentiment_score": round(float(feat.attrs.get("sentiment", {}).get("score", 0.0)), 4),
-        "sentiment_articles": int(feat.attrs.get("sentiment", {}).get("num_articles", 0)),
-        "sentiment_source": feat.attrs.get("sentiment", {}).get("source", "default"),
+        "probability": round(prepared["prob_up"] * 100, 2),
+        "signal": prepared["signal"],
+        "last_close": prepared["last_close"],
+        "recommendation": prepared["recommendation"],
+        "sentiment_score": round(float(sentiment.get("score", 0.0)), 4),
+        "sentiment_articles": int(sentiment.get("num_articles", 0)),
+        "sentiment_source": sentiment.get("source", "default"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "data_source": DATA_SOURCE,
     }
+    if with_attribution:
+        response["attribution"] = _build_lstm_attribution(
+            prepared,
+            method=attribution_method,
+            steps=attribution_steps,
+            top_k=attribution_top_k,
+        )
     return response
 
 
@@ -987,13 +1146,64 @@ def predict(
 
 
 @app.get("/predict/lstm_5d/{ticker}")
-def predict_lstm_5d(ticker: str):
-    return _predict_lstm_cached("lstm_5d", ticker)
+def predict_lstm_5d(
+    ticker: str,
+    with_attribution: bool = False,
+    attribution_method: str = "integrated_gradients",
+    attribution_steps: int = 24,
+    attribution_top_k: int = 5,
+):
+    base = _predict_lstm_cached("lstm_5d", ticker)
+    if not with_attribution:
+        return base
+    response = dict(base)
+    response["attribution"] = _compute_lstm_attribution(
+        "lstm_5d",
+        ticker,
+        method=attribution_method,
+        steps=attribution_steps,
+        top_k=attribution_top_k,
+    )["attribution"]
+    return response
 
 
 @app.get("/predict/lstm_jackpot/{ticker}")
-def predict_lstm_jackpot(ticker: str):
-    return _predict_lstm_cached("lstm_jackpot", ticker)
+def predict_lstm_jackpot(
+    ticker: str,
+    with_attribution: bool = False,
+    attribution_method: str = "integrated_gradients",
+    attribution_steps: int = 24,
+    attribution_top_k: int = 5,
+):
+    base = _predict_lstm_cached("lstm_jackpot", ticker)
+    if not with_attribution:
+        return base
+    response = dict(base)
+    response["attribution"] = _compute_lstm_attribution(
+        "lstm_jackpot",
+        ticker,
+        method=attribution_method,
+        steps=attribution_steps,
+        top_k=attribution_top_k,
+    )["attribution"]
+    return response
+
+
+@app.get("/predict/lstm/{model_name}/{ticker}/attribution")
+def predict_lstm_attribution(
+    model_name: str,
+    ticker: str,
+    method: str = "integrated_gradients",
+    steps: int = 24,
+    top_k: int = 5,
+):
+    return _compute_lstm_attribution(
+        model_name=model_name,
+        ticker=ticker,
+        method=method,
+        steps=steps,
+        top_k=top_k,
+    )
 
 
 @app.get("/predict/cache/status")

@@ -40,6 +40,16 @@ export interface LoginData {
   password: string;
 }
 
+export interface ChangePasswordData {
+  current_password: string;
+  new_password: string;
+}
+
+export interface DeleteAccountData {
+  password: string;
+  confirm_text: string;
+}
+
 export interface Tier {
   tier?: 'free' | 'basic' | 'pro';
   name: string;
@@ -201,6 +211,12 @@ export interface BillingPortalSessionResponse {
   portal_url: string;
 }
 
+export interface BillingChangeSubscriptionResponse {
+  mode: 'updated' | 'checkout' | 'no_op';
+  message: string;
+  checkout_url: string | null;
+}
+
 type AuthErrorCallback = (() => void) | null;
 
 // ============================================================================
@@ -306,6 +322,16 @@ export const auth = {
     }),
 
   getMe: (): Promise<User> => request('/api/auth/me'),
+  changePassword: (data: ChangePasswordData): Promise<{ message: string }> =>
+    request('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteAccount: (data: DeleteAccountData): Promise<{ message: string }> =>
+    request('/api/auth/delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 export const tiers = {
@@ -407,5 +433,14 @@ export const billing = {
   createPortalSession: (): Promise<BillingPortalSessionResponse> =>
     request('/api/billing/portal-session', {
       method: 'POST',
+    }),
+  cancelSubscription: (): Promise<{ message: string }> =>
+    request('/api/billing/cancel-subscription', {
+      method: 'POST',
+    }),
+  changeSubscription: (tier: 'basic' | 'pro'): Promise<BillingChangeSubscriptionResponse> =>
+    request('/api/billing/change-subscription', {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
     }),
 };

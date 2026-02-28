@@ -134,6 +134,16 @@ class PasswordResetConfirm(BaseModel):
     new_password: str = Field(..., min_length=8)
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str
+    confirm_text: str = Field(..., min_length=6, max_length=12)
+
+
 class ErrorResponse(BaseModel):
     error: str
     code: Optional[str] = None
@@ -262,6 +272,18 @@ class BillingCheckoutSessionResponse(BaseModel):
 class BillingPortalSessionResponse(BaseModel):
     """Billing portal session response."""
     portal_url: str
+
+
+class BillingChangeSubscriptionRequest(BaseModel):
+    """Request payload for switching subscription tiers."""
+    tier: SubscriptionTier
+
+
+class BillingChangeSubscriptionResponse(BaseModel):
+    """Result for subscription change flow."""
+    mode: str
+    message: str
+    checkout_url: Optional[str] = None
 
 
 class BillingStatusResponse(BaseModel):

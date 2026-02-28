@@ -13,6 +13,7 @@ import Pricing from './pages/Pricing';
 import Dashboard from './pages/Dashboard';
 import MyOracle from './pages/MyOracle';
 import Analysis from './pages/Analysis';
+import Profile from './pages/Profile';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import RefundCancellation from './pages/RefundCancellation';
@@ -73,6 +74,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Analysis />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />

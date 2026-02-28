@@ -165,6 +165,20 @@ def get_state_by_customer_id(stripe_customer_id: str) -> Optional[dict[str, Any]
     return dict(row) if row else None
 
 
+def delete_state_by_user_id(user_id: str) -> bool:
+    if not is_enabled():
+        return False
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"DELETE FROM {BILLING_STATE_TABLE} WHERE user_id = %s",
+                (user_id,),
+            )
+            deleted = cur.rowcount > 0
+        conn.commit()
+    return deleted
+
+
 def upsert_customer_state(
     user_id: str,
     email: str,

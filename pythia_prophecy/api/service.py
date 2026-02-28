@@ -48,6 +48,8 @@ from .models import (
     RefreshTokenRequest,
     PasswordResetRequest,
     PasswordResetConfirm,
+    ChangePasswordRequest,
+    DeleteAccountRequest,
     ErrorResponse,
     SubscriptionTier,
     TIER_CONFIG,
@@ -72,6 +74,8 @@ from .models import (
     BillingCheckoutSessionRequest,
     BillingCheckoutSessionResponse,
     BillingPortalSessionResponse,
+    BillingChangeSubscriptionRequest,
+    BillingChangeSubscriptionResponse,
     BillingStatusResponse,
 )
 from .database import (
@@ -92,6 +96,8 @@ from .database import (
     upsert_company,
     upsert_company_info,
     update_user_tier,
+    update_user_password,
+    delete_user_account,
     list_users_by_tiers,
 )
 from .price_cache_store import (
@@ -110,6 +116,7 @@ from .compliance_store import (
     audit_email_event,
     upsert_suppression,
     disable_newsletter_by_email,
+    delete_user_records,
 )
 from .billing_store import (
     ensure_tables as ensure_billing_tables,
@@ -118,6 +125,7 @@ from .billing_store import (
     get_state_by_customer_id,
     upsert_customer_state,
     upsert_state_by_customer_id,
+    delete_state_by_user_id,
     register_webhook_event,
     mark_webhook_event,
     list_states_with_expired_legacy_grace,
@@ -1599,10 +1607,88 @@ async def confirm_password_reset(data: PasswordResetConfirm):
         raise HTTPException(400, detail=message)
 
     # Update password in database
-    # TODO: Implement update_user_password in database module
+    updated = update_user_password(user.id, hash_password(data.new_password))
+    if not updated:
+        raise HTTPException(500, detail="Failed to update password")
+
     logger.info(f"Password reset for user: {user.email}")
 
     return MessageResponse(message="Password reset successfully. You can now login with your new password.")
+
+
+@app.post("/api/auth/change-password", response_model=MessageResponse, tags=["Authentication"])
+async def change_password(
+    data: ChangePasswordRequest,
+    user: UserInDB = Depends(require_auth),
+):
+    """Change password for authenticated user."""
+    if not verify_password(data.current_password, user.hashed_password):
+        raise HTTPException(400, detail="Current password is incorrect")
+
+    if verify_password(data.new_password, user.hashed_password):
+        raise HTTPException(400, detail="New password must be different from current password")
+
+    is_valid, message = validate_password_strength(data.new_password)
+    if not is_valid:
+        raise HTTPException(400, detail=message)
+
+    updated = update_user_password(user.id, hash_password(data.new_password))
+    if not updated:
+        raise HTTPException(500, detail="Failed to update password")
+
+    logger.info("Password changed for user: %s", user.email)
+    return MessageResponse(message="Password updated successfully.")
+
+
+@app.post("/api/auth/delete-account", response_model=MessageResponse, tags=["Authentication"])
+async def delete_account(
+    data: DeleteAccountRequest,
+    user: UserInDB = Depends(require_auth),
+):
+    """Delete authenticated user account and related records."""
+    if data.confirm_text.strip().upper() != "DELETE":
+        raise HTTPException(400, detail='Confirmation text must be "DELETE"')
+
+    if not verify_password(data.password, user.hashed_password):
+        raise HTTPException(400, detail="Password is incorrect")
+
+    # Best-effort subscription cancellation before deleting local account.
+    if STRIPE_ENABLED and stripe and billing_store_enabled():
+        try:
+            state = get_state_by_user_id(user.id)
+            subscription_id = str(state.get("stripe_subscription_id") or "").strip() if state else ""
+            if subscription_id:
+                try:
+                    stripe.Subscription.delete(subscription_id)
+                    logger.info("Canceled Stripe subscription before account deletion: %s", subscription_id)
+                except Exception as cancel_err:
+                    logger.warning(
+                        "Stripe subscription cancel failed for user_id=%s subscription_id=%s: %s",
+                        user.id,
+                        subscription_id,
+                        cancel_err,
+                    )
+        except Exception as billing_err:
+            logger.warning("Billing lookup failed before account deletion user_id=%s: %s", user.id, billing_err)
+
+    if compliance_store_enabled():
+        try:
+            delete_user_records(user.id, user.email)
+        except Exception as compliance_err:
+            logger.warning("Compliance cleanup failed for user_id=%s: %s", user.id, compliance_err)
+
+    if billing_store_enabled():
+        try:
+            delete_state_by_user_id(user.id)
+        except Exception as billing_err:
+            logger.warning("Billing cleanup failed for user_id=%s: %s", user.id, billing_err)
+
+    deleted = delete_user_account(user.id)
+    if not deleted:
+        raise HTTPException(500, detail="Failed to delete account")
+
+    logger.info("Deleted account for user: %s", user.email)
+    return MessageResponse(message="Account deleted successfully.")
 
 
 @app.get("/api/auth/me", response_model=UserResponse)
@@ -1732,33 +1818,20 @@ def _ensure_stripe_customer(user: UserInDB, state: Optional[dict]) -> str:
     return customer_id
 
 
-@app.get("/api/billing/status", response_model=BillingStatusResponse, tags=["Billing"])
-async def get_billing_status(user: UserInDB = Depends(require_auth)):
-    refreshed = _sync_user_tier_with_billing(user)
-    state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
-    return _billing_status_payload(refreshed, state)
-
-
-@app.post(
-    "/api/billing/checkout-session",
-    response_model=BillingCheckoutSessionResponse,
-    tags=["Billing"],
-)
-async def create_billing_checkout_session(
-    data: BillingCheckoutSessionRequest,
-    user: UserInDB = Depends(require_verified_user),
-):
-    _require_billing_enabled()
-
-    if data.tier not in {SubscriptionTier.BASIC, SubscriptionTier.PRO}:
+def _create_checkout_session_for_tier(
+    user: UserInDB,
+    tier: SubscriptionTier,
+    current_state: Optional[dict] = None,
+) -> BillingCheckoutSessionResponse:
+    if tier not in {SubscriptionTier.BASIC, SubscriptionTier.PRO}:
         raise HTTPException(400, detail="Only paid tiers are supported for checkout")
 
-    price_id = _stripe_price_for_tier(data.tier)
+    price_id = _stripe_price_for_tier(tier)
     if not price_id:
-        raise HTTPException(500, detail=f"No Stripe price configured for tier '{data.tier.value}'")
+        raise HTTPException(500, detail=f"No Stripe price configured for tier '{tier.value}'")
 
-    current_state = _ensure_billing_state_for_user(user)
-    customer_id = _ensure_stripe_customer(user, current_state)
+    state = current_state or _ensure_billing_state_for_user(user)
+    customer_id = _ensure_stripe_customer(user, state)
 
     try:
         session = stripe.checkout.Session.create(
@@ -1768,7 +1841,7 @@ async def create_billing_checkout_session(
             success_url=_checkout_redirect_url("success"),
             cancel_url=_checkout_redirect_url("cancelled"),
             client_reference_id=user.id,
-            metadata={"user_id": user.id, "requested_tier": data.tier.value},
+            metadata={"user_id": user.id, "requested_tier": tier.value},
             allow_promotion_codes=True,
         )
     except Exception as e:
@@ -1788,6 +1861,26 @@ async def create_billing_checkout_session(
     )
 
     return BillingCheckoutSessionResponse(checkout_url=checkout_url, session_id=session_id)
+
+
+@app.get("/api/billing/status", response_model=BillingStatusResponse, tags=["Billing"])
+async def get_billing_status(user: UserInDB = Depends(require_auth)):
+    refreshed = _sync_user_tier_with_billing(user)
+    state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
+    return _billing_status_payload(refreshed, state)
+
+
+@app.post(
+    "/api/billing/checkout-session",
+    response_model=BillingCheckoutSessionResponse,
+    tags=["Billing"],
+)
+async def create_billing_checkout_session(
+    data: BillingCheckoutSessionRequest,
+    user: UserInDB = Depends(require_verified_user),
+):
+    _require_billing_enabled()
+    return _create_checkout_session_for_tier(user=user, tier=data.tier)
 
 
 @app.post(
@@ -1812,6 +1905,150 @@ async def create_billing_portal_session(user: UserInDB = Depends(require_verifie
         raise HTTPException(502, detail="Could not create billing portal session")
 
     return BillingPortalSessionResponse(portal_url=str(session.get("url")))
+
+
+def _resolve_subscription_id_for_customer(customer_id: str, state: Optional[dict]) -> Optional[str]:
+    subscription_id = str((state or {}).get("stripe_subscription_id") or "").strip()
+    if subscription_id:
+        return subscription_id
+
+    try:
+        subscriptions = stripe.Subscription.list(customer=customer_id, status="all", limit=25)
+        records = subscriptions.get("data", []) if isinstance(subscriptions, dict) else getattr(subscriptions, "data", [])
+        for sub in records or []:
+            status = str(sub.get("status") or "").lower()
+            if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
+                return str(sub.get("id") or "").strip() or None
+    except Exception as e:
+        logger.warning("Unable to list subscriptions for customer %s: %s", customer_id, e)
+
+    return None
+
+
+@app.post(
+    "/api/billing/change-subscription",
+    response_model=BillingChangeSubscriptionResponse,
+    tags=["Billing"],
+)
+async def change_billing_subscription(
+    data: BillingChangeSubscriptionRequest,
+    user: UserInDB = Depends(require_verified_user),
+):
+    """Switch a paid subscription between Basic and Pro."""
+    _require_billing_enabled()
+
+    if data.tier not in {SubscriptionTier.BASIC, SubscriptionTier.PRO}:
+        raise HTTPException(400, detail="Target tier must be basic or pro")
+
+    state = _ensure_billing_state_for_user(user)
+    customer_id = _ensure_stripe_customer(user, state)
+    target_price_id = _stripe_price_for_tier(data.tier)
+    if not target_price_id:
+        raise HTTPException(500, detail=f"No Stripe price configured for tier '{data.tier.value}'")
+
+    subscription_id = _resolve_subscription_id_for_customer(customer_id, state)
+    if not subscription_id:
+        checkout = _create_checkout_session_for_tier(user=user, tier=data.tier, current_state=state)
+        return BillingChangeSubscriptionResponse(
+            mode="checkout",
+            message="No active subscription found. Redirect to checkout to start subscription.",
+            checkout_url=checkout.checkout_url,
+        )
+
+    try:
+        subscription = stripe.Subscription.retrieve(subscription_id, expand=["items.data.price"])
+    except Exception as e:
+        logger.error("Failed retrieving Stripe subscription %s: %s", subscription_id, e)
+        raise HTTPException(502, detail="Could not load current subscription")
+
+    payload = (
+        subscription.to_dict_recursive()
+        if hasattr(subscription, "to_dict_recursive")
+        else dict(subscription)
+    )
+    status = str(payload.get("status") or "").lower()
+    if status not in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
+        checkout = _create_checkout_session_for_tier(user=user, tier=data.tier, current_state=state)
+        return BillingChangeSubscriptionResponse(
+            mode="checkout",
+            message="Current subscription is not active. Redirect to checkout to re-subscribe.",
+            checkout_url=checkout.checkout_url,
+        )
+
+    items = payload.get("items", {}).get("data", []) if isinstance(payload.get("items"), dict) else []
+    if not items:
+        raise HTTPException(500, detail="Subscription has no billable items")
+
+    first_item = items[0] if isinstance(items[0], dict) else {}
+    current_price_id = str((first_item.get("price") or {}).get("id") or "")
+    if current_price_id == target_price_id:
+        return BillingChangeSubscriptionResponse(
+            mode="no_op",
+            message=f"Subscription is already on {data.tier.value}.",
+            checkout_url=None,
+        )
+
+    item_id = str(first_item.get("id") or "")
+    if not item_id:
+        raise HTTPException(500, detail="Subscription item id missing")
+
+    try:
+        modified = stripe.Subscription.modify(
+            subscription_id,
+            items=[{"id": item_id, "price": target_price_id}],
+            proration_behavior="create_prorations",
+            cancel_at_period_end=False,
+        )
+        modified_payload = (
+            modified.to_dict_recursive()
+            if hasattr(modified, "to_dict_recursive")
+            else dict(modified)
+        )
+        _process_subscription_event(modified_payload, source="stripe_change_subscription")
+    except Exception as e:
+        logger.error("Failed switching subscription %s to %s: %s", subscription_id, data.tier.value, e)
+        raise HTTPException(502, detail="Could not change subscription tier")
+
+    return BillingChangeSubscriptionResponse(
+        mode="updated",
+        message=f"Subscription changed to {data.tier.value}.",
+        checkout_url=None,
+    )
+
+
+@app.post("/api/billing/cancel-subscription", response_model=MessageResponse, tags=["Billing"])
+async def cancel_billing_subscription(user: UserInDB = Depends(require_verified_user)):
+    """Mark active Stripe subscription to cancel at period end."""
+    _require_billing_enabled()
+
+    state = _ensure_billing_state_for_user(user)
+    customer_id = _ensure_stripe_customer(user, state)
+    subscription_id = _resolve_subscription_id_for_customer(customer_id, state)
+    if not subscription_id:
+        raise HTTPException(400, detail="No active subscription found to cancel")
+
+    try:
+        subscription = stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=True,
+        )
+        payload = (
+            subscription.to_dict_recursive()
+            if hasattr(subscription, "to_dict_recursive")
+            else dict(subscription)
+        )
+        _process_subscription_event(payload, source="stripe_cancel_at_period_end")
+    except Exception as e:
+        logger.error("Failed to cancel subscription for %s: %s", user.email, e)
+        raise HTTPException(502, detail="Could not cancel subscription")
+
+    refreshed_state = get_state_by_user_id(user.id)
+    current_period_end = _to_utc_datetime(refreshed_state.get("current_period_end") if refreshed_state else None)
+    if current_period_end:
+        return MessageResponse(
+            message=f"Subscription will cancel at period end ({current_period_end.isoformat()})."
+        )
+    return MessageResponse(message="Subscription cancellation scheduled at period end.")
 
 
 def _process_subscription_event(subscription_payload: dict, source: str) -> None:

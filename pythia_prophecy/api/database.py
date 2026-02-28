@@ -248,6 +248,39 @@ def update_user_tier(user_id: str, tier: SubscriptionTier) -> bool:
         return False
 
 
+def update_user_password(user_id: str, hashed_password: str) -> bool:
+    """Update user's hashed password."""
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE users
+            SET hashed_password = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (hashed_password, datetime.utcnow().isoformat(), user_id),
+        )
+        conn.commit()
+        if cursor.rowcount > 0:
+            logger.info(f"Password updated for user_id={user_id}")
+            return True
+        logger.warning(f"Failed to update password for user_id={user_id} - user not found")
+        return False
+
+
+def delete_user_account(user_id: str) -> bool:
+    """Delete user account and user-owned sqlite records."""
+    with get_db() as conn:
+        # Explicitly delete dependent rows since foreign-key cascades are not guaranteed.
+        conn.execute("DELETE FROM user_oracle WHERE user_id = ?", (user_id,))
+        cursor = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        if cursor.rowcount > 0:
+            logger.info(f"Deleted user account user_id={user_id}")
+            return True
+        logger.warning(f"Failed to delete user account user_id={user_id} - user not found")
+        return False
+
+
 def list_users_by_tiers(tiers: list[SubscriptionTier]) -> list[UserInDB]:
     """List users whose tier is in the provided set."""
     if not tiers:

@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 
-type ActivePage = 'dashboard' | 'oracle' | 'analysis';
+type ActivePage = 'dashboard' | 'oracle' | 'analysis' | 'profile';
 
 interface DashboardHeaderProps {
   activePage?: ActivePage;
@@ -44,6 +44,12 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
             className={`nav-link${activePage === 'analysis' ? ' active' : ''}`}
           >
             Analysis
+          </Link>
+          <Link
+            to="/profile"
+            className={`nav-link${activePage === 'profile' ? ' active' : ''}`}
+          >
+            Profile
           </Link>
         </nav>
       )}

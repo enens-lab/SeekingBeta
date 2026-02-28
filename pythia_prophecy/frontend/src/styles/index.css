@@ -372,6 +372,49 @@ h4 {
   color: var(--text-secondary);
 }
 
+.performance-model-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-primary);
+}
+
+.performance-model-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.performance-model-tab:hover {
+  color: var(--text-primary);
+  background: var(--accent-muted);
+}
+
+.performance-model-tab:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.performance-model-tab.active {
+  color: #ffffff;
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+}
+
 .performance-metrics-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -491,6 +534,21 @@ h4 {
   color: var(--text-secondary);
   text-align: center;
   padding: 12px 4px;
+}
+
+@media (max-width: 720px) {
+  .performance-model-tabs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .performance-model-tab {
+    text-align: center;
+    padding: 10px 8px;
+  }
 }
 
 /* Section Styles */
@@ -2953,6 +3011,84 @@ h4 {
   color: white;
 }
 
+.dashboard-watchlist-manager {
+  width: 100%;
+  margin-top: -4px;
+  margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+
+.watchlist-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.watchlist-clear-btn {
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.watchlist-clear-btn:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.watchlist-clear-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.watchlist-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.watchlist-pill {
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.watchlist-pill .remove-mark {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.watchlist-pill:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.watchlist-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Empty Oracle Banner */
 .empty-oracle-banner {
   display: flex;
@@ -2987,6 +3123,15 @@ h4 {
 }
 
 @media (max-width: 768px) {
+  .dashboard-watchlist-manager {
+    padding: 10px;
+  }
+
+  .watchlist-manager-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .empty-oracle-banner {
     flex-direction: column;
     text-align: center;

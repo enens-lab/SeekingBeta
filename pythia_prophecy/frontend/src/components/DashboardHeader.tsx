@@ -37,7 +37,7 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
             to="/oracle"
             className={`nav-link${activePage === 'oracle' ? ' active' : ''}`}
           >
-            My Oracle
+            Watchlist
           </Link>
           <Link
             to="/analysis"

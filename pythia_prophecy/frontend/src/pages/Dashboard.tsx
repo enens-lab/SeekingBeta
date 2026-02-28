@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { oracle, predictions, OracleData, Prediction } from '../api/client';
+import { useToast } from '../components/Toast';
 import PredictionCard from '../components/PredictionCard';
 import CompanyDetail from '../components/CompanyDetail';
 import DashboardHeader from '../components/DashboardHeader';
@@ -10,9 +11,11 @@ type ViewMode = 'oracle' | 'universe';
 
 function Dashboard() {
   const { user, isVerified } = useAuth();
+  const toast = useToast();
   const [oracleData, setOracleData] = useState<OracleData | null>(null);
   const [predictionData, setPredictionData] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [watchlistSaving, setWatchlistSaving] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
   const [viewMode, setViewMode] = useState<ViewMode>('oracle');
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,9 +37,9 @@ function Dashboard() {
           setViewMode('universe');
         }
       })
-      .catch(console.error)
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Failed to load watchlist'))
       .finally(() => setLoading(false));
-  }, [isVerified]);
+  }, [isVerified, toast]);
 
   // Reset to page 1 when view mode, timeframe, or search changes
   useEffect(() => {
@@ -52,6 +55,41 @@ function Dashboard() {
     : baseTickers;
 
   const totalPages = Math.ceil(filteredTickers.length / pageSize);
+
+  const removeWatchlistTicker = async (ticker: string) => {
+    if (!oracleData || watchlistSaving) return;
+    setWatchlistSaving(true);
+    try {
+      const updated = await oracle.removeFromWatchlist(ticker);
+      setOracleData(updated);
+      setPredictionData((prev) => prev.filter((p) => p.ticker !== ticker));
+      if (updated.watchlist.length === 0) {
+        setViewMode('universe');
+      }
+      toast.success(`Removed ${ticker} from watchlist`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove ticker');
+    } finally {
+      setWatchlistSaving(false);
+    }
+  };
+
+  const clearWatchlist = async () => {
+    if (!oracleData || oracleData.watchlist.length === 0 || watchlistSaving) return;
+    if (!window.confirm('Clear all tickers from your watchlist?')) return;
+    setWatchlistSaving(true);
+    try {
+      const updated = await oracle.updateWatchlist([]);
+      setOracleData(updated);
+      setPredictionData([]);
+      setViewMode('universe');
+      toast.success('Watchlist cleared');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to clear watchlist');
+    } finally {
+      setWatchlistSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!oracleData || !isVerified) return;
@@ -112,9 +150,7 @@ function Dashboard() {
           <div className="dashboard-title">
             <h1>
               {viewMode === 'oracle' && hasWatchlist ? (
-                <>
-                  <span className="oracle-icon">🔮</span> My Oracle
-                </>
+                'My Watchlist'
               ) : (
                 'All Predictions'
               )}
@@ -125,7 +161,7 @@ function Dashboard() {
                   className={`toggle-btn ${viewMode === 'oracle' ? 'active' : ''}`}
                   onClick={() => setViewMode('oracle')}
                 >
-                  My Oracle ({oracleData.watchlist.length})
+                  My Watchlist ({oracleData.watchlist.length})
                 </button>
                 <button
                   className={`toggle-btn ${viewMode === 'universe' ? 'active' : ''}`}
@@ -136,6 +172,37 @@ function Dashboard() {
               </div>
             )}
           </div>
+
+          {viewMode === 'oracle' && hasWatchlist && oracleData && (
+            <div className="dashboard-watchlist-manager">
+              <div className="watchlist-manager-header">
+                <span>Manage watchlist</span>
+                <button
+                  type="button"
+                  className="watchlist-clear-btn"
+                  onClick={clearWatchlist}
+                  disabled={watchlistSaving}
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="watchlist-pill-list">
+                {oracleData.watchlist.map((ticker) => (
+                  <button
+                    key={ticker}
+                    type="button"
+                    className="watchlist-pill"
+                    onClick={() => removeWatchlistTicker(ticker)}
+                    disabled={watchlistSaving}
+                    title={`Remove ${ticker}`}
+                  >
+                    <span>{ticker}</span>
+                    <span className="remove-mark">×</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="dashboard-filters">
             <div className="dashboard-search">
@@ -200,13 +267,12 @@ function Dashboard() {
 
         {!hasWatchlist && (
           <div className="empty-oracle-banner">
-            <span className="oracle-icon">🔮</span>
             <div>
-              <h3>Set up your Oracle</h3>
+              <h3>Set up your Watchlist</h3>
               <p>Create a personalized watchlist to focus on the stocks that matter to you.</p>
             </div>
             <Link to="/oracle" className="btn btn-primary">
-              Configure My Oracle
+              Configure Watchlist
             </Link>
           </div>
         )}
@@ -214,7 +280,7 @@ function Dashboard() {
         {loading ? (
           <div className="dashboard-loading">
             <div className="spinner" />
-            <p>Consulting the Oracle...</p>
+            <p>Loading predictions...</p>
           </div>
         ) : filteredTickers.length === 0 ? (
           <div className="dashboard-no-results">

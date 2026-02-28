@@ -33,7 +33,7 @@ function MyOracle() {
     try {
       const updated = await oracle.addToWatchlist(ticker);
       setOracleData(updated);
-      toast.success(`Added ${ticker.toUpperCase()} to your Oracle`);
+      toast.success(`Added ${ticker.toUpperCase()} to your watchlist`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add stock');
     } finally {
@@ -47,7 +47,7 @@ function MyOracle() {
     try {
       const updated = await oracle.removeFromWatchlist(ticker);
       setOracleData(updated);
-      toast.success(`Removed ${ticker.toUpperCase()} from your Oracle`);
+      toast.success(`Removed ${ticker.toUpperCase()} from your watchlist`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to remove stock');
     } finally {
@@ -114,7 +114,7 @@ function MyOracle() {
         <DashboardHeader showNav={false} />
         <main className="oracle-main">
           <div className="verify-prompt">
-            <h1>Verify your email to access your Oracle</h1>
+            <h1>Verify your email to access your watchlist</h1>
             <p>Please check your inbox and click the verification link.</p>
           </div>
         </main>
@@ -129,12 +129,9 @@ function MyOracle() {
       <main className="oracle-main">
         <div className="oracle-header">
           <div className="oracle-title-section">
-            <h1>
-              <span className="oracle-icon">🔮</span>
-              My Oracle
-            </h1>
+            <h1>Watchlist</h1>
             <p className="oracle-subtitle">
-              Curate your prophetic visions. Select the stocks and timeframes you wish to divine.
+              Build and manage your SeekingBeta watchlist and preferred timeframes.
             </p>
           </div>
         </div>
@@ -142,7 +139,7 @@ function MyOracle() {
         {loading ? (
           <div className="oracle-loading">
             <div className="spinner" />
-            <p>Consulting the Oracle...</p>
+            <p>Loading watchlist...</p>
           </div>
         ) : (
           <div className="oracle-content">
@@ -178,7 +175,7 @@ function MyOracle() {
             <section className="oracle-section">
               <h2>Your Watchlist</h2>
               <p className="section-description">
-                The sacred symbols under your prophetic gaze ({oracleData?.watchlist?.length || 0} selected)
+                Tickers currently tracked ({oracleData?.watchlist?.length || 0} selected)
               </p>
 
               {oracleData && oracleData.watchlist.length > 0 ? (
@@ -201,7 +198,7 @@ function MyOracle() {
                 </div>
               ) : (
                 <div className="empty-watchlist">
-                  <p>Your Oracle awaits. Add stocks below to begin your divinations.</p>
+                  <p>Your watchlist is empty. Add stocks below to start tracking.</p>
                 </div>
               )}
             </section>
@@ -210,7 +207,7 @@ function MyOracle() {
             <section className="oracle-section">
               <h2>Add to Watchlist</h2>
               <p className="section-description">
-                Choose from {oracleData?.available_stocks?.length || 0} celestial bodies available in your tier
+                Choose from {oracleData?.available_stocks?.length || 0} stocks available in your tier
               </p>
 
               {/* Search */}

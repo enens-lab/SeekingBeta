@@ -680,6 +680,10 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").rstrip("/")
 PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 ALLOW_RANDOM_FALLBACK = os.getenv("ALLOW_RANDOM_FALLBACK", "false").lower() == "true"
+DIVINATION_LSTM_TIMEOUT_SECONDS = float(os.getenv("DIVINATION_LSTM_TIMEOUT_SECONDS", "8"))
+LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
+    os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
+)
 POLICY_VERSION = os.getenv("POLICY_VERSION", "2026-02-27")
 SES_SNS_ALLOWED_TOPIC_ARNS = {
     arn.strip()
@@ -1520,7 +1524,7 @@ async def predict_lstm_5d(ticker: str):
     """Proxy LSTM 5-Day predictions from divination backend, or use fallback."""
     upstream_error = "unknown upstream error"
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
             response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_5d/{ticker}")
             if response.status_code == 200:
                 data = response.json()
@@ -1548,10 +1552,14 @@ async def predict_lstm_5d(ticker: str):
         upstream_error = str(e)
         logger.debug(f"LSTM 5D prediction from divination failed: {e}, evaluating fallback")
 
+    fallback = _cached_price_fallback_response(ticker=ticker, horizon="5d", reason=upstream_error)
+    if fallback:
+        return fallback
+
+    if LSTM_PROXY_DISABLE_LOCAL_FALLBACK:
+        raise HTTPException(503, detail=f"LSTM 5D upstream unavailable: {upstream_error}")
+
     if not PYTHIA_AVAILABLE and not ALLOW_RANDOM_FALLBACK:
-        fallback = _cached_price_fallback_response(ticker=ticker, horizon="5d", reason=upstream_error)
-        if fallback:
-            return fallback
         raise HTTPException(503, detail=f"LSTM 5D upstream unavailable: {upstream_error}")
 
     # Fallback to local prediction
@@ -1577,7 +1585,7 @@ async def predict_lstm_5d(ticker: str):
         fallback = _cached_price_fallback_response(ticker=ticker, horizon="5d", reason=str(e))
         if fallback:
             return fallback
-        raise HTTPException(500, detail=str(e))
+        raise HTTPException(503, detail=f"LSTM 5D unavailable: {e}")
 
 
 
@@ -1587,7 +1595,7 @@ async def predict_lstm_jackpot(ticker: str):
     """Proxy LSTM Jackpot predictions from divination backend, or use fallback."""
     upstream_error = "unknown upstream error"
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
             response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_jackpot/{ticker}")
             if response.status_code == 200:
                 data = response.json()
@@ -1615,10 +1623,14 @@ async def predict_lstm_jackpot(ticker: str):
         upstream_error = str(e)
         logger.debug(f"LSTM Jackpot prediction from divination failed: {e}, evaluating fallback")
 
+    fallback = _cached_price_fallback_response(ticker=ticker, horizon="20d", reason=upstream_error)
+    if fallback:
+        return fallback
+
+    if LSTM_PROXY_DISABLE_LOCAL_FALLBACK:
+        raise HTTPException(503, detail=f"LSTM Jackpot upstream unavailable: {upstream_error}")
+
     if not PYTHIA_AVAILABLE and not ALLOW_RANDOM_FALLBACK:
-        fallback = _cached_price_fallback_response(ticker=ticker, horizon="20d", reason=upstream_error)
-        if fallback:
-            return fallback
         raise HTTPException(503, detail=f"LSTM Jackpot upstream unavailable: {upstream_error}")
 
     # Fallback to local prediction
@@ -1644,7 +1656,7 @@ async def predict_lstm_jackpot(ticker: str):
         fallback = _cached_price_fallback_response(ticker=ticker, horizon="20d", reason=str(e))
         if fallback:
             return fallback
-        raise HTTPException(500, detail=str(e))
+        raise HTTPException(503, detail=f"LSTM Jackpot unavailable: {e}")
 
 
 

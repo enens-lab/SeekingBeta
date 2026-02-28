@@ -83,40 +83,6 @@ function PredictionsCarousel() {
     };
   }, []);
 
-  const fetchPredictionsForModel = useCallback(async (model: typeof MODELS[0]): Promise<ModelRow> => {
-    try {
-      const results = await Promise.allSettled(
-        MAGNIFICENT_7.map(async (ticker) => {
-          const url = `${model.endpoint}/${ticker}`;
-
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
-          return normalizePrediction(model, ticker, data);
-        })
-      );
-
-      const predictions = results
-        .filter((r): r is PromiseFulfilledResult<Prediction> => r.status === 'fulfilled')
-        .map((r) => r.value);
-
-      return {
-        model,
-        predictions,
-        loading: false,
-        error: predictions.length === 0,
-      };
-    } catch (err) {
-      console.error(`Failed to fetch predictions for ${model.name}:`, err);
-      return {
-        model,
-        predictions: [],
-        loading: false,
-        error: true,
-      };
-    }
-  }, [normalizePrediction]);
-
   const fetchHomepageBatch = useCallback(async (): Promise<ModelRow[] | null> => {
     const res = await fetch('/predict/homepage');
     if (!res.ok) {
@@ -151,14 +117,18 @@ function PredictionsCarousel() {
         setModelRows(batchRows);
       }
     } catch (batchError) {
-      console.warn('Batch homepage prediction fetch failed; falling back to per-model requests', batchError);
-      const rows = await Promise.all(
-        MODELS.map((model) => fetchPredictionsForModel(model))
+      console.warn('Batch homepage prediction fetch failed; serving empty state', batchError);
+      setModelRows(
+        MODELS.map((model) => ({
+          model,
+          predictions: [],
+          loading: false,
+          error: true,
+        }))
       );
-      setModelRows(rows);
     }
     setLoading(false);
-  }, [fetchHomepageBatch, fetchPredictionsForModel]);
+  }, [fetchHomepageBatch]);
 
   useEffect(() => {
     fetchAllPredictions();

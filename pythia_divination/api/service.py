@@ -76,6 +76,16 @@ from strategy.metrics import snapshot_positions, compute_and_store_metrics
 from strategy.runner import run_once
 
 from storage.postgres import init_db, list_metrics
+from storage.market_data_store import (
+    ensure_tables as ensure_market_data_tables,
+    get_lstm_prediction as get_lstm_prediction_db,
+    get_ohlcv_dataframe as get_ohlcv_dataframe_db,
+    is_enabled as market_data_store_enabled,
+    list_lstm_predictions as list_lstm_predictions_db,
+    select_stale_tickers as select_stale_tickers_db,
+    upsert_lstm_prediction as upsert_lstm_prediction_db,
+    upsert_ohlcv_dataframe as upsert_ohlcv_dataframe_db,
+)
 from config.settings import settings
 
 # Default model for backward compatibility
@@ -117,12 +127,24 @@ HOME_CACHE_WARM_ENABLED = os.getenv("HOME_CACHE_WARM_ENABLED", "true").lower() =
 HOME_CACHE_WARM_ON_STARTUP = os.getenv("HOME_CACHE_WARM_ON_STARTUP", "true").lower() == "true"
 HOME_CACHE_WARM_INTERVAL_SECONDS = int(os.getenv("HOME_CACHE_WARM_INTERVAL_SECONDS", "900"))
 HOME_CACHE_SNAPSHOT_PATH = Path(os.getenv("HOME_CACHE_SNAPSHOT_PATH", "/app/artifacts/home_cache_snapshot.json"))
+HOMEPAGE_CACHE_ONLY = os.getenv("HOMEPAGE_CACHE_ONLY", "true").lower() == "true"
+LSTM_SERVE_CACHE_ONLY = os.getenv("LSTM_SERVE_CACHE_ONLY", "false").lower() == "true"
+LSTM_DB_MARKET_DATA_ENABLED = os.getenv("LSTM_DB_MARKET_DATA_ENABLED", "true").lower() == "true"
+LSTM_ALLOW_LIVE_DATA_FETCH = os.getenv("LSTM_ALLOW_LIVE_DATA_FETCH", "true").lower() == "true"
+MARKET_DATA_SYNC_ENABLED = os.getenv("MARKET_DATA_SYNC_ENABLED", "false").lower() == "true"
+MARKET_DATA_SYNC_INTERVAL_SECONDS = int(os.getenv("MARKET_DATA_SYNC_INTERVAL_SECONDS", "86400"))
+MARKET_DATA_SYNC_BATCH_SIZE = int(os.getenv("MARKET_DATA_SYNC_BATCH_SIZE", "250"))
+MARKET_DATA_SYNC_MAX_AGE_DAYS = int(os.getenv("MARKET_DATA_SYNC_MAX_AGE_DAYS", "1"))
+MARKET_DATA_SYNC_LOOKBACK_DAYS = int(os.getenv("MARKET_DATA_SYNC_LOOKBACK_DAYS", "520"))
+MARKET_DATA_SYNC_TICKERS_ENV = os.getenv("MARKET_DATA_SYNC_TICKERS", "")
+MARKET_DATA_SYNC_SOURCE = os.getenv("MARKET_DATA_SYNC_SOURCE", DATA_SOURCE).strip().lower() or DATA_SOURCE
 
 _LSTM_RESPONSE_CACHE: Dict[Tuple[str, str, str], Tuple[float, dict]] = {}
 _LSTM_RAW_DATA_CACHE: Dict[Tuple[str, str], Tuple[float, pd.DataFrame]] = {}
 _LSTM_SINGLEFLIGHT_LOCKS: Dict[Tuple[str, str, str], Lock] = {}
 _LSTM_CACHE_LOCK = Lock()
 _HOME_CACHE_WARMER_TASK: Optional[asyncio.Task] = None
+_MARKET_DATA_SYNC_TASK: Optional[asyncio.Task] = None
 
 LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
     "lstm_5d": {
@@ -175,22 +197,50 @@ def _cache_get_entry(model_name: str, ticker: str) -> Optional[Tuple[float, dict
 def _cache_get(model_name: str, ticker: str, max_age_seconds: int) -> Optional[dict]:
     now = time.time()
     entry = _cache_get_entry(model_name, ticker)
-    if not entry:
+    if entry:
+        ts, payload = entry
+        if now - ts <= max_age_seconds:
+            return payload
+
+    if not market_data_store_enabled():
         return None
-    ts, payload = entry
-    if now - ts > max_age_seconds:
+    try:
+        payload = get_lstm_prediction_db(
+            data_source=DATA_SOURCE,
+            model_name=model_name,
+            ticker=ticker,
+            max_age_seconds=max_age_seconds,
+        )
+    except Exception as exc:
+        logger.debug("DB prediction cache read failed for %s/%s: %s", model_name, ticker, exc)
         return None
-    return payload
+    if not payload:
+        return None
+    with _LSTM_CACHE_LOCK:
+        _LSTM_RESPONSE_CACHE[_cache_key(model_name, ticker)] = (now, dict(payload))
+    return dict(payload)
 
 
 def _cache_set(model_name: str, ticker: str, payload: dict) -> None:
     key = _cache_key(model_name, ticker)
     now = time.time()
+    cached_payload = dict(payload)
     with _LSTM_CACHE_LOCK:
-        _LSTM_RESPONSE_CACHE[key] = (now, dict(payload))
+        _LSTM_RESPONSE_CACHE[key] = (now, cached_payload)
         if len(_LSTM_RESPONSE_CACHE) > LSTM_CACHE_MAX_ITEMS:
             oldest = min(_LSTM_RESPONSE_CACHE.items(), key=lambda kv: kv[1][0])[0]
             _LSTM_RESPONSE_CACHE.pop(oldest, None)
+    if not market_data_store_enabled():
+        return
+    try:
+        upsert_lstm_prediction_db(
+            data_source=DATA_SOURCE,
+            model_name=model_name,
+            ticker=ticker,
+            payload=cached_payload,
+        )
+    except Exception as exc:
+        logger.debug("DB prediction cache write failed for %s/%s: %s", model_name, ticker, exc)
 
 
 def _singleflight_lock(model_name: str, ticker: str) -> Lock:
@@ -257,10 +307,28 @@ def _get_cached_lstm_raw_data(ticker: str) -> pd.DataFrame:
             if now - ts <= LSTM_RAW_DATA_STALE_TTL:
                 stale_df = df.copy()
 
+    if LSTM_DB_MARKET_DATA_ENABLED and market_data_store_enabled():
+        try:
+            db_df = get_ohlcv_dataframe_db(ticker=ticker, max_rows=max(500, 120))
+            if len(db_df) >= 120:
+                with _LSTM_CACHE_LOCK:
+                    _LSTM_RAW_DATA_CACHE[cache_key] = (now, db_df.copy())
+                return db_df
+            if stale_df is None and len(db_df) > 0:
+                stale_df = db_df.copy()
+        except Exception as exc:
+            logger.debug("DB OHLCV read failed for %s: %s", ticker, exc)
+
+    if not LSTM_ALLOW_LIVE_DATA_FETCH:
+        if stale_df is not None and len(stale_df) >= 120:
+            logger.warning("Using stale OHLCV cache for %s with live fetch disabled", ticker)
+            return stale_df
+        raise RuntimeError(f"Live OHLCV fetch disabled and no usable DB/cache data for {ticker}")
+
     try:
         raw = fetch_ohlcv_for_lstm(ticker, sequence_length=60, data_source=DATA_SOURCE)
     except Exception:
-        if stale_df is not None:
+        if stale_df is not None and len(stale_df) >= 120:
             logger.warning(
                 "Using stale OHLCV cache for %s after provider fetch failure (stale age <= %ss)",
                 ticker,
@@ -268,6 +336,16 @@ def _get_cached_lstm_raw_data(ticker: str) -> pd.DataFrame:
             )
             return stale_df
         raise
+
+    if LSTM_DB_MARKET_DATA_ENABLED and market_data_store_enabled():
+        try:
+            upsert_ohlcv_dataframe_db(
+                ticker=ticker,
+                frame=raw.tail(max(500, 120)),
+                source=f"live:{DATA_SOURCE}",
+            )
+        except Exception as exc:
+            logger.debug("DB OHLCV write failed for %s: %s", ticker, exc)
 
     with _LSTM_CACHE_LOCK:
         _LSTM_RAW_DATA_CACHE[cache_key] = (now, raw.copy())
@@ -313,6 +391,90 @@ def _configured_home_models() -> Tuple[str, ...]:
     return tuple(models)
 
 
+def _configured_market_sync_tickers() -> Tuple[str, ...]:
+    if MARKET_DATA_SYNC_TICKERS_ENV.strip():
+        return tuple(
+            t.strip().upper()
+            for t in MARKET_DATA_SYNC_TICKERS_ENV.split(",")
+            if t.strip()
+        )
+    # Default to full configured universe; batch size and interval control throughput.
+    return tuple(str(t).upper() for t in UNIVERSE)
+
+
+def _hydrate_prediction_cache_from_db() -> int:
+    if not market_data_store_enabled():
+        return 0
+    try:
+        rows = list_lstm_predictions_db(
+            data_source=DATA_SOURCE,
+            model_names=_configured_home_models(),
+            tickers=tuple(HOME_CACHE_TICKERS),
+            max_age_seconds=LSTM_STALE_CACHE_TTL,
+        )
+    except Exception as exc:
+        logger.warning("Failed loading LSTM prediction cache from DB: %s", exc)
+        return 0
+
+    now = time.time()
+    loaded = 0
+    with _LSTM_CACHE_LOCK:
+        for (model_name, ticker), payload in rows.items():
+            _LSTM_RESPONSE_CACHE[_cache_key(model_name, ticker)] = (now, dict(payload))
+            loaded += 1
+    if loaded:
+        logger.info("Hydrated %d LSTM prediction entries from DB cache", loaded)
+    return loaded
+
+
+def _sync_market_data_once(limit: Optional[int] = None) -> Dict[str, Any]:
+    tickers = _configured_market_sync_tickers()
+    batch_size = max(1, limit or MARKET_DATA_SYNC_BATCH_SIZE)
+    candidates = select_stale_tickers_db(
+        tickers=tickers,
+        max_age_days=MARKET_DATA_SYNC_MAX_AGE_DAYS,
+        limit=batch_size,
+    )
+    summary: Dict[str, Any] = {
+        "source": MARKET_DATA_SYNC_SOURCE,
+        "total_configured": len(tickers),
+        "requested": len(candidates),
+        "synced": 0,
+        "failed": 0,
+        "errors": [],
+        "as_of": datetime.now(timezone.utc).isoformat(),
+    }
+    if not candidates:
+        return summary
+
+    start = (datetime.now(timezone.utc) - pd.Timedelta(days=MARKET_DATA_SYNC_LOOKBACK_DAYS)).date().isoformat()
+
+    for ticker in candidates:
+        try:
+            frame = fetch_ohlcv(
+                ticker=ticker,
+                start=start,
+                data_source=MARKET_DATA_SYNC_SOURCE,
+                timeframe="1Day",
+                retries=1,
+            )
+            rows = upsert_ohlcv_dataframe_db(
+                ticker=ticker,
+                frame=frame,
+                source=f"sync:{MARKET_DATA_SYNC_SOURCE}",
+            )
+            summary["synced"] += 1
+            if rows == 0:
+                summary["failed"] += 1
+                if len(summary["errors"]) < 20:
+                    summary["errors"].append({"ticker": ticker, "error": "no rows persisted"})
+        except Exception as exc:
+            summary["failed"] += 1
+            if len(summary["errors"]) < 20:
+                summary["errors"].append({"ticker": ticker, "error": str(exc)})
+    return summary
+
+
 def _warm_home_cache_once(force_refresh: bool = False) -> Dict[str, Any]:
     tickers = sorted(HOME_CACHE_TICKERS)
     models = _configured_home_models()
@@ -351,6 +513,19 @@ async def _home_cache_warmer_loop() -> None:
         logger.info("Periodic homepage cache warm complete: %s", summary)
 
 
+async def _market_data_sync_loop() -> None:
+    if not MARKET_DATA_SYNC_ENABLED:
+        return
+
+    summary = await run_in_threadpool(_sync_market_data_once)
+    logger.info("Initial market-data sync complete: %s", summary)
+
+    while True:
+        await asyncio.sleep(max(300, MARKET_DATA_SYNC_INTERVAL_SECONDS))
+        summary = await run_in_threadpool(_sync_market_data_once)
+        logger.info("Periodic market-data sync complete: %s", summary)
+
+
 def _start_home_cache_warmer() -> None:
     global _HOME_CACHE_WARMER_TASK
     if not HOME_CACHE_WARM_ENABLED:
@@ -359,6 +534,19 @@ def _start_home_cache_warmer() -> None:
     if _HOME_CACHE_WARMER_TASK is not None and not _HOME_CACHE_WARMER_TASK.done():
         return
     _HOME_CACHE_WARMER_TASK = asyncio.create_task(_home_cache_warmer_loop())
+
+
+def _start_market_data_sync() -> None:
+    global _MARKET_DATA_SYNC_TASK
+    if not MARKET_DATA_SYNC_ENABLED:
+        logger.info("Market-data sync disabled via MARKET_DATA_SYNC_ENABLED=false")
+        return
+    if not market_data_store_enabled():
+        logger.warning("Market-data sync requested but DB store is disabled")
+        return
+    if _MARKET_DATA_SYNC_TASK is not None and not _MARKET_DATA_SYNC_TASK.done():
+        return
+    _MARKET_DATA_SYNC_TASK = asyncio.create_task(_market_data_sync_loop())
 
 
 @app.on_event("startup")
@@ -371,19 +559,31 @@ async def _startup():
     except Exception as e:
         logger.warning(f"Database initialization skipped: {e}")
 
+    if market_data_store_enabled():
+        try:
+            ensure_market_data_tables()
+        except Exception as exc:
+            logger.warning("Failed to initialize market-data tables: %s", exc)
+
     _load_home_cache_snapshot()
+    _hydrate_prediction_cache_from_db()
     _start_home_cache_warmer()
+    _start_market_data_sync()
 
 
 @app.on_event("shutdown")
 async def _shutdown():
-    global _HOME_CACHE_WARMER_TASK
-    if _HOME_CACHE_WARMER_TASK is None:
-        return
-    _HOME_CACHE_WARMER_TASK.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await _HOME_CACHE_WARMER_TASK
-    _HOME_CACHE_WARMER_TASK = None
+    global _HOME_CACHE_WARMER_TASK, _MARKET_DATA_SYNC_TASK
+    if _HOME_CACHE_WARMER_TASK is not None:
+        _HOME_CACHE_WARMER_TASK.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await _HOME_CACHE_WARMER_TASK
+        _HOME_CACHE_WARMER_TASK = None
+    if _MARKET_DATA_SYNC_TASK is not None:
+        _MARKET_DATA_SYNC_TASK.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await _MARKET_DATA_SYNC_TASK
+        _MARKET_DATA_SYNC_TASK = None
     _save_home_cache_snapshot()
 
 
@@ -504,13 +704,20 @@ def _compute_lstm_prediction(model_name: str, ticker: str) -> dict:
 
 def _predict_lstm_cached(model_name: str, ticker: str, force_refresh: bool = False) -> dict:
     ticker = ticker.upper()
-    use_cache = _should_cache_ticker(ticker)
+    use_cache = _should_cache_ticker(ticker) or LSTM_SERVE_CACHE_ONLY
 
     if use_cache and not force_refresh:
         cached = _cache_get(model_name, ticker, LSTM_RESPONSE_CACHE_TTL)
         if cached:
             cached["cache_status"] = "hit"
             return cached
+        if LSTM_SERVE_CACHE_ONLY:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale_cache_only"
+                stale["warning"] = "Serving stale cached prediction while live refresh is disabled"
+                return stale
+            raise HTTPException(503, detail=f"Cached prediction unavailable for {model_name}/{ticker}")
 
     lock = _singleflight_lock(model_name, ticker)
     acquired = lock.acquire(timeout=LSTM_SINGLEFLIGHT_WAIT_SECONDS)
@@ -689,11 +896,27 @@ def predict_homepage(
     if invalid_models:
         raise HTTPException(400, detail=f"Unsupported model(s): {', '.join(invalid_models)}")
 
+    cache_only_mode = HOMEPAGE_CACHE_ONLY and not force_refresh
     rows = []
     for model_name in requested_models:
         model_predictions = []
         failures = []
         for ticker in requested_tickers:
+            if cache_only_mode:
+                cached = _cache_get(model_name, ticker, LSTM_RESPONSE_CACHE_TTL)
+                if cached:
+                    cached["cache_status"] = "hit"
+                    model_predictions.append(cached)
+                    continue
+                stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+                if stale:
+                    stale["cache_status"] = "stale_cache_only"
+                    stale["warning"] = "Returned stale cache entry (homepage cache-only mode)"
+                    model_predictions.append(stale)
+                    continue
+                failures.append({"ticker": ticker, "error": "cache-miss"})
+                continue
+
             try:
                 model_predictions.append(
                     _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
@@ -713,6 +936,7 @@ def predict_homepage(
         "available": any(row["successful_predictions"] > 0 for row in rows),
         "as_of": datetime.now(timezone.utc).isoformat(),
         "data_source": DATA_SOURCE,
+        "cache_only": cache_only_mode,
         "rows": rows,
     }
 
@@ -791,6 +1015,10 @@ def prediction_cache_status():
         "fresh_ttl_seconds": LSTM_RESPONSE_CACHE_TTL,
         "stale_ttl_seconds": LSTM_STALE_CACHE_TTL,
         "warm_interval_seconds": HOME_CACHE_WARM_INTERVAL_SECONDS,
+        "homepage_cache_only": HOMEPAGE_CACHE_ONLY,
+        "lstm_cache_only": LSTM_SERVE_CACHE_ONLY,
+        "db_market_data_enabled": LSTM_DB_MARKET_DATA_ENABLED and market_data_store_enabled(),
+        "live_fetch_enabled": LSTM_ALLOW_LIVE_DATA_FETCH,
         "entries": entries,
     }
 
@@ -799,6 +1027,30 @@ def prediction_cache_status():
 async def warm_prediction_cache(force_refresh: bool = True):
     """Manual operational endpoint for warming homepage prediction cache."""
     summary = await run_in_threadpool(_warm_home_cache_once, force_refresh)
+    return summary
+
+
+@app.get("/ops/market-data/status")
+def market_data_status():
+    tickers = _configured_market_sync_tickers()
+    return {
+        "enabled": MARKET_DATA_SYNC_ENABLED,
+        "source": MARKET_DATA_SYNC_SOURCE,
+        "interval_seconds": MARKET_DATA_SYNC_INTERVAL_SECONDS,
+        "batch_size": MARKET_DATA_SYNC_BATCH_SIZE,
+        "max_age_days": MARKET_DATA_SYNC_MAX_AGE_DAYS,
+        "lookback_days": MARKET_DATA_SYNC_LOOKBACK_DAYS,
+        "configured_tickers": len(tickers),
+        "db_enabled": market_data_store_enabled(),
+    }
+
+
+@app.post("/ops/market-data/sync")
+async def sync_market_data(limit: Optional[int] = None):
+    """Manual market-data sync operation (DB upsert of daily OHLCV)."""
+    if not market_data_store_enabled():
+        raise HTTPException(503, detail="Market-data DB store is disabled (DATABASE_URL missing)")
+    summary = await run_in_threadpool(_sync_market_data_once, limit)
     return summary
 
 

@@ -37,6 +37,42 @@ function buildTopDrivers(probability: string, probValue: number, horizon: string
   ];
 }
 
+function prettifyFeatureName(feature: string): string {
+  return feature
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function buildAttributionTopDrivers(prediction: Prediction, fallback: string[]): string[] {
+  const attribution = (prediction as any).attribution;
+  if (!attribution || typeof attribution !== 'object') {
+    return fallback;
+  }
+
+  const summary = Array.isArray(attribution.summary)
+    ? attribution.summary.filter((s: unknown) => typeof s === 'string' && s.trim())
+    : [];
+
+  const rawDrivers = Array.isArray(attribution.top_drivers)
+    ? attribution.top_drivers
+    : [];
+
+  const drivers = rawDrivers
+    .filter((d: any) => d && typeof d.feature === 'string')
+    .slice(0, 3)
+    .map((d: any) => {
+      const direction = String(d.direction || '').toLowerCase() === 'negative'
+        ? 'adds downside pressure'
+        : 'supports upside momentum';
+      return `${prettifyFeatureName(d.feature)}: ${direction}.`;
+    });
+
+  const merged = [...summary.slice(0, 2), ...drivers];
+  return merged.length > 0 ? merged : fallback;
+}
+
 function PredictionCard({ prediction, onClick }: PredictionCardProps) {
   const { ticker, signal, prob_up, last_close, horizon } = prediction as any;
   const [isFlipped, setIsFlipped] = useState(false);
@@ -49,7 +85,10 @@ function PredictionCard({ prediction, onClick }: PredictionCardProps) {
   const probClass = probValue >= 0.55 ? 'high' : probValue >= 0.45 ? 'medium' : 'low';
   const price = last_close?.toFixed(2) || '—';
   const horizonLabel = horizon || '1d';
-  const topDrivers = buildTopDrivers(probability, probValue, horizonLabel);
+  const topDrivers = buildAttributionTopDrivers(
+    prediction,
+    buildTopDrivers(probability, probValue, horizonLabel)
+  );
 
   const handleFlip = () => {
     setIsFlipped((prev) => !prev);

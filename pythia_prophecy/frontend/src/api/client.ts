@@ -67,6 +67,27 @@ export interface Prediction {
   predicted_return: number | null;
   last_close: number | null;
   timestamp: string;
+  attribution?: PredictionAttribution | null;
+}
+
+export interface PredictionDriver {
+  feature: string;
+  signed_contribution: number;
+  magnitude: number;
+  direction: 'positive' | 'negative' | string;
+}
+
+export interface PredictionAttribution {
+  method: string;
+  baseline?: string;
+  steps?: number;
+  sequence_length?: number;
+  feature_count?: number;
+  top_k?: number;
+  top_drivers?: PredictionDriver[];
+  top_positive_drivers?: PredictionDriver[];
+  top_negative_drivers?: PredictionDriver[];
+  summary?: string[];
 }
 
 export interface OracleData {
@@ -344,11 +365,11 @@ export const predictions = {
     const normalized = horizon.toLowerCase();
 
     if (normalized === '5d' || normalized === '5day' || normalized === '5days') {
-      return request(`/predict/lstm_5d/${ticker}`);
+      return request(`/predict/lstm_5d/${ticker}?with_attribution=true&attribution_top_k=5`);
     }
 
     if (normalized === '20d' || normalized === '20day' || normalized === '20days') {
-      return request(`/predict/lstm_jackpot/${ticker}`);
+      return request(`/predict/lstm_jackpot/${ticker}?with_attribution=true&attribution_top_k=5`);
     }
 
     return request(`/predict/${ticker}?horizon=${horizon}`);

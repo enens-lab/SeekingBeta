@@ -85,6 +85,30 @@ function PredictionsCarousel() {
     };
   }, []);
 
+  const hydrateAttribution = useCallback(
+    async (model: typeof MODELS[0], prediction: Prediction): Promise<Prediction> => {
+      if (!prediction.ticker || (prediction as any).attribution) {
+        return prediction;
+      }
+      try {
+        const response = await fetch(
+          `${model.endpoint}/${prediction.ticker}?with_attribution=true&attribution_top_k=5`
+        );
+        if (!response.ok) {
+          return prediction;
+        }
+        const payload = await response.json();
+        return normalizePrediction(model, prediction.ticker, {
+          ...prediction,
+          attribution: payload?.attribution ?? (prediction as any).attribution,
+        });
+      } catch {
+        return prediction;
+      }
+    },
+    [normalizePrediction]
+  );
+
   const fetchHomepageBatch = useCallback(async (): Promise<ModelRow[] | null> => {
     const res = await fetch('/predict/homepage');
     if (!res.ok) {
@@ -96,7 +120,7 @@ function PredictionsCarousel() {
     }
 
     const rowsByModel = new Map(payload.rows.map((row) => [row.model, row]));
-    return MODELS.map((model) => {
+    const baseRows = MODELS.map((model) => {
       const row = rowsByModel.get(model.name);
       const predictions = Array.isArray(row?.predictions)
         ? row!.predictions.map((item) => normalizePrediction(model, item.ticker || '', item))
@@ -108,7 +132,18 @@ function PredictionsCarousel() {
         error: predictions.length === 0,
       };
     });
-  }, [normalizePrediction]);
+
+    const enrichedRows = await Promise.all(
+      baseRows.map(async (row) => {
+        const enrichedPredictions = await Promise.all(
+          row.predictions.map((prediction) => hydrateAttribution(row.model, prediction))
+        );
+        return { ...row, predictions: enrichedPredictions };
+      })
+    );
+
+    return enrichedRows;
+  }, [hydrateAttribution, normalizePrediction]);
 
   const fetchAllPredictions = useCallback(async () => {
     setLoading(true);

@@ -164,8 +164,11 @@ function Pricing() {
               <p>We accept all major credit cards. Enterprise plans can be paid via invoice.</p>
             </div>
             <div className="faq-item">
-              <h3>Is there a free trial for paid plans?</h3>
-              <p>Yes, all paid plans come with a 14-day free trial. No credit card required to start.</p>
+              <h3>Do paid plans include a free trial?</h3>
+              <p>
+                Not at this time. Paid subscriptions begin billing when activated. You can cancel at
+                any time to stop future renewals.
+              </p>
             </div>
             <div className="faq-item">
               <h3>What happens if I exceed my stock limit?</h3>
@@ -193,6 +196,11 @@ function Pricing() {
             SeekingBeta is for educational and research purposes only.
             Past performance does not guarantee future results.
           </p>
+          <nav className="footer-links">
+            <Link to="/terms">Terms</Link>
+            <Link to="/privacy">Privacy</Link>
+            <Link to="/refund-cancellation">Refund &amp; Cancellation</Link>
+          </nav>
           <p className="footer-copyright">
             &copy; {new Date().getFullYear()} SeekingBeta. All rights reserved.
           </p>

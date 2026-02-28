@@ -85,6 +85,10 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     tier: SubscriptionTier = SubscriptionTier.FREE
+    accept_terms: bool = False
+    accept_privacy: bool = False
+    policy_version: str = Field(..., min_length=1, max_length=64)
+    marketing_opt_in: bool = False
 
 
 class UserLogin(BaseModel):

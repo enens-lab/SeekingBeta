@@ -13,6 +13,9 @@ import Pricing from './pages/Pricing';
 import Dashboard from './pages/Dashboard';
 import MyOracle from './pages/MyOracle';
 import Analysis from './pages/Analysis';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import RefundCancellation from './pages/RefundCancellation';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -46,6 +49,9 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/refund-cancellation" element={<RefundCancellation />} />
       <Route
         path="/dashboard"
         element={

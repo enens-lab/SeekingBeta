@@ -40,3 +40,5 @@ pythia_prophecy/frontend/Stock_Prediction_Model/
 *.pkl
 *.pt
 *.pth
+Pythia.pem
+SES_SNS_WEBHOOK_RUNBOOK.md

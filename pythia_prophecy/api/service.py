@@ -9,6 +9,7 @@ import time
 import uuid
 import os
 import logging
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
@@ -25,10 +26,9 @@ PYTHIA_PATH = Path(__file__).parent.parent.parent / "pythia"
 if PYTHIA_PATH.exists() and str(PYTHIA_PATH) not in sys.path:
     sys.path.insert(0, str(PYTHIA_PATH))
 
-from fastapi import FastAPI, HTTPException, Depends, Header
+from fastapi import FastAPI, HTTPException, Depends, Header, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 import httpx
 
 
@@ -61,7 +61,6 @@ from .models import (
     CompanyInfoResponse,
     CompanyNewsItem,
     CompanyDetailResponse,
-    UserPreferences,
     UserPreferencesResponse,
     UpdatePreferencesRequest,
     TrackRecordResponse,
@@ -88,6 +87,17 @@ from .price_cache_store import (
     upsert_last_close as upsert_last_close_pg,
     get_last_close as get_last_close_pg,
     is_enabled as price_cache_enabled,
+)
+from .compliance_store import (
+    ensure_tables as ensure_compliance_tables,
+    is_enabled as compliance_store_enabled,
+    get_or_create_preferences,
+    upsert_preferences,
+    set_newsletter_opt_in,
+    record_consent_event,
+    audit_email_event,
+    upsert_suppression,
+    disable_newsletter_by_email,
 )
 from .auth import (
     hash_password,
@@ -388,10 +398,6 @@ from datetime import datetime as dt
 
 RATE_LIMIT_STORAGE: dict[str, dict] = defaultdict(lambda: {"date": None, "count": 0})
 
-# In-memory user preferences storage (resets on server restart)
-# In production, this should be stored in a database
-USER_PREFERENCES_STORAGE: dict[str, dict] = {}
-
 
 def check_rate_limit(identifier: str, max_requests: int, window_seconds: int) -> tuple[bool, str]:
     """
@@ -512,6 +518,18 @@ async def startup_validation():
             errors.append(f"Postgres price cache initialization failed: {e}")
     else:
         warnings.append("DATABASE_URL not set - dashboard last_close cache disabled")
+
+    # Ensure Postgres-backed compliance tables for consent/suppression/preferences.
+    if compliance_store_enabled():
+        try:
+            ensure_compliance_tables()
+        except Exception as e:
+            errors.append(f"Compliance store initialization failed: {e}")
+    else:
+        warnings.append("DATABASE_URL not set - compliance store disabled")
+
+    if not SES_SNS_ALLOWED_TOPIC_ARNS:
+        warnings.append("SES_SNS_ALLOWED_TOPIC_ARNS is empty - SES webhook will reject all topics")
 
     # Log warnings
     for warning in warnings:
@@ -662,6 +680,26 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
 DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").rstrip("/")
 PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 ALLOW_RANDOM_FALLBACK = os.getenv("ALLOW_RANDOM_FALLBACK", "false").lower() == "true"
+POLICY_VERSION = os.getenv("POLICY_VERSION", "2026-02-27")
+SES_SNS_ALLOWED_TOPIC_ARNS = {
+    arn.strip()
+    for arn in os.getenv("SES_SNS_ALLOWED_TOPIC_ARNS", "").split(",")
+    if arn.strip()
+}
+SES_SNS_AUTO_CONFIRM = os.getenv("SES_SNS_AUTO_CONFIRM", "false").lower() == "true"
+
+
+def _extract_client_ip(request: Request) -> Optional[str]:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return None
+
+
+def _extract_user_agent(request: Request) -> Optional[str]:
+    return request.headers.get("user-agent")
 
 
 # ============================================================
@@ -709,12 +747,18 @@ async def require_verified_user(authorization: Optional[str] = Header(None)) -> 
 # ============================================================
 
 @app.post("/api/auth/signup", response_model=MessageResponse, tags=["Authentication"])
-async def signup(data: UserCreate):
+async def signup(data: UserCreate, request: Request):
     """Register a new user account."""
     # Rate limit: 5 signup attempts per hour per email
     allowed, message = check_rate_limit(f"signup:{data.email.lower()}", max_requests=5, window_seconds=3600)
     if not allowed:
         raise HTTPException(429, detail=message)
+
+    if not data.accept_terms:
+        raise HTTPException(400, detail="You must accept the Terms of Service")
+
+    if not data.accept_privacy:
+        raise HTTPException(400, detail="You must accept the Privacy Policy")
 
     # Validate password strength
     is_valid, message = validate_password_strength(data.password)
@@ -747,6 +791,44 @@ async def signup(data: UserCreate):
 
     create_user(user)
     logger.info(f"New user created: {user.email} (tier={user.tier.value})")
+
+    client_ip = _extract_client_ip(request)
+    user_agent = _extract_user_agent(request)
+    policy_version = data.policy_version.strip() or POLICY_VERSION
+
+    # Persist consent and default communication preferences in Postgres.
+    try:
+        record_consent_event(
+            user_id=user.id,
+            email=user.email,
+            policy_version=policy_version,
+            consent_type="terms",
+            granted=True,
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        record_consent_event(
+            user_id=user.id,
+            email=user.email,
+            policy_version=policy_version,
+            consent_type="privacy",
+            granted=True,
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        record_consent_event(
+            user_id=user.id,
+            email=user.email,
+            policy_version=policy_version,
+            consent_type="marketing",
+            granted=bool(data.marketing_opt_in),
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+        set_newsletter_opt_in(user.id, user.email, bool(data.marketing_opt_in))
+    except Exception as e:
+        logger.error("Failed to persist compliance records for signup %s: %s", user.email, e)
+        raise HTTPException(500, detail="Failed to persist compliance preferences")
 
     # Send verification email
     send_verification_email(user.email, user.first_name, verification_token)
@@ -867,6 +949,155 @@ async def resend_verification(data: ResendVerificationRequest):
     return MessageResponse(message="If the email exists, a verification link has been sent.")
 
 
+@app.get("/api/email/unsubscribe", response_model=MessageResponse, tags=["Authentication"])
+async def email_unsubscribe(token: str):
+    """One-click unsubscribe endpoint for marketing communications."""
+    payload = decode_access_token(token, expected_type="unsubscribe")
+    if not payload:
+        raise HTTPException(400, detail="Invalid or expired unsubscribe token")
+
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    if not user_id or not email:
+        raise HTTPException(400, detail="Invalid unsubscribe token payload")
+
+    set_newsletter_opt_in(user_id=user_id, email=email, enabled=False)
+    record_consent_event(
+        user_id=user_id,
+        email=email,
+        policy_version=POLICY_VERSION,
+        consent_type="marketing",
+        granted=False,
+        ip_address=None,
+        user_agent="one-click-unsubscribe",
+    )
+    return MessageResponse(message="You have been unsubscribed from marketing emails.")
+
+
+@app.post("/api/webhooks/ses-sns", response_model=MessageResponse, tags=["System"])
+async def ses_sns_webhook(request: Request):
+    """Receive SES notifications from SNS and persist suppression/audit records."""
+    try:
+        envelope = await request.json()
+    except Exception:
+        raise HTTPException(400, detail="Invalid JSON payload")
+
+    message_type = request.headers.get("x-amz-sns-message-type") or envelope.get("Type")
+    topic_arn = envelope.get("TopicArn", "")
+    if not SES_SNS_ALLOWED_TOPIC_ARNS:
+        raise HTTPException(503, detail="SES SNS webhook is not configured")
+    if topic_arn not in SES_SNS_ALLOWED_TOPIC_ARNS:
+        raise HTTPException(403, detail="Topic ARN is not allowed")
+
+    if message_type == "SubscriptionConfirmation":
+        subscribe_url = envelope.get("SubscribeURL")
+        if SES_SNS_AUTO_CONFIRM and subscribe_url:
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    await client.get(subscribe_url)
+            except Exception as exc:
+                logger.warning("SNS subscription auto-confirm failed: %s", exc)
+                raise HTTPException(502, detail="Failed to auto-confirm SNS subscription")
+        return MessageResponse(message="SNS subscription confirmation processed")
+
+    if message_type != "Notification":
+        return MessageResponse(message=f"Ignored SNS message type: {message_type}")
+
+    raw_message = envelope.get("Message", {})
+    if isinstance(raw_message, str):
+        try:
+            ses_message = json.loads(raw_message)
+        except json.JSONDecodeError:
+            ses_message = {"raw_message": raw_message}
+    elif isinstance(raw_message, dict):
+        ses_message = raw_message
+    else:
+        ses_message = {"raw_message": str(raw_message)}
+
+    event_type = (ses_message.get("notificationType") or ses_message.get("eventType") or "unknown").lower()
+    mail = ses_message.get("mail", {}) if isinstance(ses_message.get("mail"), dict) else {}
+    provider_message_id = mail.get("messageId")
+
+    suppressed_count = 0
+    audited_count = 0
+
+    def _audit(email: Optional[str], evt: str) -> None:
+        nonlocal audited_count
+        if audit_email_event(
+            provider="ses",
+            event_type=evt,
+            payload=ses_message,
+            email=email,
+            provider_message_id=provider_message_id,
+        ):
+            audited_count += 1
+
+    if event_type == "bounce":
+        bounce = ses_message.get("bounce", {}) if isinstance(ses_message.get("bounce"), dict) else {}
+        recipients = bounce.get("bouncedRecipients", [])
+        for recipient in recipients:
+            if not isinstance(recipient, dict):
+                continue
+            email = recipient.get("emailAddress")
+            if not email:
+                continue
+            _audit(email, "bounce")
+            upsert_suppression(
+                email=email,
+                reason=bounce.get("bounceType", "bounce"),
+                source="ses-sns",
+                provider_event_type="bounce",
+                provider_message_id=provider_message_id,
+                raw_event=ses_message,
+            )
+            disable_newsletter_by_email(email)
+            suppressed_count += 1
+    elif event_type == "complaint":
+        complaint = ses_message.get("complaint", {}) if isinstance(ses_message.get("complaint"), dict) else {}
+        recipients = complaint.get("complainedRecipients", [])
+        for recipient in recipients:
+            if not isinstance(recipient, dict):
+                continue
+            email = recipient.get("emailAddress")
+            if not email:
+                continue
+            _audit(email, "complaint")
+            upsert_suppression(
+                email=email,
+                reason=complaint.get("complaintFeedbackType", "complaint"),
+                source="ses-sns",
+                provider_event_type="complaint",
+                provider_message_id=provider_message_id,
+                raw_event=ses_message,
+            )
+            disable_newsletter_by_email(email)
+            suppressed_count += 1
+    elif event_type == "delivery":
+        delivery = ses_message.get("delivery", {}) if isinstance(ses_message.get("delivery"), dict) else {}
+        recipients = delivery.get("recipients", [])
+        if isinstance(recipients, list) and recipients:
+            for recipient in recipients:
+                if recipient:
+                    _audit(str(recipient), "delivery")
+        else:
+            _audit(None, "delivery")
+    else:
+        _audit(None, event_type)
+
+    logger.info(
+        "Processed SES SNS notification type=%s audited=%s suppressed=%s",
+        event_type,
+        audited_count,
+        suppressed_count,
+    )
+    return MessageResponse(
+        message=(
+            f"Processed SES notification type={event_type}; "
+            f"audited={audited_count}; suppressed={suppressed_count}"
+        )
+    )
+
+
 @app.post("/api/auth/refresh", response_model=TokenResponse, tags=["Authentication"])
 async def refresh_token(data: RefreshTokenRequest):
     """Refresh access token using refresh token."""
@@ -971,21 +1202,7 @@ async def get_me(user: UserInDB = Depends(require_auth)):
 @app.get("/api/user/preferences", response_model=UserPreferencesResponse, tags=["Preferences"])
 async def get_user_preferences(user: UserInDB = Depends(require_auth)):
     """Get user preferences."""
-    if user.id not in USER_PREFERENCES_STORAGE:
-        # Return default preferences
-        USER_PREFERENCES_STORAGE[user.id] = {
-            "theme": "light",
-            "email_alerts_enabled": True,
-            "daily_digest_enabled": False,
-            "newsletter_enabled": False,
-            "two_factor_enabled": False,
-            "language": "en",
-            "timezone": "UTC",
-            "notifications_enabled": True,
-            "updated_at": datetime.utcnow(),
-        }
-
-    prefs = USER_PREFERENCES_STORAGE[user.id]
+    prefs = get_or_create_preferences(user.id, user.email)
     return UserPreferencesResponse(
         user_id=user.id,
         **{k: v for k, v in prefs.items() if k != "updated_at"},
@@ -999,47 +1216,14 @@ async def update_user_preferences(
     user: UserInDB = Depends(require_auth),
 ):
     """Update user preferences."""
-    # Get current preferences
-    if user.id not in USER_PREFERENCES_STORAGE:
-        USER_PREFERENCES_STORAGE[user.id] = {
-            "theme": "light",
-            "email_alerts_enabled": True,
-            "daily_digest_enabled": False,
-            "newsletter_enabled": False,
-            "two_factor_enabled": False,
-            "language": "en",
-            "timezone": "UTC",
-            "notifications_enabled": True,
-            "updated_at": datetime.utcnow(),
-        }
-
-    prefs = USER_PREFERENCES_STORAGE[user.id]
+    updates = data.model_dump(exclude_none=True)
 
     # Update with provided values
     if data.theme is not None:
         if data.theme not in ["light", "dark"]:
             raise HTTPException(400, detail="Theme must be 'light' or 'dark'")
-        prefs["theme"] = data.theme
 
-    if data.email_alerts_enabled is not None:
-        prefs["email_alerts_enabled"] = data.email_alerts_enabled
-
-    if data.daily_digest_enabled is not None:
-        prefs["daily_digest_enabled"] = data.daily_digest_enabled
-
-    if data.newsletter_enabled is not None:
-        prefs["newsletter_enabled"] = data.newsletter_enabled
-
-    if data.language is not None:
-        prefs["language"] = data.language
-
-    if data.timezone is not None:
-        prefs["timezone"] = data.timezone
-
-    if data.notifications_enabled is not None:
-        prefs["notifications_enabled"] = data.notifications_enabled
-
-    prefs["updated_at"] = datetime.utcnow()
+    prefs = upsert_preferences(user.id, user.email, updates)
     logger.info(f"Preferences updated for user: {user.email}")
 
     return UserPreferencesResponse(

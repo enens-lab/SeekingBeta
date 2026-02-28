@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { tiers as tiersApi } from '../api/client';
 import ThemeToggle from '../components/ThemeToggle';
 
+const POLICY_VERSION = '2026-02-27';
+
 interface TierData {
   tier: string;
   name: string;
@@ -24,6 +26,9 @@ function Signup() {
     password: '',
     confirmPassword: '',
     tier: searchParams.get('tier') || 'free',
+    acceptTerms: false,
+    acceptPrivacy: false,
+    marketingOptIn: false,
   });
   const [tiers, setTiers] = useState<TierData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,6 +56,12 @@ function Signup() {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormError('');
+  };
+
+  const handleCheckboxChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: checked }));
     setFormError('');
   };
 
@@ -84,6 +95,16 @@ function Signup() {
       return;
     }
 
+    if (!formData.acceptTerms) {
+      setFormError('You must accept the Terms of Service');
+      return;
+    }
+
+    if (!formData.acceptPrivacy) {
+      setFormError('You must accept the Privacy Policy');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -93,6 +114,10 @@ function Signup() {
         first_name: formData.firstName,
         last_name: formData.lastName,
         tier: formData.tier,
+        accept_terms: formData.acceptTerms,
+        accept_privacy: formData.acceptPrivacy,
+        policy_version: POLICY_VERSION,
+        marketing_opt_in: formData.marketingOptIn,
       });
       setSuccess(true);
     } catch (err) {
@@ -260,6 +285,47 @@ function Signup() {
             </div>
 
             <div className="form-group">
+              <label className="consent-check">
+                <input
+                  type="checkbox"
+                  name="acceptTerms"
+                  checked={formData.acceptTerms}
+                  onChange={handleCheckboxChange}
+                  required
+                />
+                <span>
+                  I agree to the <Link to="/terms">Terms of Service</Link>.
+                </span>
+              </label>
+              <label className="consent-check">
+                <input
+                  type="checkbox"
+                  name="acceptPrivacy"
+                  checked={formData.acceptPrivacy}
+                  onChange={handleCheckboxChange}
+                  required
+                />
+                <span>
+                  I acknowledge the <Link to="/privacy">Privacy Policy</Link>.
+                </span>
+              </label>
+              <label className="consent-check optional">
+                <input
+                  type="checkbox"
+                  name="marketingOptIn"
+                  checked={formData.marketingOptIn}
+                  onChange={handleCheckboxChange}
+                />
+                <span>
+                  Send me occasional product updates (optional). You can unsubscribe anytime.
+                </span>
+              </label>
+              <p className="form-hint">
+                Policy version: {POLICY_VERSION}
+              </p>
+            </div>
+
+            <div className="form-group">
               <label>Select your plan</label>
               <div className="tier-selector">
                 {tiers.map((tier) => (
@@ -299,6 +365,11 @@ function Signup() {
 
           <p className="auth-footer">
             Already have an account? <Link to="/login">Log in</Link>
+          </p>
+          <p className="auth-note">
+            By creating an account, you agree to our <Link to="/terms">Terms</Link>,{' '}
+            <Link to="/privacy">Privacy Policy</Link>, and{' '}
+            <Link to="/refund-cancellation">Refund & Cancellation Policy</Link>.
           </p>
         </div>
       </div>

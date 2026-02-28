@@ -14,6 +14,7 @@ from time import sleep
 from urllib.parse import quote_plus
 
 from .logging_config import get_logger
+from .auth import create_access_token
 
 logger = get_logger("email")
 
@@ -37,6 +38,9 @@ EMAIL_DEV_MODE = os.getenv("EMAIL_DEV_MODE", "true").lower() == "true"
 # Retry configuration
 EMAIL_RETRY_ATTEMPTS = int(os.getenv("EMAIL_RETRY_ATTEMPTS", "3"))
 EMAIL_RETRY_DELAY = float(os.getenv("EMAIL_RETRY_DELAY", "5"))  # seconds
+EMAIL_SUPPRESSION_ENABLED = (
+    os.getenv("EMAIL_SUPPRESSION_ENABLED", "true").lower() == "true"
+)
 
 # Environment validation
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -156,7 +160,13 @@ def send_verification_email(to_email: str, first_name: str, token: str) -> bool:
         logger.info(f"[DEV MODE] Verification code for {to_email}: {token}")
         logger.info(f"[DEV MODE] Verification URL for {to_email}: {verify_url}")
 
-    return _send_email(to_email, subject, text_content, html_content)
+    return _send_email(
+        to_email,
+        subject,
+        text_content,
+        html_content,
+        category="transactional",
+    )
 
 
 def send_welcome_email(to_email: str, first_name: str, tier: str) -> bool:
@@ -191,7 +201,13 @@ def send_welcome_email(to_email: str, first_name: str, tier: str) -> bool:
     - The {APP_NAME} Team
     """.strip()
 
-    return _send_email(to_email, subject, text_content, html_content)
+    return _send_email(
+        to_email,
+        subject,
+        text_content,
+        html_content,
+        category="transactional",
+    )
 
 
 def send_password_reset_email(to_email: str, first_name: str, token: str) -> bool:
@@ -232,7 +248,19 @@ def send_password_reset_email(to_email: str, first_name: str, token: str) -> boo
     - The {APP_NAME} Team
     """.strip()
 
-    return _send_email(to_email, subject, text_content, html_content)
+    return _send_email(
+        to_email,
+        subject,
+        text_content,
+        html_content,
+        category="transactional",
+    )
+
+
+def build_unsubscribe_url(user_id: str, email: str) -> str:
+    """Build one-click unsubscribe URL for future marketing emails."""
+    token = create_access_token(user_id, email, token_type="unsubscribe")
+    return f"{FRONTEND_URL.rstrip('/')}/api/email/unsubscribe?token={quote_plus(token)}"
 
 
 def _send_email(
@@ -240,6 +268,8 @@ def _send_email(
     subject: str,
     text_content: str,
     html_content: Optional[str] = None,
+    category: str = "transactional",
+    unsubscribe_url: Optional[str] = None,
 ) -> bool:
     """Send an email using SMTP with retry logic or log in dev mode."""
     if EMAIL_DEV_MODE:
@@ -248,6 +278,24 @@ def _send_email(
         if html_content:
             logger.debug(f"[DEV MODE] Email HTML content:\n{html_content}")
         return True
+
+    if EMAIL_SUPPRESSION_ENABLED:
+        try:
+            from .compliance_store import get_active_suppression
+
+            suppression = get_active_suppression(to_email)
+        except Exception as exc:
+            logger.error(f"Suppression lookup failed for {to_email}: {exc}")
+            suppression = None
+
+        if suppression:
+            logger.warning(
+                "Blocked email send to suppressed recipient %s (reason=%s, source=%s)",
+                to_email,
+                suppression.get("reason"),
+                suppression.get("source"),
+            )
+            return False
 
     # Build message once so retries reuse the same payload/message-id.
     msg = MIMEMultipart("alternative")
@@ -262,6 +310,9 @@ def _send_email(
     msg["Auto-Submitted"] = "auto-generated"
     msg["X-Auto-Response-Suppress"] = "OOF, AutoReply"
     msg["X-Entity-Ref-ID"] = message_id.strip("<>")
+    msg["X-Email-Category"] = category
+    if unsubscribe_url:
+        msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
 
     msg.attach(MIMEText(text_content, "plain"))
     if html_content:

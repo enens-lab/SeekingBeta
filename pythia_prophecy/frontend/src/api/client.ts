@@ -29,6 +29,10 @@ export interface SignupData {
   first_name: string;
   last_name: string;
   tier?: string;
+  accept_terms: boolean;
+  accept_privacy: boolean;
+  policy_version: string;
+  marketing_opt_in?: boolean;
 }
 
 export interface LoginData {

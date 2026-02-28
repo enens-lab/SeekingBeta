@@ -25,6 +25,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 PASSWORD_RESET_TOKEN_EXPIRE_HOURS = 1
+UNSUBSCRIBE_TOKEN_EXPIRE_DAYS = 365
 
 
 def hash_password(password: str) -> str:
@@ -70,7 +71,7 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def create_access_token(user_id: str, email: str, token_type: str = "access") -> str:
-    """Create a JWT token (access, refresh, or password_reset)."""
+    """Create a JWT token (access, refresh, password_reset, or unsubscribe)."""
     now = datetime.utcnow()
 
     if token_type == "access":
@@ -79,6 +80,8 @@ def create_access_token(user_id: str, email: str, token_type: str = "access") ->
         expires = now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     elif token_type == "password_reset":
         expires = now + timedelta(hours=PASSWORD_RESET_TOKEN_EXPIRE_HOURS)
+    elif token_type == "unsubscribe":
+        expires = now + timedelta(days=UNSUBSCRIBE_TOKEN_EXPIRE_DAYS)
     else:
         raise ValueError(f"Unknown token type: {token_type}")
 

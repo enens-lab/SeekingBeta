@@ -673,8 +673,14 @@ h4 {
 }
 
 .carousel-track {
+  --cards-per-view: 4;
+  --carousel-gap: 20px;
+  --prediction-card-width: calc(
+    (100% - (var(--carousel-gap) * (var(--cards-per-view) - 1))) / var(--cards-per-view)
+  );
   display: flex;
-  gap: 20px;
+  width: 100%;
+  gap: var(--carousel-gap);
   transition: transform 0.4s ease;
 }
 
@@ -870,7 +876,8 @@ h4 {
 
 /* Prediction Card */
 .prediction-card {
-  flex: 0 0 280px;
+  flex: 0 0 var(--prediction-card-width, 280px);
+  min-width: 0;
   min-height: 340px;
   perspective: 1200px;
   background: transparent;

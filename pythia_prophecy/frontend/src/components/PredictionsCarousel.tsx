@@ -181,11 +181,9 @@ function PredictionsCarousel() {
       <div className="model-rows-container">
         {displayedRows.map((row) => {
           const currentSlide = carouselStates[row.model.name] || 0;
-          const cardsPerView = 4; // Adjust based on screen size
+          const cardsPerView = 4;
           const totalSlides = Math.max(1, Math.ceil(row.predictions.length / cardsPerView));
-          const cardWidth = 280;
-          const gap = 20;
-          const offset = currentSlide * cardsPerView * (cardWidth + gap);
+          const offsetPercentage = currentSlide * 100;
 
           return (
             <div key={row.model.name} className="model-row">
@@ -224,7 +222,7 @@ function PredictionsCarousel() {
                   <div className="carousel-viewport">
                     <div
                       className="carousel-track"
-                      style={{ transform: `translateX(-${offset}px)` }}
+                      style={{ transform: `translateX(-${offsetPercentage}%)` }}
                     >
                       {row.predictions.map((prediction) => (
                         <PredictionCard

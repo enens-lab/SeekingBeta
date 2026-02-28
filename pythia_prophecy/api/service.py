@@ -5,6 +5,7 @@ Serves the React frontend, prediction endpoints, and authentication
 from __future__ import annotations
 
 import sys
+import asyncio
 import time
 import uuid
 import os
@@ -1099,6 +1100,53 @@ async def _hydrate_company_from_alpaca(ticker: str) -> Optional[dict]:
     return payload
 
 
+async def _hydrate_company_from_yfinance(ticker: str) -> Optional[dict]:
+    """Best-effort yfinance hydrate for symbols not covered by Alpaca asset metadata."""
+    try:
+        from .stock_info import fetch_and_store_stock_info
+    except Exception as exc:
+        logger.warning("Could not import stock_info module for %s: %s", ticker.upper(), exc)
+        return None
+
+    try:
+        result = await asyncio.to_thread(
+            fetch_and_store_stock_info,
+            ticker.upper(),
+            False,  # skip news on-demand to keep responses responsive
+        )
+    except Exception as exc:
+        logger.warning("yfinance company hydrate failed for %s: %s", ticker.upper(), exc)
+        return None
+
+    if not isinstance(result, dict):
+        return None
+    if result.get("info_stored"):
+        return result
+    return None
+
+
+def _persist_company_placeholder_info(ticker: str) -> None:
+    """Persist minimal placeholder company + info so UI has non-empty profile payload."""
+    upsert_company(
+        ticker.upper(),
+        name=ticker.upper(),
+        asset_type="stock",
+    )
+    upsert_company_info(
+        ticker.upper(),
+        {
+            "description": (
+                "Fundamentals are currently unavailable for this symbol. "
+                "Price-based model signals remain available."
+            ),
+            "exchange": "N/A",
+            "country": "N/A",
+            "currency": "USD",
+            "raw_info": {"provider": "placeholder", "status": "limited_profile"},
+        },
+    )
+
+
 async def _ensure_company_profile(ticker: str) -> Tuple[Optional[dict], Optional[dict]]:
     company = get_company(ticker.upper())
     info = get_company_info(ticker.upper())
@@ -1107,10 +1155,22 @@ async def _ensure_company_profile(ticker: str) -> Tuple[Optional[dict], Optional
         return company, info
 
     if COMPANY_AUTO_POPULATE_ON_DEMAND:
-        hydrated = await _hydrate_company_from_alpaca(ticker.upper())
-        if hydrated:
+        await _hydrate_company_from_alpaca(ticker.upper())
+        company = get_company(ticker.upper())
+        info = get_company_info(ticker.upper())
+
+        if not (company and info):
+            await _hydrate_company_from_yfinance(ticker.upper())
             company = get_company(ticker.upper())
             info = get_company_info(ticker.upper())
+
+    if ticker.upper() in UNIVERSE_UPPER and not company:
+        upsert_company(ticker.upper(), name=ticker.upper(), asset_type="stock")
+        company = get_company(ticker.upper())
+
+    if ticker.upper() in UNIVERSE_UPPER and not info:
+        _persist_company_placeholder_info(ticker.upper())
+        info = get_company_info(ticker.upper())
 
     return company, info
 

@@ -7,6 +7,7 @@ import json
 import math
 import os
 import re
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,7 @@ _MODEL_ALIASES = {
 }
 
 _CACHE: dict[str, dict[str, Any]] = {}
+BACKTEST_CACHE_TTL_SECONDS = max(60, int(os.getenv("BACKTEST_CACHE_TTL_SECONDS", "86400")))
 
 
 def _normalize_key(key: str) -> str:
@@ -540,8 +542,13 @@ def _compute_summary(path: Path, transaction_cost_bps: float, model: str) -> dic
             "avg_return_net": (sum(values) / len(values)) if values else None,
         }
 
-    if "unknown" in regime_breakdown and len(regime_breakdown) == 1:
-        notes.append("No explicit market regime columns detected; all trades grouped under 'unknown'.")
+    if "unknown" in regime_breakdown:
+        unknown_stats = regime_breakdown.pop("unknown")
+        if len(regime_breakdown) == 0:
+            regime_breakdown["all_trades"] = unknown_stats
+        else:
+            regime_breakdown["unclassified"] = unknown_stats
+            notes.append("Some trades could not be mapped to a market regime and are shown as 'Unclassified'.")
 
     summary = {
         "source_file": str(path),
@@ -637,10 +644,21 @@ def get_track_record(model: str = "lstm_5d") -> dict[str, Any]:
         }
 
     mtime = path.stat().st_mtime
-    cache_entry = _CACHE.setdefault(model_key, {"path": None, "mtime": None, "response": None})
+    cache_entry = _CACHE.setdefault(
+        model_key,
+        {"path": None, "mtime": None, "response": None, "cached_at": 0.0},
+    )
+    now = time.time()
     cached_path = cache_entry.get("path")
     cached_mtime = cache_entry.get("mtime")
-    if cached_path == str(path) and cached_mtime == mtime and cache_entry.get("response") is not None:
+    cached_at = float(cache_entry.get("cached_at") or 0.0)
+    cache_is_fresh = (now - cached_at) <= BACKTEST_CACHE_TTL_SECONDS
+    if (
+        cached_path == str(path)
+        and cached_mtime == mtime
+        and cache_entry.get("response") is not None
+        and cache_is_fresh
+    ):
         return cache_entry["response"]
 
     transaction_cost_bps = _get_float(os.getenv("BACKTEST_TRANSACTION_COST_BPS")) or 10.0
@@ -648,6 +666,7 @@ def get_track_record(model: str = "lstm_5d") -> dict[str, Any]:
     cache_entry["path"] = str(path)
     cache_entry["mtime"] = mtime
     cache_entry["response"] = response
+    cache_entry["cached_at"] = now
     return response
 
 

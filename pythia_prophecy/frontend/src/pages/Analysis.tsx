@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ChangeEvent, ReactNode, MouseEvent } from 'react';
+import { useState, useEffect, useRef, ChangeEvent, ReactNode, MouseEvent, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -101,6 +101,11 @@ function Analysis() {
     { value: '1w', label: '1 Week' },
   ];
 
+  const loadTrackRecord = useCallback(async () => {
+    const trackRecordRes = await performance.getTrackRecord(model).catch(() => null);
+    setTrackRecord(trackRecordRes);
+  }, [model]);
+
   useEffect(() => {
     if (!isVerified) return;
 
@@ -125,9 +130,6 @@ function Analysis() {
           .filter((ticker) => available.has(ticker))
           .slice(0, maxStocksForTier);
         setSelectedStocks(fromOracle);
-
-        const trackRecordRes = await performance.getTrackRecord().catch(() => null);
-        setTrackRecord(trackRecordRes);
       } catch (err) {
         console.error('Failed to load analysis data:', err);
         setError('Failed to load analysis data');
@@ -138,6 +140,15 @@ function Analysis() {
 
     loadData();
   }, [isVerified]);
+
+  useEffect(() => {
+    if (!isVerified) return;
+    void loadTrackRecord();
+    const refreshId = window.setInterval(() => {
+      void loadTrackRecord();
+    }, 300000);
+    return () => window.clearInterval(refreshId);
+  }, [isVerified, loadTrackRecord]);
 
   // Render chart when results change
   useEffect(() => {
@@ -334,6 +345,16 @@ function Analysis() {
   const formatNum = (value: number | null | undefined, digits = 2) =>
     value == null || Number.isNaN(value) ? '--' : value.toFixed(digits);
 
+  const formatRegimeName = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'all_trades') return 'All Trades';
+    if (normalized === 'unclassified' || normalized === 'unknown') return 'Unclassified';
+    return value
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
   return (
     <div className="dashboard-page">
       <DashboardHeader activePage="analysis" />
@@ -400,7 +421,7 @@ function Analysis() {
                   <div className="track-record-regimes">
                     {Object.entries(trackRecord.summary.regime_breakdown).map(([name, stats]) => (
                       <div key={name} className="regime-chip">
-                        <span className="regime-name">{name}</span>
+                        <span className="regime-name">{formatRegimeName(name)}</span>
                         <span>{stats.wins}/{stats.trades} wins</span>
                         <span>{formatPct(stats.win_rate)}</span>
                       </div>

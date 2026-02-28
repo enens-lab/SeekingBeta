@@ -87,11 +87,14 @@ function PerformanceComparison() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      setLoading(true);
+    const load = async (showSpinner: boolean) => {
+      if (showSpinner) {
+        setLoading(true);
+      }
       setError(null);
       try {
         const [curve, summary] = await Promise.all([
@@ -107,14 +110,18 @@ function PerformanceComparison() {
           setError(err instanceof Error ? err.message : 'Failed to load performance data');
         }
       } finally {
-        if (!cancelled) {
+        if (!cancelled && showSpinner) {
           setLoading(false);
         }
       }
     };
-    load();
+    void load(true);
+    const refreshId = window.setInterval(() => {
+      void load(false);
+    }, REFRESH_INTERVAL_MS);
     return () => {
       cancelled = true;
+      window.clearInterval(refreshId);
     };
   }, [selectedModel]);
 

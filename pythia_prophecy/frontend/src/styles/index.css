@@ -3982,24 +3982,38 @@ h4 {
   background: #981b14;
 }
 
-.profile-page {
-  max-width: 860px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.profile-main {
+  max-width: 1200px;
 }
 
-.profile-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 22px;
+.profile-header {
+  margin-bottom: 16px;
 }
 
-.profile-section h1,
-.profile-section h2 {
+.profile-subtitle {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  max-width: 760px;
+}
+
+.profile-overview {
+  margin-bottom: 22px;
+}
+
+.profile-stat-value {
+  font-size: 20px;
+  text-transform: none;
+}
+
+.profile-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.profile-card h2 {
   margin: 0 0 14px;
+  font-size: 20px;
 }
 
 .profile-meta {
@@ -4062,16 +4076,13 @@ h4 {
   font-size: 14px;
 }
 
-.profile-danger {
+.profile-danger-card {
   border-color: rgba(180, 35, 24, 0.5);
+  background: linear-gradient(180deg, var(--bg-card) 0%, rgba(180, 35, 24, 0.08) 100%);
 }
 
 @media (max-width: 840px) {
-  .profile-page {
-    max-width: 100%;
-  }
-
-  .profile-section {
-    padding: 18px;
+  .profile-grid {
+    grid-template-columns: 1fr;
   }
 }

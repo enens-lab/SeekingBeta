@@ -156,22 +156,52 @@ function Profile() {
       !billingStatus.cancel_at_period_end
   );
 
+  const effectiveTier = (billingStatus?.effective_tier || user?.tier || 'free').toUpperCase();
+  const subscriptionStatusLabel = billingStatus?.subscription_status || 'none';
+  const periodEndLabel = billingStatus?.current_period_end
+    ? new Date(billingStatus.current_period_end).toLocaleString()
+    : 'N/A';
+
   return (
     <div className="dashboard-page">
       <DashboardHeader activePage="profile" />
 
-      <main className="dashboard-main">
-        <div className="profile-page">
-          <section className="profile-section">
-            <h1>Account Profile</h1>
+      <main className="dashboard-main profile-main">
+        <div className="dashboard-controls profile-header">
+          <div className="dashboard-title">
+            <h1>Profile & Billing</h1>
+            <p className="profile-subtitle">
+              Manage account security, plan settings, and subscription controls in one place.
+            </p>
+          </div>
+        </div>
+
+        <div className="dashboard-stats profile-overview">
+          <div className="stat-card">
+            <span className="stat-label">Account</span>
+            <span className="stat-value profile-stat-value">{user?.first_name} {user?.last_name}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Tier</span>
+            <span className="stat-value profile-stat-value">{effectiveTier}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Subscription</span>
+            <span className="stat-value profile-stat-value">{subscriptionStatusLabel}</span>
+          </div>
+        </div>
+
+        <div className="profile-grid">
+          <section className="card profile-card">
+            <h2>Account Details</h2>
             <div className="profile-meta">
-              <p><strong>Name:</strong> {user?.first_name} {user?.last_name}</p>
               <p><strong>Email:</strong> {user?.email}</p>
-              <p><strong>Current Tier:</strong> {(billingStatus?.effective_tier || user?.tier || 'free').toUpperCase()}</p>
+              <p><strong>Current Tier:</strong> {effectiveTier}</p>
+              <p><strong>Current period end:</strong> {periodEndLabel}</p>
             </div>
           </section>
 
-          <section className="profile-section">
+          <section className="card profile-card">
             <h2>Change Password</h2>
             <form className="profile-form" onSubmit={handleChangePassword}>
               <label>
@@ -210,7 +240,7 @@ function Profile() {
             </form>
           </section>
 
-          <section className="profile-section">
+          <section className="card profile-card">
             <h2>Subscription</h2>
             {!isVerified && (
               <p className="profile-note">Verify your email to manage subscription settings.</p>
@@ -223,12 +253,7 @@ function Profile() {
                   <div className="profile-meta">
                     <p><strong>Status:</strong> {billingStatus?.subscription_status || 'none'}</p>
                     <p><strong>Cancel at period end:</strong> {billingStatus?.cancel_at_period_end ? 'Yes' : 'No'}</p>
-                    <p>
-                      <strong>Current period end:</strong>{' '}
-                      {billingStatus?.current_period_end
-                        ? new Date(billingStatus.current_period_end).toLocaleString()
-                        : 'N/A'}
-                    </p>
+                    <p><strong>Current period end:</strong> {periodEndLabel}</p>
                   </div>
                 )}
                 <div className="profile-actions">
@@ -272,7 +297,7 @@ function Profile() {
             )}
           </section>
 
-          <section className="profile-section profile-danger">
+          <section className="card profile-card profile-danger-card">
             <h2>Delete Account</h2>
             <p className="profile-note">
               This deletes your account permanently. Type <code>DELETE</code> to confirm.

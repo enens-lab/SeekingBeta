@@ -41,16 +41,18 @@ export interface LoginData {
 }
 
 export interface Tier {
+  tier?: 'free' | 'basic' | 'pro';
   name: string;
   price: number;
-  stocks: number | 'unlimited';
+  stocks_limit?: number;
   timeframes: string[];
+  features?: string[];
 }
 
 export interface Prediction {
   ticker: string;
   horizon: string;
-  signal: 'buy' | 'hold' | 'sell';
+  signal: 'buy' | 'hold' | 'sell' | 'strong_buy' | 'avoid';
   prob_up: number | null;
   predicted_return: number | null;
   last_close: number | null;
@@ -85,7 +87,7 @@ export interface AnalysisResult {
   ticker: string;
   last_close: number | null;
   prob_up: number | null;
-  signal: 'buy' | 'hold' | 'sell' | null;
+  signal: 'buy' | 'hold' | 'sell' | 'strong_buy' | 'avoid' | null;
   predicted_return: number | null;
   error?: string | null;
 }
@@ -173,6 +175,30 @@ export interface TrackRecordCurveResponse {
   end_value: number | null;
   benchmark_end_value: number | null;
   message?: string;
+}
+
+export interface BillingStatus {
+  billing_enabled: boolean;
+  user_tier: 'free' | 'basic' | 'pro';
+  effective_tier: 'free' | 'basic' | 'pro';
+  plan_tier: 'free' | 'basic' | 'pro';
+  subscription_status: string;
+  cancel_at_period_end: boolean;
+  current_period_end: string | null;
+  legacy_grace_expires_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  price_id: string | null;
+  grace_active: boolean;
+}
+
+export interface BillingCheckoutSessionResponse {
+  checkout_url: string;
+  session_id: string;
+}
+
+export interface BillingPortalSessionResponse {
+  portal_url: string;
 }
 
 type AuthErrorCallback = (() => void) | null;
@@ -369,4 +395,17 @@ export const performance = {
     request(`/api/performance/track-record?model=${encodeURIComponent(model)}`),
   getTrackRecordCurve: (model = 'lstm_5d'): Promise<TrackRecordCurveResponse> =>
     request(`/api/performance/curve?model=${encodeURIComponent(model)}`),
+};
+
+export const billing = {
+  getStatus: (): Promise<BillingStatus> => request('/api/billing/status'),
+  createCheckoutSession: (tier: 'basic' | 'pro'): Promise<BillingCheckoutSessionResponse> =>
+    request('/api/billing/checkout-session', {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
+    }),
+  createPortalSession: (): Promise<BillingPortalSessionResponse> =>
+    request('/api/billing/portal-session', {
+      method: 'POST',
+    }),
 };

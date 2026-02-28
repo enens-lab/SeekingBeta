@@ -10,7 +10,7 @@ import uuid
 import os
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple
 
@@ -30,6 +30,10 @@ from fastapi import FastAPI, HTTPException, Depends, Header, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
+try:
+    import stripe
+except Exception:  # pragma: no cover - optional import guard for non-billing environments
+    stripe = None
 
 
 from .models import (
@@ -65,6 +69,10 @@ from .models import (
     UpdatePreferencesRequest,
     TrackRecordResponse,
     TrackRecordCurveResponse,
+    BillingCheckoutSessionRequest,
+    BillingCheckoutSessionResponse,
+    BillingPortalSessionResponse,
+    BillingStatusResponse,
 )
 from .database import (
     create_user,
@@ -83,6 +91,8 @@ from .database import (
     get_company_news,
     upsert_company,
     upsert_company_info,
+    update_user_tier,
+    list_users_by_tiers,
 )
 from .price_cache_store import (
     ensure_table as ensure_price_cache_table,
@@ -100,6 +110,17 @@ from .compliance_store import (
     audit_email_event,
     upsert_suppression,
     disable_newsletter_by_email,
+)
+from .billing_store import (
+    ensure_tables as ensure_billing_tables,
+    is_enabled as billing_store_enabled,
+    get_state_by_user_id,
+    get_state_by_customer_id,
+    upsert_customer_state,
+    upsert_state_by_customer_id,
+    register_webhook_event,
+    mark_webhook_event,
+    list_states_with_expired_legacy_grace,
 )
 from .auth import (
     hash_password,
@@ -451,7 +472,7 @@ Authorization: Bearer <access_token>
 ## Subscription Tiers
 - **Free**: 5 stocks, daily predictions, basic signals
 - **Basic**: 15 stocks, multi-timeframe analysis, email alerts, CSV export
-- **Pro**: Unlimited stocks, all timeframes, API access, premium features
+- **Pro**: Unlimited stocks, all timeframes, priority features
 
 ## Error Responses
 All errors follow a standardized format:
@@ -475,6 +496,7 @@ All errors follow a standardized format:
         {"name": "Analysis", "description": "Advanced stock analysis tools"},
         {"name": "Companies", "description": "Company information and news"},
         {"name": "Subscriptions", "description": "Subscription tier information"},
+        {"name": "Billing", "description": "Stripe billing sessions and status"},
         {"name": "System", "description": "Health checks and system status"},
     ],
 )
@@ -531,6 +553,45 @@ async def startup_validation():
             errors.append(f"Compliance store initialization failed: {e}")
     else:
         warnings.append("DATABASE_URL not set - compliance store disabled")
+
+    # Validate Stripe configuration and ensure Postgres-backed billing tables.
+    if STRIPE_ENABLED:
+        if stripe is None:
+            errors.append("stripe package is missing while STRIPE_ENABLED=true")
+        if not STRIPE_SECRET_KEY:
+            errors.append("STRIPE_SECRET_KEY is required when STRIPE_ENABLED=true")
+        if not STRIPE_WEBHOOK_SECRET:
+            errors.append("STRIPE_WEBHOOK_SECRET is required when STRIPE_ENABLED=true")
+        if not STRIPE_PRICE_BASIC_MONTHLY:
+            errors.append("STRIPE_PRICE_BASIC_MONTHLY is required when STRIPE_ENABLED=true")
+        if not STRIPE_PRICE_PRO_MONTHLY:
+            errors.append("STRIPE_PRICE_PRO_MONTHLY is required when STRIPE_ENABLED=true")
+        if STRIPE_LEGACY_GRACE_DAYS < 0:
+            errors.append("STRIPE_LEGACY_GRACE_DAYS cannot be negative")
+        if not billing_store_enabled():
+            errors.append("DATABASE_URL is required when STRIPE_ENABLED=true")
+
+    if billing_store_enabled():
+        try:
+            ensure_billing_tables()
+            if STRIPE_ENABLED:
+                _seed_legacy_grace_state_for_existing_paid_users()
+                expired_states = list_states_with_expired_legacy_grace()
+                for state in expired_states:
+                    upsert_customer_state(
+                        state["user_id"],
+                        state["email"],
+                        updates={
+                            "subscription_status": "grace_expired",
+                            "plan_tier": SubscriptionTier.FREE.value,
+                        },
+                        source="startup_grace_enforcement",
+                    )
+                    update_user_tier(state["user_id"], SubscriptionTier.FREE)
+        except Exception as e:
+            errors.append(f"Billing store initialization failed: {e}")
+    elif STRIPE_ENABLED:
+        errors.append("Billing store disabled while STRIPE_ENABLED=true")
 
     if not SES_SNS_ALLOWED_TOPIC_ARNS:
         warnings.append("SES_SNS_ALLOWED_TOPIC_ARNS is empty - SES webhook will reject all topics")
@@ -689,6 +750,13 @@ LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )
 POLICY_VERSION = os.getenv("POLICY_VERSION", "2026-02-27")
+STRIPE_ENABLED = os.getenv("STRIPE_ENABLED", "false").lower() == "true"
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
+STRIPE_PRICE_BASIC_MONTHLY = os.getenv("STRIPE_PRICE_BASIC_MONTHLY", "").strip()
+STRIPE_PRICE_PRO_MONTHLY = os.getenv("STRIPE_PRICE_PRO_MONTHLY", "").strip()
+STRIPE_LEGACY_GRACE_DAYS = int(os.getenv("STRIPE_LEGACY_GRACE_DAYS", "30"))
+STRIPE_BILLING_PORTAL_RETURN_URL = os.getenv("STRIPE_BILLING_PORTAL_RETURN_URL", "").strip()
 ALPACA_KEY_ID = os.getenv("ALPACA_KEY_ID", "").strip()
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY", "").strip()
 ALPACA_TRADING_BASE_URL = os.getenv(
@@ -704,6 +772,12 @@ SES_SNS_ALLOWED_TOPIC_ARNS = {
 }
 SES_SNS_AUTO_CONFIRM = os.getenv("SES_SNS_AUTO_CONFIRM", "false").lower() == "true"
 
+ACTIVE_STRIPE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due"}
+TERMINAL_STRIPE_SUBSCRIPTION_STATUSES = {"canceled", "unpaid", "incomplete_expired"}
+
+if stripe and STRIPE_SECRET_KEY:
+    stripe.api_key = STRIPE_SECRET_KEY
+
 
 def _extract_client_ip(request: Request) -> Optional[str]:
     forwarded = request.headers.get("x-forwarded-for", "")
@@ -717,6 +791,244 @@ def _extract_client_ip(request: Request) -> Optional[str]:
 def _extract_user_agent(request: Request) -> Optional[str]:
     return request.headers.get("user-agent")
 
+
+def _billing_runtime_enabled() -> bool:
+    return STRIPE_ENABLED and billing_store_enabled()
+
+
+def _stripe_price_for_tier(tier: SubscriptionTier) -> Optional[str]:
+    if tier == SubscriptionTier.BASIC:
+        return STRIPE_PRICE_BASIC_MONTHLY or None
+    if tier == SubscriptionTier.PRO:
+        return STRIPE_PRICE_PRO_MONTHLY or None
+    return None
+
+
+def _tier_from_price_id(price_id: Optional[str]) -> Optional[SubscriptionTier]:
+    if not price_id:
+        return None
+    if price_id == STRIPE_PRICE_BASIC_MONTHLY:
+        return SubscriptionTier.BASIC
+    if price_id == STRIPE_PRICE_PRO_MONTHLY:
+        return SubscriptionTier.PRO
+    return None
+
+
+def _coerce_subscription_tier(raw_value: Optional[str], fallback: SubscriptionTier) -> SubscriptionTier:
+    if not raw_value:
+        return fallback
+    try:
+        return SubscriptionTier(str(raw_value))
+    except Exception:
+        return fallback
+
+
+def _to_utc_datetime(value: Optional[object]) -> Optional[datetime]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+    return None
+
+
+def _ensure_billing_state_for_user(user: UserInDB) -> Optional[dict]:
+    if not billing_store_enabled():
+        return None
+
+    state = get_state_by_user_id(user.id)
+    if state:
+        return state
+
+    now = datetime.now(timezone.utc)
+    updates: dict[str, object] = {}
+    source = "seed"
+
+    if STRIPE_ENABLED and user.tier in {SubscriptionTier.BASIC, SubscriptionTier.PRO}:
+        updates["plan_tier"] = user.tier.value
+        updates["subscription_status"] = "legacy_grace"
+        updates["legacy_grace_expires_at"] = now + timedelta(days=STRIPE_LEGACY_GRACE_DAYS)
+        source = "legacy_seed"
+    else:
+        updates["plan_tier"] = user.tier.value
+        updates["subscription_status"] = "none"
+        source = "seed"
+
+    return upsert_customer_state(user.id, user.email, updates=updates, source=source)
+
+
+def _is_grace_active(state: Optional[dict], now: Optional[datetime] = None) -> bool:
+    if not state:
+        return False
+    if state.get("subscription_status") != "legacy_grace":
+        return False
+    expiry = _to_utc_datetime(state.get("legacy_grace_expires_at"))
+    if not expiry:
+        return False
+    current_time = now or datetime.now(timezone.utc)
+    return expiry > current_time
+
+
+def _effective_tier_from_state(state: Optional[dict], fallback_tier: SubscriptionTier) -> SubscriptionTier:
+    if not state:
+        return fallback_tier
+
+    status = str(state.get("subscription_status") or "none").lower()
+    plan_tier = _coerce_subscription_tier(state.get("plan_tier"), SubscriptionTier.FREE)
+    if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES and plan_tier in {
+        SubscriptionTier.BASIC,
+        SubscriptionTier.PRO,
+    }:
+        return plan_tier
+
+    if status == "legacy_grace" and _is_grace_active(state):
+        return plan_tier
+
+    return SubscriptionTier.FREE
+
+
+def _sync_user_tier_with_billing(user: UserInDB) -> UserInDB:
+    if not _billing_runtime_enabled():
+        return user
+
+    state = _ensure_billing_state_for_user(user)
+    if not state:
+        return user
+
+    desired_tier = _effective_tier_from_state(state, user.tier)
+    updates: dict[str, object] = {}
+    source: Optional[str] = None
+
+    if state.get("subscription_status") == "legacy_grace" and not _is_grace_active(state):
+        updates.update(
+            {
+                "subscription_status": "grace_expired",
+                "plan_tier": SubscriptionTier.FREE.value,
+                "legacy_grace_expires_at": state.get("legacy_grace_expires_at"),
+            }
+        )
+        source = "legacy_grace_expired"
+        desired_tier = SubscriptionTier.FREE
+
+    if updates:
+        state = upsert_customer_state(user.id, user.email, updates=updates, source=source)
+
+    if desired_tier != user.tier:
+        update_user_tier(user.id, desired_tier)
+        refreshed = get_user_by_id(user.id)
+        if refreshed:
+            return refreshed
+
+    return user
+
+
+def _billing_status_payload(user: UserInDB, state: Optional[dict]) -> BillingStatusResponse:
+    effective_tier = _effective_tier_from_state(state, user.tier)
+    plan_tier = _coerce_subscription_tier(
+        state.get("plan_tier") if state else user.tier.value,
+        user.tier,
+    )
+    return BillingStatusResponse(
+        billing_enabled=_billing_runtime_enabled(),
+        user_tier=user.tier,
+        effective_tier=effective_tier,
+        plan_tier=plan_tier,
+        subscription_status=str(state.get("subscription_status") if state else "none"),
+        cancel_at_period_end=bool(state.get("cancel_at_period_end")) if state else False,
+        current_period_end=_to_utc_datetime(state.get("current_period_end")) if state else None,
+        legacy_grace_expires_at=_to_utc_datetime(state.get("legacy_grace_expires_at")) if state else None,
+        stripe_customer_id=str(state.get("stripe_customer_id")) if state and state.get("stripe_customer_id") else None,
+        stripe_subscription_id=str(state.get("stripe_subscription_id")) if state and state.get("stripe_subscription_id") else None,
+        price_id=str(state.get("price_id")) if state and state.get("price_id") else None,
+        grace_active=_is_grace_active(state),
+    )
+
+
+def _seed_legacy_grace_state_for_existing_paid_users() -> None:
+    if not _billing_runtime_enabled():
+        return
+
+    paid_users = list_users_by_tiers([SubscriptionTier.BASIC, SubscriptionTier.PRO])
+    now = datetime.now(timezone.utc)
+    grace_expiry = now + timedelta(days=STRIPE_LEGACY_GRACE_DAYS)
+
+    for user in paid_users:
+        state = get_state_by_user_id(user.id)
+        if not state:
+            upsert_customer_state(
+                user.id,
+                user.email,
+                updates={
+                    "plan_tier": user.tier.value,
+                    "subscription_status": "legacy_grace",
+                    "legacy_grace_expires_at": grace_expiry,
+                },
+                source="legacy_seed",
+            )
+            continue
+
+        status = str(state.get("subscription_status") or "none").lower()
+        if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
+            continue
+        if status == "legacy_grace" and _is_grace_active(state, now=now):
+            continue
+
+        if not state.get("legacy_grace_expires_at"):
+            upsert_customer_state(
+                user.id,
+                user.email,
+                updates={
+                    "plan_tier": user.tier.value,
+                    "subscription_status": "legacy_grace",
+                    "legacy_grace_expires_at": grace_expiry,
+                },
+                source="legacy_seed",
+            )
+
+
+def _apply_subscription_snapshot(
+    state: dict,
+    subscription_payload: dict,
+    source: str,
+) -> dict:
+    status = str(subscription_payload.get("status") or "none").lower()
+    current_period_end = _to_utc_datetime(subscription_payload.get("current_period_end"))
+    cancel_at_period_end = bool(subscription_payload.get("cancel_at_period_end", False))
+
+    price_id: Optional[str] = None
+    items = subscription_payload.get("items", {})
+    if isinstance(items, dict):
+        item_data = items.get("data", [])
+        if item_data and isinstance(item_data, list):
+            first_item = item_data[0] or {}
+            if isinstance(first_item, dict):
+                price = first_item.get("price", {})
+                if isinstance(price, dict):
+                    price_id = price.get("id")
+
+    mapped_tier = _tier_from_price_id(price_id)
+    updates: dict[str, object] = {
+        "subscription_status": status,
+        "stripe_subscription_id": subscription_payload.get("id"),
+        "price_id": price_id,
+        "current_period_end": current_period_end,
+        "cancel_at_period_end": cancel_at_period_end,
+    }
+
+    if mapped_tier:
+        updates["plan_tier"] = mapped_tier.value
+    elif status in TERMINAL_STRIPE_SUBSCRIPTION_STATUSES:
+        updates["plan_tier"] = SubscriptionTier.FREE.value
+
+    return upsert_customer_state(
+        user_id=state["user_id"],
+        email=state["email"],
+        updates=updates,
+        source=source,
+    )
 
 def _looks_like_etf(name: Optional[str]) -> bool:
     if not name:
@@ -814,6 +1126,11 @@ async def get_current_user(authorization: Optional[str] = Header(None)) -> Optio
             return None
 
         user = get_user_by_id(payload.get("sub"))
+        if user:
+            try:
+                user = _sync_user_tier_with_billing(user)
+            except Exception as sync_err:
+                logger.warning("Billing tier sync failed for user_id=%s: %s", user.id, sync_err)
         return user
     except Exception:
         return None
@@ -875,7 +1192,7 @@ async def signup(data: UserCreate, request: Request):
         first_name=data.first_name,
         last_name=data.last_name,
         hashed_password=hash_password(data.password),
-        tier=data.tier,
+        tier=SubscriptionTier.FREE,
         email_verified=False,
         verification_token=verification_token,
         created_at=now,
@@ -884,6 +1201,20 @@ async def signup(data: UserCreate, request: Request):
 
     create_user(user)
     logger.info(f"New user created: {user.email} (tier={user.tier.value})")
+
+    if billing_store_enabled():
+        try:
+            upsert_customer_state(
+                user.id,
+                user.email,
+                updates={
+                    "plan_tier": SubscriptionTier.FREE.value,
+                    "subscription_status": "none",
+                },
+                source="signup",
+            )
+        except Exception as e:
+            logger.warning("Failed to initialize billing state for %s: %s", user.email, e)
 
     client_ip = _extract_client_ip(request)
     user_agent = _extract_user_agent(request)
@@ -1358,6 +1689,291 @@ async def get_tier(tier: SubscriptionTier):
         timeframes=config["timeframes"],
         features=config["features"],
     )
+
+
+# ============================================================
+# Billing Endpoints
+# ============================================================
+
+def _require_billing_enabled() -> None:
+    if not STRIPE_ENABLED:
+        raise HTTPException(503, detail="Stripe billing is disabled")
+    if stripe is None:
+        raise HTTPException(503, detail="Stripe SDK is not installed")
+    if not billing_store_enabled():
+        raise HTTPException(503, detail="Billing store is unavailable")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(503, detail="Stripe secret key is not configured")
+
+
+def _checkout_redirect_url(result: str) -> str:
+    base = FRONTEND_URL.rstrip("/") if FRONTEND_URL else "https://seekingbeta.ai"
+    return f"{base}/pricing?checkout={result}"
+
+
+def _ensure_stripe_customer(user: UserInDB, state: Optional[dict]) -> str:
+    customer_id = state.get("stripe_customer_id") if state else None
+    if customer_id:
+        return str(customer_id)
+
+    customer = stripe.Customer.create(
+        email=user.email,
+        name=f"{user.first_name} {user.last_name}".strip(),
+        metadata={"user_id": user.id},
+    )
+    customer_id = str(customer.get("id"))
+
+    upsert_customer_state(
+        user.id,
+        user.email,
+        updates={"stripe_customer_id": customer_id},
+        source="stripe_customer_create",
+    )
+    return customer_id
+
+
+@app.get("/api/billing/status", response_model=BillingStatusResponse, tags=["Billing"])
+async def get_billing_status(user: UserInDB = Depends(require_auth)):
+    refreshed = _sync_user_tier_with_billing(user)
+    state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
+    return _billing_status_payload(refreshed, state)
+
+
+@app.post(
+    "/api/billing/checkout-session",
+    response_model=BillingCheckoutSessionResponse,
+    tags=["Billing"],
+)
+async def create_billing_checkout_session(
+    data: BillingCheckoutSessionRequest,
+    user: UserInDB = Depends(require_verified_user),
+):
+    _require_billing_enabled()
+
+    if data.tier not in {SubscriptionTier.BASIC, SubscriptionTier.PRO}:
+        raise HTTPException(400, detail="Only paid tiers are supported for checkout")
+
+    price_id = _stripe_price_for_tier(data.tier)
+    if not price_id:
+        raise HTTPException(500, detail=f"No Stripe price configured for tier '{data.tier.value}'")
+
+    current_state = _ensure_billing_state_for_user(user)
+    customer_id = _ensure_stripe_customer(user, current_state)
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer=customer_id,
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=_checkout_redirect_url("success"),
+            cancel_url=_checkout_redirect_url("cancelled"),
+            client_reference_id=user.id,
+            metadata={"user_id": user.id, "requested_tier": data.tier.value},
+            allow_promotion_codes=True,
+        )
+    except Exception as e:
+        logger.error("Failed creating Stripe checkout session for %s: %s", user.email, e)
+        raise HTTPException(502, detail="Could not create checkout session")
+
+    session_id = str(session.get("id"))
+    checkout_url = str(session.get("url") or "")
+    if not checkout_url:
+        raise HTTPException(502, detail="Stripe checkout session missing URL")
+
+    upsert_customer_state(
+        user.id,
+        user.email,
+        updates={"stripe_customer_id": customer_id},
+        source="checkout_session_create",
+    )
+
+    return BillingCheckoutSessionResponse(checkout_url=checkout_url, session_id=session_id)
+
+
+@app.post(
+    "/api/billing/portal-session",
+    response_model=BillingPortalSessionResponse,
+    tags=["Billing"],
+)
+async def create_billing_portal_session(user: UserInDB = Depends(require_verified_user)):
+    _require_billing_enabled()
+
+    state = _ensure_billing_state_for_user(user)
+    customer_id = _ensure_stripe_customer(user, state)
+
+    return_url = STRIPE_BILLING_PORTAL_RETURN_URL or _checkout_redirect_url("portal_return")
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=return_url,
+        )
+    except Exception as e:
+        logger.error("Failed creating Stripe billing portal session for %s: %s", user.email, e)
+        raise HTTPException(502, detail="Could not create billing portal session")
+
+    return BillingPortalSessionResponse(portal_url=str(session.get("url")))
+
+
+def _process_subscription_event(subscription_payload: dict, source: str) -> None:
+    customer_id = str(subscription_payload.get("customer") or "").strip()
+    if not customer_id:
+        return
+
+    state = get_state_by_customer_id(customer_id)
+    if not state:
+        metadata = subscription_payload.get("metadata") or {}
+        user_id = metadata.get("user_id")
+        if not user_id:
+            logger.warning("Stripe subscription event ignored: no mapped customer state for %s", customer_id)
+            return
+        user = get_user_by_id(str(user_id))
+        if not user:
+            logger.warning("Stripe subscription event ignored: user not found for user_id=%s", user_id)
+            return
+        state = upsert_customer_state(
+            user.id,
+            user.email,
+            updates={"stripe_customer_id": customer_id},
+            source="stripe_subscription_user_link",
+        )
+
+    updated = _apply_subscription_snapshot(state, subscription_payload, source=source)
+    user = get_user_by_id(updated["user_id"])
+    if user:
+        _sync_user_tier_with_billing(user)
+
+
+def _process_checkout_completed(event_payload: dict) -> None:
+    customer_id = str(event_payload.get("customer") or "").strip()
+    subscription_id = str(event_payload.get("subscription") or "").strip()
+    metadata = event_payload.get("metadata") or {}
+    user_id = str(event_payload.get("client_reference_id") or metadata.get("user_id") or "").strip()
+
+    state: Optional[dict] = None
+    user: Optional[UserInDB] = None
+    if user_id:
+        user = get_user_by_id(user_id)
+        if user:
+            state = upsert_customer_state(
+                user.id,
+                user.email,
+                updates={"stripe_customer_id": customer_id or None},
+                source="checkout_completed_link",
+            )
+
+    if not state and customer_id:
+        state = get_state_by_customer_id(customer_id)
+        if state:
+            user = get_user_by_id(state["user_id"])
+
+    if not state:
+        logger.warning(
+            "Stripe checkout.session.completed ignored: cannot map customer=%s user_id=%s",
+            customer_id,
+            user_id,
+        )
+        return
+
+    if subscription_id:
+        try:
+            subscription = stripe.Subscription.retrieve(
+                subscription_id,
+                expand=["items.data.price"],
+            )
+            payload = (
+                subscription.to_dict_recursive()
+                if hasattr(subscription, "to_dict_recursive")
+                else dict(subscription)
+            )
+            _process_subscription_event(payload, source="stripe_checkout_completed")
+            return
+        except Exception as e:
+            logger.warning(
+                "Stripe checkout completed subscription fetch failed for %s: %s",
+                subscription_id,
+                e,
+            )
+
+    requested_tier = metadata.get("requested_tier")
+    requested_tier_enum = _coerce_subscription_tier(requested_tier, SubscriptionTier.FREE)
+    updates: dict[str, object] = {
+        "stripe_customer_id": customer_id or state.get("stripe_customer_id"),
+        "stripe_subscription_id": subscription_id or state.get("stripe_subscription_id"),
+    }
+    if requested_tier_enum in {SubscriptionTier.BASIC, SubscriptionTier.PRO}:
+        updates["plan_tier"] = requested_tier_enum.value
+        updates["subscription_status"] = "active"
+    updated = upsert_customer_state(state["user_id"], state["email"], updates=updates, source="stripe_checkout_completed")
+    if user is None:
+        user = get_user_by_id(updated["user_id"])
+    if user:
+        _sync_user_tier_with_billing(user)
+
+
+def _process_invoice_payment_failed(event_payload: dict) -> None:
+    customer_id = str(event_payload.get("customer") or "").strip()
+    if not customer_id:
+        return
+    updated = upsert_state_by_customer_id(
+        customer_id,
+        updates={
+            "subscription_status": "past_due",
+            "stripe_subscription_id": event_payload.get("subscription"),
+        },
+        source="stripe_invoice_payment_failed",
+    )
+    if not updated:
+        return
+    user = get_user_by_id(updated["user_id"])
+    if user:
+        _sync_user_tier_with_billing(user)
+
+
+@app.post("/api/webhooks/stripe", response_model=MessageResponse, tags=["System"])
+async def stripe_webhook(request: Request):
+    _require_billing_enabled()
+
+    sig_header = request.headers.get("stripe-signature")
+    if not sig_header:
+        raise HTTPException(403, detail="Missing Stripe signature header")
+
+    payload = await request.body()
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
+    except Exception as e:
+        logger.warning("Invalid Stripe webhook signature: %s", e)
+        raise HTTPException(403, detail="Invalid Stripe webhook signature")
+
+    event_payload = (
+        event.to_dict_recursive() if hasattr(event, "to_dict_recursive") else dict(event)
+    )
+
+    event_id = str(event_payload.get("id") or "")
+    event_type = str(event_payload.get("type") or "").lower()
+    if not event_id:
+        raise HTTPException(400, detail="Missing Stripe event id")
+
+    inserted = register_webhook_event(event_id, event_type, event_payload)
+    if not inserted:
+        return MessageResponse(message=f"Duplicate Stripe event ignored: {event_id}")
+
+    try:
+        event_data = event_payload.get("data", {}).get("object", {})
+        if event_type == "checkout.session.completed":
+            _process_checkout_completed(event_data)
+        elif event_type in {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"}:
+            _process_subscription_event(event_data, source=f"stripe_{event_type.replace('.', '_')}")
+        elif event_type == "invoice.payment_failed":
+            _process_invoice_payment_failed(event_data)
+        else:
+            logger.info("Unhandled Stripe event type=%s (recorded only)", event_type)
+
+        mark_webhook_event(event_id, "success")
+        return MessageResponse(message=f"Processed Stripe event type={event_type}")
+    except Exception as e:
+        logger.error("Stripe webhook processing failed for event %s: %s", event_id, e, exc_info=True)
+        mark_webhook_event(event_id, "error", error_message=str(e))
+        raise HTTPException(500, detail="Stripe webhook processing failed")
 
 
 # ============================================================

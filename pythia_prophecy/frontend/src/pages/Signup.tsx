@@ -1,22 +1,12 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { tiers as tiersApi } from '../api/client';
 import ThemeToggle from '../components/ThemeToggle';
 
 const POLICY_VERSION = '2026-02-27';
 
-interface TierData {
-  tier: string;
-  name: string;
-  price: number;
-  stocks_limit: number;
-  timeframes: string[];
-}
-
 function Signup() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { signup, resendVerification, isAuthenticated, error, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -25,12 +15,10 @@ function Signup() {
     email: '',
     password: '',
     confirmPassword: '',
-    tier: searchParams.get('tier') || 'free',
     acceptTerms: false,
     acceptPrivacy: false,
     marketingOptIn: false,
   });
-  const [tiers, setTiers] = useState<TierData[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [formError, setFormError] = useState('');
@@ -42,12 +30,6 @@ function Signup() {
       navigate('/dashboard');
     }
   }, [isAuthenticated, navigate]);
-
-  useEffect(() => {
-    tiersApi.getAll()
-      .then((data) => setTiers(data as unknown as TierData[]))
-      .catch(console.error);
-  }, []);
 
   useEffect(() => {
     clearError();
@@ -90,7 +72,7 @@ function Signup() {
       setFormError('Password must contain at least one number');
       return;
     }
-    if (!/[!@#$%^&*()_\-+=[\]{};:'",.<>?/\\|`~]/.test(formData.password)) {
+    if (!/[!@#$%^&*()_\-+=[\]{};:'\",.<>?/\\|`~]/.test(formData.password)) {
       setFormError('Password must contain at least one special character');
       return;
     }
@@ -113,7 +95,7 @@ function Signup() {
         password: formData.password,
         first_name: formData.firstName,
         last_name: formData.lastName,
-        tier: formData.tier,
+        tier: 'free',
         accept_terms: formData.acceptTerms,
         accept_privacy: formData.acceptPrivacy,
         policy_version: POLICY_VERSION,
@@ -163,7 +145,7 @@ function Signup() {
             </div>
             <h1>Check your email</h1>
             <p className="auth-subtitle">
-              We've sent a verification link to <strong>{formData.email}</strong>.
+              We&apos;ve sent a verification link to <strong>{formData.email}</strong>.
               Click the link to activate your account.
             </p>
             <p className="auth-note">
@@ -210,9 +192,7 @@ function Signup() {
           </p>
 
           <form onSubmit={handleSubmit} className="auth-form">
-            {(formError || error) && (
-              <div className="form-error">{formError || error}</div>
-            )}
+            {(formError || error) && <div className="form-error">{formError || error}</div>}
 
             <div className="form-row">
               <div className="form-group">
@@ -320,41 +300,8 @@ function Signup() {
                   Send me occasional product updates (optional). You can unsubscribe anytime.
                 </span>
               </label>
-              <p className="form-hint">
-                Policy version: {POLICY_VERSION}
-              </p>
-            </div>
-
-            <div className="form-group">
-              <label>Select your plan</label>
-              <div className="tier-selector">
-                {tiers.map((tier) => (
-                  <label
-                    key={tier.tier}
-                    className={`tier-option ${formData.tier === tier.tier ? 'selected' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="tier"
-                      value={tier.tier}
-                      checked={formData.tier === tier.tier}
-                      onChange={handleChange}
-                    />
-                    <div className="tier-option-content">
-                      <div className="tier-option-header">
-                        <span className="tier-name">{tier.name}</span>
-                        <span className="tier-price">
-                          {tier.price === 0 ? 'Free' : `$${tier.price}/mo`}
-                        </span>
-                      </div>
-                      <ul className="tier-features-mini">
-                        <li>{tier.stocks_limit === -1 ? 'All stocks' : `${tier.stocks_limit} stocks`}</li>
-                        <li>{tier.timeframes.length} timeframe{tier.timeframes.length > 1 ? 's' : ''}</li>
-                      </ul>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              <p className="form-hint">Policy version: {POLICY_VERSION}</p>
+              <p className="form-hint">All new accounts start on the Free plan. Upgrade anytime from Pricing.</p>
               <Link to="/pricing" className="form-link">Compare plans in detail</Link>
             </div>
 

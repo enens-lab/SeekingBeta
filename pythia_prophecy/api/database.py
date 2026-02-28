@@ -248,6 +248,20 @@ def update_user_tier(user_id: str, tier: SubscriptionTier) -> bool:
         return False
 
 
+def list_users_by_tiers(tiers: list[SubscriptionTier]) -> list[UserInDB]:
+    """List users whose tier is in the provided set."""
+    if not tiers:
+        return []
+
+    tier_values = [tier.value for tier in tiers]
+    placeholders = ",".join("?" for _ in tier_values)
+    query = f"SELECT * FROM users WHERE tier IN ({placeholders})"
+
+    with get_db() as conn:
+        rows = conn.execute(query, tuple(tier_values)).fetchall()
+    return [_row_to_user(row) for row in rows]
+
+
 def _row_to_user(row: sqlite3.Row) -> UserInDB:
     """Convert database row to UserInDB model."""
     return UserInDB(

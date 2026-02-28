@@ -10,9 +10,9 @@ function Privacy() {
           <h1>Privacy Policy</h1>
           <p className="legal-updated">Last updated: February 27, 2026</p>
           <p>
-            This Privacy Policy explains how EnEns LLC ("EnEns," "we," "us," or "our") collects,
-            uses, shares, and protects information when you access or use SeekingBeta at
-            seekingbeta.ai (the "Service").
+            This Privacy Policy explains how EnEns LLC ("EnEns," "we," "us," or "our")
+            collects, uses, shares, and protects information when you access or use SeekingBeta
+            at seekingbeta.ai (the "Service").
           </p>
 
           <section>
@@ -25,8 +25,8 @@ function Privacy() {
             </p>
             <p>B. Usage and diagnostics data</p>
             <p>
-              App activity (including watchlist usage), request logs, feature usage, performance and
-              diagnostics data, and error reports.
+              App activity (including watchlist usage), request logs, feature usage, performance
+              and diagnostics data, and error reports.
             </p>
             <p>C. Email event and deliverability data</p>
             <p>
@@ -56,10 +56,7 @@ function Privacy() {
               <li>Provide, operate, maintain, and secure the Service (including free and paid plans).</li>
               <li>Authenticate users and manage subscriptions and billing status.</li>
               <li>Send transactional communications (verification, security, billing, and account notices).</li>
-              <li>
-                Maintain deliverability and abuse prevention systems (including bounce/complaint
-                suppression).
-              </li>
+              <li>Maintain deliverability and abuse prevention systems (including bounce/complaint suppression).</li>
               <li>Monitor reliability, troubleshoot issues, and improve Service performance.</li>
               <li>Comply with legal obligations and enforce our agreements.</li>
             </ul>
@@ -118,16 +115,13 @@ function Privacy() {
                 prevent fraud or abuse, or enforce our Terms.
               </li>
               <li>
-                As part of a business transfer (for example, merger, acquisition, financing,
+                As part of a business transfer (e.g., merger, acquisition, financing,
                 reorganization, bankruptcy, or sale of assets), where information may be transferred
                 as part of that transaction.
               </li>
               <li>With your direction (for example, if you request a data export).</li>
             </ul>
-            <p>
-              No sale of personal information. We do not sell personal information in exchange for
-              money.
-            </p>
+            <p>No sale of personal information. We do not sell personal information in exchange for money.</p>
           </section>
 
           <section>
@@ -144,8 +138,8 @@ function Privacy() {
           <section>
             <h2>7. Security</h2>
             <p>
-              We apply reasonable administrative, technical, and organizational safeguards designed to
-              protect information. However, no system can guarantee absolute security.
+              We apply reasonable administrative, technical, and organizational safeguards designed
+              to protect information. However, no system can guarantee absolute security.
             </p>
           </section>
 

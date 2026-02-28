@@ -45,7 +45,8 @@ function RefundCancellation() {
               If you believe there is a billing error (for example, a duplicate charge or an
               incorrect amount), contact{' '}
               <a href="mailto:support@seekingbeta.ai">support@seekingbeta.ai</a> promptly with your
-              account email and transaction details.
+              account email and transaction details. We will investigate and, where appropriate,
+              correct billing errors.
             </p>
           </section>
 

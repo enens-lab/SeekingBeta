@@ -4,8 +4,8 @@ function CallToAction() {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>Start with a watchlist. Get signal guidance in minutes.</h2>
-        <p>SeekingBeta helps new investors build confidence with model-backed reference signals.</p>
+        <h2>Build a watchlist and study model behavior in minutes.</h2>
+        <p>SeekingBeta is built to help investors learn from model-generated reference ratings and market context.</p>
         <Link to="/signup" className="btn btn-primary btn-lg">
           Create Free Account
         </Link>

@@ -27,13 +27,15 @@ const MODELS = [
     name: 'lstm_5d',
     displayName: 'LSTM 5-Day',
     endpoint: '/predict/lstm_5d',
-    description: 'Deep learning model optimized for short-term consistency. Predicts stocks likely to move >2% within 5 days.'
+    description:
+      'Short-horizon learning model focused on recent trend structure. Useful for studying how model confidence evolves over 5-day windows.'
   },
   {
     name: 'lstm_jackpot',
     displayName: 'LSTM Jackpot',
     endpoint: '/predict/lstm_jackpot',
-    description: 'Aggressive LSTM targeting high-return opportunities. Identifies stocks expected to move >20% within 20 days.'
+    description:
+      'Higher-volatility learning model with a wider 20-day horizon. Useful for comparing how signal strength changes under larger moves.'
   },
 ];
 
@@ -154,14 +156,14 @@ function PredictionsCarousel() {
     return (
       <section className="predictions-section" id="predictions">
         <div className="section-header">
-          <h2 className="section-title">Today&apos;s Signals, in Plain English</h2>
+          <h2 className="section-title">Today&apos;s Model Views, in Plain English</h2>
           <p className="section-subtitle">
-            Two AI models covering the Magnificent 7 so beginners can compare views quickly
+            Two models covering the Magnificent 7 so you can compare outputs as an educational reference
           </p>
         </div>
         <div className="predictions-loading">
           <div className="spinner" />
-          <p>Loading today&apos;s model guidance...</p>
+          <p>Loading today&apos;s model views...</p>
         </div>
       </section>
     );
@@ -170,9 +172,9 @@ function PredictionsCarousel() {
   return (
     <section className="predictions-section" id="predictions">
       <div className="section-header">
-        <h2 className="section-title">Today&apos;s Signals, in Plain English</h2>
+        <h2 className="section-title">Today&apos;s Model Views, in Plain English</h2>
         <p className="section-subtitle">
-          Two AI models across the Magnificent 7. Each row is one model&apos;s perspective.
+          Two AI models across the Magnificent 7. Use these outputs as educational context, not direct trade instructions.
         </p>
       </div>
 

@@ -17,7 +17,7 @@ class SubscriptionTier(str, Enum):
 TIER_CONFIG = {
     SubscriptionTier.FREE: {
         "name": "Free",
-        "price": 0,
+        "price": 0.0,
         "stocks_limit": 5,
         "timeframes": ["1d"],
         "features": [
@@ -35,7 +35,7 @@ TIER_CONFIG = {
     },
     SubscriptionTier.BASIC: {
         "name": "Basic",
-        "price": 19,
+        "price": 9.99,
         "stocks_limit": 15,
         "timeframes": ["1d", "2d", "3d", "4h", "1h", "30m"],
         "features": [
@@ -54,14 +54,13 @@ TIER_CONFIG = {
     },
     SubscriptionTier.PRO: {
         "name": "Pro",
-        "price": 49,
+        "price": 19.99,
         "stocks_limit": -1,  # unlimited
         "timeframes": ["1mo", "1w", "3d", "2d", "1d", "4h", "1h", "30m", "15m", "5m", "1m"],
         "features": [
             "Full universe access (6,000+ stocks)",
             "All timeframes (1m to monthly)",
             "Priority email alerts",
-            "API access",
             "Historical prediction accuracy",
             "Custom watchlists",
         ],
@@ -144,7 +143,7 @@ class ErrorResponse(BaseModel):
 class TierInfo(BaseModel):
     tier: SubscriptionTier
     name: str
-    price: int
+    price: float
     stocks_limit: int
     timeframes: List[str]
     features: List[str]
@@ -247,6 +246,38 @@ class UserFeaturesResponse(BaseModel):
     tier: str
     features: dict
     limits: dict
+
+
+class BillingCheckoutSessionRequest(BaseModel):
+    """Request payload for creating Stripe Checkout session."""
+    tier: SubscriptionTier
+
+
+class BillingCheckoutSessionResponse(BaseModel):
+    """Checkout session response."""
+    checkout_url: str
+    session_id: str
+
+
+class BillingPortalSessionResponse(BaseModel):
+    """Billing portal session response."""
+    portal_url: str
+
+
+class BillingStatusResponse(BaseModel):
+    """Current billing/subscription state for authenticated user."""
+    billing_enabled: bool
+    user_tier: SubscriptionTier
+    effective_tier: SubscriptionTier
+    plan_tier: SubscriptionTier
+    subscription_status: str
+    cancel_at_period_end: bool
+    current_period_end: Optional[datetime] = None
+    legacy_grace_expires_at: Optional[datetime] = None
+    stripe_customer_id: Optional[str] = None
+    stripe_subscription_id: Optional[str] = None
+    price_id: Optional[str] = None
+    grace_active: bool = False
 
 
 # ============================================================

@@ -15,8 +15,8 @@ const features: Feature[] = [
         <path d="M2 12l10 5 10-5" />
       </svg>
     ),
-    title: 'Plain-Language Signals',
-    description: 'Each stock is translated into a clear Buy, Hold, or Sell view with confidence attached.',
+    title: 'Plain-Language Ratings',
+    description: 'Each stock is translated into Bullish, Neutral, or Bearish language with transparent probability context.',
   },
   {
     icon: (
@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'AI as Your Second Opinion',
-    description: 'Our models scan technical patterns so you can make faster decisions without spreadsheet overload.',
+    title: 'Model-Based Learning Layer',
+    description: 'Models scan technical patterns so you can compare perspectives and learn how market structure changes over time.',
   },
   {
     icon: (
@@ -41,7 +41,7 @@ const features: Feature[] = [
       </svg>
     ),
     title: 'Confidence + Context',
-    description: 'See upside probability, model horizon, and recent price context in one card before you act.',
+    description: 'See upside probability, model horizon, and high-level driver summaries in one place for educational review.',
   },
   {
     icon: (
@@ -60,8 +60,8 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">Built for real people, not just quants</h2>
-        <p className="section-subtitle">Everything is designed to be understandable in under a minute</p>
+        <h2 className="section-title">Built for practical financial education</h2>
+        <p className="section-subtitle">Designed to help you interpret model output before making your own decisions</p>
       </div>
 
       <div className="features-grid">

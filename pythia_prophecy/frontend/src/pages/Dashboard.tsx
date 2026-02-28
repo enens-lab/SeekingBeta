@@ -9,6 +9,16 @@ import DashboardHeader from '../components/DashboardHeader';
 
 type ViewMode = 'oracle' | 'universe';
 
+function isBullishSignal(signal?: string | null): boolean {
+  const normalized = (signal || '').toLowerCase();
+  return normalized === 'buy' || normalized === 'strong_buy';
+}
+
+function isBearishSignal(signal?: string | null): boolean {
+  const normalized = (signal || '').toLowerCase();
+  return normalized === 'sell' || normalized === 'avoid';
+}
+
 function Dashboard() {
   const { user, isVerified } = useAuth();
   const toast = useToast();
@@ -145,7 +155,7 @@ function Dashboard() {
         if (failedTickers.length > 0) {
           if (successful.length === 0) {
             setPageFetchError(
-              `No predictions available for ${failedTickers.slice(0, 3).join(', ')}${failedTickers.length > 3 ? '...' : ''}.`
+              `No model outputs available for ${failedTickers.slice(0, 3).join(', ')}${failedTickers.length > 3 ? '...' : ''}.`
             );
           } else {
             setPageFetchError(
@@ -196,7 +206,7 @@ function Dashboard() {
               {viewMode === 'oracle' && hasWatchlist ? (
                 'My Watchlist'
               ) : (
-                'All Predictions'
+                'All Model Views'
               )}
             </h1>
             {hasWatchlist && oracleData && (
@@ -296,15 +306,15 @@ function Dashboard() {
             <span className="stat-value">{oracleData?.available_timeframes?.length || 0}</span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Buy Signals</span>
+            <span className="stat-label">Bullish Signals</span>
             <span className="stat-value signal-buy">
-              {predictionData.filter((p) => p.signal === 'buy').length}
+              {predictionData.filter((p) => isBullishSignal(p.signal)).length}
             </span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Sell Signals</span>
+            <span className="stat-label">Bearish Signals</span>
             <span className="stat-value signal-sell">
-              {predictionData.filter((p) => p.signal === 'sell').length}
+              {predictionData.filter((p) => isBearishSignal(p.signal)).length}
             </span>
           </div>
         </div>
@@ -324,7 +334,7 @@ function Dashboard() {
         {loading ? (
           <div className="dashboard-loading">
             <div className="spinner" />
-            <p>Loading predictions...</p>
+            <p>Loading model views...</p>
           </div>
         ) : filteredTickers.length === 0 ? (
           <div className="dashboard-no-results">

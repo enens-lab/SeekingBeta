@@ -6,6 +6,25 @@ export type AnalyticsParams = Record<string, AnalyticsParamValue>;
 const GA4_MEASUREMENT_ID = (import.meta.env.VITE_GA4_MEASUREMENT_ID || '').trim();
 const IS_GA4_ENABLED = Boolean(GA4_MEASUREMENT_ID);
 const MAX_EVENT_NAME_LENGTH = 40;
+const CONSENT_STORAGE_KEY = 'sb_ga4_consent_v1';
+
+type ConsentValue = 'granted' | 'denied';
+
+export interface AnalyticsConsent {
+  analytics_storage: ConsentValue;
+  ad_storage: ConsentValue;
+  ad_user_data: ConsentValue;
+  ad_personalization: ConsentValue;
+  source?: string;
+  updated_at?: string;
+}
+
+const DEFAULT_DENIED_CONSENT: AnalyticsConsent = {
+  analytics_storage: 'denied',
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+};
 
 declare global {
   interface Window {
@@ -16,6 +35,7 @@ declare global {
 
 let initialized = false;
 let scriptScheduled = false;
+let currentConsent: AnalyticsConsent = { ...DEFAULT_DENIED_CONSENT };
 
 function normalizeEventName(eventName: string): string {
   const normalized = eventName
@@ -70,6 +90,48 @@ function gtagCall(...args: unknown[]): void {
   window.gtag?.(...args);
 }
 
+function normalizeConsentValue(value: unknown): ConsentValue {
+  return value === 'granted' ? 'granted' : 'denied';
+}
+
+function normalizeConsent(raw?: Partial<AnalyticsConsent> | null): AnalyticsConsent {
+  return {
+    analytics_storage: normalizeConsentValue(raw?.analytics_storage),
+    ad_storage: normalizeConsentValue(raw?.ad_storage),
+    ad_user_data: normalizeConsentValue(raw?.ad_user_data),
+    ad_personalization: normalizeConsentValue(raw?.ad_personalization),
+    source: typeof raw?.source === 'string' ? raw.source.slice(0, 64) : undefined,
+    updated_at: typeof raw?.updated_at === 'string' ? raw.updated_at : undefined,
+  };
+}
+
+function readStoredConsent(): AnalyticsConsent | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(CONSENT_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw) as Partial<AnalyticsConsent>;
+    return normalizeConsent(parsed);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredConsent(consent: AnalyticsConsent): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(consent));
+  } catch {
+    // Ignore storage failures (private mode / quota).
+  }
+}
+
 function scheduleScriptLoad(): void {
   if (scriptScheduled) {
     return;
@@ -110,6 +172,14 @@ export function initAnalytics(): boolean {
   }
 
   ensureGtagStub();
+  const storedConsent = readStoredConsent();
+  currentConsent = storedConsent ?? { ...DEFAULT_DENIED_CONSENT };
+  gtagCall('consent', 'default', {
+    analytics_storage: currentConsent.analytics_storage,
+    ad_storage: currentConsent.ad_storage,
+    ad_user_data: currentConsent.ad_user_data,
+    ad_personalization: currentConsent.ad_personalization,
+  });
   gtagCall('js', new Date());
   gtagCall('config', GA4_MEASUREMENT_ID, {
     send_page_view: false,
@@ -119,6 +189,38 @@ export function initAnalytics(): boolean {
   scheduleScriptLoad();
   initialized = true;
   return true;
+}
+
+export function getAnalyticsConsent(): AnalyticsConsent {
+  const stored = readStoredConsent();
+  return stored ?? { ...currentConsent };
+}
+
+export function hasStoredAnalyticsConsent(): boolean {
+  return readStoredConsent() !== null;
+}
+
+export function updateAnalyticsConsent(
+  consent: Partial<AnalyticsConsent>,
+  source = 'ui'
+): AnalyticsConsent {
+  const normalized = normalizeConsent({
+    ...currentConsent,
+    ...consent,
+    source,
+    updated_at: new Date().toISOString(),
+  });
+  currentConsent = normalized;
+  writeStoredConsent(normalized);
+  if (initAnalytics()) {
+    gtagCall('consent', 'update', {
+      analytics_storage: normalized.analytics_storage,
+      ad_storage: normalized.ad_storage,
+      ad_user_data: normalized.ad_user_data,
+      ad_personalization: normalized.ad_personalization,
+    });
+  }
+  return normalized;
 }
 
 export function trackPageView(pagePath: string): void {

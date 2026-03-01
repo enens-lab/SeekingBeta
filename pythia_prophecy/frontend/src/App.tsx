@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
+import AnalyticsConsentManager from './components/AnalyticsConsentManager';
 import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Pages
@@ -109,6 +110,7 @@ function App() {
     <ThemeProvider>
       <BrowserRouter>
         <AnalyticsRouteTracker />
+        <AnalyticsConsentManager />
         <AuthProvider>
           <ToastProvider>
             <AppRoutes />

@@ -39,3 +39,23 @@ Model-specific:
 
 Cost setting:
 - `BACKTEST_TRANSACTION_COST_BPS=10` (default: 10 bps one-way; round-trip applied to non-net return fields)
+
+## Daily refresh workflow
+
+If your external backtest engine writes outputs to `backtest_results/`, sync them into this folder:
+
+```bash
+cd /home/ec2-user/seekingbeta
+SOURCE_DIR=/home/ec2-user/Stock_Prediction_Model/backtest_results \
+bash scripts/ops/sync_backtest_artifacts.sh
+```
+
+This updates all required files and recreates `prophecy-api` to clear in-memory performance cache.
+
+To run `run_backtest_v4_1.py` (both models) and sync in one command:
+
+```bash
+cd /home/ec2-user/seekingbeta
+BACKTEST_SCRIPT_PATH=/home/ec2-user/Stock_Prediction_Model/run_backtest_v4_1.py \
+bash scripts/ops/refresh_backtests_daily.sh
+```

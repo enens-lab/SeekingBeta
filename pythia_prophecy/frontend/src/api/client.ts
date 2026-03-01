@@ -193,6 +193,9 @@ export interface TrackRecordSummary {
   total_return_net: number | null;
   benchmark_return: number | null;
   avg_trade_return_net: number | null;
+  avg_win_return_net: number | null;
+  avg_loss_return_net: number | null;
+  profit_factor: number | null;
   avg_holding_days: number | null;
   regime_breakdown: Record<string, RegimePerformance>;
   notes: string[];

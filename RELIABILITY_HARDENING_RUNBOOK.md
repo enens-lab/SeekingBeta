@@ -164,3 +164,45 @@ Optional cert file check (recommended on EC2 deploys):
 cd /home/ec2-user/seekingbeta
 CHECK_LOCAL_CERT_FILES=true bash scripts/ops/pre_deploy_check.sh
 ```
+
+## 6) Daily backtest artifact refresh
+
+Script:
+
+- `/Users/huyngo/Downloads/pythia/scripts/ops/sync_backtest_artifacts.sh`
+- `/Users/huyngo/Downloads/pythia/scripts/ops/refresh_backtests_daily.sh`
+
+Expected source files in `SOURCE_DIR` (default: `./backtest_results`):
+
+- `production_trade_log.csv`
+- `production_metrics.json`
+- `jackpot_trade_log.csv`
+- `jackpot_metrics.json`
+
+Manual sync:
+
+```bash
+cd /home/ec2-user/seekingbeta
+SOURCE_DIR=/home/ec2-user/Stock_Prediction_Model/backtest_results \
+bash scripts/ops/sync_backtest_artifacts.sh
+```
+
+The script:
+
+- Validates all required files exist and are non-empty
+- Copies files into `pythia_prophecy/data/backtests`
+- Recreates `prophecy-api` by default to clear in-memory performance cache
+
+Daily cron example (after your backtest job finishes):
+
+```cron
+# Daily backtest artifact sync at 02:10 UTC
+10 2 * * * cd /home/ec2-user/seekingbeta && SOURCE_DIR=/home/ec2-user/Stock_Prediction_Model/backtest_results bash scripts/ops/sync_backtest_artifacts.sh >> logs/backtest_sync.log 2>&1
+```
+
+End-to-end daily run + sync (recommended):
+
+```cron
+# Run both backtests (choice=3) then sync + restart prophecy-api
+10 2 * * * cd /home/ec2-user/seekingbeta && BACKTEST_SCRIPT_PATH=/home/ec2-user/Stock_Prediction_Model/run_backtest_v4_1.py bash scripts/ops/refresh_backtests_daily.sh >> logs/backtest_refresh.log 2>&1
+```

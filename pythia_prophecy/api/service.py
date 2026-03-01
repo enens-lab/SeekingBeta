@@ -13,7 +13,7 @@ import logging
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List, Tuple, Any
 
 from .logging_config import setup_logging, get_logger
 
@@ -457,6 +457,60 @@ def check_rate_limit(identifier: str, max_requests: int, window_seconds: int) ->
 
     bucket.append(now_ts)
     return True, "OK"
+
+
+def _available_stocks_for_tier(tier_config: dict[str, Any]) -> list[str]:
+    """Return deterministic, category-diversified stocks for tier-limited users."""
+    stocks_limit = int(tier_config.get("stocks_limit", -1))
+    if stocks_limit == -1 or stocks_limit >= len(UNIVERSE):
+        return list(UNIVERSE)
+    if stocks_limit <= 0:
+        return []
+
+    selected: list[str] = []
+    selected_upper: set[str] = set()
+
+    def _append(symbol: str) -> None:
+        upper = symbol.upper()
+        if upper in selected_upper or upper not in UNIVERSE_UPPER:
+            return
+        selected.append(symbol)
+        selected_upper.add(upper)
+
+    primary_buckets: list[deque[str]] = []
+    other_buckets: list[deque[str]] = []
+    for category, symbols in STOCK_CATEGORIES.items():
+        bucket = deque([symbol for symbol in symbols if symbol.upper() in UNIVERSE_UPPER])
+        if not bucket:
+            continue
+        if category.lower().startswith("other"):
+            other_buckets.append(bucket)
+        else:
+            primary_buckets.append(bucket)
+
+    # Round-robin over primary categories first, then "Other" buckets.
+    for buckets in (primary_buckets, other_buckets):
+        progressed = True
+        while len(selected) < stocks_limit and progressed:
+            progressed = False
+            for bucket in buckets:
+                while bucket and bucket[0].upper() in selected_upper:
+                    bucket.popleft()
+                if not bucket:
+                    continue
+                _append(bucket.popleft())
+                progressed = True
+                if len(selected) >= stocks_limit:
+                    break
+
+    # Backfill from the raw universe ordering if category lists are exhausted.
+    if len(selected) < stocks_limit:
+        for symbol in UNIVERSE:
+            _append(symbol)
+            if len(selected) >= stocks_limit:
+                break
+
+    return selected
 
 
 # FastAPI app
@@ -2706,9 +2760,9 @@ def check_tier_access(user: Optional[UserInDB], ticker: str, horizon: str) -> bo
     if stocks_limit == -1:
         return True  # Unlimited
 
-    # For limited tiers, only allow first N stocks from universe
-    allowed_stocks = UNIVERSE[:stocks_limit]
-    return ticker.upper() in [s.upper() for s in allowed_stocks]
+    allowed_stocks = _available_stocks_for_tier(tier_config)
+    allowed_stocks_upper = {symbol.upper() for symbol in allowed_stocks}
+    return ticker.upper() in allowed_stocks_upper
 
 
 @app.get("/predict/{ticker}", response_model=PredictResponse, tags=["Predictions"])
@@ -2947,10 +3001,7 @@ async def get_universe(user: Optional[UserInDB] = Depends(get_current_user)):
         tier_config = TIER_CONFIG[user.tier]
 
     stocks_limit = tier_config["stocks_limit"]
-    if stocks_limit == -1:
-        available = UNIVERSE
-    else:
-        available = UNIVERSE[:stocks_limit]
+    available = _available_stocks_for_tier(tier_config)
 
     return {
         "universe": available,
@@ -3016,11 +3067,7 @@ def performance_curve(model: str = Query("lstm_5d")):
 def _get_available_for_user(user: UserInDB) -> tuple[list[str], dict[str, list[str]], list[str]]:
     """Get available stocks, categories, and timeframes for user's tier."""
     tier_config = TIER_CONFIG[user.tier]
-    stocks_limit = tier_config["stocks_limit"]
-    if stocks_limit == -1:
-        available_stocks = list(UNIVERSE)
-    else:
-        available_stocks = list(UNIVERSE[:stocks_limit])
+    available_stocks = _available_stocks_for_tier(tier_config)
 
     # Build categories filtered to available stocks
     available_set = set(available_stocks)
@@ -3299,12 +3346,7 @@ async def get_available_models(user: UserInDB = Depends(require_verified_user)):
 async def get_analysis_universe(user: UserInDB = Depends(require_verified_user)):
     """Get available stocks organized by category for the analysis page."""
     tier_config = TIER_CONFIG[user.tier]
-    stocks_limit = tier_config["stocks_limit"]
-
-    if stocks_limit == -1:
-        available_stocks = list(UNIVERSE)
-    else:
-        available_stocks = list(UNIVERSE[:stocks_limit])
+    available_stocks = _available_stocks_for_tier(tier_config)
 
     available_set = set(available_stocks)
 
@@ -3396,13 +3438,9 @@ async def run_analysis(
         )
 
     # Validate tickers are accessible
-    stocks_limit = tier_config["stocks_limit"]
-    if stocks_limit == -1:
-        available_stocks = UNIVERSE
-    else:
-        available_stocks = UNIVERSE[:stocks_limit]
+    available_stocks = _available_stocks_for_tier(tier_config)
 
-    available_upper = [s.upper() for s in available_stocks]
+    available_upper = {s.upper() for s in available_stocks}
     invalid_tickers = [t for t in data.tickers if t.upper() not in available_upper]
     if invalid_tickers:
         raise HTTPException(

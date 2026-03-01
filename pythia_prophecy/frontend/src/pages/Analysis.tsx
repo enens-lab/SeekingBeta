@@ -404,6 +404,9 @@ function Analysis() {
   const formatNum = (value: number | null | undefined, digits = 2) =>
     value == null || Number.isNaN(value) ? '--' : value.toFixed(digits);
 
+  const formatMultiple = (value: number | null | undefined, digits = 2) =>
+    value == null || Number.isNaN(value) ? '--' : `${value.toFixed(digits)}x`;
+
   const formatRegimeName = (value: string) => {
     const normalized = value.trim().toLowerCase();
     if (normalized === 'all_trades') return 'All Trades';
@@ -468,13 +471,34 @@ function Analysis() {
                       <strong>{formatPct(trackRecord.summary.total_return_net)}</strong>
                     </div>
                     <div className="track-record-metric">
-                      <span className="label">Avg Trade Return (Net)</span>
+                      <span className="label">Avg Trade Return (Net / trade)</span>
                       <strong>{formatPct(trackRecord.summary.avg_trade_return_net)}</strong>
                     </div>
                     <div className="track-record-metric">
-                      <span className="label">Transaction Cost</span>
-                      <strong>{trackRecord.summary.transaction_cost_bps} bps (round-trip)</strong>
+                      <span className="label">Avg Win (Net)</span>
+                      <strong>{formatPct(trackRecord.summary.avg_win_return_net)}</strong>
                     </div>
+                    <div className="track-record-metric">
+                      <span className="label">Avg Loss (Net)</span>
+                      <strong>{formatPct(trackRecord.summary.avg_loss_return_net)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Profit Factor</span>
+                      <strong>{formatMultiple(trackRecord.summary.profit_factor)}</strong>
+                    </div>
+                    <div className="track-record-metric">
+                      <span className="label">Transaction Cost</span>
+                      <strong>
+                        {trackRecord.summary.transaction_cost_bps} bps/side (
+                        {trackRecord.summary.transaction_cost_bps * 2} bps round-trip)
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="track-record-context">
+                    Avg Trade Return is measured per closed trade after costs. Compounding across{' '}
+                    {trackRecord.summary.sample_size} trades leads to{' '}
+                    {formatPct(trackRecord.summary.total_return_net)} net portfolio return.
                   </div>
 
                   <div className="track-record-regimes">

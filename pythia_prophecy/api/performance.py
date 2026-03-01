@@ -518,9 +518,17 @@ def _compute_summary(path: Path, transaction_cost_bps: float, model: str) -> dic
         (benchmark_end_value / start_value - 1.0) if benchmark_end_value is not None and start_value > 0 else None
     )
 
-    wins = sum(1 for r in net_returns if r > 0)
-    losses = len(net_returns) - wins
+    win_returns = [r for r in net_returns if r > 0]
+    loss_returns = [r for r in net_returns if r <= 0]
+    wins = len(win_returns)
+    losses = len(loss_returns)
     hit_rate = wins / len(net_returns) if net_returns else None
+    profit_factor = None
+    if win_returns and loss_returns:
+        gross_wins = sum(win_returns)
+        gross_losses = abs(sum(loss_returns))
+        if gross_losses > 0:
+            profit_factor = gross_wins / gross_losses
 
     sharpe_ratio: float | None = None
     if len(daily_returns) >= 2:
@@ -562,6 +570,9 @@ def _compute_summary(path: Path, transaction_cost_bps: float, model: str) -> dic
         "total_return_net": net_curve[-1] - 1.0 if net_curve else None,
         "benchmark_return": benchmark_total_return,
         "avg_trade_return_net": (sum(net_returns) / len(net_returns)) if net_returns else None,
+        "avg_win_return_net": (sum(win_returns) / len(win_returns)) if win_returns else None,
+        "avg_loss_return_net": (sum(loss_returns) / len(loss_returns)) if loss_returns else None,
+        "profit_factor": profit_factor,
         "avg_holding_days": (sum(holding_days) / len(holding_days)) if holding_days else None,
         "regime_breakdown": regime_breakdown,
         "notes": notes,
@@ -587,6 +598,18 @@ def _compute_summary(path: Path, transaction_cost_bps: float, model: str) -> dic
         if summary.get("total_return_net") is not None:
             summary["total_return_gross"] = summary["total_return_net"]
 
+        avg_win = _to_decimal_return(_get_float(metrics.get("avg_win_pct")))
+        if avg_win is not None:
+            summary["avg_win_return_net"] = avg_win
+
+        avg_loss = _to_decimal_return(_get_float(metrics.get("avg_loss_pct")))
+        if avg_loss is not None:
+            summary["avg_loss_return_net"] = avg_loss
+
+        sidecar_profit_factor = _get_float(metrics.get("profit_factor"))
+        if sidecar_profit_factor is not None:
+            summary["profit_factor"] = sidecar_profit_factor
+
         notes.append("Metrics sidecar loaded for summary fields.")
 
         target_final_value = _get_float(metrics.get("final_value"))
@@ -604,6 +627,10 @@ def _compute_summary(path: Path, transaction_cost_bps: float, model: str) -> dic
                 start_value + ((value - start_value) * factor)
                 for value in model_curve_values
             ]
+
+    notes.append(
+        "Avg Trade Return (Net) is per closed trade after transaction costs; total return reflects compounded results over all trades."
+    )
 
     curve_points: list[dict[str, Any]] = []
     for dt, model_value, benchmark_value in zip(trade_dates, model_curve_values, benchmark_curve_values):

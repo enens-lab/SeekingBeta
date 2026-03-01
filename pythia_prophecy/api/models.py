@@ -328,6 +328,9 @@ class TrackRecordSummary(BaseModel):
     total_return_net: Optional[float] = None
     benchmark_return: Optional[float] = None
     avg_trade_return_net: Optional[float] = None
+    avg_win_return_net: Optional[float] = None
+    avg_loss_return_net: Optional[float] = None
+    profit_factor: Optional[float] = None
     avg_holding_days: Optional[float] = None
     regime_breakdown: Dict[str, RegimeBreakdown] = {}
     notes: List[str] = []

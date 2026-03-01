@@ -1887,7 +1887,8 @@ def _require_billing_enabled() -> None:
 
 
 def _checkout_redirect_url(result: str) -> str:
-    base = FRONTEND_URL.rstrip("/") if FRONTEND_URL else "https://seekingbeta.ai"
+    frontend_url = os.getenv("FRONTEND_URL", "").strip()
+    base = frontend_url.rstrip("/") if frontend_url else "https://seekingbeta.ai"
     return f"{base}/pricing?checkout={result}"
 
 

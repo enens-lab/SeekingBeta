@@ -16,6 +16,19 @@ fail() {
   exit 2
 }
 
+path_exists_file() {
+  local path="$1"
+  if [[ -f "$path" ]]; then
+    return 0
+  fi
+  if command -v sudo >/dev/null 2>&1; then
+    if sudo test -f "$path" 2>/dev/null; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 if [[ ! -f "$COMPOSE_FILE_PATH" ]]; then
   fail "compose file not found at $COMPOSE_FILE_PATH"
 fi
@@ -54,11 +67,11 @@ if grep -q "listen 443 ssl;" "$FRONTEND_NGINX_PATH"; then
   fi
 
   if [[ "$CHECK_LOCAL_CERT_FILES" == "true" ]]; then
-    if [[ ! -f "$TLS_CERT_DIR/fullchain.pem" ]]; then
+    if ! path_exists_file "$TLS_CERT_DIR/fullchain.pem"; then
       fail "missing cert file: $TLS_CERT_DIR/fullchain.pem"
     fi
 
-    if [[ ! -f "$TLS_CERT_DIR/privkey.pem" ]]; then
+    if ! path_exists_file "$TLS_CERT_DIR/privkey.pem"; then
       fail "missing cert file: $TLS_CERT_DIR/privkey.pem"
     fi
   fi

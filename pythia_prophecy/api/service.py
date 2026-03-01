@@ -1891,10 +1891,65 @@ def _checkout_redirect_url(result: str) -> str:
     return f"{base}/pricing?checkout={result}"
 
 
+def _is_stripe_resource_missing_error(exc: Exception) -> bool:
+    """True when Stripe reports missing customer/subscription under current API key."""
+    code = str(getattr(exc, "code", "") or "").lower()
+    if code == "resource_missing":
+        return True
+
+    message = str(exc).lower()
+    return (
+        "resource_missing" in message
+        or "no such customer" in message
+        or "no such subscription" in message
+    )
+
+
+def _reset_stripe_linked_state_for_mode_switch(user: UserInDB, source: str) -> Optional[dict]:
+    """Clear Stripe-linked ids so checkout can re-provision customer/subscription cleanly."""
+    if not billing_store_enabled():
+        return None
+    return upsert_customer_state(
+        user.id,
+        user.email,
+        updates={
+            "stripe_customer_id": None,
+            "stripe_subscription_id": None,
+            "price_id": None,
+            "current_period_end": None,
+            "cancel_at_period_end": False,
+            "subscription_status": "none",
+            "plan_tier": SubscriptionTier.FREE.value,
+        },
+        source=source,
+    )
+
+
 def _ensure_stripe_customer(user: UserInDB, state: Optional[dict]) -> str:
     customer_id = state.get("stripe_customer_id") if state else None
     if customer_id:
-        return str(customer_id)
+        customer_id = str(customer_id)
+        try:
+            stripe.Customer.retrieve(customer_id)
+            return customer_id
+        except Exception as e:
+            if _is_stripe_resource_missing_error(e):
+                logger.warning(
+                    "Stored Stripe customer %s is invalid under current key for user=%s; resetting and recreating",
+                    customer_id,
+                    user.email,
+                )
+                _reset_stripe_linked_state_for_mode_switch(
+                    user, source="stripe_customer_missing_reset"
+                )
+            else:
+                logger.warning(
+                    "Stripe customer validation failed for %s (user=%s): %s",
+                    customer_id,
+                    user.email,
+                    e,
+                )
+                return customer_id
 
     customer = stripe.Customer.create(
         email=user.email,
@@ -2004,7 +2059,42 @@ async def create_billing_portal_session(user: UserInDB = Depends(require_verifie
 def _resolve_subscription_id_for_customer(customer_id: str, state: Optional[dict]) -> Optional[str]:
     subscription_id = str((state or {}).get("stripe_subscription_id") or "").strip()
     if subscription_id:
-        return subscription_id
+        try:
+            sub = stripe.Subscription.retrieve(subscription_id)
+            payload = (
+                sub.to_dict_recursive() if hasattr(sub, "to_dict_recursive") else dict(sub)
+            )
+            status = str(payload.get("status") or "").lower()
+            if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
+                return subscription_id
+        except Exception as e:
+            if _is_stripe_resource_missing_error(e):
+                logger.warning(
+                    "Stored Stripe subscription %s is invalid under current key for customer=%s; clearing cached id",
+                    subscription_id,
+                    customer_id,
+                )
+                if state:
+                    upsert_customer_state(
+                        state["user_id"],
+                        state["email"],
+                        updates={
+                            "stripe_subscription_id": None,
+                            "price_id": None,
+                            "current_period_end": None,
+                            "cancel_at_period_end": False,
+                            "subscription_status": "none",
+                            "plan_tier": SubscriptionTier.FREE.value,
+                        },
+                        source="stripe_subscription_missing_reset",
+                    )
+            else:
+                logger.warning(
+                    "Unable to validate stored Stripe subscription %s for customer=%s: %s",
+                    subscription_id,
+                    customer_id,
+                    e,
+                )
 
     try:
         subscriptions = stripe.Subscription.list(customer=customer_id, status="all", limit=25)

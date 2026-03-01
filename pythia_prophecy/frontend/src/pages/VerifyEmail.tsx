@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
+import { trackEvent } from '../lib/analytics';
 
 type VerificationStatus = 'form' | 'verifying' | 'success' | 'error';
 
@@ -30,15 +31,18 @@ function VerifyEmail() {
   const handleVerify = async (verificationCode: string) => {
     setIsLoading(true);
     setStatus('verifying');
+    trackEvent('email_verification_attempt', { source: token ? 'token_link' : 'manual_code' });
     try {
       await verifyEmail(verificationCode);
       setStatus('success');
+      trackEvent('email_verification_success');
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Verification failed');
+      trackEvent('email_verification_error');
       setIsLoading(false);
     }
   };
@@ -60,10 +64,13 @@ function VerifyEmail() {
 
     setResendLoading(true);
     setResendMessage('');
+    trackEvent('resend_verification_attempt', { source: 'verify_email' });
     try {
       const response = await resendVerification(email);
       setResendMessage(response.message);
+      trackEvent('resend_verification_success', { source: 'verify_email' });
     } catch (err) {
+      trackEvent('resend_verification_error', { source: 'verify_email' });
       setResendMessage(err instanceof Error ? err.message : 'Failed to resend verification email');
     } finally {
       setResendLoading(false);

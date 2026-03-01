@@ -1,8 +1,9 @@
-import { ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ReactNode, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './components/Toast';
+import { initAnalytics, trackPageView } from './lib/analytics';
 
 // Pages
 import Landing from './pages/Landing';
@@ -91,10 +92,23 @@ function AppRoutes() {
   );
 }
 
+function AnalyticsRouteTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    initAnalytics();
+    const pagePath = `${location.pathname}${location.search}${location.hash}`;
+    trackPageView(pagePath);
+  }, [location.pathname, location.search, location.hash]);
+
+  return null;
+}
+
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
+        <AnalyticsRouteTracker />
         <AuthProvider>
           <ToastProvider>
             <AppRoutes />

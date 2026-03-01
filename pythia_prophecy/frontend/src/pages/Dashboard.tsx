@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast';
 import PredictionCard from '../components/PredictionCard';
 import CompanyDetail from '../components/CompanyDetail';
 import DashboardHeader from '../components/DashboardHeader';
+import { trackEvent } from '../lib/analytics';
 
 type ViewMode = 'oracle' | 'universe';
 
@@ -98,8 +99,11 @@ function Dashboard() {
       if (updated.watchlist.length === 0) {
         setViewMode('universe');
       }
+      trackEvent('watchlist_ticker_remove', { ticker, source: 'dashboard' });
+      trackEvent('ticker_interaction', { ticker, action: 'watchlist_remove', surface: 'dashboard' });
       toast.success(`Removed ${ticker} from watchlist`);
     } catch (err) {
+      trackEvent('watchlist_ticker_remove_error', { ticker, source: 'dashboard' });
       toast.error(err instanceof Error ? err.message : 'Failed to remove ticker');
     } finally {
       setWatchlistSaving(false);
@@ -115,8 +119,10 @@ function Dashboard() {
       setOracleData(updated);
       setPredictionData([]);
       setViewMode('universe');
+      trackEvent('watchlist_clear', { source: 'dashboard' });
       toast.success('Watchlist cleared');
     } catch (err) {
+      trackEvent('watchlist_clear_error', { source: 'dashboard' });
       toast.error(err instanceof Error ? err.message : 'Failed to clear watchlist');
     } finally {
       setWatchlistSaving(false);
@@ -153,6 +159,11 @@ function Dashboard() {
         });
         setPredictionData(successful);
         if (failedTickers.length > 0) {
+          trackEvent('dashboard_prediction_partial', {
+            failed_count: failedTickers.length,
+            success_count: successful.length,
+            timeframe: selectedTimeframe,
+          });
           if (successful.length === 0) {
             setPageFetchError(
               `No model outputs available for ${failedTickers.slice(0, 3).join(', ')}${failedTickers.length > 3 ? '...' : ''}.`
@@ -162,6 +173,13 @@ function Dashboard() {
               `Partial results: ${failedTickers.slice(0, 3).join(', ')}${failedTickers.length > 3 ? '...' : ''} unavailable.`
             );
           }
+        }
+        if (successful.length > 0) {
+          trackEvent('dashboard_predictions_loaded', {
+            count: successful.length,
+            timeframe: selectedTimeframe,
+            view_mode: viewMode,
+          });
         }
       })
       .finally(() => setLoading(false));
@@ -213,13 +231,19 @@ function Dashboard() {
               <div className="view-toggle">
                 <button
                   className={`toggle-btn ${viewMode === 'oracle' ? 'active' : ''}`}
-                  onClick={() => setViewMode('oracle')}
+                  onClick={() => {
+                    trackEvent('dashboard_view_mode_change', { mode: 'oracle' });
+                    setViewMode('oracle');
+                  }}
                 >
                   My Watchlist ({oracleData.watchlist.length})
                 </button>
                 <button
                   className={`toggle-btn ${viewMode === 'universe' ? 'active' : ''}`}
-                  onClick={() => setViewMode('universe')}
+                  onClick={() => {
+                    trackEvent('dashboard_view_mode_change', { mode: 'universe' });
+                    setViewMode('universe');
+                  }}
                 >
                   All Stocks ({oracleData.available_stocks.length})
                 </button>
@@ -264,7 +288,13 @@ function Dashboard() {
                 type="text"
                 placeholder="Search stocks..."
                 value={searchQuery}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  if (value.length === 2 || value.length === 4 || value.length === 6) {
+                    trackEvent('dashboard_search_update', { query_length: value.length });
+                  }
+                }}
                 className="dashboard-search-input"
               />
               {searchQuery && (
@@ -280,7 +310,10 @@ function Dashboard() {
               <label>Timeframe:</label>
               <select
                 value={selectedTimeframe}
-                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTimeframe(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                  trackEvent('dashboard_timeframe_change', { timeframe: e.target.value });
+                  setSelectedTimeframe(e.target.value);
+                }}
               >
                 {oracleData?.available_timeframes?.map((tf) => (
                   <option key={tf} value={tf}>{tf}</option>

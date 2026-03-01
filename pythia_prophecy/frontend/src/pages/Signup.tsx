@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
+import { trackEvent } from '../lib/analytics';
 
 const POLICY_VERSION = '2026-02-27';
 
@@ -88,6 +89,7 @@ function Signup() {
     }
 
     setLoading(true);
+    trackEvent('signup_attempt', { marketing_opt_in: formData.marketingOptIn });
 
     try {
       await signup({
@@ -102,7 +104,9 @@ function Signup() {
         marketing_opt_in: formData.marketingOptIn,
       });
       setSuccess(true);
+      trackEvent('sign_up', { method: 'password' });
     } catch (err) {
+      trackEvent('signup_error');
       setFormError(err instanceof Error ? err.message : 'Signup failed');
     } finally {
       setLoading(false);
@@ -113,10 +117,13 @@ function Signup() {
     const handleResendVerification = async () => {
       setResendLoading(true);
       setResendMessage('');
+      trackEvent('resend_verification_attempt', { source: 'signup_success' });
       try {
         const response = await resendVerification(formData.email);
         setResendMessage(response.message);
+        trackEvent('resend_verification_success', { source: 'signup_success' });
       } catch (err) {
+        trackEvent('resend_verification_error', { source: 'signup_success' });
         setResendMessage(err instanceof Error ? err.message : 'Failed to resend verification email');
       } finally {
         setResendLoading(false);

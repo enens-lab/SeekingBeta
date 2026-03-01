@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { tiers as tiersApi, billing as billingApi, BillingStatus } from '../api/client';
 import { useToast } from '../components/Toast';
 import ThemeToggle from '../components/ThemeToggle';
+import { trackEvent } from '../lib/analytics';
 
 interface TierData {
   tier: string;
@@ -29,9 +30,14 @@ function Pricing() {
   useEffect(() => {
     tiersApi
       .getAll()
-      .then((data) => setTiers(data as unknown as TierData[]))
+      .then((data) => {
+        const typedData = data as unknown as TierData[];
+        setTiers(typedData);
+        trackEvent('pricing_plans_loaded', { plan_count: typedData.length });
+      })
       .catch((err) => {
         console.error(err);
+        trackEvent('pricing_plans_load_error');
         toast.error('Failed to load pricing plans');
       })
       .finally(() => setLoading(false));
@@ -58,11 +64,14 @@ function Pricing() {
     }
 
     if (checkout === 'success') {
+      trackEvent('checkout_return', { status: 'success' });
       toast.success('Checkout complete. Subscription is syncing now.');
       billingApi.getStatus().then(setBillingStatus).catch(console.error);
     } else if (checkout === 'cancelled') {
+      trackEvent('checkout_return', { status: 'cancelled' });
       toast.error('Checkout canceled. No changes were made.');
     } else if (checkout === 'portal_return') {
+      trackEvent('checkout_return', { status: 'portal_return' });
       billingApi.getStatus().then(setBillingStatus).catch(console.error);
     }
 
@@ -73,6 +82,13 @@ function Pricing() {
   const currentTier = billingStatus?.effective_tier || user?.tier || 'free';
 
   const handleSelectTier = async (tier: string) => {
+    trackEvent('pricing_plan_selected', {
+      tier,
+      is_authenticated: isAuthenticated,
+      is_verified: isVerified,
+      current_tier: currentTier,
+    });
+
     if (tier === 'free') {
       if (isAuthenticated) {
         navigate('/dashboard');
@@ -94,15 +110,24 @@ function Pricing() {
 
     if (tier !== 'basic' && tier !== 'pro') {
       toast.error('Unsupported paid tier selected.');
+      trackEvent('pricing_plan_invalid', { tier });
       return;
     }
 
     setCheckoutTier(tier);
     try {
+      const priceValue = tier === 'pro' ? 19.99 : 9.99;
+      trackEvent('begin_checkout', {
+        currency: 'USD',
+        value: priceValue,
+        plan_tier: tier,
+      });
       const result = await billingApi.createCheckoutSession(tier);
+      trackEvent('checkout_redirect', { plan_tier: tier });
       window.location.assign(result.checkout_url);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start checkout';
+      trackEvent('checkout_error', { plan_tier: tier, reason: message.slice(0, 80) });
       toast.error(message);
     } finally {
       setCheckoutTier(null);
@@ -110,6 +135,7 @@ function Pricing() {
   };
 
   const handleManageBilling = async () => {
+    trackEvent('billing_portal_open_click', { source: 'pricing' });
     setPortalLoading(true);
     try {
       const result = await billingApi.createPortalSession();
@@ -137,19 +163,61 @@ function Pricing() {
             <span className="logo-text">SeekingBeta</span>
           </Link>
           <nav className="nav">
-            <Link to="/#predictions" className="nav-link">Model Views</Link>
-            <Link to="/#performance" className="nav-link">Track Record</Link>
-            <Link to="/#features" className="nav-link">How It Works</Link>
-            <Link to="/pricing" className="nav-link">Pricing</Link>
+            <Link
+              to="/#predictions"
+              className="nav-link"
+              onClick={() => trackEvent('pricing_nav_click', { destination: 'predictions' })}
+            >
+              Model Views
+            </Link>
+            <Link
+              to="/#performance"
+              className="nav-link"
+              onClick={() => trackEvent('pricing_nav_click', { destination: 'performance' })}
+            >
+              Track Record
+            </Link>
+            <Link
+              to="/#features"
+              className="nav-link"
+              onClick={() => trackEvent('pricing_nav_click', { destination: 'features' })}
+            >
+              How It Works
+            </Link>
+            <Link
+              to="/pricing"
+              className="nav-link"
+              onClick={() => trackEvent('pricing_nav_click', { destination: 'pricing' })}
+            >
+              Pricing
+            </Link>
           </nav>
           <div className="header-actions">
             <ThemeToggle />
             {isAuthenticated ? (
-              <Link to="/dashboard" className="btn btn-primary">Dashboard</Link>
+              <Link
+                to="/dashboard"
+                className="btn btn-primary"
+                onClick={() => trackEvent('pricing_dashboard_click')}
+              >
+                Dashboard
+              </Link>
             ) : (
               <>
-                <Link to="/login" className="btn btn-ghost">Log In</Link>
-                <Link to="/signup" className="btn btn-primary">Get Started</Link>
+                <Link
+                  to="/login"
+                  className="btn btn-ghost"
+                  onClick={() => trackEvent('pricing_login_click')}
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="btn btn-primary"
+                  onClick={() => trackEvent('pricing_signup_click')}
+                >
+                  Get Started
+                </Link>
               </>
             )}
           </div>
@@ -295,7 +363,11 @@ function Pricing() {
         <section className="pricing-cta">
           <h2>Ready for model-driven market context?</h2>
           <p>Use SeekingBeta as a transparent decision-support layer in your research workflow.</p>
-          <Link to="/signup" className="btn btn-primary btn-lg">
+          <Link
+            to="/signup"
+            className="btn btn-primary btn-lg"
+            onClick={() => trackEvent('pricing_cta_click', { cta: 'start_free' })}
+          >
             Start Free
           </Link>
         </section>
@@ -312,9 +384,18 @@ function Pricing() {
             Past performance does not guarantee future results.
           </p>
           <nav className="footer-links">
-            <Link to="/terms">Terms</Link>
-            <Link to="/privacy">Privacy</Link>
-            <Link to="/refund-cancellation">Refund &amp; Cancellation</Link>
+            <Link to="/terms" onClick={() => trackEvent('footer_link_click', { destination: 'terms' })}>
+              Terms
+            </Link>
+            <Link to="/privacy" onClick={() => trackEvent('footer_link_click', { destination: 'privacy' })}>
+              Privacy
+            </Link>
+            <Link
+              to="/refund-cancellation"
+              onClick={() => trackEvent('footer_link_click', { destination: 'refund_cancellation' })}
+            >
+              Refund &amp; Cancellation
+            </Link>
           </nav>
           <p className="footer-copyright">
             &copy; {new Date().getFullYear()} SeekingBeta. All rights reserved.

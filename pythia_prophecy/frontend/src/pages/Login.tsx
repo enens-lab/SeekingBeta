@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import ThemeToggle from '../components/ThemeToggle';
+import { trackEvent } from '../lib/analytics';
 
 interface LocationState {
   from?: {
@@ -60,13 +61,16 @@ function Login() {
     e.preventDefault();
     setFormError('');
     setLoading(true);
+    trackEvent('login_attempt', { from_path: from });
 
     try {
       await login(formData.email, formData.password);
+      trackEvent('login_success', { redirect_to: from });
       navigate(from, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setFormError(message);
+      trackEvent('login_error', { reason: message.slice(0, 80) });
       // Show resend option if email not verified
       if (message.toLowerCase().includes('not verified')) {
         setShowResend(true);
@@ -77,10 +81,13 @@ function Login() {
   };
 
   const handleResend = async () => {
+    trackEvent('resend_verification_attempt', { source: 'login' });
     try {
       await resendVerification(formData.email);
       setResendSuccess(true);
+      trackEvent('resend_verification_success', { source: 'login' });
     } catch (err) {
+      trackEvent('resend_verification_error', { source: 'login' });
       setFormError(err instanceof Error ? err.message : 'Failed to resend verification');
     }
   };

@@ -2,6 +2,7 @@ import { MouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import { trackEvent } from '../lib/analytics';
 
 function Header() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ function Header() {
 
   const scrollToSection = (e: MouseEvent<HTMLAnchorElement>, sectionId: string) => {
     e.preventDefault();
+    trackEvent('landing_nav_click', { destination: sectionId });
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -50,7 +52,11 @@ function Header() {
           >
             How It Works
           </a>
-          <Link to="/pricing" className="nav-link">
+          <Link
+            to="/pricing"
+            className="nav-link"
+            onClick={() => trackEvent('landing_nav_click', { destination: 'pricing' })}
+          >
             Pricing
           </Link>
         </nav>
@@ -59,19 +65,37 @@ function Header() {
           <ThemeToggle />
           {isAuthenticated ? (
             <>
-              <Link to="/dashboard" className="btn btn-ghost">
+              <Link
+                to="/dashboard"
+                className="btn btn-ghost"
+                onClick={() => trackEvent('header_dashboard_click')}
+              >
                 Dashboard
               </Link>
-              <button className="btn btn-ghost" onClick={handleLogout}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  trackEvent('header_logout_click');
+                  handleLogout();
+                }}
+              >
                 Log Out
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn btn-ghost">
+              <Link
+                to="/login"
+                className="btn btn-ghost"
+                onClick={() => trackEvent('header_login_click')}
+              >
                 Log In
               </Link>
-              <Link to="/signup" className="btn btn-primary">
+              <Link
+                to="/signup"
+                className="btn btn-primary"
+                onClick={() => trackEvent('header_signup_click')}
+              >
                 Get Started
               </Link>
             </>

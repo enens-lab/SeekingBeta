@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, setToken, getToken, setOnAuthError, User, SignupData } from '../api/client';
+import { clearAnalyticsUser, setAnalyticsUser, trackEvent } from '../lib/analytics';
 
 interface AuthContextValue {
   user: User | null;
@@ -60,16 +61,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      setAnalyticsUser(user.id, {
+        tier: user.tier,
+        email_verified: user.email_verified,
+      });
+      return;
+    }
+    clearAnalyticsUser();
+  }, [user]);
+
   const login = useCallback(async (email: string, password: string): Promise<User> => {
     setError(null);
     try {
       const response = await auth.login({ email, password });
       setToken(response.access_token);
       setUser(response.user);
+      trackEvent('login', { method: 'password' });
       return response.user;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);
+      trackEvent('login_failed');
       throw err;
     }
   }, []);
@@ -92,10 +106,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await auth.verifyEmail(token);
       setToken(response.access_token);
       setUser(response.user);
+      trackEvent('email_verified');
       return response.user;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Email verification failed';
       setError(message);
+      trackEvent('email_verification_failed');
       throw err;
     }
   }, []);
@@ -113,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const logout = useCallback(() => {
+    trackEvent('logout');
     setToken(null);
     setUser(null);
   }, []);

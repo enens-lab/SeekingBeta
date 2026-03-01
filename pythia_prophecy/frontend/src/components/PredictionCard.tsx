@@ -1,5 +1,6 @@
 import { KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from 'react';
 import { Prediction, PredictionAttribution, predictions } from '../api/client';
+import { trackEvent } from '../lib/analytics';
 
 interface PredictionCardProps {
   prediction: Prediction;
@@ -145,6 +146,16 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
   );
 
   const handleFlip = () => {
+    trackEvent('prediction_card_flip', {
+      ticker,
+      model: resolvedModelName ?? 'unknown',
+      side: isFlipped ? 'front' : 'back',
+    });
+    trackEvent('ticker_interaction', {
+      ticker,
+      action: 'card_flip',
+      surface: onClick ? 'dashboard' : 'landing',
+    });
     setIsFlipped((prev) => {
       const next = !prev;
       if (next && !attribution && !attributionLoading && resolvedModelName && ticker) {
@@ -185,6 +196,12 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
 
   const handleOpenCompany = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
+    trackEvent('company_profile_open', { ticker, source: 'prediction_card' });
+    trackEvent('ticker_interaction', {
+      ticker,
+      action: 'company_profile_open',
+      surface: onClick ? 'dashboard' : 'landing',
+    });
     if (onClick) {
       onClick(ticker);
     }

@@ -18,6 +18,10 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY . .
 
+# Build-time analytics configuration (Vite reads VITE_* at build time)
+ARG VITE_GA4_MEASUREMENT_ID=""
+ENV VITE_GA4_MEASUREMENT_ID=${VITE_GA4_MEASUREMENT_ID}
+
 # Build the app
 RUN pnpm build
 

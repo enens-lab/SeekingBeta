@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
+import { trackEvent } from '../lib/analytics';
 
 type ActivePage = 'dashboard' | 'oracle' | 'analysis' | 'profile';
 
@@ -14,6 +15,7 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
+    trackEvent('dashboard_logout_click');
     logout();
     navigate('/');
   };
@@ -30,24 +32,28 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
           <Link
             to="/dashboard"
             className={`nav-link${activePage === 'dashboard' ? ' active' : ''}`}
+            onClick={() => trackEvent('dashboard_nav_click', { destination: 'dashboard' })}
           >
             Dashboard
           </Link>
           <Link
             to="/oracle"
             className={`nav-link${activePage === 'oracle' ? ' active' : ''}`}
+            onClick={() => trackEvent('dashboard_nav_click', { destination: 'oracle' })}
           >
             Watchlist
           </Link>
           <Link
             to="/analysis"
             className={`nav-link${activePage === 'analysis' ? ' active' : ''}`}
+            onClick={() => trackEvent('dashboard_nav_click', { destination: 'analysis' })}
           >
             Analysis
           </Link>
           <Link
             to="/profile"
             className={`nav-link${activePage === 'profile' ? ' active' : ''}`}
+            onClick={() => trackEvent('dashboard_nav_click', { destination: 'profile' })}
           >
             Profile
           </Link>
@@ -68,7 +74,13 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
       <div className="header-actions">
         <ThemeToggle />
         {showNav && user?.tier !== 'pro' && (
-          <Link to="/pricing" className="btn btn-ghost">Upgrade</Link>
+          <Link
+            to="/pricing"
+            className="btn btn-ghost"
+            onClick={() => trackEvent('dashboard_upgrade_click')}
+          >
+            Upgrade
+          </Link>
         )}
         <button className="btn btn-ghost" onClick={handleLogout}>Log Out</button>
       </div>

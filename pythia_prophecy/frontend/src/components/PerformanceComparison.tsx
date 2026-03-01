@@ -1,5 +1,6 @@
 import { MouseEvent, useEffect, useMemo, useState } from 'react';
 import { performance, TrackRecordCurveResponse, TrackRecordResponse } from '../api/client';
+import { trackEvent } from '../lib/analytics';
 
 type TrackModel = 'lstm_5d' | 'lstm_jackpot';
 
@@ -88,6 +89,13 @@ function PerformanceComparison() {
   const [error, setError] = useState<string | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+  const handleModelSelect = (model: TrackModel) => {
+    if (model !== selectedModel) {
+      trackEvent('track_record_model_switch', { model });
+    }
+    setSelectedModel(model);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -307,7 +315,7 @@ function PerformanceComparison() {
               role="tab"
               aria-selected={selectedModel === option.value}
               className={`performance-model-tab${selectedModel === option.value ? ' active' : ''}`}
-              onClick={() => setSelectedModel(option.value)}
+              onClick={() => handleModelSelect(option.value)}
             >
               {option.label}
             </button>

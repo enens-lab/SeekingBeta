@@ -42,3 +42,4 @@ pythia_prophecy/frontend/Stock_Prediction_Model/
 *.pth
 Pythia.pem
 SES_SNS_WEBHOOK_RUNBOOK.md
+jackpot_trade_log.csv

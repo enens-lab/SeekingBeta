@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import StockTooltip from '../components/StockTooltip';
 import DashboardHeader from '../components/DashboardHeader';
 import { oracle, OracleData } from '../api/client';
+import { trackEvent } from '../lib/analytics';
 
 function MyOracle() {
   const { user, isVerified } = useAuth();
@@ -33,8 +34,11 @@ function MyOracle() {
     try {
       const updated = await oracle.addToWatchlist(ticker);
       setOracleData(updated);
+      trackEvent('watchlist_ticker_add', { ticker });
+      trackEvent('ticker_interaction', { ticker, action: 'watchlist_add', surface: 'oracle' });
       toast.success(`Added ${ticker.toUpperCase()} to your watchlist`);
     } catch (err) {
+      trackEvent('watchlist_ticker_add_error', { ticker });
       toast.error(err instanceof Error ? err.message : 'Failed to add stock');
     } finally {
       setSaving(false);
@@ -47,8 +51,11 @@ function MyOracle() {
     try {
       const updated = await oracle.removeFromWatchlist(ticker);
       setOracleData(updated);
+      trackEvent('watchlist_ticker_remove', { ticker });
+      trackEvent('ticker_interaction', { ticker, action: 'watchlist_remove', surface: 'oracle' });
       toast.success(`Removed ${ticker.toUpperCase()} from your watchlist`);
     } catch (err) {
+      trackEvent('watchlist_ticker_remove_error', { ticker });
       toast.error(err instanceof Error ? err.message : 'Failed to remove stock');
     } finally {
       setSaving(false);
@@ -72,6 +79,7 @@ function MyOracle() {
     }
 
     setSaving(true);
+    trackEvent('watchlist_timeframe_toggle', { timeframe, selected: !currentTimeframes.includes(timeframe) });
 
     try {
       const updated = await oracle.updateTimeframes(newTimeframes);
@@ -269,7 +277,10 @@ function MyOracle() {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => navigate('/analysis')}
+                onClick={() => {
+                  trackEvent('oracle_view_predictions_click');
+                  navigate('/analysis');
+                }}
               >
                 View Predictions
               </button>

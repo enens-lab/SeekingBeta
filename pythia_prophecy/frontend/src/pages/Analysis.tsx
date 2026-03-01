@@ -11,6 +11,7 @@ import {
 } from '../api/client';
 import DashboardHeader from '../components/DashboardHeader';
 import type { Chart as ChartJS } from 'chart.js';
+import { trackEvent } from '../lib/analytics';
 
 interface ModelOption {
   value: string;
@@ -251,6 +252,7 @@ function Analysis() {
 
   const toggleStock = (ticker: string) => {
     if (selectedStocks.includes(ticker)) {
+      trackEvent('ticker_interaction', { ticker, action: 'analysis_deselect', surface: 'analysis' });
       setSelectedStocks((prev) => prev.filter((s) => s !== ticker));
     } else {
       const maxStocks = userFeatures?.limits?.max_stocks_per_request || 5;
@@ -258,11 +260,13 @@ function Analysis() {
         alert(`Maximum ${maxStocks} stocks for your tier`);
         return;
       }
+      trackEvent('ticker_interaction', { ticker, action: 'analysis_select', surface: 'analysis' });
       setSelectedStocks((prev) => [...prev, ticker]);
     }
   };
 
   const removeStock = (ticker: string) => {
+    trackEvent('ticker_interaction', { ticker, action: 'analysis_remove', surface: 'analysis' });
     setSelectedStocks((prev) => prev.filter((s) => s !== ticker));
   };
 
@@ -275,6 +279,14 @@ function Analysis() {
 
     setAnalyzing(true);
     setError(null);
+    trackEvent('analysis_run_attempt', {
+      model,
+      task,
+      horizon,
+      period,
+      ticker_count: selectedStocks.length,
+      tickers: selectedStocks.slice(0, 10).join(','),
+    });
 
     try {
       const data = await analysis.run({
@@ -285,6 +297,13 @@ function Analysis() {
         horizon,
       });
       setResults(data);
+      trackEvent('analysis_run_success', {
+        model,
+        horizon,
+        requested: data.metadata?.requested || selectedStocks.length,
+        successful: data.metadata?.successful || 0,
+        failed: data.metadata?.failed || 0,
+      });
       if ((data.metadata?.failed || 0) > 0) {
         const failedExamples = data.results
           .filter((row) => row.error)
@@ -298,6 +317,7 @@ function Analysis() {
       const features = await analysis.getUserFeatures();
       setUserFeatures(features);
     } catch (err) {
+      trackEvent('analysis_run_error', { model, horizon });
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setAnalyzing(false);
@@ -306,6 +326,11 @@ function Analysis() {
 
   const exportCSV = () => {
     if (!results) return;
+    trackEvent('analysis_export_csv', {
+      model,
+      horizon,
+      rows: results.results.length,
+    });
 
     const headers = ['Ticker', 'Last Close', 'Prob. Up', 'Signal', 'Pred. Return', 'Top Drivers (High-Level)'];
     const rows = results.results.map((r) => [
@@ -552,7 +577,14 @@ function Analysis() {
                             type="button"
                             key={m.value}
                             className={`model-option${model === m.value ? ' active' : ''}${isDisabled ? ' disabled' : ''}`}
-                            onClick={() => !isDisabled && setModel(m.value)}
+                            onClick={() => {
+                              if (isDisabled) return;
+                              trackEvent('analysis_setting_change', {
+                                setting: 'model',
+                                value: m.value,
+                              });
+                              setModel(m.value);
+                            }}
                             disabled={isDisabled}
                             title={m.label + (isDisabled ? ' (PRO)' : '')}
                           >
@@ -569,7 +601,18 @@ function Analysis() {
 
                   <div className="config-row">
                     <label htmlFor="selectTask">Task</label>
-                    <select id="selectTask" name="selectTask" value={task} onChange={(e: ChangeEvent<HTMLSelectElement>) => setTask(e.target.value)}>
+                    <select
+                      id="selectTask"
+                      name="selectTask"
+                      value={task}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                        trackEvent('analysis_setting_change', {
+                          setting: 'task',
+                          value: e.target.value,
+                        });
+                        setTask(e.target.value);
+                      }}
+                    >
                       {allTasks.map((t) => (
                         <option
                           key={t.value}
@@ -585,7 +628,18 @@ function Analysis() {
 
                   <div className="config-row">
                     <label htmlFor="selectTime">Time Period</label>
-                    <select id="selectTime" name="selectTime" value={period} onChange={(e: ChangeEvent<HTMLSelectElement>) => setPeriod(e.target.value)}>
+                    <select
+                      id="selectTime"
+                      name="selectTime"
+                      value={period}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                        trackEvent('analysis_setting_change', {
+                          setting: 'period',
+                          value: e.target.value,
+                        });
+                        setPeriod(e.target.value);
+                      }}
+                    >
                       {allPeriods.map((p) => (
                         <option key={p.value} value={p.value} disabled={p.days > maxDays}>
                           {p.label}
@@ -597,7 +651,18 @@ function Analysis() {
 
                   <div className="config-row">
                     <label htmlFor="selectHorizon">Horizon</label>
-                    <select id="selectHorizon" name="selectHorizon" value={horizon} onChange={(e: ChangeEvent<HTMLSelectElement>) => setHorizon(e.target.value)}>
+                    <select
+                      id="selectHorizon"
+                      name="selectHorizon"
+                      value={horizon}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                        trackEvent('analysis_setting_change', {
+                          setting: 'horizon',
+                          value: e.target.value,
+                        });
+                        setHorizon(e.target.value);
+                      }}
+                    >
                       {allHorizons.map((h) => (
                         <option key={h.value} value={h.value}>
                           {h.label}
@@ -626,7 +691,10 @@ function Analysis() {
                   <button
                     type="button"
                     className="results-info-btn"
-                    onClick={() => setShowSignalInfo((prev) => !prev)}
+                    onClick={() => {
+                      trackEvent('analysis_signal_info_toggle', { expanded: !showSignalInfo });
+                      setShowSignalInfo((prev) => !prev);
+                    }}
                     aria-expanded={showSignalInfo}
                   >
                     More info

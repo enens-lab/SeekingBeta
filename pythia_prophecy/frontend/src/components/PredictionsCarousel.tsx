@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import PredictionCard from './PredictionCard';
 import { Prediction } from '../api/client';
+import { trackEvent } from '../lib/analytics';
 
 const ChevronLeft = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -141,6 +142,7 @@ function PredictionsCarousel() {
   const displayedRows = showAll ? modelRows : modelRows.slice(0, 2);
 
   const goToPrev = (modelName: string) => {
+    trackEvent('carousel_slide', { model: modelName, direction: 'prev' });
     setCarouselStates((prev) => ({
       ...prev,
       [modelName]: Math.max(0, (prev[modelName] || 0) - 1),
@@ -148,6 +150,7 @@ function PredictionsCarousel() {
   };
 
   const goToNext = (modelName: string, maxSlide: number) => {
+    trackEvent('carousel_slide', { model: modelName, direction: 'next' });
     setCarouselStates((prev) => ({
       ...prev,
       [modelName]: Math.min(maxSlide - 1, (prev[modelName] || 0) + 1),
@@ -194,7 +197,10 @@ function PredictionsCarousel() {
                   <h3 className="model-row-title">{row.model.displayName}</h3>
                   <button
                     className="model-info-btn"
-                    onClick={() => setActiveInfoModal(row.model.name)}
+                    onClick={() => {
+                      trackEvent('model_info_open', { model: row.model.name });
+                      setActiveInfoModal(row.model.name);
+                    }}
                     aria-label={`Info about ${row.model.displayName}`}
                     title={`More details about ${row.model.displayName}`}
                   >
@@ -255,7 +261,10 @@ function PredictionsCarousel() {
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button
             className="btn btn-primary"
-            onClick={() => setShowAll(true)}
+            onClick={() => {
+              trackEvent('carousel_show_more_models');
+              setShowAll(true);
+            }}
           >
             View More Models ({modelRows.length - 2} more)
           </button>
@@ -266,7 +275,10 @@ function PredictionsCarousel() {
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button
             className="btn btn-outline"
-            onClick={() => setShowAll(false)}
+            onClick={() => {
+              trackEvent('carousel_show_less_models');
+              setShowAll(false);
+            }}
           >
             Show Less
           </button>

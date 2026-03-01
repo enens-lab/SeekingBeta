@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
+import { trackEvent } from '../lib/analytics';
 
 function Hero() {
   const scrollToFeatures = () => {
+    trackEvent('hero_cta_click', { cta: 'see_how_it_works' });
     const element = document.getElementById('features');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -17,7 +19,11 @@ function Hero() {
           probability context and track-record transparency, so you can cut through noise faster.
         </p>
         <div className="hero-cta">
-          <Link to="/signup" className="btn btn-primary btn-lg">
+          <Link
+            to="/signup"
+            className="btn btn-primary btn-lg"
+            onClick={() => trackEvent('hero_cta_click', { cta: 'start_free' })}
+          >
             Start Free
           </Link>
           <button className="btn btn-outline btn-lg" onClick={scrollToFeatures}>

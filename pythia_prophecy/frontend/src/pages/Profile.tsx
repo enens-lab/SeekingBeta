@@ -4,6 +4,7 @@ import DashboardHeader from '../components/DashboardHeader';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import { auth, billing, BillingStatus } from '../api/client';
+import { trackEvent } from '../lib/analytics';
 
 function Profile() {
   const navigate = useNavigate();
@@ -62,16 +63,19 @@ function Profile() {
     }
 
     setPasswordLoading(true);
+    trackEvent('profile_password_change_attempt');
     try {
       const result = await auth.changePassword({
         current_password: currentPassword,
         new_password: newPassword,
       });
+      trackEvent('profile_password_change_success');
       toast.success(result.message || 'Password updated.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
+      trackEvent('profile_password_change_error');
       const message = err instanceof Error ? err.message : 'Failed to update password';
       toast.error(message);
     } finally {
@@ -80,6 +84,7 @@ function Profile() {
   };
 
   const handleOpenBillingPortal = async () => {
+    trackEvent('billing_portal_open_click', { source: 'profile' });
     setPortalLoading(true);
     try {
       const result = await billing.createPortalSession();
@@ -97,11 +102,14 @@ function Profile() {
       return;
     }
     setCancelLoading(true);
+    trackEvent('subscription_cancel_attempt');
     try {
       const result = await billing.cancelSubscription();
+      trackEvent('subscription_cancel_success');
       toast.success(result.message || 'Subscription cancellation scheduled.');
       await loadBillingStatus();
     } catch (err) {
+      trackEvent('subscription_cancel_error');
       const message = err instanceof Error ? err.message : 'Failed to cancel subscription';
       toast.error(message);
     } finally {
@@ -111,15 +119,19 @@ function Profile() {
 
   const handleChangeSubscription = async () => {
     setChangeLoading(true);
+    trackEvent('subscription_change_attempt', { target_tier: targetTier });
     try {
       const result = await billing.changeSubscription(targetTier);
       if (result.mode === 'checkout' && result.checkout_url) {
+        trackEvent('subscription_change_checkout_redirect', { target_tier: targetTier });
         window.location.assign(result.checkout_url);
         return;
       }
+      trackEvent('subscription_change_success', { target_tier: targetTier, mode: result.mode });
       toast.success(result.message || 'Subscription updated.');
       await loadBillingStatus();
     } catch (err) {
+      trackEvent('subscription_change_error', { target_tier: targetTier });
       const message = err instanceof Error ? err.message : 'Failed to change subscription';
       toast.error(message);
     } finally {
@@ -133,15 +145,18 @@ function Profile() {
       return;
     }
     setDeleteLoading(true);
+    trackEvent('account_delete_attempt');
     try {
       const result = await auth.deleteAccount({
         password: deletePassword,
         confirm_text: deleteConfirmText,
       });
+      trackEvent('account_delete_success');
       toast.success(result.message || 'Account deleted.');
       logout();
       navigate('/', { replace: true });
     } catch (err) {
+      trackEvent('account_delete_error');
       const message = err instanceof Error ? err.message : 'Failed to delete account';
       toast.error(message);
     } finally {

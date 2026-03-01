@@ -1,4 +1,5 @@
 import { useTheme } from '../context/ThemeContext';
+import { trackEvent } from '../lib/analytics';
 
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
@@ -8,7 +9,10 @@ function ThemeToggle() {
     <button
       type="button"
       className="theme-toggle"
-      onClick={toggleTheme}
+      onClick={() => {
+        trackEvent('theme_toggle', { next_theme: isDark ? 'light' : 'dark' });
+        toggleTheme();
+      }}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
       title={isDark ? 'Light mode' : 'Dark mode'}
     >

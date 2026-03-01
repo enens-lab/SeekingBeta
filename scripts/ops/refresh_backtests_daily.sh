@@ -14,11 +14,21 @@ if [[ ! -f "$BACKTEST_SCRIPT_PATH" ]]; then
 fi
 
 BACKTEST_SCRIPT_DIR="$(cd "$(dirname "$BACKTEST_SCRIPT_PATH")" && pwd)"
-SOURCE_DIR_DEFAULT="${BACKTEST_SCRIPT_DIR}/backtest_results"
+BACKTEST_WORKDIR="${BACKTEST_WORKDIR:-$BACKTEST_SCRIPT_DIR}"
+SOURCE_DIR_DEFAULT="${BACKTEST_WORKDIR}/backtest_results"
 SOURCE_DIR="${SOURCE_DIR:-$SOURCE_DIR_DEFAULT}"
 
+if [[ ! -d "$BACKTEST_WORKDIR" ]]; then
+  echo "[refresh-backtests] ERROR: backtest workdir not found at $BACKTEST_WORKDIR" >&2
+  exit 2
+fi
+
 echo "[refresh-backtests] running $BACKTEST_SCRIPT_PATH with choice=$BACKTEST_CHOICE"
-printf '%s\n' "$BACKTEST_CHOICE" | "$PYTHON_BIN" "$BACKTEST_SCRIPT_PATH"
+echo "[refresh-backtests] workdir=$BACKTEST_WORKDIR"
+(
+  cd "$BACKTEST_WORKDIR"
+  printf '%s\n' "$BACKTEST_CHOICE" | "$PYTHON_BIN" "$BACKTEST_SCRIPT_PATH"
+)
 
 echo "[refresh-backtests] syncing artifacts from $SOURCE_DIR"
 SOURCE_DIR="$SOURCE_DIR" bash scripts/ops/sync_backtest_artifacts.sh

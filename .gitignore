@@ -31,6 +31,7 @@ logs/
 
 # Data files
 *.db
+backups/
 
 artifacts/
 pythia_prophecy/frontend/Stock_Prediction_Model/

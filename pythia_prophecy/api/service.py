@@ -425,33 +425,37 @@ except Exception as e:
     STOCK_CATEGORIES = _categorize_local(UNIVERSE)
     UNIVERSE_UPPER = {s.upper() for s in UNIVERSE}
 
-# Simple in-memory rate limiting (resets on server restart)
-# In production, this should be stored in a database or Redis
-from collections import defaultdict
-from datetime import datetime as dt
+# Simple in-memory rate limiting (resets on server restart).
+# For horizontal scaling, move these counters to Redis or Postgres.
+from collections import defaultdict, deque
 
-RATE_LIMIT_STORAGE: dict[str, dict] = defaultdict(lambda: {"date": None, "count": 0})
+# Rolling-window request counters for auth + webhooks.
+REQUEST_RATE_LIMIT_STORAGE: dict[str, deque[float]] = defaultdict(deque)
+# Daily counters for analysis request quotas by user tier.
+ANALYSIS_RATE_LIMIT_STORAGE: dict[str, dict] = defaultdict(lambda: {"date": None, "count": 0})
 
 
 def check_rate_limit(identifier: str, max_requests: int, window_seconds: int) -> tuple[bool, str]:
     """
-    Check if a request exceeds rate limit.
-    Returns (is_allowed, message)
+    Rolling-window limiter.
+    Returns (is_allowed, message).
     """
-    now = dt.utcnow()
-    entry = RATE_LIMIT_STORAGE[identifier]
+    if max_requests <= 0 or window_seconds <= 0:
+        return False, "Rate limit configuration is invalid"
 
-    # Reset counter if window has passed
-    if entry["date"] is None or (now - entry["date"]).total_seconds() > window_seconds:
-        entry["date"] = now
-        entry["count"] = 0
+    now_ts = time.time()
+    window_start = now_ts - window_seconds
+    bucket = REQUEST_RATE_LIMIT_STORAGE[identifier]
 
-    entry["count"] += 1
+    # Drop requests outside the current window.
+    while bucket and bucket[0] <= window_start:
+        bucket.popleft()
 
-    if entry["count"] > max_requests:
-        reset_time = entry["date"] + timedelta(seconds=window_seconds)
-        return False, f"Rate limit exceeded. Try again in {int((reset_time - now).total_seconds())} seconds"
+    if len(bucket) >= max_requests:
+        retry_after = max(1, int(window_seconds - (now_ts - bucket[0])))
+        return False, f"Rate limit exceeded. Try again in {retry_after} seconds"
 
+    bucket.append(now_ts)
     return True, "OK"
 
 
@@ -783,6 +787,40 @@ SES_SNS_ALLOWED_TOPIC_ARNS = {
     if arn.strip()
 }
 SES_SNS_AUTO_CONFIRM = os.getenv("SES_SNS_AUTO_CONFIRM", "false").lower() == "true"
+AUTH_SIGNUP_RATE_LIMIT = int(os.getenv("AUTH_SIGNUP_RATE_LIMIT", "5"))
+AUTH_SIGNUP_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_SIGNUP_RATE_WINDOW_SECONDS", "3600"))
+AUTH_SIGNUP_IP_RATE_LIMIT = int(os.getenv("AUTH_SIGNUP_IP_RATE_LIMIT", "30"))
+AUTH_SIGNUP_IP_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_SIGNUP_IP_RATE_WINDOW_SECONDS", "3600"))
+AUTH_LOGIN_RATE_LIMIT = int(os.getenv("AUTH_LOGIN_RATE_LIMIT", "10"))
+AUTH_LOGIN_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_LOGIN_RATE_WINDOW_SECONDS", "3600"))
+AUTH_LOGIN_IP_RATE_LIMIT = int(os.getenv("AUTH_LOGIN_IP_RATE_LIMIT", "120"))
+AUTH_LOGIN_IP_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_LOGIN_IP_RATE_WINDOW_SECONDS", "3600"))
+AUTH_VERIFY_RATE_LIMIT = int(os.getenv("AUTH_VERIFY_RATE_LIMIT", "20"))
+AUTH_VERIFY_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_VERIFY_RATE_WINDOW_SECONDS", "3600"))
+AUTH_RESEND_RATE_LIMIT = int(os.getenv("AUTH_RESEND_RATE_LIMIT", "1"))
+AUTH_RESEND_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_RESEND_RATE_WINDOW_SECONDS", "60"))
+AUTH_PASSWORD_RESET_RATE_LIMIT = int(os.getenv("AUTH_PASSWORD_RESET_RATE_LIMIT", "5"))
+AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS", "900"))
+AUTH_PASSWORD_RESET_CONFIRM_RATE_LIMIT = int(
+    os.getenv("AUTH_PASSWORD_RESET_CONFIRM_RATE_LIMIT", "10")
+)
+AUTH_PASSWORD_RESET_CONFIRM_RATE_WINDOW_SECONDS = int(
+    os.getenv("AUTH_PASSWORD_RESET_CONFIRM_RATE_WINDOW_SECONDS", "3600")
+)
+AUTH_REFRESH_RATE_LIMIT = int(os.getenv("AUTH_REFRESH_RATE_LIMIT", "60"))
+AUTH_REFRESH_RATE_WINDOW_SECONDS = int(os.getenv("AUTH_REFRESH_RATE_WINDOW_SECONDS", "300"))
+AUTH_CHANGE_PASSWORD_RATE_LIMIT = int(os.getenv("AUTH_CHANGE_PASSWORD_RATE_LIMIT", "5"))
+AUTH_CHANGE_PASSWORD_RATE_WINDOW_SECONDS = int(
+    os.getenv("AUTH_CHANGE_PASSWORD_RATE_WINDOW_SECONDS", "3600")
+)
+AUTH_DELETE_ACCOUNT_RATE_LIMIT = int(os.getenv("AUTH_DELETE_ACCOUNT_RATE_LIMIT", "3"))
+AUTH_DELETE_ACCOUNT_RATE_WINDOW_SECONDS = int(
+    os.getenv("AUTH_DELETE_ACCOUNT_RATE_WINDOW_SECONDS", "3600")
+)
+SES_WEBHOOK_RATE_LIMIT = int(os.getenv("SES_WEBHOOK_RATE_LIMIT", "240"))
+SES_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("SES_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
+STRIPE_WEBHOOK_RATE_LIMIT = int(os.getenv("STRIPE_WEBHOOK_RATE_LIMIT", "240"))
+STRIPE_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("STRIPE_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
 
 ACTIVE_STRIPE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due"}
 TERMINAL_STRIPE_SUBSCRIPTION_STATUSES = {"canceled", "unpaid", "incomplete_expired"}
@@ -806,6 +844,22 @@ def _extract_client_ip(request: Request) -> Optional[str]:
 
 def _extract_user_agent(request: Request) -> Optional[str]:
     return request.headers.get("user-agent")
+
+
+def _rate_limit_client_id(request: Optional[Request]) -> str:
+    if request is None:
+        return "unknown"
+    return _extract_client_ip(request) or "unknown"
+
+
+def _enforce_rate_limit(identifier: str, max_requests: int, window_seconds: int) -> None:
+    allowed, message = check_rate_limit(
+        identifier=identifier,
+        max_requests=max_requests,
+        window_seconds=window_seconds,
+    )
+    if not allowed:
+        raise HTTPException(429, detail=message)
 
 
 def _billing_runtime_enabled() -> bool:
@@ -1261,10 +1315,18 @@ async def require_verified_user(authorization: Optional[str] = Header(None)) -> 
 @app.post("/api/auth/signup", response_model=MessageResponse, tags=["Authentication"])
 async def signup(data: UserCreate, request: Request):
     """Register a new user account."""
-    # Rate limit: 5 signup attempts per hour per email
-    allowed, message = check_rate_limit(f"signup:{data.email.lower()}", max_requests=5, window_seconds=3600)
-    if not allowed:
-        raise HTTPException(429, detail=message)
+    email = data.email.lower().strip()
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:signup:email:{email}",
+        max_requests=AUTH_SIGNUP_RATE_LIMIT,
+        window_seconds=AUTH_SIGNUP_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:signup:ip:{client_id}",
+        max_requests=AUTH_SIGNUP_IP_RATE_LIMIT,
+        window_seconds=AUTH_SIGNUP_IP_RATE_WINDOW_SECONDS,
+    )
 
     if not data.accept_terms:
         raise HTTPException(400, detail="You must accept the Terms of Service")
@@ -1279,9 +1341,9 @@ async def signup(data: UserCreate, request: Request):
         raise HTTPException(400, detail=message)
 
     # Check if email already exists
-    existing = get_user_by_email(data.email.lower())
+    existing = get_user_by_email(email)
     if existing:
-        logger.info(f"Signup attempt with existing email: {data.email.lower()}")
+        logger.info(f"Signup attempt with existing email: {email}")
         raise HTTPException(400, detail="Email already registered")
 
     # Create user
@@ -1290,7 +1352,7 @@ async def signup(data: UserCreate, request: Request):
 
     user = UserInDB(
         id=str(uuid.uuid4()),
-        email=data.email.lower(),
+        email=email,
         first_name=data.first_name,
         last_name=data.last_name,
         hashed_password=hash_password(data.password),
@@ -1365,18 +1427,25 @@ async def signup(data: UserCreate, request: Request):
 
 
 @app.post("/api/auth/login", response_model=TokenResponse, tags=["Authentication"])
-async def login(data: UserLogin):
+async def login(data: UserLogin, request: Request):
     """Login with email and password."""
-    # Rate limit: 10 failed login attempts per hour per email
-    allowed, message = check_rate_limit(f"login:{data.email.lower()}", max_requests=10, window_seconds=3600)
-    if not allowed:
-        logger.warning(f"Rate limit exceeded for login attempts: {data.email.lower()}")
-        raise HTTPException(429, detail=message)
+    email = data.email.lower().strip()
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:login:email:{email}",
+        max_requests=AUTH_LOGIN_RATE_LIMIT,
+        window_seconds=AUTH_LOGIN_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:login:ip:{client_id}",
+        max_requests=AUTH_LOGIN_IP_RATE_LIMIT,
+        window_seconds=AUTH_LOGIN_IP_RATE_WINDOW_SECONDS,
+    )
 
-    user = get_user_by_email(data.email.lower())
+    user = get_user_by_email(email)
 
     if not user or not verify_password(data.password, user.hashed_password):
-        logger.warning(f"Failed login attempt for: {data.email.lower()}")
+        logger.warning(f"Failed login attempt for: {email}")
         raise HTTPException(401, detail="Invalid email or password")
 
     if not user.email_verified:
@@ -1406,12 +1475,19 @@ async def login(data: UserLogin):
 
 
 @app.post("/api/auth/verify-email", response_model=TokenResponse)
-async def verify_email(data: VerifyEmailRequest):
+async def verify_email(data: VerifyEmailRequest, request: Request):
     """Verify email with token from email link."""
-    # Rate limit: 20 verification attempts per hour per token
-    allowed, message = check_rate_limit(f"verify:{data.token}", max_requests=20, window_seconds=3600)
-    if not allowed:
-        raise HTTPException(429, detail=message)
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:verify:token:{data.token}",
+        max_requests=AUTH_VERIFY_RATE_LIMIT,
+        window_seconds=AUTH_VERIFY_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:verify:ip:{client_id}",
+        max_requests=AUTH_VERIFY_RATE_LIMIT,
+        window_seconds=AUTH_VERIFY_RATE_WINDOW_SECONDS,
+    )
 
     user = get_user_by_verification_token(data.token)
 
@@ -1445,18 +1521,22 @@ async def verify_email(data: VerifyEmailRequest):
 
 
 @app.post("/api/auth/resend-verification", response_model=MessageResponse)
-async def resend_verification(data: ResendVerificationRequest):
+async def resend_verification(data: ResendVerificationRequest, request: Request):
     """Resend verification email."""
-    # Prevent accidental double-clicks or rapid resend loops.
-    allowed, message = check_rate_limit(
-        f"resend:{data.email.lower()}",
-        max_requests=1,
-        window_seconds=60,
+    email = data.email.lower().strip()
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:resend:email:{email}",
+        max_requests=AUTH_RESEND_RATE_LIMIT,
+        window_seconds=AUTH_RESEND_RATE_WINDOW_SECONDS,
     )
-    if not allowed:
-        raise HTTPException(429, detail=message)
+    _enforce_rate_limit(
+        identifier=f"auth:resend:ip:{client_id}",
+        max_requests=AUTH_RESEND_RATE_LIMIT * 5,
+        window_seconds=AUTH_RESEND_RATE_WINDOW_SECONDS,
+    )
 
-    user = get_user_by_email(data.email.lower())
+    user = get_user_by_email(email)
 
     if not user:
         # Don't reveal if email exists
@@ -1503,6 +1583,13 @@ async def email_unsubscribe(token: str):
 @app.post("/api/webhooks/ses-sns", response_model=MessageResponse, tags=["System"])
 async def ses_sns_webhook(request: Request):
     """Receive SES notifications from SNS and persist suppression/audit records."""
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"webhook:ses-sns:ip:{client_id}",
+        max_requests=SES_WEBHOOK_RATE_LIMIT,
+        window_seconds=SES_WEBHOOK_RATE_WINDOW_SECONDS,
+    )
+
     try:
         envelope = await request.json()
     except Exception:
@@ -1625,8 +1712,15 @@ async def ses_sns_webhook(request: Request):
 
 
 @app.post("/api/auth/refresh", response_model=TokenResponse, tags=["Authentication"])
-async def refresh_token(data: RefreshTokenRequest):
+async def refresh_token(data: RefreshTokenRequest, request: Request):
     """Refresh access token using refresh token."""
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:refresh:ip:{client_id}",
+        max_requests=AUTH_REFRESH_RATE_LIMIT,
+        window_seconds=AUTH_REFRESH_RATE_WINDOW_SECONDS,
+    )
+
     payload = decode_access_token(data.refresh_token, expected_type="refresh")
 
     if not payload:
@@ -1660,9 +1754,22 @@ async def refresh_token(data: RefreshTokenRequest):
 
 
 @app.post("/api/auth/password-reset", response_model=MessageResponse)
-async def request_password_reset(data: PasswordResetRequest):
+async def request_password_reset(data: PasswordResetRequest, request: Request):
     """Request password reset email."""
-    user = get_user_by_email(data.email.lower())
+    email = data.email.lower().strip()
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:password-reset:email:{email}",
+        max_requests=AUTH_PASSWORD_RESET_RATE_LIMIT,
+        window_seconds=AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:password-reset:ip:{client_id}",
+        max_requests=AUTH_PASSWORD_RESET_RATE_LIMIT * 5,
+        window_seconds=AUTH_PASSWORD_RESET_RATE_WINDOW_SECONDS,
+    )
+
+    user = get_user_by_email(email)
 
     if not user:
         # Don't reveal if email exists
@@ -1679,8 +1786,20 @@ async def request_password_reset(data: PasswordResetRequest):
 
 
 @app.post("/api/auth/password-reset-confirm", response_model=MessageResponse)
-async def confirm_password_reset(data: PasswordResetConfirm):
+async def confirm_password_reset(data: PasswordResetConfirm, request: Request):
     """Confirm password reset with token and new password."""
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:password-reset-confirm:token:{data.token}",
+        max_requests=AUTH_PASSWORD_RESET_CONFIRM_RATE_LIMIT,
+        window_seconds=AUTH_PASSWORD_RESET_CONFIRM_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:password-reset-confirm:ip:{client_id}",
+        max_requests=AUTH_PASSWORD_RESET_CONFIRM_RATE_LIMIT,
+        window_seconds=AUTH_PASSWORD_RESET_CONFIRM_RATE_WINDOW_SECONDS,
+    )
+
     payload = decode_access_token(data.token, expected_type="password_reset")
 
     if not payload:
@@ -1713,9 +1832,22 @@ async def confirm_password_reset(data: PasswordResetConfirm):
 @app.post("/api/auth/change-password", response_model=MessageResponse, tags=["Authentication"])
 async def change_password(
     data: ChangePasswordRequest,
+    request: Request,
     user: UserInDB = Depends(require_auth),
 ):
     """Change password for authenticated user."""
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:change-password:user:{user.id}",
+        max_requests=AUTH_CHANGE_PASSWORD_RATE_LIMIT,
+        window_seconds=AUTH_CHANGE_PASSWORD_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:change-password:ip:{client_id}",
+        max_requests=AUTH_CHANGE_PASSWORD_RATE_LIMIT * 5,
+        window_seconds=AUTH_CHANGE_PASSWORD_RATE_WINDOW_SECONDS,
+    )
+
     if not verify_password(data.current_password, user.hashed_password):
         raise HTTPException(400, detail="Current password is incorrect")
 
@@ -1737,9 +1869,22 @@ async def change_password(
 @app.post("/api/auth/delete-account", response_model=MessageResponse, tags=["Authentication"])
 async def delete_account(
     data: DeleteAccountRequest,
+    request: Request,
     user: UserInDB = Depends(require_auth),
 ):
     """Delete authenticated user account and related records."""
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:delete-account:user:{user.id}",
+        max_requests=AUTH_DELETE_ACCOUNT_RATE_LIMIT,
+        window_seconds=AUTH_DELETE_ACCOUNT_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:delete-account:ip:{client_id}",
+        max_requests=AUTH_DELETE_ACCOUNT_RATE_LIMIT * 5,
+        window_seconds=AUTH_DELETE_ACCOUNT_RATE_WINDOW_SECONDS,
+    )
+
     if data.confirm_text.strip().upper() != "DELETE":
         raise HTTPException(400, detail='Confirmation text must be "DELETE"')
 
@@ -2354,6 +2499,12 @@ def _process_invoice_payment_failed(event_payload: dict) -> None:
 @app.post("/api/webhooks/stripe", response_model=MessageResponse, tags=["System"])
 async def stripe_webhook(request: Request):
     _require_billing_enabled()
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"webhook:stripe:ip:{client_id}",
+        max_requests=STRIPE_WEBHOOK_RATE_LIMIT,
+        window_seconds=STRIPE_WEBHOOK_RATE_WINDOW_SECONDS,
+    )
 
     sig_header = request.headers.get("stripe-signature")
     if not sig_header:
@@ -3086,7 +3237,7 @@ def _get_rate_limit_for_user(user: UserInDB) -> tuple[int, int, int]:
         return 0, -1, -1  # unlimited
 
     today = datetime.utcnow().strftime("%Y-%m-%d")
-    user_limits = RATE_LIMIT_STORAGE[user.id]
+    user_limits = ANALYSIS_RATE_LIMIT_STORAGE[user.id]
 
     if user_limits["date"] != today:
         user_limits["date"] = today
@@ -3100,7 +3251,7 @@ def _get_rate_limit_for_user(user: UserInDB) -> tuple[int, int, int]:
 def _increment_rate_limit(user: UserInDB) -> None:
     """Increment rate limit counter for user."""
     today = datetime.utcnow().strftime("%Y-%m-%d")
-    user_limits = RATE_LIMIT_STORAGE[user.id]
+    user_limits = ANALYSIS_RATE_LIMIT_STORAGE[user.id]
 
     if user_limits["date"] != today:
         user_limits["date"] = today

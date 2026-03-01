@@ -6,6 +6,7 @@ This runbook covers:
 - Restore testing
 - Runtime alert checks (5xx spikes, webhook failures, container restarts)
 - Auth + webhook rate limit controls
+- Pre-deploy safety checks (required backtests + TLS wiring)
 
 ## 1) Backup and restore scripts
 
@@ -127,5 +128,39 @@ After changing limits:
 
 ```bash
 cd /home/ec2-user/seekingbeta
+bash scripts/ops/pre_deploy_check.sh
 docker compose up -d --build --force-recreate prophecy-api
+```
+
+## 5) Pre-deploy safety checks
+
+Script:
+
+- `/Users/huyngo/Downloads/pythia/scripts/ops/pre_deploy_check.sh`
+
+Manual run:
+
+```bash
+cd /home/ec2-user/seekingbeta
+bash scripts/ops/pre_deploy_check.sh
+```
+
+What it validates:
+
+- Required backtest artifacts exist:
+  - `production_trade_log.csv`
+  - `production_metrics.json`
+  - `jackpot_trade_log.csv`
+  - `jackpot_metrics.json`
+- `docker-compose.yml` includes the backtest mount:
+  - `./pythia_prophecy/data/backtests:/app/data/backtests:ro`
+- If frontend nginx is TLS-enabled (`listen 443 ssl;`), compose must include:
+  - frontend port mapping `443:443`
+  - letsencrypt mount `/etc/letsencrypt:/etc/letsencrypt:ro`
+
+Optional cert file check (recommended on EC2 deploys):
+
+```bash
+cd /home/ec2-user/seekingbeta
+CHECK_LOCAL_CERT_FILES=true bash scripts/ops/pre_deploy_check.sh
 ```

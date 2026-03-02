@@ -111,6 +111,13 @@ function normalizeLstmModelName(model: string | null | undefined): LstmModelName
   return null;
 }
 
+function safeNumber(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+  return value;
+}
+
 function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps) {
   const { ticker, signal, prob_up, last_close, horizon } = prediction as any;
   const [isFlipped, setIsFlipped] = useState(false);
@@ -134,10 +141,12 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
 
   const signalClass = formatSignalClass(signal);
   const signalLabel = formatSignalLabel(signal);
-  const probability = prob_up !== null ? (prob_up * 100).toFixed(1) : '0.0';
-  const probValue = prob_up ?? 0;
+  const probUpValue = safeNumber(prob_up);
+  const lastCloseValue = safeNumber(last_close);
+  const probValue = probUpValue ?? 0;
+  const probability = (probValue * 100).toFixed(1);
   const probClass = probValue >= 0.55 ? 'high' : probValue >= 0.45 ? 'medium' : 'low';
-  const price = last_close?.toFixed(2) || '—';
+  const price = lastCloseValue !== null ? lastCloseValue.toFixed(2) : '—';
   const horizonLabel = horizon || '1d';
   const topDrivers = buildAttributionTopDrivers(
     attribution,

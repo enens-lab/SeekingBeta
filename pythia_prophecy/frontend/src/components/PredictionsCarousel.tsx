@@ -68,11 +68,16 @@ function PredictionsCarousel() {
   const [activeInfoModal, setActiveInfoModal] = useState<string | null>(null);
 
   const normalizePrediction = useCallback((model: typeof MODELS[0], ticker: string, data: any): Prediction => {
-    const probUp =
+    const rawProbUp =
       typeof data.prob_up === 'number'
         ? data.prob_up
         : typeof data.probability === 'number'
         ? data.probability / 100
+        : null;
+
+    const probUp =
+      typeof rawProbUp === 'number' && Number.isFinite(rawProbUp)
+        ? rawProbUp
         : null;
 
     return {

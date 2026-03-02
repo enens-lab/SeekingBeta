@@ -9,6 +9,7 @@ import asyncio
 import time
 import uuid
 import os
+import math
 import logging
 import json
 from datetime import datetime, timedelta, timezone
@@ -2654,6 +2655,40 @@ def _horizon_to_display(h: str) -> str:
     return canonical or "5d"
 
 
+def _sanitize_probability(value: Any, default: float = 0.5) -> float:
+    """Normalize probability to finite [0,1], accepting either 0-1 or 0-100."""
+    try:
+        prob = float(value)
+    except (TypeError, ValueError):
+        return default
+
+    if not math.isfinite(prob):
+        return default
+
+    if prob > 1.0 and prob <= 100.0:
+        prob = prob / 100.0
+
+    if prob < 0.0:
+        return 0.0
+    if prob > 1.0:
+        return 1.0
+    return prob
+
+
+def _sanitize_last_close(value: Any, default: float = 0.0) -> float:
+    """Normalize last_close to finite non-negative float."""
+    try:
+        price = float(value)
+    except (TypeError, ValueError):
+        return default
+
+    if not math.isfinite(price):
+        return default
+    if price < 0.0:
+        return default
+    return price
+
+
 def predict_for_ticker(ticker: str, horizon: str = "5d"):
     """Generate prediction for a single ticker."""
     if not PYTHIA_AVAILABLE:
@@ -2679,8 +2714,8 @@ def predict_for_ticker(ticker: str, horizon: str = "5d"):
 
     X = feat[FEATS].values
     Xs = SCALER.transform(X)
-    prob_up = float(MODEL.predict_proba(Xs)[:, 1][-1])
-    last_close = float(raw["Close"].iloc[-1])
+    prob_up = _sanitize_probability(MODEL.predict_proba(Xs)[:, 1][-1], default=0.5)
+    last_close = _sanitize_last_close(raw["Close"].iloc[-1], default=0.0)
     signal = "buy" if prob_up >= THRESHOLD else ("sell" if prob_up <= 1 - THRESHOLD else "hold")
 
     return prob_up, signal, last_close
@@ -2813,9 +2848,9 @@ async def predict(
                         result = PredictResponse(
                             ticker=data.get("ticker", ticker.upper()),
                             horizon=_horizon_to_display(str(data.get("horizon", canonical_horizon))),
-                            prob_up=data.get("prob_up", 0.0),
+                            prob_up=_sanitize_probability(data.get("prob_up"), default=0.5),
                             signal=data.get("signal", "hold"),
-                            last_close=data.get("last_close", 0.0),
+                            last_close=_sanitize_last_close(data.get("last_close"), default=0.0),
                         )
                         _cache_last_close_for_dashboard(
                             ticker=ticker.upper(),
@@ -2835,9 +2870,9 @@ async def predict(
         result = PredictResponse(
             ticker=ticker.upper(),
             horizon=canonical_horizon,
-            prob_up=prob_up,
+            prob_up=_sanitize_probability(prob_up, default=0.5),
             signal=signal,
-            last_close=last_close,
+            last_close=_sanitize_last_close(last_close, default=0.0),
         )
         if PYTHIA_AVAILABLE:
             _cache_last_close_for_dashboard(
@@ -2874,9 +2909,9 @@ async def predict_lstm_5d(ticker: str):
                 result = PredictResponse(
                     ticker=data.get("ticker", ticker),
                     horizon=_horizon_to_display(str(data.get("horizon", "5d"))),
-                    prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
+                    prob_up=_sanitize_probability(data.get("probability"), default=0.5),
                     signal=data.get("signal", "hold"),
-                    last_close=data.get("last_close", 0.0),
+                    last_close=_sanitize_last_close(data.get("last_close"), default=0.0),
                 )
                 _cache_last_close_for_dashboard(
                     ticker=ticker.upper(),
@@ -2910,9 +2945,9 @@ async def predict_lstm_5d(ticker: str):
         result = PredictResponse(
             ticker=ticker.upper(),
             horizon="5d",
-            prob_up=prob_up,
+            prob_up=_sanitize_probability(prob_up, default=0.5),
             signal=signal,
-            last_close=last_close,
+            last_close=_sanitize_last_close(last_close, default=0.0),
         )
         if PYTHIA_AVAILABLE or ALLOW_RANDOM_FALLBACK:
             _cache_last_close_for_dashboard(
@@ -2945,9 +2980,9 @@ async def predict_lstm_jackpot(ticker: str):
                 result = PredictResponse(
                     ticker=data.get("ticker", ticker),
                     horizon=_horizon_to_display(str(data.get("horizon", "20d"))),
-                    prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
+                    prob_up=_sanitize_probability(data.get("probability"), default=0.5),
                     signal=data.get("signal", "hold"),
-                    last_close=data.get("last_close", 0.0),
+                    last_close=_sanitize_last_close(data.get("last_close"), default=0.0),
                 )
                 _cache_last_close_for_dashboard(
                     ticker=ticker.upper(),
@@ -2981,9 +3016,9 @@ async def predict_lstm_jackpot(ticker: str):
         result = PredictResponse(
             ticker=ticker.upper(),
             horizon="20d",
-            prob_up=prob_up,
+            prob_up=_sanitize_probability(prob_up, default=0.5),
             signal=signal,
-            last_close=last_close,
+            last_close=_sanitize_last_close(last_close, default=0.0),
         )
         if PYTHIA_AVAILABLE or ALLOW_RANDOM_FALLBACK:
             _cache_last_close_for_dashboard(
@@ -3477,8 +3512,8 @@ async def run_analysis(
                     payload = response.json()
                     results.append(AnalyzeResultItem(
                         ticker=ticker.upper(),
-                        last_close=payload.get("last_close"),
-                        prob_up=(payload.get("probability", 0.0) / 100.0),
+                        last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
+                        prob_up=_sanitize_probability(payload.get("probability"), default=0.5),
                         signal=payload.get("signal"),
                         predicted_return=None,
                         error=None,
@@ -3491,8 +3526,8 @@ async def run_analysis(
                     payload = response.json()
                     results.append(AnalyzeResultItem(
                         ticker=ticker.upper(),
-                        last_close=payload.get("last_close"),
-                        prob_up=(payload.get("probability", 0.0) / 100.0),
+                        last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
+                        prob_up=_sanitize_probability(payload.get("probability"), default=0.5),
                         signal=payload.get("signal"),
                         predicted_return=None,
                         error=None,
@@ -3512,8 +3547,8 @@ async def run_analysis(
 
                 results.append(AnalyzeResultItem(
                     ticker=ticker.upper(),
-                    last_close=payload.get("last_close"),
-                    prob_up=payload.get("prob_up"),
+                    last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
+                    prob_up=_sanitize_probability(payload.get("prob_up"), default=0.5),
                     signal=payload.get("signal"),
                     predicted_return=payload.get("predicted_return"),
                     error=None,

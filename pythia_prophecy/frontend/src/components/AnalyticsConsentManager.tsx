@@ -6,6 +6,42 @@ import {
   updateAnalyticsConsent,
 } from '../lib/analytics';
 
+type ConsentToggleKey = Exclude<keyof AnalyticsConsent, 'source' | 'updated_at'>;
+
+type ConsentOption = {
+  key: ConsentToggleKey;
+  label: string;
+  description: string;
+  signal: string;
+};
+
+const CONSENT_OPTIONS: ConsentOption[] = [
+  {
+    key: 'analytics_storage',
+    label: 'Usage analytics',
+    description: 'Helps us understand site traffic and product usage.',
+    signal: 'analytics_storage',
+  },
+  {
+    key: 'ad_storage',
+    label: 'Ads cookies',
+    description: 'Allows ads-related cookies for campaign measurement.',
+    signal: 'ad_storage',
+  },
+  {
+    key: 'ad_user_data',
+    label: 'Ads measurement data',
+    description: 'Allows sending data used for ad performance reporting.',
+    signal: 'ad_user_data',
+  },
+  {
+    key: 'ad_personalization',
+    label: 'Ads personalization',
+    description: 'Allows use of data for personalized ads and remarketing.',
+    signal: 'ad_personalization',
+  },
+];
+
 function buildDeniedConsent(): AnalyticsConsent {
   return {
     analytics_storage: 'denied',
@@ -56,14 +92,21 @@ function AnalyticsConsentManager() {
     setShowModal(false);
   };
 
+  const toggleConsentField = (key: ConsentToggleKey, granted: boolean) => {
+    setFormConsent((prev) => ({
+      ...prev,
+      [key]: granted ? 'granted' : 'denied',
+    }));
+  };
+
   return (
     <>
       {showBanner && (
         <div className="consent-banner" role="dialog" aria-live="polite" aria-label="Cookie consent">
           <div className="consent-banner-content">
             <p>
-              We use analytics and ads consent signals for measurement and modeling. You can accept,
-              reject, or customize your consent preferences.
+              We use optional analytics and advertising signals to improve measurement. Required site
+              features always stay on.
             </p>
             <div className="consent-banner-actions">
               <button type="button" className="btn btn-outline" onClick={rejectAll}>
@@ -103,69 +146,39 @@ function AnalyticsConsentManager() {
           <div className="consent-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Analytics & Advertising Consent</h3>
             <p>
-              Control which consent signals are sent to Google Analytics. Required functionality
-              remains enabled.
+              Choose which optional analytics and advertising signals are enabled. Core site
+              functionality remains on.
             </p>
 
-            <label className="consent-row">
-              <input
-                type="checkbox"
-                checked={formConsent.analytics_storage === 'granted'}
-                onChange={(event) =>
-                  setFormConsent((prev) => ({
-                    ...prev,
-                    analytics_storage: event.target.checked ? 'granted' : 'denied',
-                  }))
-                }
-              />
-              <span>Analytics cookies (`analytics_storage`)</span>
-            </label>
+            <div className="consent-required-row">
+              <span className="consent-required-dot" aria-hidden="true" />
+              <div>
+                <strong>Required functionality (always on)</strong>
+                <small>Authentication, security, and core site operations.</small>
+              </div>
+            </div>
 
-            <label className="consent-row">
-              <input
-                type="checkbox"
-                checked={formConsent.ad_storage === 'granted'}
-                onChange={(event) =>
-                  setFormConsent((prev) => ({
-                    ...prev,
-                    ad_storage: event.target.checked ? 'granted' : 'denied',
-                  }))
-                }
-              />
-              <span>Ads cookies (`ad_storage`)</span>
-            </label>
-
-            <label className="consent-row">
-              <input
-                type="checkbox"
-                checked={formConsent.ad_user_data === 'granted'}
-                onChange={(event) =>
-                  setFormConsent((prev) => ({
-                    ...prev,
-                    ad_user_data: event.target.checked ? 'granted' : 'denied',
-                  }))
-                }
-              />
-              <span>Ads measurement data (`ad_user_data`)</span>
-            </label>
-
-            <label className="consent-row">
-              <input
-                type="checkbox"
-                checked={formConsent.ad_personalization === 'granted'}
-                onChange={(event) =>
-                  setFormConsent((prev) => ({
-                    ...prev,
-                    ad_personalization: event.target.checked ? 'granted' : 'denied',
-                  }))
-                }
-              />
-              <span>Ads personalization (`ad_personalization`)</span>
-            </label>
+            {CONSENT_OPTIONS.map((option) => (
+              <label className="consent-row" key={option.key}>
+                <input
+                  type="checkbox"
+                  checked={formConsent[option.key] === 'granted'}
+                  onChange={(event) => toggleConsentField(option.key, event.target.checked)}
+                />
+                <span className="consent-row-content">
+                  <strong>{option.label}</strong>
+                  <small>{option.description}</small>
+                  <small className="consent-signal">Signal: {option.signal}</small>
+                </span>
+              </label>
+            ))}
 
             <div className="consent-modal-actions">
               <button type="button" className="btn btn-outline" onClick={rejectAll}>
                 Reject All
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={acceptAll}>
+                Accept All
               </button>
               <button type="button" className="btn btn-primary" onClick={() => saveConsent('consent_custom_save')}>
                 Save Preferences

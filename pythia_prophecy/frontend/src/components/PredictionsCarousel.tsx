@@ -29,14 +29,14 @@ const MODELS = [
     displayName: 'LSTM 5-Day',
     endpoint: '/predict/lstm_5d',
     description:
-      'Short-horizon LSTM focused on recent trend structure and consistency over 5-day windows.'
+      'Short-horizon model focused on 5-day moves.'
   },
   {
     name: 'lstm_jackpot',
     displayName: 'LSTM Jackpot',
     endpoint: '/predict/lstm_jackpot',
     description:
-      'Higher-volatility LSTM targeting larger 20-day moves with stricter signal thresholds.'
+      'Higher-volatility model focused on larger 20-day moves.'
   },
 ];
 
@@ -161,9 +161,9 @@ function PredictionsCarousel() {
     return (
       <section className="predictions-section" id="predictions">
         <div className="section-header">
-          <h2 className="section-title">Today&apos;s Model Signals, in Plain English</h2>
+          <h2 className="section-title">Today&apos;s Model Ratings</h2>
           <p className="section-subtitle">
-            Two models covering the Magnificent 7 so you can compare signal quality quickly
+            Compare two models across the Magnificent 7.
           </p>
         </div>
         <div className="predictions-loading">
@@ -177,9 +177,9 @@ function PredictionsCarousel() {
   return (
     <section className="predictions-section" id="predictions">
       <div className="section-header">
-        <h2 className="section-title">Today&apos;s Model Signals, in Plain English</h2>
+        <h2 className="section-title">Today&apos;s Model Ratings</h2>
         <p className="section-subtitle">
-          Two AI models across the Magnificent 7. Use these outputs as decision-support context, not direct trade instructions.
+          Compare two models across the Magnificent 7.
         </p>
       </div>
 

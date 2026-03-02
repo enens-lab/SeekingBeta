@@ -303,8 +303,8 @@ function PerformanceComparison() {
     <section className="performance-showcase" id="performance">
       <div className="performance-showcase-inner">
         <div className="performance-header">
-          <h2>Proof, Not Hype</h2>
-          <p>A public model track record benchmarked against the S&amp;P 500 (SPY).</p>
+          <h2>Track Record First</h2>
+          <p>See model performance versus the S&amp;P 500 (SPY).</p>
         </div>
 
         <div className="performance-model-tabs" role="tablist" aria-label="Track record model">

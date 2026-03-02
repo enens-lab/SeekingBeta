@@ -15,8 +15,8 @@ const features: Feature[] = [
         <path d="M2 12l10 5 10-5" />
       </svg>
     ),
-    title: 'Plain-Language Ratings',
-    description: 'Each stock is translated into Bullish, Neutral, or Bearish language with transparent probability context.',
+    title: 'Clear Ratings',
+    description: 'Each stock gets a Bullish, Neutral, or Bearish rating with a probability score.',
   },
   {
     icon: (
@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'Model Intelligence Layer',
-    description: 'Models scan technical patterns so you can compare short-horizon and swing-horizon setups without manual screening.',
+    title: 'Built on Market History',
+    description: 'Models are trained on historical price, trend, and volatility data to find repeatable patterns.',
   },
   {
     icon: (
@@ -40,8 +40,8 @@ const features: Feature[] = [
         <line x1="6" y1="20" x2="6" y2="16" />
       </svg>
     ),
-    title: 'Confidence + Context',
-    description: 'See upside probability, model horizon, and high-level driver summaries in one place.',
+    title: 'Why the Rating',
+    description: 'See the prediction horizon, upside probability, and top driver summary in one place.',
   },
   {
     icon: (
@@ -51,8 +51,8 @@ const features: Feature[] = [
         <line x1="9" y1="21" x2="9" y2="9" />
       </svg>
     ),
-    title: 'Track Record Transparency',
-    description: 'Benchmark strategy performance against the S&P 500 so users can verify results, not just promises.',
+    title: 'Public Track Record',
+    description: 'Compare model results against the S&P 500 to judge performance with real numbers.',
   },
 ];
 
@@ -60,8 +60,8 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">Built for practical investors, not just quants</h2>
-        <p className="section-subtitle">Structured model output designed for fast decision support</p>
+        <h2 className="section-title">How SeekingBeta Works</h2>
+        <p className="section-subtitle">Simple model output for day-to-day research</p>
       </div>
 
       <div className="features-grid">

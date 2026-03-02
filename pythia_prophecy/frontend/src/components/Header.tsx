@@ -36,7 +36,7 @@ function Header() {
             className="nav-link"
             onClick={(e) => scrollToSection(e, 'predictions')}
           >
-            Model Views
+            Ratings
           </a>
           <a
             href="#performance"

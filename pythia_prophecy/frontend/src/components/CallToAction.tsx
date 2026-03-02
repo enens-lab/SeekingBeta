@@ -5,8 +5,8 @@ function CallToAction() {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>Build a watchlist and get model context in minutes.</h2>
-        <p>SeekingBeta gives you model-rated signals, probability bands, and benchmarked performance in one workflow.</p>
+        <h2>Start free and test the ratings yourself.</h2>
+        <p>Build a watchlist, review the model context, and track signals in one place.</p>
         <Link
           to="/signup"
           className="btn btn-primary btn-lg"

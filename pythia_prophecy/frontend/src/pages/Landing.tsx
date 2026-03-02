@@ -12,8 +12,8 @@ function Landing() {
       <Header />
       <main>
         <Hero />
-        <PredictionsCarousel />
         <PerformanceComparison />
+        <PredictionsCarousel />
         <Features />
         <CallToAction />
       </main>

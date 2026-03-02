@@ -54,6 +54,7 @@ from .models import (
     ErrorResponse,
     SubscriptionTier,
     TIER_CONFIG,
+    MODEL_HORIZONS,
     PredictResponse,
     OracleResponse,
     UpdateWatchlistRequest,
@@ -521,7 +522,7 @@ app = FastAPI(
 
 An AI-powered stock prediction and analysis platform providing:
 - Real-time stock signal predictions powered by machine learning
-- Multi-timeframe technical analysis
+- Model-rated stock analysis (5-day and 20-day horizons)
 - Personalized watchlists and alerts
 - Advanced stock analysis tools
 
@@ -537,9 +538,9 @@ Authorization: Bearer <access_token>
 - Email verification: 20 attempts per hour per token
 
 ## Subscription Tiers
-- **Free**: 5 stocks, daily predictions, basic signals
-- **Basic**: 15 stocks, multi-timeframe analysis, email alerts, CSV export
-- **Pro**: Unlimited stocks, all timeframes, priority features
+- **Free**: 5 stocks, model ratings (5d/20d), basic signals
+- **Basic**: 15 stocks, model ratings (5d/20d), email alerts, CSV export
+- **Pro**: Unlimited stocks, model ratings (5d/20d), priority features
 
 ## Error Responses
 All errors follow a standardized format:
@@ -2607,53 +2608,53 @@ async def stripe_webhook(request: Request):
 # Prediction Endpoints
 # ============================================================
 
+SUPPORTED_HORIZON_ALIASES: dict[str, str] = {
+    "5d": "5d",
+    "5day": "5d",
+    "5days": "5d",
+    "5 days": "5d",
+    "20d": "20d",
+    "20day": "20d",
+    "20days": "20d",
+    "20 days": "20d",
+}
+
+MODEL_HORIZON_REQUIREMENTS: dict[str, str] = {
+    "lstm_5d": "5d",
+    "lstm_jackpot": "20d",
+}
+
+
+def _canonical_model_horizon(h: str | None) -> str | None:
+    if h is None:
+        return None
+    return SUPPORTED_HORIZON_ALIASES.get(h.strip().lower())
+
+
+def _require_supported_horizon(h: str | None) -> str:
+    canonical = _canonical_model_horizon(h)
+    if canonical:
+        return canonical
+    supported = ", ".join(MODEL_HORIZONS)
+    raise HTTPException(400, detail=f"Unsupported horizon '{h}'. Allowed horizons: {supported}.")
+
+
 def _normalize_horizon(h: str) -> str:
-    """Normalize horizon tokens to canonical timeframe string."""
-    if not h:
+    """Normalize supported prediction horizons to data timeframe."""
+    # Current production models are trained for 5d/20d horizons using daily bars.
+    canonical = _canonical_model_horizon(h) or "5d"
+    if canonical not in {"5d", "20d"}:
         return "1Day"
-    h = h.strip().lower()
-    table = {
-        # Minutes
-        "1m": "1Min",
-        "5m": "5Min",
-        "15m": "15Min",
-        "30m": "30Min",
-        # Hours
-        "1h": "1Hour",
-        "60m": "1Hour",
-        "4h": "4Hour",
-        "240m": "4Hour",
-        # Days
-        "1d": "1Day",
-        "1day": "1Day",
-        "2d": "2Day",
-        "2day": "2Day",
-        "3d": "3Day",
-        "3day": "3Day",
-        # Weeks
-        "1w": "1Week",
-        "1wk": "1Week",
-        "1week": "1Week",
-        # Months
-        "1mo": "1Month",
-        "1month": "1Month",
-    }
-    return table.get(h, "1Day")
+    return "1Day"
 
 
 def _horizon_to_display(h: str) -> str:
-    """Convert horizon to display format."""
-    table = {
-        "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m",
-        "1h": "1h", "60m": "1h", "4h": "4h", "240m": "4h",
-        "1d": "1d", "1day": "1d", "2d": "2d", "2day": "2d", "3d": "3d", "3day": "3d",
-        "1w": "1w", "1wk": "1w", "1week": "1w",
-        "1mo": "1mo", "1month": "1mo",
-    }
-    return table.get(h.lower(), "1d")
+    """Convert horizon to canonical display format."""
+    canonical = _canonical_model_horizon(h)
+    return canonical or "5d"
 
 
-def predict_for_ticker(ticker: str, horizon: str = "1d"):
+def predict_for_ticker(ticker: str, horizon: str = "5d"):
     """Generate prediction for a single ticker."""
     if not PYTHIA_AVAILABLE:
         if not ALLOW_RANDOM_FALLBACK:
@@ -2768,7 +2769,7 @@ def check_tier_access(user: Optional[UserInDB], ticker: str, horizon: str) -> bo
 @app.get("/predict/{ticker}", response_model=PredictResponse, tags=["Predictions"])
 async def predict(
     ticker: str,
-    horizon: str = "1d",
+    horizon: str = "5d",
     model: Optional[str] = None,
     user: Optional[UserInDB] = Depends(get_current_user),
 ):
@@ -2781,14 +2782,17 @@ async def predict(
     - lstm
     """
     user_email = user.email if user else "anonymous"
+    canonical_horizon = _require_supported_horizon(horizon)
 
     # Check tier access (but allow anonymous users basic access)
-    if user and not check_tier_access(user, ticker, horizon):
+    if user and not check_tier_access(user, ticker, canonical_horizon):
         tier_name = user.tier.value
-        logger.info(f"Prediction access denied: {ticker} ({horizon}) for {user_email} (tier={tier_name})")
+        logger.info(
+            f"Prediction access denied: {ticker} ({canonical_horizon}) for {user_email} (tier={tier_name})"
+        )
         raise HTTPException(
             403,
-            detail=f"Your {tier_name} tier doesn't include access to this ticker/timeframe. Please upgrade.",
+            detail=f"Your {tier_name} tier doesn't include access to this ticker/horizon. Please upgrade.",
         )
 
     try:
@@ -2799,7 +2803,7 @@ async def predict(
                     response = await client.get(
                         f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
                         params={
-                            "horizon": horizon,
+                            "horizon": canonical_horizon,
                             "model": model.lower(),
                             "task": "classifier",
                         },
@@ -2808,14 +2812,14 @@ async def predict(
                         data = response.json()
                         result = PredictResponse(
                             ticker=data.get("ticker", ticker.upper()),
-                            horizon=data.get("horizon", _horizon_to_display(horizon)),
+                            horizon=_horizon_to_display(str(data.get("horizon", canonical_horizon))),
                             prob_up=data.get("prob_up", 0.0),
                             signal=data.get("signal", "hold"),
                             last_close=data.get("last_close", 0.0),
                         )
                         _cache_last_close_for_dashboard(
                             ticker=ticker.upper(),
-                            horizon=horizon,
+                            horizon=canonical_horizon,
                             last_close=result.last_close,
                             source=f"divination:{model.lower()}",
                         )
@@ -2824,11 +2828,13 @@ async def predict(
                 logger.warning(f"Failed to fetch {model} prediction from divination: {e}, using fallback")
 
         # Default: use local prediction (gradient boosting)
-        prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon=horizon)
-        logger.debug(f"Prediction: {ticker.upper()} ({horizon}) = {signal} ({prob_up:.2%}) for {user_email}")
+        prob_up, signal, last_close = predict_for_ticker(ticker.upper(), horizon=canonical_horizon)
+        logger.debug(
+            f"Prediction: {ticker.upper()} ({canonical_horizon}) = {signal} ({prob_up:.2%}) for {user_email}"
+        )
         result = PredictResponse(
             ticker=ticker.upper(),
-            horizon=_horizon_to_display(horizon),
+            horizon=canonical_horizon,
             prob_up=prob_up,
             signal=signal,
             last_close=last_close,
@@ -2836,7 +2842,7 @@ async def predict(
         if PYTHIA_AVAILABLE:
             _cache_last_close_for_dashboard(
                 ticker=ticker.upper(),
-                horizon=horizon,
+                horizon=canonical_horizon,
                 last_close=result.last_close,
                 source="local:model",
             )
@@ -2845,7 +2851,11 @@ async def predict(
         raise
     except Exception as e:
         logger.error(f"Prediction error for {ticker}: {e}")
-        fallback = _cached_price_fallback_response(ticker=ticker, horizon=horizon, reason=str(e))
+        fallback = _cached_price_fallback_response(
+            ticker=ticker,
+            horizon=canonical_horizon,
+            reason=str(e),
+        )
         if fallback:
             return fallback
         raise HTTPException(400, detail=str(e))
@@ -2863,7 +2873,7 @@ async def predict_lstm_5d(ticker: str):
                 # Transform LSTM response to match PredictResponse schema
                 result = PredictResponse(
                     ticker=data.get("ticker", ticker),
-                    horizon=data.get("horizon", "5 days"),
+                    horizon=_horizon_to_display(str(data.get("horizon", "5d"))),
                     prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
                     signal=data.get("signal", "hold"),
                     last_close=data.get("last_close", 0.0),
@@ -2934,7 +2944,7 @@ async def predict_lstm_jackpot(ticker: str):
                 # Transform LSTM response to match PredictResponse schema
                 result = PredictResponse(
                     ticker=data.get("ticker", ticker),
-                    horizon=data.get("horizon", "20 days"),
+                    horizon=_horizon_to_display(str(data.get("horizon", "20d"))),
                     prob_up=data.get("probability", 0.0) / 100.0,  # Convert percentage to decimal
                     signal=data.get("signal", "hold"),
                     last_close=data.get("last_close", 0.0),
@@ -3099,10 +3109,10 @@ async def get_oracle(user: UserInDB = Depends(require_verified_user)):
             if tf in available_timeframes
         ]
         if not valid_timeframes:
-            valid_timeframes = [available_timeframes[0]] if available_timeframes else ["1d"]
+            valid_timeframes = [available_timeframes[0]] if available_timeframes else ["5d"]
     else:
         valid_watchlist = []
-        valid_timeframes = [available_timeframes[0]] if available_timeframes else ["1d"]
+        valid_timeframes = [available_timeframes[0]] if available_timeframes else ["5d"]
 
     return OracleResponse(
         watchlist=valid_watchlist,
@@ -3134,7 +3144,7 @@ async def update_watchlist(
 
     # Get current timeframes
     oracle = get_user_oracle(user.id)
-    current_timeframes = oracle.timeframes if oracle else ["1d"]
+    current_timeframes = oracle.timeframes if oracle else ["5d"]
 
     # Normalize tickers to uppercase
     normalized = [t.upper() for t in data.watchlist]
@@ -3246,7 +3256,7 @@ async def get_oracle_predictions(
         if tf in available_timeframes
     ]
     if not valid_timeframes:
-        valid_timeframes = [available_timeframes[0]] if available_timeframes else ["1d"]
+        valid_timeframes = [available_timeframes[0]] if available_timeframes else ["5d"]
 
     predictions = []
     for ticker in valid_watchlist:
@@ -3437,6 +3447,14 @@ async def run_analysis(
             detail=f"Period '{data.period}' requires more historical data than your tier allows. Maximum: {max_days} days.",
         )
 
+    canonical_horizon = _require_supported_horizon(data.horizon)
+    required_horizon = MODEL_HORIZON_REQUIREMENTS.get(data.model)
+    if required_horizon and canonical_horizon != required_horizon:
+        raise HTTPException(
+            400,
+            detail=f"Model '{data.model}' only supports horizon '{required_horizon}'.",
+        )
+
     # Validate tickers are accessible
     available_stocks = _available_stocks_for_tier(tier_config)
 
@@ -3484,7 +3502,7 @@ async def run_analysis(
                 response = await client.get(
                     f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
                     params={
-                        "horizon": data.horizon,
+                        "horizon": canonical_horizon,
                         "model": data.model,
                         "task": data.task,
                     },
@@ -3533,7 +3551,7 @@ async def run_analysis(
             "model": data.model,
             "task": data.task,
             "period": data.period,
-            "horizon": data.horizon,
+            "horizon": canonical_horizon,
             "analyzed_at": datetime.utcnow().isoformat(),
             "requested": len(data.tickers),
             "successful": success_count,

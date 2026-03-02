@@ -27,7 +27,7 @@ function Dashboard() {
   const [predictionData, setPredictionData] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [watchlistSaving, setWatchlistSaving] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('1d');
+  const [selectedTimeframe, setSelectedTimeframe] = useState('5d');
   const [viewMode, setViewMode] = useState<ViewMode>('oracle');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -307,7 +307,7 @@ function Dashboard() {
               )}
             </div>
             <div className="timeframe-selector">
-              <label>Timeframe:</label>
+              <label>Horizon:</label>
               <select
                 value={selectedTimeframe}
                 onChange={(e: ChangeEvent<HTMLSelectElement>) => {
@@ -335,7 +335,7 @@ function Dashboard() {
             </span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Timeframes</span>
+            <span className="stat-label">Horizons</span>
             <span className="stat-value">{oracleData?.available_timeframes?.length || 0}</span>
           </div>
           <div className="stat-card">

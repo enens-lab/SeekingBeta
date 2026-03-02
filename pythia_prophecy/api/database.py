@@ -65,7 +65,7 @@ def init_database():
             CREATE TABLE IF NOT EXISTS user_oracle (
                 user_id TEXT PRIMARY KEY,
                 watchlist TEXT NOT NULL DEFAULT '[]',
-                timeframes TEXT NOT NULL DEFAULT '["1d"]',
+                timeframes TEXT NOT NULL DEFAULT '["5d"]',
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
@@ -374,7 +374,7 @@ def add_to_watchlist(user_id: str, ticker: str) -> UserOracle:
         timeframes = oracle.timeframes
     else:
         watchlist = [ticker.upper()]
-        timeframes = ["1d"]
+        timeframes = ["5d"]
     return create_or_update_user_oracle(user_id, watchlist, timeframes)
 
 
@@ -386,7 +386,7 @@ def remove_from_watchlist(user_id: str, ticker: str) -> UserOracle:
         timeframes = oracle.timeframes
     else:
         watchlist = []
-        timeframes = ["1d"]
+        timeframes = ["5d"]
     return create_or_update_user_oracle(user_id, watchlist, timeframes)
 
 

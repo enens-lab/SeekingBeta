@@ -377,7 +377,7 @@ export const tiers = {
 };
 
 export const predictions = {
-  get: (ticker: string, horizon = '1d'): Promise<Prediction> => {
+  get: (ticker: string, horizon = '5d'): Promise<Prediction> => {
     const normalized = horizon.toLowerCase();
 
     if (normalized === '5d' || normalized === '5day' || normalized === '5days') {
@@ -388,7 +388,7 @@ export const predictions = {
       return request(`/predict/lstm_jackpot/${ticker}`);
     }
 
-    return request(`/predict/${ticker}?horizon=${horizon}`);
+    throw new Error(`Unsupported horizon '${horizon}'. Allowed horizons: 5d, 20d.`);
   },
 
   getAttribution: (

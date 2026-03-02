@@ -13,16 +13,19 @@ class SubscriptionTier(str, Enum):
     PRO = "pro"
 
 
+MODEL_HORIZONS = ["5d", "20d"]
+
+
 # Tier configuration
 TIER_CONFIG = {
     SubscriptionTier.FREE: {
         "name": "Free",
         "price": 0.0,
         "stocks_limit": 5,
-        "timeframes": ["1d"],
+        "timeframes": MODEL_HORIZONS,
         "features": [
             "5 stocks from universe",
-            "Daily predictions only",
+            "Model horizons: 5-day and 20-day",
             "Basic signal alerts",
         ],
         # Analysis settings
@@ -37,10 +40,10 @@ TIER_CONFIG = {
         "name": "Basic",
         "price": 9.99,
         "stocks_limit": 15,
-        "timeframes": ["1d", "2d", "3d", "4h", "1h", "30m"],
+        "timeframes": MODEL_HORIZONS,
         "features": [
             "15 stocks from universe",
-            "Multi-day, daily, and intraday predictions",
+            "Model horizons: 5-day and 20-day",
             "Email alerts",
             "Historical prediction accuracy",
         ],
@@ -56,10 +59,10 @@ TIER_CONFIG = {
         "name": "Pro",
         "price": 19.99,
         "stocks_limit": -1,  # unlimited
-        "timeframes": ["1mo", "1w", "3d", "2d", "1d", "4h", "1h", "30m", "15m", "5m", "1m"],
+        "timeframes": MODEL_HORIZONS,
         "features": [
             "Full universe access (6,000+ stocks)",
-            "All timeframes (1m to monthly)",
+            "Model horizons: 5-day and 20-day",
             "Priority email alerts",
             "Historical prediction accuracy",
             "Custom watchlists",
@@ -187,7 +190,7 @@ class UserOracle(BaseModel):
     """User's personalized oracle settings (watchlist and timeframes)."""
     user_id: str
     watchlist: List[str] = []
-    timeframes: List[str] = ["1d"]
+    timeframes: List[str] = ["5d"]
     updated_at: datetime
 
 
@@ -225,7 +228,7 @@ class AnalyzeRequest(BaseModel):
     model: str = "lstm_5d"
     task: str = "classifier"
     period: str = "1M"
-    horizon: str = "1d"
+    horizon: str = "5d"
 
 
 class AnalyzeResultItem(BaseModel):

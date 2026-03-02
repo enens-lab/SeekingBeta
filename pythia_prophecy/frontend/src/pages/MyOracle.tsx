@@ -70,7 +70,7 @@ function MyOracle() {
 
     if (currentTimeframes.includes(timeframe)) {
       if (currentTimeframes.length === 1) {
-        toast.error('You must have at least one timeframe selected');
+        toast.error('You must have at least one horizon selected');
         return;
       }
       newTimeframes = currentTimeframes.filter((tf) => tf !== timeframe);
@@ -139,7 +139,7 @@ function MyOracle() {
           <div className="oracle-title-section">
             <h1>Watchlist</h1>
             <p className="oracle-subtitle">
-              Build and manage your SeekingBeta watchlist and preferred timeframes.
+              Build and manage your SeekingBeta watchlist and preferred horizons.
             </p>
           </div>
         </div>
@@ -151,11 +151,11 @@ function MyOracle() {
           </div>
         ) : (
           <div className="oracle-content">
-            {/* Timeframes Section */}
+            {/* Horizons Section */}
             <section className="oracle-section">
-              <h2>Preferred Timeframes</h2>
+              <h2>Preferred Horizons</h2>
               <p className="section-description">
-                Select the temporal windows for your divinations
+                Select which model horizons you want to see
               </p>
               <div className="timeframe-grid">
                 {oracleData?.available_timeframes?.map((tf) => (
@@ -172,11 +172,6 @@ function MyOracle() {
                   </button>
                 ))}
               </div>
-              {oracleData && oracleData.available_timeframes.length < 6 && (
-                <p className="upgrade-hint">
-                  <Link to="/pricing">Upgrade</Link> to unlock more timeframes
-                </p>
-              )}
             </section>
 
             {/* Watchlist Section */}

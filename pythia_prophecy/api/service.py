@@ -2909,7 +2909,10 @@ async def predict_lstm_5d(ticker: str):
                 result = PredictResponse(
                     ticker=data.get("ticker", ticker),
                     horizon=_horizon_to_display(str(data.get("horizon", "5d"))),
-                    prob_up=_sanitize_probability(data.get("probability"), default=0.5),
+                    prob_up=_sanitize_probability(
+                        data.get("prob_up", data.get("probability")),
+                        default=0.5,
+                    ),
                     signal=data.get("signal", "hold"),
                     last_close=_sanitize_last_close(data.get("last_close"), default=0.0),
                 )
@@ -2980,7 +2983,10 @@ async def predict_lstm_jackpot(ticker: str):
                 result = PredictResponse(
                     ticker=data.get("ticker", ticker),
                     horizon=_horizon_to_display(str(data.get("horizon", "20d"))),
-                    prob_up=_sanitize_probability(data.get("probability"), default=0.5),
+                    prob_up=_sanitize_probability(
+                        data.get("prob_up", data.get("probability")),
+                        default=0.5,
+                    ),
                     signal=data.get("signal", "hold"),
                     last_close=_sanitize_last_close(data.get("last_close"), default=0.0),
                 )
@@ -3513,7 +3519,10 @@ async def run_analysis(
                     results.append(AnalyzeResultItem(
                         ticker=ticker.upper(),
                         last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
-                        prob_up=_sanitize_probability(payload.get("probability"), default=0.5),
+                        prob_up=_sanitize_probability(
+                            payload.get("prob_up", payload.get("probability")),
+                            default=0.5,
+                        ),
                         signal=payload.get("signal"),
                         predicted_return=None,
                         error=None,
@@ -3527,7 +3536,10 @@ async def run_analysis(
                     results.append(AnalyzeResultItem(
                         ticker=ticker.upper(),
                         last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
-                        prob_up=_sanitize_probability(payload.get("probability"), default=0.5),
+                        prob_up=_sanitize_probability(
+                            payload.get("prob_up", payload.get("probability")),
+                            default=0.5,
+                        ),
                         signal=payload.get("signal"),
                         predicted_return=None,
                         error=None,

@@ -352,13 +352,12 @@ function Analysis() {
       rows: results.results.length,
     });
 
-    const headers = ['Ticker', 'Last Close', 'Prob. Up', 'Signal', 'Pred. Return', 'Top Drivers (High-Level)'];
+    const headers = ['Ticker', 'Last Close', 'Prob. Up', 'Signal', 'Top Drivers (High-Level)'];
     const rows = results.results.map((r) => [
       r.ticker,
       r.last_close ? `$${r.last_close.toFixed(2)}` : '-',
       r.prob_up !== null ? `${(r.prob_up * 100).toFixed(1)}%` : '-',
       formatSignalLabel(r.signal),
-      r.predicted_return !== null ? `${(r.predicted_return * 100).toFixed(2)}%` : '-',
       buildTopDriversSummary(r.prob_up, horizon),
     ]);
 
@@ -417,6 +416,8 @@ function Analysis() {
   const requestsUsed = userFeatures?.limits?.requests_used || 0;
   const dailyLimit = userFeatures?.limits?.daily_requests;
   const showRateBanner = dailyLimit && requestsUsed >= dailyLimit * 0.8;
+  const canExportCsv = Boolean(userFeatures?.features?.export_csv);
+  const canExportNow = canExportCsv && Boolean(results);
 
   const formatPct = (value: number | null | undefined, digits = 1) =>
     value == null || Number.isNaN(value) ? '--' : `${(value * 100).toFixed(digits)}%`;
@@ -740,14 +741,27 @@ function Analysis() {
                   >
                     More info
                   </button>
-                  {results && userFeatures?.features?.export_csv && (
-                    <button className="btn btn-outline" onClick={exportCSV}>
+                  {canExportCsv && (
+                    <button
+                      className="btn btn-outline"
+                      onClick={exportCSV}
+                      disabled={!canExportNow}
+                      title={!canExportNow ? 'Run analysis to enable CSV export' : undefined}
+                    >
                       Export CSV
                     </button>
                   )}
                 </div>
               </div>
               {showSignalInfo && <p className="results-signal-disclaimer">{MODEL_SIGNAL_DISCLAIMER}</p>}
+              {canExportCsv && !canExportNow && (
+                <p className="form-hint">CSV export becomes available after you run analysis.</p>
+              )}
+              {!canExportCsv && (
+                <p className="form-hint">
+                  CSV export is available on Basic and Pro plans.
+                </p>
+              )}
 
               {error && <div className="form-error">{error}</div>}
 
@@ -768,9 +782,7 @@ function Analysis() {
                           <th>Last Close</th>
                           <th>Prob. Up</th>
                           <th>Signal</th>
-                          <th>Pred. Return</th>
                           <th>Top Drivers (High-Level)</th>
-                          <th>Error</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -786,13 +798,7 @@ function Analysis() {
                             <td className={`signal-${signalClassName(r.signal)}`}>
                               {formatSignalLabel(r.signal)}
                             </td>
-                            <td>
-                              {r.predicted_return !== null
-                                ? `${(r.predicted_return * 100).toFixed(2)}%`
-                                : '-'}
-                            </td>
                             <td>{buildTopDriversSummary(r.prob_up, horizon)}</td>
-                            <td>{r.error || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

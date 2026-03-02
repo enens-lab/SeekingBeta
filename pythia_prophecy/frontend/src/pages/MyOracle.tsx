@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import StockTooltip from '../components/StockTooltip';
 import DashboardHeader from '../components/DashboardHeader';
-import { oracle, OracleData } from '../api/client';
+import { billing, oracle, OracleData } from '../api/client';
 import { trackEvent } from '../lib/analytics';
 
 function MyOracle() {
@@ -13,6 +13,7 @@ function MyOracle() {
   const toast = useToast();
 
   const [oracleData, setOracleData] = useState<OracleData | null>(null);
+  const [effectiveTier, setEffectiveTier] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,11 +22,17 @@ function MyOracle() {
   useEffect(() => {
     if (!isVerified) return;
 
-    oracle.get()
-      .then(setOracleData)
+    Promise.all([
+      oracle.get(),
+      billing.getStatus().catch(() => null),
+    ])
+      .then(([oracleRes, billingStatus]) => {
+        setOracleData(oracleRes);
+        setEffectiveTier((billingStatus?.effective_tier || user?.tier || '').toLowerCase() || null);
+      })
       .catch((err) => toast.error(err instanceof Error ? err.message : 'Failed to load oracle data'))
       .finally(() => setLoading(false));
-  }, [isVerified, toast]);
+  }, [isVerified, toast, user?.tier]);
 
   const handleAddStock = async (ticker: string) => {
     if (!ticker) return;
@@ -115,6 +122,7 @@ function MyOracle() {
   };
 
   const filteredCategories = getFilteredCategories();
+  const resolvedTier = (effectiveTier || user?.tier || '').toLowerCase();
 
   if (!isVerified) {
     return (
@@ -260,7 +268,7 @@ function MyOracle() {
                 ))}
               </div>
 
-              {user?.tier !== 'pro' && (
+              {resolvedTier !== 'pro' && (
                 <p className="upgrade-hint">
                   <Link to="/pricing">Upgrade to Pro</Link> for access to the full universe
                 </p>

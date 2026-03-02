@@ -40,6 +40,7 @@ function MyOracle() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
   const [finvizEnabled, setFinvizEnabled] = useState(false);
+  const [fullscreenInsight, setFullscreenInsight] = useState<WatchlistInsight | null>(null);
   const [effectiveTier, setEffectiveTier] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,6 +92,25 @@ function MyOracle() {
       })
       .finally(() => setInsightsLoading(false));
   }, [isVerified, watchlistKey]);
+
+  useEffect(() => {
+    if (!fullscreenInsight) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setFullscreenInsight(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [fullscreenInsight]);
 
   const handleAddStock = async (ticker: string) => {
     if (!ticker) return;
@@ -306,9 +326,42 @@ function MyOracle() {
                             {formatPct(insight.change_pct)}
                           </p>
                         </div>
-                        <span className={`watchlist-insight-source source-${insight.source}`}>
-                          {insight.source === 'finviz' ? 'Live' : 'Cached'}
-                        </span>
+                        <div className="watchlist-insight-header-actions">
+                          <span className={`watchlist-insight-source source-${insight.source}`}>
+                            {insight.source === 'finviz' ? 'Live' : 'Cached'}
+                          </span>
+                          <button
+                            type="button"
+                            className="watchlist-insight-fullscreen-btn"
+                            aria-label={`Open ${insight.ticker} chart fullscreen`}
+                            title="Fullscreen chart"
+                            onClick={() => {
+                              trackEvent('ticker_interaction', {
+                                ticker: insight.ticker,
+                                action: 'watchlist_chart_fullscreen_open',
+                                surface: 'oracle',
+                              });
+                              setFullscreenInsight(insight);
+                            }}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <polyline points="15 3 21 3 21 9" />
+                              <polyline points="9 21 3 21 3 15" />
+                              <line x1="21" y1="3" x2="14" y2="10" />
+                              <line x1="3" y1="21" x2="10" y2="14" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
 
                       <a
@@ -444,6 +497,48 @@ function MyOracle() {
           </div>
         )}
       </main>
+
+      {fullscreenInsight && (
+        <div
+          className="chart-fullscreen-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${fullscreenInsight.ticker} chart fullscreen`}
+          onClick={() => setFullscreenInsight(null)}
+        >
+          <div className="chart-fullscreen-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="chart-fullscreen-toolbar">
+              <div className="chart-fullscreen-title">
+                <strong>{fullscreenInsight.ticker}</strong>
+                <span>{formatPct(fullscreenInsight.change_pct)}</span>
+              </div>
+              <button
+                type="button"
+                className="chart-fullscreen-close"
+                onClick={() => {
+                  trackEvent('ticker_interaction', {
+                    ticker: fullscreenInsight.ticker,
+                    action: 'watchlist_chart_fullscreen_close',
+                    surface: 'oracle',
+                  });
+                  setFullscreenInsight(null);
+                }}
+                aria-label="Close fullscreen chart"
+              >
+                ×
+              </button>
+            </div>
+            <div className="chart-fullscreen-image-wrap">
+              <img
+                src={fullscreenInsight.chart_url}
+                alt={`${fullscreenInsight.ticker} fullscreen chart`}
+                className="chart-fullscreen-image"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

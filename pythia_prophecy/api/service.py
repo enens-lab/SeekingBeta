@@ -14,8 +14,10 @@ import re
 import logging
 import json
 from datetime import datetime, timedelta, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from .logging_config import setup_logging, get_logger
 
@@ -883,6 +885,7 @@ FINVIZ_API_BASE_URL = os.getenv("FINVIZ_API_BASE_URL", "").strip().rstrip("/")
 FINVIZ_API_KEY = os.getenv("FINVIZ_API_KEY", "").strip()
 FINVIZ_API_AUTH_HEADER = os.getenv("FINVIZ_API_AUTH_HEADER", "X-API-KEY").strip() or "X-API-KEY"
 FINVIZ_API_KEY_PREFIX = os.getenv("FINVIZ_API_KEY_PREFIX", "").strip()
+FINVIZ_API_AUTH_QUERY_PARAM = os.getenv("FINVIZ_API_AUTH_QUERY_PARAM", "auth").strip()
 FINVIZ_API_QUOTE_PATH_TEMPLATE = os.getenv(
     "FINVIZ_API_QUOTE_PATH_TEMPLATE", "/quote/{ticker}"
 ).strip() or "/quote/{ticker}"
@@ -1347,7 +1350,7 @@ def _finviz_chart_url(ticker: str) -> str:
 
 
 def _finviz_headers() -> dict[str, str]:
-    if not FINVIZ_API_KEY:
+    if not FINVIZ_API_KEY or FINVIZ_API_AUTH_QUERY_PARAM:
         return {}
     value = f"{FINVIZ_API_KEY_PREFIX}{FINVIZ_API_KEY}" if FINVIZ_API_KEY_PREFIX else FINVIZ_API_KEY
     return {FINVIZ_API_AUTH_HEADER: value}
@@ -1362,10 +1365,30 @@ def _build_finviz_quote_url(ticker: str) -> Optional[str]:
         path = f"/quote/{ticker.upper()}"
 
     if path.startswith("http://") or path.startswith("https://"):
-        return path
+        base_url = path
+    else:
+        normalized_path = path if path.startswith("/") else f"/{path}"
+        base_url = f"{FINVIZ_API_BASE_URL}{normalized_path}"
 
-    normalized_path = path if path.startswith("/") else f"/{path}"
-    return f"{FINVIZ_API_BASE_URL}{normalized_path}"
+    if not FINVIZ_API_AUTH_QUERY_PARAM or not FINVIZ_API_KEY:
+        return base_url
+
+    token_value = (
+        f"{FINVIZ_API_KEY_PREFIX}{FINVIZ_API_KEY}" if FINVIZ_API_KEY_PREFIX else FINVIZ_API_KEY
+    )
+    parsed = urlparse(base_url)
+    query_items = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query_items.setdefault(FINVIZ_API_AUTH_QUERY_PARAM, token_value)
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            urlencode(query_items),
+            parsed.fragment,
+        )
+    )
 
 
 def _pick_value(payload: dict[str, Any], keys: list[str]) -> Any:
@@ -1432,7 +1455,23 @@ async def _fetch_finviz_quote(ticker: str) -> Optional[dict[str, Any]]:
             if response.status_code == 404:
                 return None
             response.raise_for_status()
-            payload = response.json()
+            try:
+                payload: Any = response.json()
+            except Exception:
+                payload = None
+                text_body = response.text.strip()
+                if text_body:
+                    try:
+                        payload = json.loads(text_body)
+                    except Exception:
+                        payload = None
+                        try:
+                            import csv
+
+                            reader = csv.DictReader(StringIO(text_body))
+                            payload = next(reader, None)
+                        except Exception:
+                            payload = None
     except Exception as exc:
         logger.debug("Finviz quote fetch failed for %s: %s", symbol, exc)
         return None

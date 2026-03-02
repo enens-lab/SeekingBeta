@@ -4178,6 +4178,37 @@ h4 {
   color: var(--text-secondary);
 }
 
+.consent-required-row {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.consent-required-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: var(--accent);
+}
+
+.consent-required-row strong {
+  display: block;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.consent-required-row small {
+  display: block;
+  color: var(--text-muted);
+}
+
 .consent-row {
   display: grid;
   grid-template-columns: 18px 1fr;
@@ -4189,6 +4220,21 @@ h4 {
 
 .consent-row input {
   margin-top: 2px;
+}
+
+.consent-row-content {
+  display: block;
+}
+
+.consent-row-content strong {
+  display: block;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.consent-row-content small {
+  display: block;
+  color: var(--text-muted);
 }
 
 .consent-modal-actions {

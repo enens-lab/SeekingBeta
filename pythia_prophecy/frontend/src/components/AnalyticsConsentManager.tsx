@@ -12,33 +12,28 @@ type ConsentOption = {
   key: ConsentToggleKey;
   label: string;
   description: string;
-  signal: string;
 };
 
 const CONSENT_OPTIONS: ConsentOption[] = [
   {
     key: 'analytics_storage',
     label: 'Usage analytics',
-    description: 'Helps us understand site traffic and product usage.',
-    signal: 'analytics_storage',
+    description: 'Helps us understand traffic and product usage.',
   },
   {
     key: 'ad_storage',
     label: 'Ads cookies',
-    description: 'Allows ads-related cookies for campaign measurement.',
-    signal: 'ad_storage',
+    description: 'Enables cookies used for campaign measurement.',
   },
   {
     key: 'ad_user_data',
     label: 'Ads measurement data',
-    description: 'Allows sending data used for ad performance reporting.',
-    signal: 'ad_user_data',
+    description: 'Enables ad performance and conversion reporting.',
   },
   {
     key: 'ad_personalization',
     label: 'Ads personalization',
-    description: 'Allows use of data for personalized ads and remarketing.',
-    signal: 'ad_personalization',
+    description: 'Allows personalized ads and remarketing.',
   },
 ];
 
@@ -144,10 +139,10 @@ function AnalyticsConsentManager() {
       {showModal && (
         <div className="consent-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="consent-modal" onClick={(event) => event.stopPropagation()}>
-            <h3>Analytics & Advertising Consent</h3>
+            <h3>Privacy Controls</h3>
             <p>
-              Choose which optional analytics and advertising signals are enabled. Core site
-              functionality remains on.
+              Choose which optional analytics and advertising features are on. Core site
+              functionality is always on.
             </p>
 
             <div className="consent-required-row">
@@ -168,7 +163,6 @@ function AnalyticsConsentManager() {
                 <span className="consent-row-content">
                   <strong>{option.label}</strong>
                   <small>{option.description}</small>
-                  <small className="consent-signal">Signal: {option.signal}</small>
                 </span>
               </label>
             ))}

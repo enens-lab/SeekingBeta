@@ -19,6 +19,7 @@ import Profile from './pages/Profile';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import RefundCancellation from './pages/RefundCancellation';
+import Methodology from './pages/Methodology';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund-cancellation" element={<RefundCancellation />} />
+      <Route path="/methodology" element={<Methodology />} />
       <Route
         path="/dashboard"
         element={

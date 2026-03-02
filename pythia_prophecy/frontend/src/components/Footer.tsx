@@ -17,6 +17,9 @@ function Footer() {
           Always do your own research and consult a financial advisor.
         </p>
         <nav className="footer-links">
+          <Link to="/methodology" onClick={() => trackEvent('footer_link_click', { destination: 'methodology' })}>
+            Methodology
+          </Link>
           <Link to="/terms" onClick={() => trackEvent('footer_link_click', { destination: 'terms' })}>
             Terms
           </Link>

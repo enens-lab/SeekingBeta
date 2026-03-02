@@ -53,6 +53,13 @@ function Header() {
             How It Works
           </a>
           <Link
+            to="/methodology"
+            className="nav-link"
+            onClick={() => trackEvent('landing_nav_click', { destination: 'methodology' })}
+          >
+            Methodology
+          </Link>
+          <Link
             to="/pricing"
             className="nav-link"
             onClick={() => trackEvent('landing_nav_click', { destination: 'pricing' })}

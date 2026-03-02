@@ -1,11 +1,34 @@
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import StockTooltip from '../components/StockTooltip';
 import DashboardHeader from '../components/DashboardHeader';
-import { billing, oracle, OracleData } from '../api/client';
+import { billing, oracle, OracleData, WatchlistInsight } from '../api/client';
 import { trackEvent } from '../lib/analytics';
+
+function formatPrice(value: number | null): string {
+  if (value === null) return '—';
+  return `$${value.toFixed(2)}`;
+}
+
+function formatPct(value: number | null): string {
+  if (value === null) return '—';
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+}
+
+function formatMetric(value: number | null, decimals = 2): string {
+  if (value === null) return '—';
+  return value.toFixed(decimals);
+}
+
+function formatVolume(value: number | null): string {
+  if (value === null) return '—';
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return Math.round(value).toString();
+}
 
 function MyOracle() {
   const { user, isVerified } = useAuth();
@@ -13,11 +36,20 @@ function MyOracle() {
   const toast = useToast();
 
   const [oracleData, setOracleData] = useState<OracleData | null>(null);
+  const [watchlistInsights, setWatchlistInsights] = useState<WatchlistInsight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [finvizEnabled, setFinvizEnabled] = useState(false);
   const [effectiveTier, setEffectiveTier] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+  const watchlistKey = useMemo(
+    () => (oracleData?.watchlist || []).map((t) => t.toUpperCase()).join(','),
+    [oracleData?.watchlist]
+  );
 
   useEffect(() => {
     if (!isVerified) return;
@@ -33,6 +65,32 @@ function MyOracle() {
       .catch((err) => toast.error(err instanceof Error ? err.message : 'Failed to load oracle data'))
       .finally(() => setLoading(false));
   }, [isVerified, toast, user?.tier]);
+
+  useEffect(() => {
+    const watchlist = oracleData?.watchlist || [];
+    if (!isVerified) return;
+    if (!watchlist.length) {
+      setWatchlistInsights([]);
+      setInsightsError(null);
+      setInsightsLoading(false);
+      return;
+    }
+
+    setInsightsLoading(true);
+    setInsightsError(null);
+    oracle
+      .getWatchlistInsights(Math.min(watchlist.length, 20))
+      .then((payload) => {
+        setWatchlistInsights(payload.insights || []);
+        setFinvizEnabled(!!payload.finviz_enabled);
+      })
+      .catch((err) => {
+        setWatchlistInsights([]);
+        setFinvizEnabled(false);
+        setInsightsError(err instanceof Error ? err.message : 'Could not load watchlist insights');
+      })
+      .finally(() => setInsightsLoading(false));
+  }, [isVerified, watchlistKey]);
 
   const handleAddStock = async (ticker: string) => {
     if (!ticker) return;
@@ -123,6 +181,8 @@ function MyOracle() {
 
   const filteredCategories = getFilteredCategories();
   const resolvedTier = (effectiveTier || user?.tier || '').toLowerCase();
+  const hasFullUniverseAccess = (oracleData?.available_stocks?.length || 0) > 15;
+  const isProPlan = resolvedTier === 'pro' || hasFullUniverseAccess;
 
   if (!isVerified) {
     return (
@@ -214,6 +274,99 @@ function MyOracle() {
               )}
             </section>
 
+            <section className="oracle-section">
+              <h2>Watchlist Insights</h2>
+              <p className="section-description">
+                {finvizEnabled
+                  ? 'Chart and technical snapshots for your selected tickers.'
+                  : 'Snapshot cards are available. Add Finviz API credentials for richer chart data.'}
+              </p>
+
+              {insightsLoading ? (
+                <div className="oracle-loading">
+                  <div className="spinner" />
+                  <p>Loading watchlist insights...</p>
+                </div>
+              ) : insightsError ? (
+                <div className="empty-watchlist">
+                  <p>{insightsError}</p>
+                </div>
+              ) : watchlistInsights.length === 0 ? (
+                <div className="empty-watchlist">
+                  <p>Add tickers to your watchlist to see chart insights.</p>
+                </div>
+              ) : (
+                <div className="watchlist-insights-grid">
+                  {watchlistInsights.map((insight) => (
+                    <article key={insight.ticker} className="watchlist-insight-card">
+                      <div className="watchlist-insight-header">
+                        <div>
+                          <h3>{insight.ticker}</h3>
+                          <p className={`watchlist-insight-change ${(insight.change_pct || 0) >= 0 ? 'up' : 'down'}`}>
+                            {formatPct(insight.change_pct)}
+                          </p>
+                        </div>
+                        <span className={`watchlist-insight-source source-${insight.source}`}>
+                          {insight.source === 'finviz' ? 'Live' : 'Cached'}
+                        </span>
+                      </div>
+
+                      <a
+                        href={insight.chart_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="watchlist-insight-chart-link"
+                        onClick={() =>
+                          trackEvent('ticker_interaction', {
+                            ticker: insight.ticker,
+                            action: 'watchlist_chart_open',
+                            surface: 'oracle',
+                          })
+                        }
+                      >
+                        <img
+                          src={insight.chart_url}
+                          alt={`${insight.ticker} chart`}
+                          loading="lazy"
+                          className="watchlist-insight-chart"
+                          referrerPolicy="no-referrer"
+                        />
+                      </a>
+
+                      <dl className="watchlist-insight-metrics">
+                        <div>
+                          <dt>Price</dt>
+                          <dd>{formatPrice(insight.price)}</dd>
+                        </div>
+                        <div>
+                          <dt>RSI</dt>
+                          <dd>{formatMetric(insight.rsi)}</dd>
+                        </div>
+                        <div>
+                          <dt>SMA 20</dt>
+                          <dd>{formatPrice(insight.sma20)}</dd>
+                        </div>
+                        <div>
+                          <dt>SMA 50</dt>
+                          <dd>{formatPrice(insight.sma50)}</dd>
+                        </div>
+                        <div>
+                          <dt>Volume</dt>
+                          <dd>{formatVolume(insight.volume)}</dd>
+                        </div>
+                        <div>
+                          <dt>Rel Vol</dt>
+                          <dd>{formatMetric(insight.rel_volume)}</dd>
+                        </div>
+                      </dl>
+
+                      {insight.summary && <p className="watchlist-insight-summary">{insight.summary}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
             {/* Add Stocks Section - Now with Categories */}
             <section className="oracle-section">
               <h2>Add to Watchlist</h2>
@@ -268,7 +421,7 @@ function MyOracle() {
                 ))}
               </div>
 
-              {resolvedTier !== 'pro' && (
+              {!isProPlan && (
                 <p className="upgrade-hint">
                   <Link to="/pricing">Upgrade to Pro</Link> for access to the full universe
                 </p>

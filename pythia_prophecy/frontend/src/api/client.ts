@@ -111,6 +111,32 @@ export interface OracleData {
   available_categories: Record<string, string[]>;
 }
 
+export interface WatchlistInsight {
+  ticker: string;
+  chart_url: string;
+  source: 'finviz' | 'fallback';
+  updated_at: string;
+  price: number | null;
+  change_pct: number | null;
+  rsi: number | null;
+  sma20: number | null;
+  sma50: number | null;
+  sma200: number | null;
+  volume: number | null;
+  rel_volume: number | null;
+  atr: number | null;
+  support: number | null;
+  resistance: number | null;
+  trend: string | null;
+  summary: string | null;
+}
+
+export interface WatchlistInsightsResponse {
+  watchlist: string[];
+  finviz_enabled: boolean;
+  insights: WatchlistInsight[];
+}
+
 export interface Company {
   ticker: string;
   name: string;
@@ -329,6 +355,57 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   return response.json();
 }
 
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function normalizeHorizon(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === '5 days' || normalized === '5day' || normalized === '5days') return '5d';
+  if (normalized === '20 days' || normalized === '20day' || normalized === '20days') return '20d';
+  if (normalized === '5d' || normalized === '20d') return normalized;
+  return fallback;
+}
+
+function normalizeProbability(probUpValue: unknown, probabilityValue: unknown): number | null {
+  let candidate = toFiniteNumber(probUpValue);
+  if (candidate === null) {
+    candidate = toFiniteNumber(probabilityValue);
+  }
+
+  if (candidate === null) return null;
+  if (candidate > 1 && candidate <= 100) {
+    candidate = candidate / 100;
+  }
+  if (candidate < 0) return 0;
+  if (candidate > 1) return 1;
+  return candidate;
+}
+
+function normalizePredictionPayload(raw: any, ticker: string, fallbackHorizon: string): Prediction {
+  return {
+    ticker: (typeof raw?.ticker === 'string' && raw.ticker.trim()) || ticker.toUpperCase(),
+    horizon: normalizeHorizon(raw?.horizon, fallbackHorizon),
+    signal: (raw?.signal || 'hold') as Prediction['signal'],
+    prob_up: normalizeProbability(raw?.prob_up, raw?.probability),
+    predicted_return: toFiniteNumber(raw?.predicted_return),
+    last_close: toFiniteNumber(raw?.last_close),
+    timestamp:
+      (typeof raw?.generated_at === 'string' && raw.generated_at) ||
+      (typeof raw?.timestamp === 'string' && raw.timestamp) ||
+      new Date().toISOString(),
+    attribution: raw?.attribution ?? null,
+  };
+}
+
 // ============================================================================
 // API Modules
 // ============================================================================
@@ -377,15 +454,17 @@ export const tiers = {
 };
 
 export const predictions = {
-  get: (ticker: string, horizon = '5d'): Promise<Prediction> => {
+  get: async (ticker: string, horizon = '5d'): Promise<Prediction> => {
     const normalized = horizon.toLowerCase();
 
     if (normalized === '5d' || normalized === '5day' || normalized === '5days') {
-      return request(`/predict/lstm_5d/${ticker}`);
+      const raw = await request<any>(`/predict/lstm_5d/${ticker}`);
+      return normalizePredictionPayload(raw, ticker, '5d');
     }
 
     if (normalized === '20d' || normalized === '20day' || normalized === '20days') {
-      return request(`/predict/lstm_jackpot/${ticker}`);
+      const raw = await request<any>(`/predict/lstm_jackpot/${ticker}`);
+      return normalizePredictionPayload(raw, ticker, '20d');
     }
 
     throw new Error(`Unsupported horizon '${horizon}'. Allowed horizons: 5d, 20d.`);
@@ -430,6 +509,8 @@ export const oracle = {
     }),
 
   getPredictions: (): Promise<Prediction[]> => request('/api/oracle/predictions'),
+  getWatchlistInsights: (limit = 20): Promise<WatchlistInsightsResponse> =>
+    request(`/api/oracle/watchlist-insights?limit=${encodeURIComponent(limit)}`),
 };
 
 export const health = {

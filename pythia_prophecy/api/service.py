@@ -10,6 +10,7 @@ import time
 import uuid
 import os
 import math
+import re
 import logging
 import json
 from datetime import datetime, timedelta, timezone
@@ -58,6 +59,7 @@ from .models import (
     MODEL_HORIZONS,
     PredictResponse,
     OracleResponse,
+    WatchlistInsightsResponse,
     UpdateWatchlistRequest,
     AddToWatchlistRequest,
     UpdateTimeframesRequest,
@@ -877,6 +879,19 @@ SES_WEBHOOK_RATE_LIMIT = int(os.getenv("SES_WEBHOOK_RATE_LIMIT", "240"))
 SES_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("SES_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
 STRIPE_WEBHOOK_RATE_LIMIT = int(os.getenv("STRIPE_WEBHOOK_RATE_LIMIT", "240"))
 STRIPE_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("STRIPE_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
+FINVIZ_API_BASE_URL = os.getenv("FINVIZ_API_BASE_URL", "").strip().rstrip("/")
+FINVIZ_API_KEY = os.getenv("FINVIZ_API_KEY", "").strip()
+FINVIZ_API_AUTH_HEADER = os.getenv("FINVIZ_API_AUTH_HEADER", "X-API-KEY").strip() or "X-API-KEY"
+FINVIZ_API_KEY_PREFIX = os.getenv("FINVIZ_API_KEY_PREFIX", "").strip()
+FINVIZ_API_QUOTE_PATH_TEMPLATE = os.getenv(
+    "FINVIZ_API_QUOTE_PATH_TEMPLATE", "/quote/{ticker}"
+).strip() or "/quote/{ticker}"
+FINVIZ_CHART_URL_TEMPLATE = os.getenv(
+    "FINVIZ_CHART_URL_TEMPLATE",
+    "https://finviz.com/chart.ashx?t={ticker}&ty=c&ta=1&p=d&s=l",
+).strip()
+FINVIZ_API_TIMEOUT_SECONDS = float(os.getenv("FINVIZ_API_TIMEOUT_SECONDS", "8"))
+FINVIZ_INSIGHTS_CACHE_TTL_SECONDS = int(os.getenv("FINVIZ_INSIGHTS_CACHE_TTL_SECONDS", "120"))
 
 ACTIVE_STRIPE_SUBSCRIPTION_STATUSES = {"active", "trialing", "past_due"}
 TERMINAL_STRIPE_SUBSCRIPTION_STATUSES = {"canceled", "unpaid", "incomplete_expired"}
@@ -887,6 +902,7 @@ if stripe and STRIPE_SECRET_KEY:
 
 _ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL: float = 0.0
 _ALPACA_COMPANY_HYDRATE_LAST_LOG: float = 0.0
+_FINVIZ_INSIGHTS_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 
 
 def _extract_client_ip(request: Request) -> Optional[str]:
@@ -1317,6 +1333,193 @@ async def _ensure_company_profile(ticker: str) -> Tuple[Optional[dict], Optional
         info = get_company_info(ticker.upper())
 
     return company, info
+
+
+def _finviz_enabled() -> bool:
+    return bool(FINVIZ_API_BASE_URL and FINVIZ_API_KEY)
+
+
+def _finviz_chart_url(ticker: str) -> str:
+    try:
+        return FINVIZ_CHART_URL_TEMPLATE.format(ticker=ticker.upper())
+    except Exception:
+        return f"https://finviz.com/chart.ashx?t={ticker.upper()}&ty=c&ta=1&p=d&s=l"
+
+
+def _finviz_headers() -> dict[str, str]:
+    if not FINVIZ_API_KEY:
+        return {}
+    value = f"{FINVIZ_API_KEY_PREFIX}{FINVIZ_API_KEY}" if FINVIZ_API_KEY_PREFIX else FINVIZ_API_KEY
+    return {FINVIZ_API_AUTH_HEADER: value}
+
+
+def _build_finviz_quote_url(ticker: str) -> Optional[str]:
+    if not FINVIZ_API_BASE_URL:
+        return None
+    try:
+        path = FINVIZ_API_QUOTE_PATH_TEMPLATE.format(ticker=ticker.upper())
+    except Exception:
+        path = f"/quote/{ticker.upper()}"
+
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+
+    normalized_path = path if path.startswith("/") else f"/{path}"
+    return f"{FINVIZ_API_BASE_URL}{normalized_path}"
+
+
+def _pick_value(payload: dict[str, Any], keys: list[str]) -> Any:
+    if not payload:
+        return None
+    for key in keys:
+        if key in payload:
+            return payload.get(key)
+    lower_map = {str(k).lower(): v for k, v in payload.items()}
+    for key in keys:
+        if key.lower() in lower_map:
+            return lower_map[key.lower()]
+    return None
+
+
+def _parse_float(value: Any, percent: bool = False) -> Optional[float]:
+    if value is None:
+        return None
+
+    if isinstance(value, (int, float)):
+        number = float(value)
+    elif isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        compact = raw.replace(",", "")
+        match = re.search(r"-?\d+(\.\d+)?", compact)
+        if not match:
+            return None
+        try:
+            number = float(match.group(0))
+        except Exception:
+            return None
+        if percent and "%" not in raw and abs(number) <= 1:
+            number *= 100.0
+    else:
+        return None
+
+    if not math.isfinite(number):
+        return None
+    return number
+
+
+async def _fetch_finviz_quote(ticker: str) -> Optional[dict[str, Any]]:
+    if not _finviz_enabled():
+        return None
+
+    symbol = ticker.upper()
+    now_ts = time.time()
+    cached = _FINVIZ_INSIGHTS_CACHE.get(symbol)
+    if cached and now_ts - cached[0] < FINVIZ_INSIGHTS_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    url = _build_finviz_quote_url(symbol)
+    if not url:
+        return None
+
+    try:
+        async with httpx.AsyncClient(timeout=FINVIZ_API_TIMEOUT_SECONDS) as client:
+            response = await client.get(url, headers=_finviz_headers())
+            if response.status_code in (401, 403):
+                logger.warning("Finviz quote access denied for %s: status=%s", symbol, response.status_code)
+                return None
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            payload = response.json()
+    except Exception as exc:
+        logger.debug("Finviz quote fetch failed for %s: %s", symbol, exc)
+        return None
+
+    if isinstance(payload, list):
+        if not payload:
+            return None
+        payload = payload[0]
+
+    if isinstance(payload, dict) and isinstance(payload.get("data"), dict):
+        payload = payload.get("data")
+
+    if not isinstance(payload, dict):
+        return None
+
+    _FINVIZ_INSIGHTS_CACHE[symbol] = (now_ts, payload)
+    return payload
+
+
+def _normalize_watchlist_insight(
+    ticker: str,
+    finviz_quote: Optional[dict[str, Any]],
+) -> dict[str, Any]:
+    symbol = ticker.upper()
+    quote = finviz_quote or {}
+
+    price = _parse_float(_pick_value(quote, ["price", "last", "last_price", "close"]))
+    change_pct = _parse_float(
+        _pick_value(quote, ["change_pct", "change_percent", "changePercent", "change"]),
+        percent=True,
+    )
+    rsi = _parse_float(_pick_value(quote, ["rsi", "rsi14", "rsi_14"]))
+    sma20 = _parse_float(_pick_value(quote, ["sma20", "sma_20"]))
+    sma50 = _parse_float(_pick_value(quote, ["sma50", "sma_50"]))
+    sma200 = _parse_float(_pick_value(quote, ["sma200", "sma_200"]))
+    volume = _parse_float(_pick_value(quote, ["volume", "avg_volume", "avgVolume"]))
+    rel_volume = _parse_float(_pick_value(quote, ["rel_volume", "relative_volume", "relativeVolume"]))
+    atr = _parse_float(_pick_value(quote, ["atr", "atr14"]))
+    support = _parse_float(_pick_value(quote, ["support", "pivot_support"]))
+    resistance = _parse_float(_pick_value(quote, ["resistance", "pivot_resistance"]))
+    trend_raw = _pick_value(quote, ["trend", "signal", "technical_signal", "pattern"])
+    summary_raw = _pick_value(quote, ["summary", "technical_summary", "analysis", "commentary"])
+    updated_raw = _pick_value(quote, ["updated_at", "timestamp", "generated_at", "as_of"])
+
+    cached_price = None
+    if price is None:
+        cached_row = get_last_close_pg(ticker=symbol, timeframe="5d", max_age_hours=168)
+        if cached_row and cached_row.get("last_close") is not None:
+            cached_price = _parse_float(cached_row.get("last_close"))
+            price = cached_price
+
+    summary = str(summary_raw).strip() if isinstance(summary_raw, str) and summary_raw.strip() else None
+    if not summary:
+        company = get_company(symbol)
+        info = get_company_info(symbol)
+        sector = info.get("sector") if isinstance(info, dict) else None
+        industry = info.get("industry") if isinstance(info, dict) else None
+        company_name = company.get("name") if isinstance(company, dict) else symbol
+        parts = [p for p in [sector, industry] if isinstance(p, str) and p.strip()]
+        if parts:
+            summary = f"{company_name}: {' / '.join(parts)}."
+
+    updated_at = (
+        str(updated_raw).strip()
+        if isinstance(updated_raw, str) and str(updated_raw).strip()
+        else datetime.now(timezone.utc).isoformat()
+    )
+
+    return {
+        "ticker": symbol,
+        "chart_url": _finviz_chart_url(symbol),
+        "source": "finviz" if finviz_quote else "fallback",
+        "updated_at": updated_at,
+        "price": price,
+        "change_pct": change_pct,
+        "rsi": rsi,
+        "sma20": sma20,
+        "sma50": sma50,
+        "sma200": sma200,
+        "volume": volume,
+        "rel_volume": rel_volume,
+        "atr": atr,
+        "support": support,
+        "resistance": resistance,
+        "trend": str(trend_raw).strip() if isinstance(trend_raw, str) and str(trend_raw).strip() else None,
+        "summary": summary,
+    }
 
 
 # ============================================================
@@ -3161,6 +3364,56 @@ async def get_oracle(user: UserInDB = Depends(require_verified_user)):
         available_stocks=available_stocks,
         available_categories=available_categories,
         available_timeframes=available_timeframes,
+    )
+
+
+@app.get("/api/oracle/watchlist-insights", response_model=WatchlistInsightsResponse)
+async def get_watchlist_insights(
+    limit: int = Query(20, ge=1, le=100),
+    user: UserInDB = Depends(require_verified_user),
+):
+    """Return watchlist insights with optional Finviz enrichment."""
+    oracle = get_user_oracle(user.id)
+    available_stocks, _, _ = _get_available_for_user(user)
+    available_set = {symbol.upper() for symbol in available_stocks}
+
+    if not oracle or not oracle.watchlist:
+        return WatchlistInsightsResponse(
+            watchlist=[],
+            finviz_enabled=_finviz_enabled(),
+            insights=[],
+        )
+
+    scoped_watchlist: list[str] = []
+    seen: set[str] = set()
+    for ticker in oracle.watchlist:
+        normalized = ticker.upper()
+        if normalized in available_set and normalized not in seen:
+            seen.add(normalized)
+            scoped_watchlist.append(normalized)
+
+    if limit > 0:
+        scoped_watchlist = scoped_watchlist[:limit]
+
+    insights: list[dict[str, Any]] = []
+    if _finviz_enabled() and scoped_watchlist:
+        quote_tasks = [_fetch_finviz_quote(ticker) for ticker in scoped_watchlist]
+        quote_results = await asyncio.gather(*quote_tasks, return_exceptions=True)
+        for ticker, result in zip(scoped_watchlist, quote_results):
+            quote_payload: Optional[dict[str, Any]]
+            if isinstance(result, Exception):
+                quote_payload = None
+            else:
+                quote_payload = result
+            insights.append(_normalize_watchlist_insight(ticker, quote_payload))
+    else:
+        for ticker in scoped_watchlist:
+            insights.append(_normalize_watchlist_insight(ticker, None))
+
+    return WatchlistInsightsResponse(
+        watchlist=scoped_watchlist,
+        finviz_enabled=_finviz_enabled(),
+        insights=insights,
     )
 
 

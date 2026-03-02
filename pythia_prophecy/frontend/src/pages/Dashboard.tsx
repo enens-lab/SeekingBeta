@@ -436,7 +436,7 @@ function Dashboard() {
           </>
         )}
 
-        {oracleData && oracleData.available_stocks.length < 10 && (
+        {oracleData && oracleData.available_stocks.length > 0 && oracleData.available_stocks.length <= 15 && (
           <div className="upgrade-banner">
             <p>
               You have access to {oracleData.available_stocks.length} of the full universe.

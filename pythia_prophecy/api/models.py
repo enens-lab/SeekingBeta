@@ -203,6 +203,34 @@ class OracleResponse(BaseModel):
     available_timeframes: List[str]
 
 
+class WatchlistInsight(BaseModel):
+    """Single watchlist insight card payload."""
+    ticker: str
+    chart_url: str
+    source: str
+    updated_at: str
+    price: Optional[float] = None
+    change_pct: Optional[float] = None
+    rsi: Optional[float] = None
+    sma20: Optional[float] = None
+    sma50: Optional[float] = None
+    sma200: Optional[float] = None
+    volume: Optional[float] = None
+    rel_volume: Optional[float] = None
+    atr: Optional[float] = None
+    support: Optional[float] = None
+    resistance: Optional[float] = None
+    trend: Optional[str] = None
+    summary: Optional[str] = None
+
+
+class WatchlistInsightsResponse(BaseModel):
+    """Watchlist insights response for Oracle page."""
+    watchlist: List[str]
+    finviz_enabled: bool
+    insights: List[WatchlistInsight]
+
+
 class UpdateWatchlistRequest(BaseModel):
     """Request to update entire watchlist."""
     watchlist: List[str]

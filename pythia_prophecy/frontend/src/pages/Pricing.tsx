@@ -160,7 +160,7 @@ function Pricing() {
         <div className="header-content">
           <Link to="/" className="logo">
             <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta</span>
+            <span className="logo-text">SeekingBeta.AI</span>
           </Link>
           <nav className="nav">
             <Link
@@ -362,7 +362,7 @@ function Pricing() {
 
         <section className="pricing-cta">
           <h2>Ready for model-driven market context?</h2>
-          <p>Use SeekingBeta as a transparent decision-support layer in your research workflow.</p>
+          <p>Use SeekingBeta.AI as a transparent decision-support layer in your research workflow.</p>
           <Link
             to="/signup"
             className="btn btn-primary btn-lg"
@@ -377,10 +377,10 @@ function Pricing() {
         <div className="footer-content">
           <div className="footer-brand">
             <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta</span>
+            <span className="logo-text">SeekingBeta.AI</span>
           </div>
           <p className="footer-disclaimer">
-            SeekingBeta is for informational and research purposes only.
+            SeekingBeta.AI is for informational and research purposes only.
             Past performance does not guarantee future results.
           </p>
           <nav className="footer-links">
@@ -398,7 +398,7 @@ function Pricing() {
             </Link>
           </nav>
           <p className="footer-copyright">
-            &copy; {new Date().getFullYear()} SeekingBeta. All rights reserved.
+            &copy; {new Date().getFullYear()} SeekingBeta.AI. All rights reserved.
           </p>
         </div>
       </footer>

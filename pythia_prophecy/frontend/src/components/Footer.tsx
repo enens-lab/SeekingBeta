@@ -9,10 +9,10 @@ function Footer() {
       <div className="footer-content">
         <div className="footer-brand">
           <span className="logo-icon">β</span>
-          <span className="logo-text">SeekingBeta</span>
+          <span className="logo-text">SeekingBeta.AI</span>
         </div>
         <p className="footer-disclaimer">
-          SeekingBeta is for informational and research purposes only.
+          SeekingBeta.AI is for informational and research purposes only.
           Past performance does not guarantee future results.
           Always do your own research and consult a financial advisor.
         </p>
@@ -34,7 +34,7 @@ function Footer() {
           </Link>
         </nav>
         <p className="footer-copyright">
-          &copy; {currentYear} SeekingBeta. All rights reserved.
+          &copy; {currentYear} SeekingBeta.AI. All rights reserved.
         </p>
       </div>
     </footer>

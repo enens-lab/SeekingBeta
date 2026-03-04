@@ -10,7 +10,7 @@ function Terms() {
           <h1>Terms of Service</h1>
           <p className="legal-updated">Last updated: February 27, 2026</p>
           <p>
-            These Terms of Service ("Terms") govern your access to and use of SeekingBeta at
+            These Terms of Service ("Terms") govern your access to and use of SeekingBeta.AI at
             seekingbeta.ai (the "Service"), operated by EnEns LLC ("EnEns," "we," "us," or
             "our"). By accessing or using the Service, you agree to these Terms and our Privacy
             Policy.
@@ -19,7 +19,7 @@ function Terms() {
           <section>
             <h2>1. Agreement</h2>
             <p>
-              By using SeekingBeta, you agree to these Terms. If you do not agree, do not use the
+              By using SeekingBeta.AI, you agree to these Terms. If you do not agree, do not use the
               Service.
             </p>
           </section>
@@ -27,7 +27,7 @@ function Terms() {
           <section>
             <h2>2. Service Description</h2>
             <p>
-              SeekingBeta provides stock analysis, model outputs, and decision-support content for
+              SeekingBeta.AI provides stock analysis, model outputs, and decision-support content for
               educational and research purposes. The Service may include automated or model-driven
               outputs.
             </p>
@@ -36,8 +36,8 @@ function Terms() {
           <section>
             <h2>3. No Financial Advice</h2>
             <p>
-              SeekingBeta is not a broker-dealer, investment adviser, or financial planner. Content
-              provided by SeekingBeta is not personalized investment advice and should not be the
+              SeekingBeta.AI is not a broker-dealer, investment adviser, or financial planner. Content
+              provided by SeekingBeta.AI is not personalized investment advice and should not be the
               sole basis for any investment decision.
             </p>
             <p>
@@ -58,7 +58,7 @@ function Terms() {
           <section>
             <h2>5. Plans, Subscriptions, Billing, and Cancellation (Monthly; Stripe)</h2>
             <p>
-              SeekingBeta may offer a free plan and paid monthly subscription plans (for example,
+              SeekingBeta.AI may offer a free plan and paid monthly subscription plans (for example,
               plans currently offered at $9.99/month and $19.99/month). Plan features and pricing
               are described on the Service and may change from time to time.
             </p>
@@ -88,7 +88,7 @@ function Terms() {
           <section>
             <h2>7. Acceptable Use</h2>
             <p>
-              You may not use SeekingBeta for unlawful activity, abuse, unauthorized access,
+              You may not use SeekingBeta.AI for unlawful activity, abuse, unauthorized access,
               scraping in violation of applicable limits, or activity that degrades service
               reliability. You may not attempt to bypass rate limits or security controls.
             </p>
@@ -130,7 +130,7 @@ function Terms() {
           <section>
             <h2>10. Disclaimers and Limitation of Liability</h2>
             <p>
-              SeekingBeta is provided on an "as is" and "as available" basis. We do not guarantee
+              SeekingBeta.AI is provided on an "as is" and "as available" basis. We do not guarantee
               uninterrupted availability, data accuracy, model performance, or any financial
               outcome.
             </p>

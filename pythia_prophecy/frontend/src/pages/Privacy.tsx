@@ -11,7 +11,7 @@ function Privacy() {
           <p className="legal-updated">Last updated: February 27, 2026</p>
           <p>
             This Privacy Policy explains how EnEns LLC ("EnEns," "we," "us," or "our")
-            collects, uses, shares, and protects information when you access or use SeekingBeta
+            collects, uses, shares, and protects information when you access or use SeekingBeta.AI
             at seekingbeta.ai (the "Service").
           </p>
 
@@ -90,7 +90,7 @@ function Privacy() {
 
           <section>
             <h2>5. Data Sharing</h2>
-            <p>We share data only with service providers required to run SeekingBeta, including:</p>
+            <p>We share data only with service providers required to run SeekingBeta.AI, including:</p>
             <ul>
               <li>AWS infrastructure and hosting services.</li>
               <li>

@@ -84,7 +84,7 @@ function VerifyEmail() {
           <div className="auth-header-row">
             <Link to="/" className="logo">
               <span className="logo-icon">β</span>
-              <span className="logo-text">SeekingBeta</span>
+              <span className="logo-text">SeekingBeta.AI</span>
             </Link>
             <ThemeToggle />
           </div>

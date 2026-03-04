@@ -60,7 +60,7 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">How SeekingBeta Works</h2>
+        <h2 className="section-title">How SeekingBeta.AI Works</h2>
         <p className="section-subtitle">Simple model output for day-to-day research</p>
       </div>
 

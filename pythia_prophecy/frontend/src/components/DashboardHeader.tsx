@@ -24,7 +24,7 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
     <header className="dashboard-header">
       <Link to="/" className="logo">
         <span className="logo-icon">β</span>
-        <span className="logo-text">SeekingBeta</span>
+        <span className="logo-text">SeekingBeta.AI</span>
       </Link>
 
       {showNav && (

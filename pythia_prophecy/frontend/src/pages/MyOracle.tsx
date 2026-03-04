@@ -227,7 +227,7 @@ function MyOracle() {
           <div className="oracle-title-section">
             <h1>Watchlist</h1>
             <p className="oracle-subtitle">
-              Build and manage your SeekingBeta watchlist and preferred horizons.
+              Build and manage your SeekingBeta.AI watchlist and preferred horizons.
             </p>
           </div>
         </div>

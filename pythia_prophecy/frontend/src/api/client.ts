@@ -1,5 +1,5 @@
 /**
- * API client for SeekingBeta backend
+ * API client for SeekingBeta.AI backend
  */
 
 const API_BASE = '';

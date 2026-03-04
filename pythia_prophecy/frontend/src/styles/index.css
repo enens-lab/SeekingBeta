@@ -179,22 +179,30 @@ h4 {
 }
 
 .logo-icon {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, var(--accent), var(--brand-secondary));
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 17px;
-  color: #fff;
+  width: 34px;
+  height: 34px;
+  display: block;
+  flex: 0 0 34px;
+  background: center / contain no-repeat url('/brand-mark.png');
+  border-radius: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  overflow: hidden;
+  text-indent: -9999px;
 }
 
 .logo-text {
-  font-weight: 600;
-  font-size: 20px;
+  width: clamp(118px, 18vw, 168px);
+  height: 32px;
+  display: block;
+  flex: 0 0 auto;
+  background: left center / contain no-repeat url('/brand-wordmark.png');
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  overflow: hidden;
+  text-indent: -9999px;
 }
 
 .nav {
@@ -1271,11 +1279,12 @@ h4 {
 .footer-brand .logo-icon {
   width: 28px;
   height: 28px;
-  font-size: 14px;
+  flex: 0 0 28px;
 }
 
 .footer-brand .logo-text {
-  font-size: 16px;
+  width: 128px;
+  height: 24px;
 }
 
 .footer-disclaimer {

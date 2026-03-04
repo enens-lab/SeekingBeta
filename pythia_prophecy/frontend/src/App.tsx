@@ -25,6 +25,133 @@ interface ProtectedRouteProps {
   children: ReactNode;
 }
 
+interface SeoMeta {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  indexable: boolean;
+}
+
+const SITE_ORIGIN = 'https://seekingbeta.ai';
+const DEFAULT_SEO: SeoMeta = {
+  title: 'SeekingBeta.AI | Educational Stock Model Signals',
+  description:
+    'SeekingBeta.AI provides educational, model-driven stock signal views with transparent probabilities and benchmarked track records.',
+  canonicalPath: '/',
+  indexable: true,
+};
+
+const ROUTE_SEO: Record<string, SeoMeta> = {
+  '/': DEFAULT_SEO,
+  '/pricing': {
+    title: 'Pricing | SeekingBeta.AI',
+    description:
+      'Compare SeekingBeta.AI plans for educational stock model signals, horizons, and watchlist limits.',
+    canonicalPath: '/pricing',
+    indexable: true,
+  },
+  '/methodology': {
+    title: 'Model Methodology | SeekingBeta.AI',
+    description:
+      'Learn how SeekingBeta.AI model signals are generated, evaluated, and presented for educational use.',
+    canonicalPath: '/methodology',
+    indexable: true,
+  },
+  '/terms': {
+    title: 'Terms of Service | SeekingBeta.AI',
+    description: 'Review the SeekingBeta.AI terms of service and platform usage terms.',
+    canonicalPath: '/terms',
+    indexable: true,
+  },
+  '/privacy': {
+    title: 'Privacy Policy | SeekingBeta.AI',
+    description: 'Review how SeekingBeta.AI collects, uses, and protects your data.',
+    canonicalPath: '/privacy',
+    indexable: true,
+  },
+  '/refund-cancellation': {
+    title: 'Refund & Cancellation | SeekingBeta.AI',
+    description: 'Read the SeekingBeta.AI refund and cancellation policy for paid subscriptions.',
+    canonicalPath: '/refund-cancellation',
+    indexable: true,
+  },
+  '/login': {
+    title: 'Log In | SeekingBeta.AI',
+    description: 'Log in to your SeekingBeta.AI account.',
+    canonicalPath: '/login',
+    indexable: false,
+  },
+  '/signup': {
+    title: 'Sign Up | SeekingBeta.AI',
+    description: 'Create your SeekingBeta.AI account.',
+    canonicalPath: '/signup',
+    indexable: false,
+  },
+  '/verify-email': {
+    title: 'Verify Email | SeekingBeta.AI',
+    description: 'Verify your email to activate your SeekingBeta.AI account.',
+    canonicalPath: '/verify-email',
+    indexable: false,
+  },
+  '/dashboard': {
+    title: 'Dashboard | SeekingBeta.AI',
+    description: 'Personalized model views and signal summaries.',
+    canonicalPath: '/dashboard',
+    indexable: false,
+  },
+  '/oracle': {
+    title: 'Watchlist | SeekingBeta.AI',
+    description: 'Manage your watchlist and preferred model horizons.',
+    canonicalPath: '/oracle',
+    indexable: false,
+  },
+  '/analysis': {
+    title: 'Analysis | SeekingBeta.AI',
+    description: 'Run model analysis and review signal outputs.',
+    canonicalPath: '/analysis',
+    indexable: false,
+  },
+  '/profile': {
+    title: 'Profile | SeekingBeta.AI',
+    description: 'Manage your account profile and billing.',
+    canonicalPath: '/profile',
+    indexable: false,
+  },
+};
+
+function getRouteSeo(pathname: string): SeoMeta {
+  return ROUTE_SEO[pathname] ?? {
+    ...DEFAULT_SEO,
+    canonicalPath: pathname || '/',
+  };
+}
+
+function upsertMetaTag(
+  queryKey: 'name' | 'property',
+  queryValue: string,
+  content: string,
+) {
+  let tag = document.head.querySelector<HTMLMetaElement>(
+    `meta[${queryKey}="${queryValue}"]`,
+  );
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(queryKey, queryValue);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', content);
+}
+
+function upsertCanonical(url: string) {
+  let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.setAttribute('rel', 'canonical');
+    document.head.appendChild(canonical);
+  }
+  canonical.setAttribute('href', url);
+}
+
 // Protected route wrapper
 function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth();
@@ -102,6 +229,20 @@ function AnalyticsRouteTracker() {
     initAnalytics();
     const pagePath = `${location.pathname}${location.search}${location.hash}`;
     trackPageView(pagePath);
+
+    const seo = getRouteSeo(location.pathname);
+    const canonicalUrl = new URL(seo.canonicalPath ?? location.pathname, SITE_ORIGIN).toString();
+
+    document.title = seo.title;
+    upsertMetaTag('name', 'description', seo.description);
+    upsertMetaTag('name', 'robots', seo.indexable ? 'index,follow' : 'noindex,nofollow');
+    upsertCanonical(canonicalUrl);
+
+    upsertMetaTag('property', 'og:url', canonicalUrl);
+    upsertMetaTag('property', 'og:title', seo.title);
+    upsertMetaTag('property', 'og:description', seo.description);
+    upsertMetaTag('name', 'twitter:title', seo.title);
+    upsertMetaTag('name', 'twitter:description', seo.description);
   }, [location.pathname, location.search, location.hash]);
 
   return null;

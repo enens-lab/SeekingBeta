@@ -171,7 +171,6 @@ function Privacy() {
             <p>
               Email: <a href="mailto:support@seekingbeta.ai">support@seekingbeta.ai</a>
             </p>
-            <p>Address: [Your business mailing address]</p>
           </section>
         </article>
       </main>

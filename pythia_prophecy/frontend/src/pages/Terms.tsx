@@ -164,7 +164,6 @@ function Terms() {
               Questions and legal notices should be sent to{' '}
               <a href="mailto:support@seekingbeta.ai">support@seekingbeta.ai</a>.
             </p>
-            <p>EnEns LLC mailing address: [Your business mailing address]</p>
           </section>
         </article>
       </main>

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Keep crawlers out of app-only and API endpoints
+Disallow: /api/
+Disallow: /predict/
+Disallow: /portfolio/
+Disallow: /paper/
+Disallow: /simulate/
+Disallow: /data/
+Disallow: /dashboard
+Disallow: /oracle
+Disallow: /analysis
+Disallow: /profile
+Disallow: /login
+Disallow: /signup
+Disallow: /verify-email
+
+Sitemap: https://seekingbeta.ai/sitemap.xml

@@ -66,6 +66,15 @@ export interface DeleteAccountData {
   confirm_text: string;
 }
 
+export interface PasswordResetRequestData {
+  email: string;
+}
+
+export interface PasswordResetConfirmData {
+  token: string;
+  new_password: string;
+}
+
 export interface Tier {
   tier?: 'free' | 'basic' | 'pro';
   name: string;
@@ -449,6 +458,16 @@ export const auth = {
     request('/api/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify({ email }),
+    }),
+  requestPasswordReset: (data: PasswordResetRequestData): Promise<{ message: string }> =>
+    request('/api/auth/password-reset', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  confirmPasswordReset: (data: PasswordResetConfirmData): Promise<{ message: string }> =>
+    request('/api/auth/password-reset-confirm', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 
   getMe: (): Promise<User> => request('/api/auth/me'),

@@ -1662,6 +1662,12 @@ h4 {
   color: var(--text-muted);
 }
 
+.form-group-helper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
 .consent-check {
   display: flex;
   align-items: flex-start;
@@ -1713,6 +1719,14 @@ h4 {
 .form-error {
   background: var(--danger-bg);
   color: var(--danger);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.form-success {
+  background: var(--success-bg);
+  color: var(--success);
   padding: 12px 16px;
   border-radius: var(--radius-sm);
   font-size: 14px;
@@ -1785,6 +1799,10 @@ h4 {
   display: flex;
   justify-content: center;
   margin-top: 24px;
+}
+
+.auth-inline-actions {
+  margin-top: 20px;
 }
 
 .code-input {

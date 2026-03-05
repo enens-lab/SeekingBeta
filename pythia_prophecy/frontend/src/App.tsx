@@ -11,6 +11,7 @@ import Landing from './pages/Landing';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
 import VerifyEmail from './pages/VerifyEmail';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import Pricing from './pages/Pricing';
 import Dashboard from './pages/Dashboard';
 import MyOracle from './pages/MyOracle';
@@ -91,6 +92,12 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
     title: 'Verify Email | SeekingBeta.AI',
     description: 'Verify your email to activate your SeekingBeta.AI account.',
     canonicalPath: '/verify-email',
+    indexable: false,
+  },
+  '/reset-password': {
+    title: 'Reset Password | SeekingBeta.AI',
+    description: 'Reset your SeekingBeta.AI account password.',
+    canonicalPath: '/reset-password',
     indexable: false,
   },
   '/dashboard': {
@@ -179,6 +186,7 @@ function AppRoutes() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/pricing" element={<Pricing />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />

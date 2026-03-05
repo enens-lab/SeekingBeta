@@ -11,7 +11,7 @@ from email.utils import formatdate, make_msgid
 from html import escape
 from typing import Optional
 from time import sleep
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlencode
 
 from .logging_config import get_logger
 from .auth import create_access_token
@@ -31,6 +31,10 @@ REPLY_TO_EMAIL = os.getenv("REPLY_TO_EMAIL", SUPPORT_EMAIL)
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+IOS_RESET_DEEP_LINK_BASE = os.getenv(
+    "IOS_RESET_DEEP_LINK_BASE",
+    "seekingbeta://reset-password",
+)
 
 # Dev mode - print emails instead of sending
 EMAIL_DEV_MODE = os.getenv("EMAIL_DEV_MODE", "true").lower() == "true"
@@ -59,6 +63,12 @@ def _safe_name(name: str) -> str:
     if not clean:
         return "there"
     return escape(clean)
+
+
+def _with_query(url: str, params: dict[str, str]) -> str:
+    """Append query parameters to URL preserving existing query strings."""
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{urlencode(params)}"
 
 
 def _render_email_html(
@@ -214,15 +224,22 @@ def send_password_reset_email(to_email: str, first_name: str, token: str) -> boo
     """Send password reset email."""
     subject = f"Reset your {APP_NAME} password"
 
-    reset_url = f"{FRONTEND_URL.rstrip('/')}/reset-password?token={quote_plus(token)}"
+    reset_url = _with_query(
+        f"{FRONTEND_URL.rstrip('/')}/reset-password",
+        {"token": token, "email": to_email},
+    )
+    app_base = IOS_RESET_DEEP_LINK_BASE.strip() or "seekingbeta://reset-password"
+    app_reset_url = _with_query(app_base, {"token": token, "email": to_email})
     safe_name = _safe_name(first_name)
     safe_url = escape(reset_url)
+    safe_app_url = escape(app_reset_url)
 
     body_html = f"""
     <p>Hi {safe_name},</p>
     <p>We received a request to reset your password.</p>
     <p class="muted">If you did not request this, you can ignore this email.</p>
     <div class="notice"><strong>Security notice:</strong> This reset link expires in 1 hour.</div>
+    <p class="muted">Prefer the iOS app? <a href="{safe_app_url}">Open in app</a></p>
     <p class="muted">Direct link: <a href="{safe_url}">{safe_url}</a></p>
     """
     html_content = _render_email_html(
@@ -240,6 +257,9 @@ def send_password_reset_email(to_email: str, first_name: str, token: str) -> boo
     We received a request to reset your {APP_NAME} password. Use this link to set a new password:
 
     {reset_url}
+
+    Open in iOS app:
+    {app_reset_url}
 
     This link expires in 1 hour.
 

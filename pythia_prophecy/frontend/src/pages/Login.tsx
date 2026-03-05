@@ -154,6 +154,11 @@ function Login() {
                 required
                 autoComplete="current-password"
               />
+              <div className="form-group-helper">
+                <Link to="/reset-password" className="form-link">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>

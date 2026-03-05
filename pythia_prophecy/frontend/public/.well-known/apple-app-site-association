@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "TEAMID.BUNDLEID"
+        ],
+        "components": [
+          {
+            "/": "/reset-password*"
+          },
+          {
+            "/": "/verify-email*"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -57,6 +57,13 @@ function Header() {
           >
             How It Works
           </a>
+          <a
+            href="/#beta-testers"
+            className="nav-link"
+            onClick={(e) => scrollToSection(e, 'beta-testers')}
+          >
+            Beta Program
+          </a>
           <Link
             to="/methodology"
             className="nav-link"
@@ -64,6 +71,15 @@ function Header() {
           >
             Methodology
           </Link>
+          <a
+            href="https://discord.gg/gydS5yb3"
+            className="nav-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent('discord_click', { source: 'header_nav' })}
+          >
+            Discord
+          </a>
           <Link
             to="/pricing"
             className="nav-link"

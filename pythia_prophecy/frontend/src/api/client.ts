@@ -35,6 +35,22 @@ export interface SignupData {
   marketing_opt_in?: boolean;
 }
 
+export interface BetaTesterSignupData {
+  full_name: string;
+  email: string;
+  role?: string;
+  organization?: string;
+  investing_experience?: string;
+  testing_focus: string;
+  accept_contact: boolean;
+  source?: string;
+}
+
+export interface BetaTesterSignupResponse {
+  message: string;
+  discord_url: string;
+}
+
 export interface LoginData {
   email: string;
   password: string;
@@ -443,6 +459,14 @@ export const auth = {
     }),
   deleteAccount: (data: DeleteAccountData): Promise<{ message: string }> =>
     request('/api/auth/delete-account', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
+
+export const betaProgram = {
+  signup: (data: BetaTesterSignupData): Promise<BetaTesterSignupResponse> =>
+    request('/api/beta-testers/signup', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

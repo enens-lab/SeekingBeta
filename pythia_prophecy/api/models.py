@@ -174,6 +174,22 @@ class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
 
+class BetaTesterSignupRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=120)
+    email: EmailStr
+    role: Optional[str] = Field(default=None, max_length=120)
+    organization: Optional[str] = Field(default=None, max_length=160)
+    investing_experience: Optional[str] = Field(default=None, max_length=80)
+    testing_focus: str = Field(..., min_length=12, max_length=1200)
+    accept_contact: bool
+    source: Optional[str] = Field(default=None, max_length=120)
+
+
+class BetaTesterSignupResponse(BaseModel):
+    message: str
+    discord_url: str
+
+
 class PredictResponse(BaseModel):
     ticker: str
     horizon: str

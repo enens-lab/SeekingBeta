@@ -3,6 +3,7 @@ import Hero from '../components/Hero';
 import PredictionsCarousel from '../components/PredictionsCarousel';
 import PerformanceComparison from '../components/PerformanceComparison';
 import Features from '../components/Features';
+import BetaTesterSignup from '../components/BetaTesterSignup';
 import CallToAction from '../components/CallToAction';
 import Footer from '../components/Footer';
 
@@ -15,6 +16,7 @@ function Landing() {
         <PerformanceComparison />
         <PredictionsCarousel />
         <Features />
+        <BetaTesterSignup />
         <CallToAction />
       </main>
       <Footer />

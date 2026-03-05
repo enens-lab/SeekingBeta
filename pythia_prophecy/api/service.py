@@ -48,6 +48,8 @@ from .models import (
     TokenResponse,
     TierInfo,
     MessageResponse,
+    BetaTesterSignupRequest,
+    BetaTesterSignupResponse,
     VerifyEmailRequest,
     ResendVerificationRequest,
     RefreshTokenRequest,
@@ -136,6 +138,11 @@ from .billing_store import (
     register_webhook_event,
     mark_webhook_event,
     list_states_with_expired_legacy_grace,
+)
+from .beta_program_store import (
+    ensure_table as ensure_beta_program_table,
+    is_enabled as beta_program_store_enabled,
+    upsert_beta_tester,
 )
 from .auth import (
     hash_password,
@@ -563,6 +570,7 @@ All errors follow a standardized format:
     openapi_url="/api/openapi.json",
     openapi_tags=[
         {"name": "Authentication", "description": "User signup, login, and token management"},
+        {"name": "Community", "description": "Public community and beta program endpoints"},
         {"name": "Preferences", "description": "User settings and preferences"},
         {"name": "Predictions", "description": "Stock price predictions and signals"},
         {"name": "Oracle", "description": "Personal watchlist and alert management"},
@@ -626,6 +634,15 @@ async def startup_validation():
             errors.append(f"Compliance store initialization failed: {e}")
     else:
         warnings.append("DATABASE_URL not set - compliance store disabled")
+
+    # Ensure Postgres-backed beta tester applications table.
+    if beta_program_store_enabled():
+        try:
+            ensure_beta_program_table()
+        except Exception as e:
+            errors.append(f"Beta program store initialization failed: {e}")
+    else:
+        warnings.append("DATABASE_URL not set - beta program signup storage disabled")
 
     # Validate Stripe configuration and ensure Postgres-backed billing tables.
     if STRIPE_ENABLED:
@@ -877,10 +894,19 @@ AUTH_DELETE_ACCOUNT_RATE_LIMIT = int(os.getenv("AUTH_DELETE_ACCOUNT_RATE_LIMIT",
 AUTH_DELETE_ACCOUNT_RATE_WINDOW_SECONDS = int(
     os.getenv("AUTH_DELETE_ACCOUNT_RATE_WINDOW_SECONDS", "3600")
 )
+PUBLIC_BETA_SIGNUP_RATE_LIMIT = int(os.getenv("PUBLIC_BETA_SIGNUP_RATE_LIMIT", "3"))
+PUBLIC_BETA_SIGNUP_RATE_WINDOW_SECONDS = int(
+    os.getenv("PUBLIC_BETA_SIGNUP_RATE_WINDOW_SECONDS", "3600")
+)
+PUBLIC_BETA_SIGNUP_IP_RATE_LIMIT = int(os.getenv("PUBLIC_BETA_SIGNUP_IP_RATE_LIMIT", "30"))
+PUBLIC_BETA_SIGNUP_IP_RATE_WINDOW_SECONDS = int(
+    os.getenv("PUBLIC_BETA_SIGNUP_IP_RATE_WINDOW_SECONDS", "3600")
+)
 SES_WEBHOOK_RATE_LIMIT = int(os.getenv("SES_WEBHOOK_RATE_LIMIT", "240"))
 SES_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("SES_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
 STRIPE_WEBHOOK_RATE_LIMIT = int(os.getenv("STRIPE_WEBHOOK_RATE_LIMIT", "240"))
 STRIPE_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("STRIPE_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
+DISCORD_INVITE_URL = os.getenv("DISCORD_INVITE_URL", "https://discord.gg/gydS5yb3").strip()
 FINVIZ_API_BASE_URL = os.getenv("FINVIZ_API_BASE_URL", "").strip().rstrip("/")
 FINVIZ_API_KEY = os.getenv("FINVIZ_API_KEY", "").strip()
 FINVIZ_API_AUTH_HEADER = os.getenv("FINVIZ_API_AUTH_HEADER", "X-API-KEY").strip() or "X-API-KEY"
@@ -2311,6 +2337,71 @@ async def get_tier(tier: SubscriptionTier):
         stocks_limit=config["stocks_limit"],
         timeframes=config["timeframes"],
         features=config["features"],
+    )
+
+
+# ============================================================
+# Community Endpoints
+# ============================================================
+
+@app.post("/api/beta-testers/signup", response_model=BetaTesterSignupResponse, tags=["Community"])
+async def beta_tester_signup(data: BetaTesterSignupRequest, request: Request):
+    """Capture public beta tester applications from landing page."""
+    if not data.accept_contact:
+        raise HTTPException(400, detail="You must agree to be contacted for beta updates.")
+
+    safe_email = str(data.email).strip().lower()
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"community:beta-signup:email:{safe_email}",
+        max_requests=PUBLIC_BETA_SIGNUP_RATE_LIMIT,
+        window_seconds=PUBLIC_BETA_SIGNUP_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"community:beta-signup:ip:{client_id}",
+        max_requests=PUBLIC_BETA_SIGNUP_IP_RATE_LIMIT,
+        window_seconds=PUBLIC_BETA_SIGNUP_IP_RATE_WINDOW_SECONDS,
+    )
+
+    if not beta_program_store_enabled():
+        logger.error("Beta signup attempted while beta program store is disabled")
+        raise HTTPException(503, detail="Beta signup is temporarily unavailable.")
+
+    try:
+        saved = upsert_beta_tester(
+            email=safe_email,
+            full_name=data.full_name,
+            role=data.role,
+            organization=data.organization,
+            investing_experience=data.investing_experience,
+            testing_focus=data.testing_focus,
+            source=data.source or "landing_page",
+            ip_address=_extract_client_ip(request),
+            user_agent=_extract_user_agent(request),
+        )
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(503, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to store beta tester signup for %s: %s", safe_email, e)
+        raise HTTPException(500, detail="Could not process beta signup right now.")
+
+    logger.info(
+        "Beta tester signup stored email=%s created=%s source=%s",
+        safe_email,
+        saved.get("created", False),
+        data.source or "landing_page",
+    )
+
+    if saved.get("created"):
+        message = "Application received. We will reach out with beta access updates soon."
+    else:
+        message = "Your beta application was updated. We will follow up with next steps."
+
+    return BetaTesterSignupResponse(
+        message=message,
+        discord_url=DISCORD_INVITE_URL or "https://discord.gg/gydS5yb3",
     )
 
 

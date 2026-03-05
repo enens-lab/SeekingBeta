@@ -20,6 +20,14 @@ function Footer() {
           <Link to="/methodology" onClick={() => trackEvent('footer_link_click', { destination: 'methodology' })}>
             Methodology
           </Link>
+          <a
+            href="https://discord.gg/gydS5yb3"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackEvent('discord_click', { source: 'footer' })}
+          >
+            Discord
+          </a>
           <Link to="/terms" onClick={() => trackEvent('footer_link_click', { destination: 'terms' })}>
             Terms
           </Link>

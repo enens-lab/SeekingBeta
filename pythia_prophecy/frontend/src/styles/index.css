@@ -162,18 +162,19 @@ h4 {
 }
 
 .header-content {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 20px;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
   text-decoration: none;
   color: var(--text-primary);
 }
@@ -208,7 +209,9 @@ h4 {
 
 .nav {
   display: flex;
-  gap: 24px;
+  gap: 18px;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .nav-link {
@@ -216,6 +219,8 @@ h4 {
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.2;
   transition: color 0.2s;
 }
 
@@ -228,6 +233,7 @@ h4 {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .theme-toggle {

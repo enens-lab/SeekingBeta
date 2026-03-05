@@ -179,10 +179,10 @@ h4 {
 }
 
 .logo-icon {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   display: block;
-  flex: 0 0 48px;
+  flex: 0 0 56px;
   background: center / contain no-repeat url('/brand-mark.png');
   border-radius: 0;
   font-size: 0;
@@ -193,8 +193,8 @@ h4 {
 }
 
 .logo-text {
-  width: clamp(188px, 19vw, 252px);
-  height: 44px;
+  width: clamp(208px, 21vw, 276px);
+  height: 50px;
   display: block;
   flex: 0 0 auto;
   margin-left: -32px;
@@ -1278,15 +1278,15 @@ h4 {
 }
 
 .footer-brand .logo-icon {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
 }
 
 .footer-brand .logo-text {
-  width: 168px;
-  height: 32px;
-  margin-left: -22px;
+  width: 192px;
+  height: 36px;
+  margin-left: -24px;
 }
 
 .footer-disclaimer {

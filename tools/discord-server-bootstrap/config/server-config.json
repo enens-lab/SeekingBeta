@@ -1,0 +1,122 @@
+{
+  "brandName": "SeekingBeta.AI",
+  "discordInviteUrl": "https://discord.gg/gydS5yb3",
+  "acceptRoleName": "Member",
+  "roles": [
+    {
+      "name": "Admin",
+      "color": "#ef4444",
+      "hoist": true,
+      "mentionable": false
+    },
+    {
+      "name": "Moderator",
+      "color": "#f59e0b",
+      "hoist": true,
+      "mentionable": false
+    },
+    {
+      "name": "Beta Tester",
+      "color": "#22d3ee",
+      "hoist": true,
+      "mentionable": true
+    },
+    {
+      "name": "Member",
+      "color": "#10b981",
+      "hoist": false,
+      "mentionable": false
+    }
+  ],
+  "categories": [
+    {
+      "name": "START HERE",
+      "channels": [
+        {
+          "name": "rules",
+          "type": "text",
+          "topic": "Read the rules and click I Agree to unlock member access.",
+          "permissions": {
+            "everyone": {
+              "allow": ["ViewChannel", "ReadMessageHistory"],
+              "deny": ["SendMessages"]
+            },
+            "roles": {
+              "Admin": {
+                "allow": ["SendMessages", "ManageMessages"]
+              },
+              "Moderator": {
+                "allow": ["SendMessages", "ManageMessages"]
+              }
+            }
+          }
+        },
+        {
+          "name": "announcements",
+          "type": "text",
+          "topic": "Official product and beta updates.",
+          "permissions": {
+            "everyone": {
+              "allow": ["ViewChannel", "ReadMessageHistory"],
+              "deny": ["SendMessages"]
+            },
+            "roles": {
+              "Admin": {
+                "allow": ["SendMessages", "ManageMessages"]
+              },
+              "Moderator": {
+                "allow": ["SendMessages", "ManageMessages"]
+              }
+            }
+          }
+        },
+        {
+          "name": "welcome",
+          "type": "text",
+          "topic": "Welcome channel for new members."
+        }
+      ]
+    },
+    {
+      "name": "BETA FEEDBACK",
+      "channels": [
+        {
+          "name": "beta-general",
+          "type": "text",
+          "topic": "General beta testing discussion."
+        },
+        {
+          "name": "bug-reports",
+          "type": "text",
+          "topic": "Report bugs with steps to reproduce and screenshots."
+        },
+        {
+          "name": "feature-requests",
+          "type": "text",
+          "topic": "Request improvements or new features."
+        },
+        {
+          "name": "support",
+          "type": "text",
+          "topic": "Ask product or account questions."
+        }
+      ]
+    }
+  ],
+  "welcome": {
+    "channel": "welcome",
+    "message": "Welcome {user} to SeekingBeta.AI. Please review #rules and click **I Agree** to unlock full access."
+  },
+  "rules": {
+    "title": "SeekingBeta.AI Community Rules",
+    "description": "Please follow these rules to keep the beta program productive and professional.",
+    "items": [
+      "Be respectful and constructive in feedback.",
+      "Do not share private account details, API keys, or sensitive data.",
+      "Keep bug reports clear with reproduction steps and expected behavior.",
+      "No spam, scams, harassment, or abusive language.",
+      "Beta features may change; avoid sharing confidential screenshots outside this server."
+    ],
+    "footer": "By clicking I Agree, you confirm you understand and will follow these rules."
+  }
+}

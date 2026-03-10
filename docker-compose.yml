@@ -84,6 +84,8 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-development}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_me_in_production}
       EMAIL_DEV_MODE: ${EMAIL_DEV_MODE:-true}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      POSTMARK_SERVER_TOKEN: ${POSTMARK_SERVER_TOKEN:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       SMTP_HOST: ${SMTP_HOST:-localhost}
       SMTP_PORT: ${SMTP_PORT:-587}

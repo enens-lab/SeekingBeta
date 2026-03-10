@@ -596,17 +596,28 @@ async def startup_validation():
 
     # Check critical environment variables based on environment
     if environment == "production":
+        email_provider = os.getenv("EMAIL_PROVIDER", "smtp").strip().lower()
+        smtp_user = os.getenv("SMTP_USER", "").strip()
+        smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+        postmark_token = os.getenv("POSTMARK_SERVER_TOKEN", "").strip()
+
         if not os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET_KEY") == "your-secret-key":
             errors.append("JWT_SECRET_KEY is not set securely in production")
 
         if os.getenv("EMAIL_DEV_MODE", "false").lower() == "true":
             errors.append("EMAIL_DEV_MODE should be disabled in production")
 
-        if not os.getenv("SMTP_USER"):
-            warnings.append("SMTP_USER not configured - email sending will fail")
-
-        if not os.getenv("SMTP_PASSWORD"):
-            warnings.append("SMTP_PASSWORD not configured - email sending will fail")
+        if email_provider == "postmark":
+            if not postmark_token and (not smtp_user or not smtp_password):
+                warnings.append(
+                    "Postmark email configured but no credentials found. "
+                    "Set POSTMARK_SERVER_TOKEN or SMTP_USER/SMTP_PASSWORD."
+                )
+        else:
+            if not smtp_user:
+                warnings.append("SMTP_USER not configured - email sending will fail")
+            if not smtp_password:
+                warnings.append("SMTP_PASSWORD not configured - email sending will fail")
 
     # Check frontend URL
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")

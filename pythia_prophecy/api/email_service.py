@@ -19,10 +19,22 @@ from .auth import create_access_token
 logger = get_logger("email")
 
 # Email configuration from environment
-SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
+EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "smtp").strip().lower()
+if EMAIL_PROVIDER not in {"smtp", "postmark"}:
+    logger.warning("Unknown EMAIL_PROVIDER=%s; defaulting to smtp", EMAIL_PROVIDER)
+    EMAIL_PROVIDER = "smtp"
+
+POSTMARK_SERVER_TOKEN = os.getenv("POSTMARK_SERVER_TOKEN", "").strip()
+default_smtp_host = "smtp.postmarkapp.com" if EMAIL_PROVIDER == "postmark" else "localhost"
+SMTP_HOST = os.getenv("SMTP_HOST", default_smtp_host).strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+if EMAIL_PROVIDER == "postmark" and POSTMARK_SERVER_TOKEN:
+    if not SMTP_USER:
+        SMTP_USER = POSTMARK_SERVER_TOKEN
+    if not SMTP_PASSWORD:
+        SMTP_PASSWORD = POSTMARK_SERVER_TOKEN
 FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@seekingbeta.ai")
 FROM_NAME = os.getenv("FROM_NAME", "SeekingBeta.AI")
 APP_NAME = os.getenv("APP_NAME", "SeekingBeta.AI")

@@ -444,3 +444,56 @@
   text-transform: uppercase;
   font-weight: bold;
 }
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.sports-search-input {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  min-width: 250px;
+}
+
+.sports-search-input:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+}
+
+.sports-filter-dropdown {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.backtest-header-area {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.backtest-filters {
+  display: flex;
+  gap: 1rem;
+}
+
+.no-results-message {
+  padding: 3rem;
+  text-align: center;
+  color: var(--text-muted);
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  font-size: 1.1rem;
+}

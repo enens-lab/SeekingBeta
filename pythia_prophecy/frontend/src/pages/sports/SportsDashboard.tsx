@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
 import { trackEvent } from '../../lib/analytics';
 import upcomingTournaments from '../../data/upcoming_tournaments.json';
@@ -13,6 +13,11 @@ function SportsDashboard() {
   const [activeEventId, setActiveEventId] = useState<string>(upcomingTournaments[0]?.id || '');
   const [showAllPredictions, setShowAllPredictions] = useState(false);
   const [expandedBacktest, setExpandedBacktest] = useState<number | null>(null);
+  
+  // Search and filter states
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [backtestSearchQuery, setBacktestSearchQuery] = useState('');
+  const [backtestFilter, setBacktestFilter] = useState<'All' | 'Hit: Top Pick' | 'Hit: Top 3' | 'Hit: Top 5' | 'Miss'>('All');
 
   const handleSportChange = (sport: SportCategory) => {
     trackEvent('sports_category_change', { sport });
@@ -22,16 +27,35 @@ function SportsDashboard() {
   const activeEvent = upcomingTournaments.find(t => t.id === activeEventId) || upcomingTournaments[0];
   const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map(p => p.winProbability)) : 100;
   
-  const displayedPredictions = showAllPredictions 
-    ? activeEvent?.predictions 
-    : activeEvent?.predictions.slice(0, 15);
+  const displayedPredictions = useMemo(() => {
+    let filtered = activeEvent?.predictions || [];
+    
+    if (playerSearchQuery.trim() !== '') {
+      const query = playerSearchQuery.toLowerCase();
+      filtered = filtered.filter(p => p.playerName.toLowerCase().includes(query));
+      // If searching, show all matches regardless of showAllPredictions state
+      return filtered;
+    }
+    
+    return showAllPredictions ? filtered : filtered.slice(0, 15);
+  }, [activeEvent, playerSearchQuery, showAllPredictions]);
+
+  const filteredBacktests = useMemo(() => {
+    return historicalBacktests.filter(bt => {
+      const matchesSearch = bt.tournament.toLowerCase().includes(backtestSearchQuery.toLowerCase()) || 
+                            bt.actualWinner.toLowerCase().includes(backtestSearchQuery.toLowerCase());
+      const matchesFilter = backtestFilter === 'All' || bt.hitStatus === backtestFilter.replace('Hit: ', '');
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [backtestSearchQuery, backtestFilter]);
 
   const toggleBacktestDetails = (idx: number) => {
     if (expandedBacktest === idx) {
       setExpandedBacktest(null);
     } else {
       setExpandedBacktest(idx);
-      trackEvent('sports_backtest_details_click', { tournament: historicalBacktests[idx].tournament });
+      trackEvent('sports_backtest_details_click', { tournament: filteredBacktests[idx].tournament });
     }
   };
 
@@ -107,56 +131,76 @@ function SportsDashboard() {
               {pgaTab === 'upcoming' && (
                 <div className="upcoming-events-container">
                   <div className="event-selector">
-                    <label>Select Tournament: </label>
-                    <select 
-                      value={activeEventId} 
-                      onChange={(e) => {
-                        setActiveEventId(e.target.value);
-                        setShowAllPredictions(false);
-                      }}
-                      className="tournament-dropdown"
-                    >
-                      {upcomingTournaments.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
+                    <div className="selector-group">
+                      <label>Select Tournament: </label>
+                      <select 
+                        value={activeEventId} 
+                        onChange={(e) => {
+                          setActiveEventId(e.target.value);
+                          setShowAllPredictions(false);
+                          setPlayerSearchQuery('');
+                        }}
+                        className="tournament-dropdown"
+                      >
+                        {upcomingTournaments.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   
                   {activeEvent && (
                     <div className="tournament-card active-market">
                       <div className="tournament-header">
-                        <h2>{activeEvent.name}</h2>
-                        <span className="market-status live">Market Live</span>
+                        <div className="header-left">
+                          <h2>{activeEvent.name}</h2>
+                          <span className="market-status live">Market Live</span>
+                        </div>
+                        <div className="header-search">
+                          <input 
+                            type="text" 
+                            placeholder="Search player..." 
+                            value={playerSearchQuery}
+                            onChange={(e) => setPlayerSearchQuery(e.target.value)}
+                            className="sports-search-input"
+                          />
+                        </div>
                       </div>
                       <div className="tournament-details">
                         <p><strong>Course:</strong> {activeEvent.course}</p>
                         <p><strong>Model:</strong> Tournament-Aware Softmax Ranker</p>
                       </div>
 
-                      <div className="prediction-leaderboard">
-                        <div className="leaderboard-header">
-                          <span>Rank</span>
-                          <span>Player</span>
-                          <span>Win Probability</span>
+                      {displayedPredictions.length === 0 ? (
+                        <div className="no-results-message">
+                          No players found matching "{playerSearchQuery}"
                         </div>
-                        {displayedPredictions?.map((pred) => (
-                          <div key={pred.rank} className="leaderboard-row">
-                            <span className="player-rank">#{pred.rank}</span>
-                            <span className="player-name">{pred.playerName}</span>
-                            <div className="probability-container">
-                              <span className="prob-value">{pred.winProbability.toFixed(2)}%</span>
-                              <div className="prob-bar-bg">
-                                <div 
-                                  className="prob-bar-fill" 
-                                  style={{ width: `${(pred.winProbability / maxProb) * 100}%` }}
-                                ></div>
+                      ) : (
+                        <div className="prediction-leaderboard">
+                          <div className="leaderboard-header">
+                            <span>Rank</span>
+                            <span>Player</span>
+                            <span>Win Probability</span>
+                          </div>
+                          {displayedPredictions.map((pred) => (
+                            <div key={pred.rank} className="leaderboard-row">
+                              <span className="player-rank">#{pred.rank}</span>
+                              <span className="player-name">{pred.playerName}</span>
+                              <div className="probability-container">
+                                <span className="prob-value">{pred.winProbability.toFixed(2)}%</span>
+                                <div className="prob-bar-bg">
+                                  <div 
+                                    className="prob-bar-fill" 
+                                    style={{ width: `${(pred.winProbability / maxProb) * 100}%` }}
+                                  ></div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                       
-                      {!showAllPredictions && activeEvent.predictions.length > 15 && (
+                      {!showAllPredictions && playerSearchQuery === '' && activeEvent.predictions.length > 15 && (
                         <div className="view-all-container">
                           <button 
                             className="btn btn-outline"
@@ -173,58 +217,88 @@ function SportsDashboard() {
 
               {pgaTab === 'backtest' && (
                 <div className="backtest-container">
-                  <h2>Model Track Record (2024 - 2025)</h2>
-                  <p className="backtest-desc">Comparing the model's top predicted picks against the actual tournament winner. We evaluate Top Pick (1st), Top 3, and Top 5 probabilities.</p>
-                  
-                  <div className="backtest-table">
-                    <div className="backtest-header">
-                      <span>Year</span>
-                      <span>Tournament</span>
-                      <span>Top Predicted Picks</span>
-                      <span>Actual Winner</span>
-                      <span>Result</span>
-                      <span>Details</span>
+                  <div className="backtest-header-area">
+                    <div>
+                      <h2>Model Track Record (2024 - 2025)</h2>
+                      <p className="backtest-desc">Comparing the model's top predicted picks against the actual tournament winner. We evaluate Top Pick (1st), Top 3, and Top 5 probabilities.</p>
                     </div>
-                    {historicalBacktests.map((bt, idx) => (
-                      <div key={idx} className="backtest-row-container">
-                        <div className={`backtest-row ${bt.hitStatus !== 'Miss' ? 'hit' : 'miss'}`}>
-                          <span>{bt.year}</span>
-                          <span>{bt.tournament}</span>
-                          <div className="top-picks-col">
-                            <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
-                            <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
-                            <small>4. {bt.predictedTop5?.[3]} | 5. {bt.predictedTop5?.[4]}</small>
-                          </div>
-                          <span>{bt.actualWinner}</span>
-                          <span className={`result-badge ${bt.hitStatus.toLowerCase().replace(' ', '-')}`}>
-                            {bt.hitStatus !== 'Miss' ? `Hit: ${bt.hitStatus}` : 'Miss'}
-                          </span>
-                          <button 
-                            className="btn-text details-toggle"
-                            onClick={() => toggleBacktestDetails(idx)}
-                          >
-                            {expandedBacktest === idx ? 'Hide Details' : 'View Details'}
-                          </button>
-                        </div>
-                        
-                        {expandedBacktest === idx && (
-                          <div className="backtest-details-panel">
-                            <h4>Full Model Field Ranking</h4>
-                            <div className="details-grid">
-                              {bt.fullField?.map(player => (
-                                <div key={player.rank} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
-                                  <span className="dp-rank">#{player.rank}</span>
-                                  <span className="dp-name">{player.playerName}</span>
-                                  <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
-                                  {player.actualWinner && <span className="dp-badge">Winner</span>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    <div className="backtest-filters">
+                      <input 
+                        type="text" 
+                        placeholder="Search tournament or winner..." 
+                        value={backtestSearchQuery}
+                        onChange={(e) => setBacktestSearchQuery(e.target.value)}
+                        className="sports-search-input"
+                      />
+                      <select 
+                        value={backtestFilter}
+                        onChange={(e) => setBacktestFilter(e.target.value as any)}
+                        className="sports-filter-dropdown"
+                      >
+                        <option value="All">All Results</option>
+                        <option value="Hit: Top Pick">Hit: Top Pick Only</option>
+                        <option value="Hit: Top 3">Hit: Top 3</option>
+                        <option value="Hit: Top 5">Hit: Top 5</option>
+                        <option value="Miss">Misses Only</option>
+                      </select>
+                    </div>
                   </div>
+                  
+                  {filteredBacktests.length === 0 ? (
+                    <div className="no-results-message">
+                      No historical results found matching your filters.
+                    </div>
+                  ) : (
+                    <div className="backtest-table">
+                      <div className="backtest-header">
+                        <span>Year</span>
+                        <span>Tournament</span>
+                        <span>Top Predicted Picks</span>
+                        <span>Actual Winner</span>
+                        <span>Result</span>
+                        <span>Details</span>
+                      </div>
+                      {filteredBacktests.map((bt, idx) => (
+                        <div key={idx} className="backtest-row-container">
+                          <div className={`backtest-row ${bt.hitStatus !== 'Miss' ? 'hit' : 'miss'}`}>
+                            <span>{bt.year}</span>
+                            <span>{bt.tournament}</span>
+                            <div className="top-picks-col">
+                              <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
+                              <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
+                              <small>4. {bt.predictedTop5?.[3]} | 5. {bt.predictedTop5?.[4]}</small>
+                            </div>
+                            <span>{bt.actualWinner}</span>
+                            <span className={`result-badge ${bt.hitStatus.toLowerCase().replace(' ', '-')}`}>
+                              {bt.hitStatus !== 'Miss' ? `Hit: ${bt.hitStatus}` : 'Miss'}
+                            </span>
+                            <button 
+                              className="btn-text details-toggle"
+                              onClick={() => toggleBacktestDetails(idx)}
+                            >
+                              {expandedBacktest === idx ? 'Hide Details' : 'View Details'}
+                            </button>
+                          </div>
+                          
+                          {expandedBacktest === idx && (
+                            <div className="backtest-details-panel">
+                              <h4>Full Model Field Ranking</h4>
+                              <div className="details-grid">
+                                {bt.fullField?.map(player => (
+                                  <div key={player.rank} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
+                                    <span className="dp-rank">#{player.rank}</span>
+                                    <span className="dp-name">{player.playerName}</span>
+                                    <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
+                                    {player.actualWinner && <span className="dp-badge">Winner</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

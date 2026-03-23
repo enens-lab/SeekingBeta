@@ -2,44 +2,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: SRB vs NOR",
-    "predictedWinner": "Lola Radivojevic",
+    "predictedWinner": "Ulrikke Eikeri",
     "predictedTop3": [
-      "Lola Radivojevic",
       "Ulrikke Eikeri",
+      "Lola Radivojevic",
       "Malene Helgo"
     ],
     "predictedTop5": [
-      "Lola Radivojevic",
       "Ulrikke Eikeri",
+      "Lola Radivojevic",
       "Malene Helgo",
       "Mia Ristic"
     ],
     "actualWinner": "Lola Radivojevic",
-    "hitStatus": "Top Pick",
-    "prob": 0.5370644330978394,
+    "hitStatus": "Top 3",
+    "prob": 0.38460075855255127,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Lola Radivojevic",
-        "winProbability": 53.706443786621094,
-        "actualWinner": true
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 38.46007537841797,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 25.948646545410156,
-        "actualWinner": false
+        "playerName": "Lola Radivojevic",
+        "winProbability": 26.41421890258789,
+        "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Malene Helgo",
-        "winProbability": 10.18128776550293,
+        "winProbability": 19.821731567382812,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Mia Ristic",
-        "winProbability": 10.163616180419922,
+        "winProbability": 15.303971290588379,
         "actualWinner": false
       }
     ]
@@ -61,30 +61,30 @@
     ],
     "actualWinner": "Malene Helgo",
     "hitStatus": "Top 3",
-    "prob": 0.3164597153663635,
+    "prob": 0.6356230974197388,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Ulrikke Eikeri",
-        "winProbability": 31.645971298217773,
+        "winProbability": 63.56230926513672,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Malene Helgo",
-        "winProbability": 31.468360900878906,
+        "winProbability": 24.06448745727539,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Johanne Christine Svendsen",
-        "winProbability": 20.000154495239258,
+        "winProbability": 10.152871131896973,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Rebecca Munk Mortensen",
-        "winProbability": 16.885509490966797,
+        "winProbability": 2.2203288078308105,
         "actualWinner": false
       }
     ]
@@ -95,41 +95,41 @@
     "predictedWinner": "Gergana Topalova",
     "predictedTop3": [
       "Gergana Topalova",
-      "Malene Helgo",
-      "Ulrikke Eikeri"
+      "Ulrikke Eikeri",
+      "Malene Helgo"
     ],
     "predictedTop5": [
       "Gergana Topalova",
-      "Malene Helgo",
       "Ulrikke Eikeri",
+      "Malene Helgo",
       "Lia Karatancheva"
     ],
     "actualWinner": "Malene Helgo",
     "hitStatus": "Top 3",
-    "prob": 0.36911314725875854,
+    "prob": 0.36767932772636414,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Gergana Topalova",
-        "winProbability": 36.91131591796875,
+        "winProbability": 36.7679328918457,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Malene Helgo",
-        "winProbability": 29.76450538635254,
-        "actualWinner": true
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 25.809309005737305,
+        "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 22.262577056884766,
-        "actualWinner": false
+        "playerName": "Malene Helgo",
+        "winProbability": 23.717008590698242,
+        "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Lia Karatancheva",
-        "winProbability": 11.061598777770996,
+        "winProbability": 13.705745697021484,
         "actualWinner": false
       }
     ]
@@ -140,41 +140,41 @@
     "predictedWinner": "Malene Helgo",
     "predictedTop3": [
       "Malene Helgo",
-      "Tara Wurth",
-      "Ulrikke Eikeri"
+      "Ulrikke Eikeri",
+      "Tara Wurth"
     ],
     "predictedTop5": [
       "Malene Helgo",
-      "Tara Wurth",
       "Ulrikke Eikeri",
+      "Tara Wurth",
       "Antonia Ruzic"
     ],
     "actualWinner": "Tara Wurth",
     "hitStatus": "Top 3",
-    "prob": 0.3535524904727936,
+    "prob": 0.5571631193161011,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Malene Helgo",
-        "winProbability": 35.355247497558594,
+        "winProbability": 55.716312408447266,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Tara Wurth",
-        "winProbability": 27.94363784790039,
-        "actualWinner": true
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 28.216938018798828,
+        "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 26.443603515625,
-        "actualWinner": false
+        "playerName": "Tara Wurth",
+        "winProbability": 10.592419624328613,
+        "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Antonia Ruzic",
-        "winProbability": 10.257509231567383,
+        "winProbability": 5.474327564239502,
         "actualWinner": false
       }
     ]
@@ -185,41 +185,41 @@
     "predictedWinner": "Daniela Seguel",
     "predictedTop3": [
       "Daniela Seguel",
-      "Romina Ccuno",
+      "Lucciana Perez Alarcon",
       "Fernanda Labrana"
     ],
     "predictedTop5": [
       "Daniela Seguel",
-      "Romina Ccuno",
+      "Lucciana Perez Alarcon",
       "Fernanda Labrana",
-      "Lucciana Perez Alarcon"
+      "Romina Ccuno"
     ],
     "actualWinner": "Daniela Seguel",
     "hitStatus": "Top Pick",
-    "prob": 0.40571269392967224,
+    "prob": 0.7570016384124756,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Daniela Seguel",
-        "winProbability": 40.57126998901367,
+        "winProbability": 75.70016479492188,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Romina Ccuno",
-        "winProbability": 38.62950134277344,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 15.294692993164062,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Fernanda Labrana",
-        "winProbability": 11.476316452026367,
+        "winProbability": 7.875973701477051,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Lucciana Perez Alarcon",
-        "winProbability": 9.322907447814941,
+        "playerName": "Romina Ccuno",
+        "winProbability": 1.129166841506958,
         "actualWinner": false
       }
     ]
@@ -227,44 +227,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: ARG vs CHI",
-    "predictedWinner": "Daniela Seguel",
+    "predictedWinner": "Julia Riera",
     "predictedTop3": [
-      "Daniela Seguel",
       "Julia Riera",
+      "Daniela Seguel",
       "Martina Capurro Taborda"
     ],
     "predictedTop5": [
-      "Daniela Seguel",
       "Julia Riera",
+      "Daniela Seguel",
       "Martina Capurro Taborda",
       "Fernanda Labrana"
     ],
     "actualWinner": "Julia Riera",
-    "hitStatus": "Top 3",
-    "prob": 0.47717589139938354,
+    "hitStatus": "Top Pick",
+    "prob": 0.3716012239456177,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Daniela Seguel",
-        "winProbability": 47.71759033203125,
-        "actualWinner": false
+        "playerName": "Julia Riera",
+        "winProbability": 37.16012191772461,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Julia Riera",
-        "winProbability": 32.121925354003906,
-        "actualWinner": true
+        "playerName": "Daniela Seguel",
+        "winProbability": 27.431928634643555,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Martina Capurro Taborda",
-        "winProbability": 12.148331642150879,
+        "winProbability": 24.55657196044922,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Fernanda Labrana",
-        "winProbability": 8.012158393859863,
+        "winProbability": 10.851366996765137,
         "actualWinner": false
       }
     ]
@@ -272,44 +272,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: COL vs CHI",
-    "predictedWinner": "Maria Fernanda Herazo Gonzalez",
+    "predictedWinner": "Emiliana Arango",
     "predictedTop3": [
-      "Maria Fernanda Herazo Gonzalez",
       "Emiliana Arango",
+      "Maria Fernanda Herazo Gonzalez",
       "Daniela Seguel"
     ],
     "predictedTop5": [
-      "Maria Fernanda Herazo Gonzalez",
       "Emiliana Arango",
+      "Maria Fernanda Herazo Gonzalez",
       "Daniela Seguel",
       "Fernanda Labrana"
     ],
     "actualWinner": "Emiliana Arango",
-    "hitStatus": "Top 3",
-    "prob": 0.3761746287345886,
+    "hitStatus": "Top Pick",
+    "prob": 0.4345676600933075,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Maria Fernanda Herazo Gonzalez",
-        "winProbability": 37.617462158203125,
-        "actualWinner": false
+        "playerName": "Emiliana Arango",
+        "winProbability": 43.456764221191406,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Emiliana Arango",
-        "winProbability": 30.473636627197266,
-        "actualWinner": true
+        "playerName": "Maria Fernanda Herazo Gonzalez",
+        "winProbability": 30.693832397460938,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Daniela Seguel",
-        "winProbability": 26.979108810424805,
+        "winProbability": 18.20846176147461,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Fernanda Labrana",
-        "winProbability": 4.929787635803223,
+        "winProbability": 7.640936374664307,
         "actualWinner": false
       }
     ]
@@ -331,30 +331,30 @@
     ],
     "actualWinner": "Ankita Raina",
     "hitStatus": "Top Pick",
-    "prob": 0.5280216336250305,
+    "prob": 0.4457908272743225,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Ankita Raina",
-        "winProbability": 52.802162170410156,
+        "winProbability": 44.57908248901367,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Rutuja Bhosale",
-        "winProbability": 31.173372268676758,
+        "winProbability": 32.92401885986328,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Sevil Yuldasheva",
-        "winProbability": 8.012231826782227,
+        "winProbability": 13.737394332885742,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Sabrina Olimjanova",
-        "winProbability": 8.012231826782227,
+        "winProbability": 8.759512901306152,
         "actualWinner": false
       }
     ]
@@ -362,44 +362,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: CHN vs IND",
-    "predictedWinner": "Ankita Raina",
+    "predictedWinner": "Yue Yuan",
     "predictedTop3": [
-      "Ankita Raina",
       "Yue Yuan",
+      "Ankita Raina",
       "Rutuja Bhosale"
     ],
     "predictedTop5": [
-      "Ankita Raina",
       "Yue Yuan",
+      "Ankita Raina",
       "Rutuja Bhosale",
       "Xinyu Jiang"
     ],
     "actualWinner": "Yue Yuan",
-    "hitStatus": "Top 3",
-    "prob": 0.43565401434898376,
+    "hitStatus": "Top Pick",
+    "prob": 0.45671942830085754,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Ankita Raina",
-        "winProbability": 43.56540298461914,
-        "actualWinner": false
+        "playerName": "Yue Yuan",
+        "winProbability": 45.67194366455078,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Yue Yuan",
-        "winProbability": 40.574127197265625,
-        "actualWinner": true
+        "playerName": "Ankita Raina",
+        "winProbability": 22.210342407226562,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Rutuja Bhosale",
-        "winProbability": 8.832335472106934,
+        "winProbability": 17.72863006591797,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Xinyu Jiang",
-        "winProbability": 7.028132438659668,
+        "winProbability": 14.389077186584473,
         "actualWinner": false
       }
     ]
@@ -411,41 +411,41 @@
     "predictedTop3": [
       "Mai Hontama",
       "Ankita Raina",
-      "Moyuka Uchijima"
+      "Rutuja Bhosale"
     ],
     "predictedTop5": [
       "Mai Hontama",
       "Ankita Raina",
-      "Moyuka Uchijima",
-      "Rutuja Bhosale"
+      "Rutuja Bhosale",
+      "Moyuka Uchijima"
     ],
     "actualWinner": "Moyuka Uchijima",
-    "hitStatus": "Top 3",
-    "prob": 0.49456489086151123,
+    "hitStatus": "Top 5",
+    "prob": 0.5711135864257812,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mai Hontama",
-        "winProbability": 49.45648956298828,
+        "winProbability": 57.111358642578125,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Ankita Raina",
-        "winProbability": 36.63127136230469,
+        "winProbability": 17.4228572845459,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Moyuka Uchijima",
-        "winProbability": 8.129717826843262,
-        "actualWinner": true
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 15.361669540405273,
+        "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Rutuja Bhosale",
-        "winProbability": 5.7825164794921875,
-        "actualWinner": false
+        "playerName": "Moyuka Uchijima",
+        "winProbability": 10.104116439819336,
+        "actualWinner": true
       }
     ]
   },
@@ -466,30 +466,30 @@
     ],
     "actualWinner": "Rutuja Bhosale",
     "hitStatus": "Top Pick",
-    "prob": 0.44849178194999695,
+    "prob": 0.46078330278396606,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Rutuja Bhosale",
-        "winProbability": 44.849178314208984,
+        "winProbability": 46.078330993652344,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Yeon Woo Ku",
-        "winProbability": 25.081008911132812,
+        "winProbability": 30.74053192138672,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Dabin Kim",
-        "winProbability": 17.779306411743164,
+        "winProbability": 17.68669319152832,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Vaidehi Chaudhari",
-        "winProbability": 12.290498733520508,
+        "winProbability": 5.494447231292725,
         "actualWinner": false
       }
     ]
@@ -500,42 +500,42 @@
     "predictedWinner": "Wushuang Zheng",
     "predictedTop3": [
       "Wushuang Zheng",
-      "Dayeon Back",
-      "Zhaoxuan Yang"
-    ],
-    "predictedTop5": [
-      "Wushuang Zheng",
-      "Dayeon Back",
       "Zhaoxuan Yang",
       "Dabin Kim"
     ],
+    "predictedTop5": [
+      "Wushuang Zheng",
+      "Zhaoxuan Yang",
+      "Dabin Kim",
+      "Dayeon Back"
+    ],
     "actualWinner": "Dayeon Back",
-    "hitStatus": "Top 3",
-    "prob": 0.5867441296577454,
+    "hitStatus": "Top 5",
+    "prob": 0.6860694885253906,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Wushuang Zheng",
-        "winProbability": 58.67441177368164,
+        "winProbability": 68.60694885253906,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Dayeon Back",
-        "winProbability": 15.05859661102295,
-        "actualWinner": true
+        "playerName": "Zhaoxuan Yang",
+        "winProbability": 25.37152099609375,
+        "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Zhaoxuan Yang",
-        "winProbability": 14.390955924987793,
+        "playerName": "Dabin Kim",
+        "winProbability": 4.19728946685791,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Dabin Kim",
-        "winProbability": 11.876031875610352,
-        "actualWinner": false
+        "playerName": "Dayeon Back",
+        "winProbability": 1.824240803718567,
+        "actualWinner": true
       }
     ]
   },
@@ -556,30 +556,30 @@
     ],
     "actualWinner": "Marketa Vondrousova",
     "hitStatus": "Top 3",
-    "prob": 0.6325861811637878,
+    "prob": 0.7228939533233643,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Barbora Krejcikova",
-        "winProbability": 63.25861740112305,
+        "winProbability": 72.28939819335938,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Marketa Vondrousova",
-        "winProbability": 18.76323699951172,
+        "winProbability": 15.949435234069824,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Marta Kostyuk",
-        "winProbability": 13.672487258911133,
+        "winProbability": 6.15627908706665,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Katarina Zavatska",
-        "winProbability": 4.305655002593994,
+        "winProbability": 5.604889392852783,
         "actualWinner": false
       }
     ]
@@ -587,45 +587,45 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: ARG vs GUA",
-    "predictedWinner": "Kirsten Andrea Weedon",
+    "predictedWinner": "Maria Gabriela Rivera Corado",
     "predictedTop3": [
+      "Maria Gabriela Rivera Corado",
+      "Kirsten Andrea Weedon",
+      "Martina Capurro Taborda"
+    ],
+    "predictedTop5": [
+      "Maria Gabriela Rivera Corado",
       "Kirsten Andrea Weedon",
       "Martina Capurro Taborda",
       "Julia Riera"
     ],
-    "predictedTop5": [
-      "Kirsten Andrea Weedon",
-      "Martina Capurro Taborda",
-      "Julia Riera",
-      "Maria Gabriela Rivera Corado"
-    ],
     "actualWinner": "Julia Riera",
-    "hitStatus": "Top 3",
-    "prob": 0.4323108494281769,
+    "hitStatus": "Top 5",
+    "prob": 0.4280620217323303,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Kirsten Andrea Weedon",
-        "winProbability": 43.23108673095703,
+        "playerName": "Maria Gabriela Rivera Corado",
+        "winProbability": 42.80620193481445,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Martina Capurro Taborda",
-        "winProbability": 18.987422943115234,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 29.449108123779297,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Julia Riera",
-        "winProbability": 18.987422943115234,
-        "actualWinner": true
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 14.002619743347168,
+        "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Maria Gabriela Rivera Corado",
-        "winProbability": 18.794071197509766,
-        "actualWinner": false
+        "playerName": "Julia Riera",
+        "winProbability": 13.7420654296875,
+        "actualWinner": true
       }
     ]
   },
@@ -646,30 +646,30 @@
     ],
     "actualWinner": "Maria Gabriela Rivera Corado",
     "hitStatus": "Top 5",
-    "prob": 0.5374882817268372,
+    "prob": 0.4367315173149109,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Lucciana Perez Alarcon",
-        "winProbability": 53.74882888793945,
+        "winProbability": 43.673152923583984,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Anastasia Iamachkine",
-        "winProbability": 17.935312271118164,
+        "winProbability": 24.386545181274414,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Kirsten Andrea Weedon",
-        "winProbability": 17.840267181396484,
+        "winProbability": 21.100379943847656,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Maria Gabriela Rivera Corado",
-        "winProbability": 10.475591659545898,
+        "winProbability": 10.839932441711426,
         "actualWinner": true
       }
     ]
@@ -681,85 +681,85 @@
     "predictedTop3": [
       "Nefisa Berberovic",
       "Elaine Genovese",
-      "Dea Herdzelas"
+      "Francesca Curmi"
     ],
     "predictedTop5": [
       "Nefisa Berberovic",
       "Elaine Genovese",
-      "Dea Herdzelas",
-      "Francesca Curmi"
+      "Francesca Curmi",
+      "Dea Herdzelas"
     ],
     "actualWinner": "Francesca Curmi",
-    "hitStatus": "Top 5",
-    "prob": 0.2584660053253174,
+    "hitStatus": "Top 3",
+    "prob": 0.41365543007850647,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Nefisa Berberovic",
-        "winProbability": 25.846599578857422,
+        "winProbability": 41.365543365478516,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Elaine Genovese",
-        "winProbability": 24.717802047729492,
+        "winProbability": 20.491727828979492,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Dea Herdzelas",
-        "winProbability": 24.717802047729492,
-        "actualWinner": false
+        "playerName": "Francesca Curmi",
+        "winProbability": 19.555740356445312,
+        "actualWinner": true
       },
       {
         "rank": 4,
-        "playerName": "Francesca Curmi",
-        "winProbability": 24.717802047729492,
-        "actualWinner": true
+        "playerName": "Dea Herdzelas",
+        "winProbability": 18.58698081970215,
+        "actualWinner": false
       }
     ]
   },
   {
     "year": 2023,
     "tournament": "BJK Cup G2 RR: POR vs MLT",
-    "predictedWinner": "Francisca Jorge",
+    "predictedWinner": "Francesca Curmi",
     "predictedTop3": [
-      "Francisca Jorge",
       "Francesca Curmi",
+      "Francisca Jorge",
       "Elaine Genovese"
     ],
     "predictedTop5": [
-      "Francisca Jorge",
       "Francesca Curmi",
+      "Francisca Jorge",
       "Elaine Genovese",
       "Ines Murta"
     ],
     "actualWinner": "Francesca Curmi",
-    "hitStatus": "Top 3",
-    "prob": 0.5186456441879272,
+    "hitStatus": "Top Pick",
+    "prob": 0.37403324246406555,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Francisca Jorge",
-        "winProbability": 51.86456298828125,
-        "actualWinner": false
+        "playerName": "Francesca Curmi",
+        "winProbability": 37.403324127197266,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Francesca Curmi",
-        "winProbability": 32.36789321899414,
-        "actualWinner": true
+        "playerName": "Francisca Jorge",
+        "winProbability": 33.98986053466797,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Elaine Genovese",
-        "winProbability": 8.196706771850586,
+        "winProbability": 18.76828384399414,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Ines Murta",
-        "winProbability": 7.570833683013916,
+        "winProbability": 9.83852481842041,
         "actualWinner": false
       }
     ]
@@ -767,44 +767,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G2 RR: ISR vs MLT",
-    "predictedWinner": "Shavit Kimchi",
+    "predictedWinner": "Francesca Curmi",
     "predictedTop3": [
-      "Shavit Kimchi",
       "Francesca Curmi",
+      "Shavit Kimchi",
       "Elaine Genovese"
     ],
     "predictedTop5": [
-      "Shavit Kimchi",
       "Francesca Curmi",
+      "Shavit Kimchi",
       "Elaine Genovese",
       "Lina Glushko"
     ],
     "actualWinner": "Lina Glushko",
     "hitStatus": "Top 5",
-    "prob": 0.3879033327102661,
+    "prob": 0.4132464826107025,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Shavit Kimchi",
-        "winProbability": 38.79033279418945,
+        "playerName": "Francesca Curmi",
+        "winProbability": 41.324649810791016,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Francesca Curmi",
-        "winProbability": 26.586400985717773,
+        "playerName": "Shavit Kimchi",
+        "winProbability": 20.86739158630371,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Elaine Genovese",
-        "winProbability": 23.23395538330078,
+        "winProbability": 19.927873611450195,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Lina Glushko",
-        "winProbability": 11.389310836791992,
+        "winProbability": 17.880083084106445,
         "actualWinner": true
       }
     ]
@@ -816,40 +816,40 @@
     "predictedTop3": [
       "Francesca Curmi",
       "Suzanie Pretorius",
-      "Marilouise Van Zyl"
+      "Elaine Genovese"
     ],
     "predictedTop5": [
       "Francesca Curmi",
       "Suzanie Pretorius",
-      "Marilouise Van Zyl",
-      "Elaine Genovese"
+      "Elaine Genovese",
+      "Marilouise Van Zyl"
     ],
     "actualWinner": "Francesca Curmi",
     "hitStatus": "Top Pick",
-    "prob": 0.5152037143707275,
+    "prob": 0.5570128560066223,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Francesca Curmi",
-        "winProbability": 51.52037048339844,
+        "winProbability": 55.70128631591797,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Suzanie Pretorius",
-        "winProbability": 17.187726974487305,
+        "winProbability": 19.636045455932617,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Marilouise Van Zyl",
-        "winProbability": 15.878108024597168,
+        "playerName": "Elaine Genovese",
+        "winProbability": 16.706924438476562,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Elaine Genovese",
-        "winProbability": 15.413797378540039,
+        "playerName": "Marilouise Van Zyl",
+        "winProbability": 7.95574426651001,
         "actualWinner": false
       }
     ]
@@ -860,41 +860,41 @@
     "predictedWinner": "Francisca Jorge",
     "predictedTop3": [
       "Francisca Jorge",
-      "Ines Murta",
+      "Nefisa Berberovic",
       "Dea Herdzelas"
     ],
     "predictedTop5": [
       "Francisca Jorge",
-      "Ines Murta",
+      "Nefisa Berberovic",
       "Dea Herdzelas",
-      "Nefisa Berberovic"
+      "Ines Murta"
     ],
     "actualWinner": "Francisca Jorge",
     "hitStatus": "Top Pick",
-    "prob": 0.6548304557800293,
+    "prob": 0.3142741322517395,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Francisca Jorge",
-        "winProbability": 65.48304748535156,
+        "winProbability": 31.427413940429688,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Ines Murta",
-        "winProbability": 13.271127700805664,
+        "playerName": "Nefisa Berberovic",
+        "winProbability": 24.8626708984375,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Dea Herdzelas",
-        "winProbability": 10.816187858581543,
+        "winProbability": 24.854795455932617,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Nefisa Berberovic",
-        "winProbability": 10.42963981628418,
+        "playerName": "Ines Murta",
+        "winProbability": 18.85511016845703,
         "actualWinner": false
       }
     ]
@@ -916,30 +916,30 @@
     ],
     "actualWinner": "Nefisa Berberovic",
     "hitStatus": "Top Pick",
-    "prob": 0.7194235324859619,
+    "prob": 0.45231351256370544,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Nefisa Berberovic",
-        "winProbability": 71.94235229492188,
+        "winProbability": 45.23134994506836,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Dea Herdzelas",
-        "winProbability": 9.875008583068848,
+        "winProbability": 30.624385833740234,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Mika Buchnik",
-        "winProbability": 9.863558769226074,
+        "winProbability": 17.722896575927734,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Mika Dagan Fruchtman",
-        "winProbability": 8.319076538085938,
+        "winProbability": 6.421365737915039,
         "actualWinner": false
       }
     ]
@@ -961,30 +961,30 @@
     ],
     "actualWinner": "Anna Bondar",
     "hitStatus": "Top 3",
-    "prob": 0.41379550099372864,
+    "prob": 0.4055790901184082,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Sandra Samir",
-        "winProbability": 41.37955093383789,
+        "winProbability": 40.55790710449219,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Anna Bondar",
-        "winProbability": 30.502151489257812,
+        "winProbability": 28.016544342041016,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Dalma Galfi",
-        "winProbability": 21.601839065551758,
+        "winProbability": 25.666921615600586,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Lamis Alhussein Abdel Aziz",
-        "winProbability": 6.516467094421387,
+        "winProbability": 5.7586236000061035,
         "actualWinner": false
       }
     ]
@@ -995,41 +995,41 @@
     "predictedWinner": "Clara Tauson",
     "predictedTop3": [
       "Clara Tauson",
-      "Rebecca Munk Mortensen",
+      "Sandra Samir",
       "Lamis Alhussein Abdel Aziz"
     ],
     "predictedTop5": [
       "Clara Tauson",
-      "Rebecca Munk Mortensen",
+      "Sandra Samir",
       "Lamis Alhussein Abdel Aziz",
-      "Sandra Samir"
+      "Rebecca Munk Mortensen"
     ],
     "actualWinner": "Clara Tauson",
     "hitStatus": "Top Pick",
-    "prob": 0.6420145034790039,
+    "prob": 0.7366843819618225,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Clara Tauson",
-        "winProbability": 64.20144653320312,
+        "winProbability": 73.66844177246094,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Rebecca Munk Mortensen",
-        "winProbability": 12.17630386352539,
+        "playerName": "Sandra Samir",
+        "winProbability": 13.867571830749512,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Lamis Alhussein Abdel Aziz",
-        "winProbability": 11.996443748474121,
+        "winProbability": 7.132670879364014,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sandra Samir",
-        "winProbability": 11.62579345703125,
+        "playerName": "Rebecca Munk Mortensen",
+        "winProbability": 5.331322193145752,
         "actualWinner": false
       }
     ]
@@ -1051,30 +1051,30 @@
     ],
     "actualWinner": "Gergana Topalova",
     "hitStatus": "Top 3",
-    "prob": 0.48445647954940796,
+    "prob": 0.6769012808799744,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 48.445648193359375,
+        "winProbability": 67.69012451171875,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Gergana Topalova",
-        "winProbability": 38.671566009521484,
+        "winProbability": 21.55205535888672,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Lia Karatancheva",
-        "winProbability": 6.580878257751465,
+        "winProbability": 10.40300464630127,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Kajsa Rinaldo Persson",
-        "winProbability": 6.301907539367676,
+        "winProbability": 0.35481515526771545,
         "actualWinner": false
       }
     ]
@@ -1096,30 +1096,30 @@
     ],
     "actualWinner": "Emiliana Arango",
     "hitStatus": "Top 3",
-    "prob": 0.6963910460472107,
+    "prob": 0.5321243405342102,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Maria Fernanda Herazo Gonzalez",
-        "winProbability": 69.63910675048828,
+        "winProbability": 53.212432861328125,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Emiliana Arango",
-        "winProbability": 11.047972679138184,
+        "winProbability": 24.875301361083984,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Noelia Zeballos Melgar",
-        "winProbability": 9.65645980834961,
+        "winProbability": 12.018586158752441,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Ana Fabia Holweg Bustillos",
-        "winProbability": 9.65645980834961,
+        "winProbability": 9.893684387207031,
         "actualWinner": false
       }
     ]
@@ -1131,40 +1131,40 @@
     "predictedTop3": [
       "Maria Fernanda Herazo Gonzalez",
       "Emiliana Arango",
-      "Lucciana Perez Alarcon"
+      "Anastasia Iamachkine"
     ],
     "predictedTop5": [
       "Maria Fernanda Herazo Gonzalez",
       "Emiliana Arango",
-      "Lucciana Perez Alarcon",
-      "Anastasia Iamachkine"
+      "Anastasia Iamachkine",
+      "Lucciana Perez Alarcon"
     ],
     "actualWinner": "Emiliana Arango",
     "hitStatus": "Top 3",
-    "prob": 0.44768649339675903,
+    "prob": 0.39679792523384094,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Maria Fernanda Herazo Gonzalez",
-        "winProbability": 44.76865005493164,
+        "winProbability": 39.67979431152344,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Emiliana Arango",
-        "winProbability": 43.87405014038086,
+        "winProbability": 34.6552848815918,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Lucciana Perez Alarcon",
-        "winProbability": 6.265560626983643,
+        "playerName": "Anastasia Iamachkine",
+        "winProbability": 15.210439682006836,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Anastasia Iamachkine",
-        "winProbability": 5.091736316680908,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 10.454482078552246,
         "actualWinner": false
       }
     ]
@@ -1172,44 +1172,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: ARG vs COL",
-    "predictedWinner": "Maria Fernanda Herazo Gonzalez",
+    "predictedWinner": "Julia Riera",
     "predictedTop3": [
-      "Maria Fernanda Herazo Gonzalez",
       "Julia Riera",
+      "Maria Fernanda Herazo Gonzalez",
       "Martina Capurro Taborda"
     ],
     "predictedTop5": [
-      "Maria Fernanda Herazo Gonzalez",
       "Julia Riera",
+      "Maria Fernanda Herazo Gonzalez",
       "Martina Capurro Taborda",
       "Yuliana Monroy"
     ],
     "actualWinner": "Julia Riera",
-    "hitStatus": "Top 3",
-    "prob": 0.5256360769271851,
+    "hitStatus": "Top Pick",
+    "prob": 0.42788586020469666,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Maria Fernanda Herazo Gonzalez",
-        "winProbability": 52.56360626220703,
-        "actualWinner": false
+        "playerName": "Julia Riera",
+        "winProbability": 42.7885856628418,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Julia Riera",
-        "winProbability": 30.157682418823242,
-        "actualWinner": true
+        "playerName": "Maria Fernanda Herazo Gonzalez",
+        "winProbability": 32.96561813354492,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Martina Capurro Taborda",
-        "winProbability": 10.349353790283203,
+        "winProbability": 23.83148956298828,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Yuliana Monroy",
-        "winProbability": 6.929356575012207,
+        "winProbability": 0.41430842876434326,
         "actualWinner": false
       }
     ]
@@ -1220,41 +1220,41 @@
     "predictedWinner": "Julia Riera",
     "predictedTop3": [
       "Julia Riera",
-      "Martina Capurro Taborda",
-      "Noelia Zeballos Melgar"
+      "Noelia Zeballos Melgar",
+      "Martina Capurro Taborda"
     ],
     "predictedTop5": [
       "Julia Riera",
-      "Martina Capurro Taborda",
       "Noelia Zeballos Melgar",
+      "Martina Capurro Taborda",
       "Catalina Padilla Udaeta"
     ],
     "actualWinner": "Julia Riera",
     "hitStatus": "Top Pick",
-    "prob": 0.5775381922721863,
+    "prob": 0.41783735156059265,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Julia Riera",
-        "winProbability": 57.75381851196289,
+        "winProbability": 41.78373336791992,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Martina Capurro Taborda",
-        "winProbability": 14.968079566955566,
+        "playerName": "Noelia Zeballos Melgar",
+        "winProbability": 29.051319122314453,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Noelia Zeballos Melgar",
-        "winProbability": 14.632476806640625,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 22.913686752319336,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Catalina Padilla Udaeta",
-        "winProbability": 12.645624160766602,
+        "winProbability": 6.251261234283447,
         "actualWinner": false
       }
     ]
@@ -1262,44 +1262,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: ARG vs PER",
-    "predictedWinner": "Romina Ccuno",
+    "predictedWinner": "Martina Capurro Taborda",
     "predictedTop3": [
-      "Romina Ccuno",
+      "Martina Capurro Taborda",
       "Julia Riera",
       "Lucciana Perez Alarcon"
     ],
     "predictedTop5": [
-      "Romina Ccuno",
+      "Martina Capurro Taborda",
       "Julia Riera",
       "Lucciana Perez Alarcon",
-      "Martina Capurro Taborda"
+      "Romina Ccuno"
     ],
     "actualWinner": "Julia Riera",
     "hitStatus": "Top 3",
-    "prob": 0.41367241740226746,
+    "prob": 0.4047614336013794,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Romina Ccuno",
-        "winProbability": 41.36724090576172,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 40.47614288330078,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Julia Riera",
-        "winProbability": 26.458707809448242,
+        "winProbability": 35.77248764038086,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Lucciana Perez Alarcon",
-        "winProbability": 16.40308380126953,
+        "winProbability": 22.394216537475586,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Martina Capurro Taborda",
-        "winProbability": 15.770971298217773,
+        "playerName": "Romina Ccuno",
+        "winProbability": 1.3571528196334839,
         "actualWinner": false
       }
     ]
@@ -1311,40 +1311,40 @@
     "predictedTop3": [
       "Justina Mikulskyte",
       "Adrijana Lekaj",
-      "Arlinda Rushiti"
+      "Klaudija Bubelyte"
     ],
     "predictedTop5": [
       "Justina Mikulskyte",
       "Adrijana Lekaj",
-      "Arlinda Rushiti",
-      "Klaudija Bubelyte"
+      "Klaudija Bubelyte",
+      "Arlinda Rushiti"
     ],
     "actualWinner": "Justina Mikulskyte",
     "hitStatus": "Top Pick",
-    "prob": 0.6627895832061768,
+    "prob": 0.7529277801513672,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Justina Mikulskyte",
-        "winProbability": 66.27896118164062,
+        "winProbability": 75.29277801513672,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Adrijana Lekaj",
-        "winProbability": 11.240346908569336,
+        "winProbability": 8.972670555114746,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Arlinda Rushiti",
-        "winProbability": 11.240346908569336,
+        "playerName": "Klaudija Bubelyte",
+        "winProbability": 7.903829097747803,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Klaudija Bubelyte",
-        "winProbability": 11.240346908569336,
+        "playerName": "Arlinda Rushiti",
+        "winProbability": 7.830716133117676,
         "actualWinner": false
       }
     ]
@@ -1352,44 +1352,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G2 RR: RSA vs KOS",
-    "predictedWinner": "Suzanie Pretorius",
+    "predictedWinner": "Adrijana Lekaj",
     "predictedTop3": [
+      "Adrijana Lekaj",
       "Suzanie Pretorius",
-      "Arlinda Rushiti",
-      "Adrijana Lekaj"
+      "Arlinda Rushiti"
     ],
     "predictedTop5": [
+      "Adrijana Lekaj",
       "Suzanie Pretorius",
       "Arlinda Rushiti",
-      "Adrijana Lekaj",
       "Marilouise Van Zyl"
     ],
     "actualWinner": "Arlinda Rushiti",
     "hitStatus": "Top 3",
-    "prob": 0.3630210757255554,
+    "prob": 0.32293960452079773,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Suzanie Pretorius",
-        "winProbability": 36.30210876464844,
+        "playerName": "Adrijana Lekaj",
+        "winProbability": 32.29396057128906,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Arlinda Rushiti",
-        "winProbability": 28.42286491394043,
-        "actualWinner": true
+        "playerName": "Suzanie Pretorius",
+        "winProbability": 32.04320526123047,
+        "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Adrijana Lekaj",
-        "winProbability": 18.921472549438477,
-        "actualWinner": false
+        "playerName": "Arlinda Rushiti",
+        "winProbability": 29.88433265686035,
+        "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Marilouise Van Zyl",
-        "winProbability": 16.35356330871582,
+        "winProbability": 5.77849817276001,
         "actualWinner": false
       }
     ]
@@ -1401,40 +1401,40 @@
     "predictedTop3": [
       "Arlinda Rushiti",
       "Celine Simunyu",
-      "Sinead Lohan"
+      "Adrijana Lekaj"
     ],
     "predictedTop5": [
       "Arlinda Rushiti",
       "Celine Simunyu",
-      "Sinead Lohan",
-      "Adrijana Lekaj"
+      "Adrijana Lekaj",
+      "Sinead Lohan"
     ],
     "actualWinner": "Celine Simunyu",
     "hitStatus": "Top 3",
-    "prob": 0.5551462173461914,
+    "prob": 0.3430965840816498,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Arlinda Rushiti",
-        "winProbability": 55.51462173461914,
+        "winProbability": 34.30965805053711,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Celine Simunyu",
-        "winProbability": 29.261484146118164,
+        "winProbability": 23.130882263183594,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Sinead Lohan",
-        "winProbability": 7.707390785217285,
+        "playerName": "Adrijana Lekaj",
+        "winProbability": 22.928831100463867,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Adrijana Lekaj",
-        "winProbability": 7.516505718231201,
+        "playerName": "Sinead Lohan",
+        "winProbability": 19.63062858581543,
         "actualWinner": false
       }
     ]
@@ -1446,40 +1446,40 @@
     "predictedTop3": [
       "Nefisa Berberovic",
       "Arlinda Rushiti",
-      "Suana Tucakovic"
+      "Adrijana Lekaj"
     ],
     "predictedTop5": [
       "Nefisa Berberovic",
       "Arlinda Rushiti",
-      "Suana Tucakovic",
-      "Adrijana Lekaj"
+      "Adrijana Lekaj",
+      "Suana Tucakovic"
     ],
     "actualWinner": "Nefisa Berberovic",
     "hitStatus": "Top Pick",
-    "prob": 0.6256172060966492,
+    "prob": 0.622462272644043,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Nefisa Berberovic",
-        "winProbability": 62.56172180175781,
+        "winProbability": 62.2462272644043,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Arlinda Rushiti",
-        "winProbability": 21.999719619750977,
+        "winProbability": 19.597028732299805,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Suana Tucakovic",
-        "winProbability": 7.7293701171875,
+        "playerName": "Adrijana Lekaj",
+        "winProbability": 14.901724815368652,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Adrijana Lekaj",
-        "winProbability": 7.709187984466553,
+        "playerName": "Suana Tucakovic",
+        "winProbability": 3.2550148963928223,
         "actualWinner": false
       }
     ]
@@ -1491,40 +1491,40 @@
     "predictedTop3": [
       "Justina Mikulskyte",
       "Sinead Lohan",
-      "Klaudija Bubelyte"
+      "Celine Simunyu"
     ],
     "predictedTop5": [
       "Justina Mikulskyte",
       "Sinead Lohan",
-      "Klaudija Bubelyte",
-      "Celine Simunyu"
+      "Celine Simunyu",
+      "Klaudija Bubelyte"
     ],
     "actualWinner": "Justina Mikulskyte",
     "hitStatus": "Top Pick",
-    "prob": 0.6387258172035217,
+    "prob": 0.5450863242149353,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Justina Mikulskyte",
-        "winProbability": 63.872581481933594,
+        "winProbability": 54.50863265991211,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Sinead Lohan",
-        "winProbability": 12.113780975341797,
+        "winProbability": 20.26210594177246,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Klaudija Bubelyte",
-        "winProbability": 12.113780975341797,
+        "playerName": "Celine Simunyu",
+        "winProbability": 15.159520149230957,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Celine Simunyu",
-        "winProbability": 11.899850845336914,
+        "playerName": "Klaudija Bubelyte",
+        "winProbability": 10.069745063781738,
         "actualWinner": false
       }
     ]
@@ -1535,86 +1535,86 @@
     "predictedWinner": "Suzanie Pretorius",
     "predictedTop3": [
       "Suzanie Pretorius",
-      "Celine Simunyu",
-      "Isabella Kruger"
+      "Sinead Lohan",
+      "Celine Simunyu"
     ],
     "predictedTop5": [
       "Suzanie Pretorius",
+      "Sinead Lohan",
       "Celine Simunyu",
-      "Isabella Kruger",
-      "Sinead Lohan"
+      "Isabella Kruger"
     ],
     "actualWinner": "Isabella Kruger",
-    "hitStatus": "Top 3",
-    "prob": 0.5135021209716797,
+    "hitStatus": "Top 5",
+    "prob": 0.3670463562011719,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Suzanie Pretorius",
-        "winProbability": 51.35021209716797,
+        "winProbability": 36.70463562011719,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Celine Simunyu",
-        "winProbability": 20.180618286132812,
+        "playerName": "Sinead Lohan",
+        "winProbability": 35.498592376708984,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Isabella Kruger",
-        "winProbability": 18.38068389892578,
-        "actualWinner": true
+        "playerName": "Celine Simunyu",
+        "winProbability": 17.60638427734375,
+        "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sinead Lohan",
-        "winProbability": 10.088476181030273,
-        "actualWinner": false
+        "playerName": "Isabella Kruger",
+        "winProbability": 10.190387725830078,
+        "actualWinner": true
       }
     ]
   },
   {
     "year": 2023,
     "tournament": "BJK Cup G2 RR: LTU vs RSA",
-    "predictedWinner": "Isabella Kruger",
+    "predictedWinner": "Justina Mikulskyte",
     "predictedTop3": [
-      "Isabella Kruger",
-      "Justina Mikulskyte",
-      "Klaudija Bubelyte"
-    ],
-    "predictedTop5": [
-      "Isabella Kruger",
       "Justina Mikulskyte",
       "Klaudija Bubelyte",
+      "Isabella Kruger"
+    ],
+    "predictedTop5": [
+      "Justina Mikulskyte",
+      "Klaudija Bubelyte",
+      "Isabella Kruger",
       "Marilouise Van Zyl"
     ],
     "actualWinner": "Isabella Kruger",
-    "hitStatus": "Top Pick",
-    "prob": 0.43162351846694946,
+    "hitStatus": "Top 3",
+    "prob": 0.5458734035491943,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Isabella Kruger",
-        "winProbability": 43.162353515625,
-        "actualWinner": true
+        "playerName": "Justina Mikulskyte",
+        "winProbability": 54.58734130859375,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Justina Mikulskyte",
-        "winProbability": 35.13518524169922,
+        "playerName": "Klaudija Bubelyte",
+        "winProbability": 20.801237106323242,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Klaudija Bubelyte",
-        "winProbability": 15.711821556091309,
-        "actualWinner": false
+        "playerName": "Isabella Kruger",
+        "winProbability": 12.708161354064941,
+        "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Marilouise Van Zyl",
-        "winProbability": 5.990642547607422,
+        "winProbability": 11.9032564163208,
         "actualWinner": false
       }
     ]
@@ -1625,41 +1625,41 @@
     "predictedWinner": "Zeynep Sonmez",
     "predictedTop3": [
       "Zeynep Sonmez",
-      "Anna Bondar",
-      "Ipek Oz"
+      "Ipek Oz",
+      "Anna Bondar"
     ],
     "predictedTop5": [
       "Zeynep Sonmez",
-      "Anna Bondar",
       "Ipek Oz",
+      "Anna Bondar",
       "Dalma Galfi"
     ],
     "actualWinner": "Anna Bondar",
     "hitStatus": "Top 3",
-    "prob": 0.3726574182510376,
+    "prob": 0.32777321338653564,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Zeynep Sonmez",
-        "winProbability": 37.265743255615234,
+        "winProbability": 32.777320861816406,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Anna Bondar",
-        "winProbability": 29.11374855041504,
-        "actualWinner": true
+        "playerName": "Ipek Oz",
+        "winProbability": 26.3851318359375,
+        "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Ipek Oz",
-        "winProbability": 24.07171630859375,
-        "actualWinner": false
+        "playerName": "Anna Bondar",
+        "winProbability": 23.593229293823242,
+        "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Dalma Galfi",
-        "winProbability": 9.548785209655762,
+        "winProbability": 17.244314193725586,
         "actualWinner": false
       }
     ]
@@ -1667,44 +1667,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G2 RR: ISR vs POR",
-    "predictedWinner": "Francisca Jorge",
+    "predictedWinner": "Lina Glushko",
     "predictedTop3": [
-      "Francisca Jorge",
       "Lina Glushko",
+      "Francisca Jorge",
       "Shavit Kimchi"
     ],
     "predictedTop5": [
-      "Francisca Jorge",
       "Lina Glushko",
+      "Francisca Jorge",
       "Shavit Kimchi",
       "Ines Murta"
     ],
     "actualWinner": "Francisca Jorge",
-    "hitStatus": "Top Pick",
-    "prob": 0.42397528886795044,
+    "hitStatus": "Top 3",
+    "prob": 0.3451775908470154,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Francisca Jorge",
-        "winProbability": 42.39752960205078,
-        "actualWinner": true
+        "playerName": "Lina Glushko",
+        "winProbability": 34.517757415771484,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Lina Glushko",
-        "winProbability": 30.48358917236328,
-        "actualWinner": false
+        "playerName": "Francisca Jorge",
+        "winProbability": 31.582338333129883,
+        "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Shavit Kimchi",
-        "winProbability": 22.451290130615234,
+        "winProbability": 28.559741973876953,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Ines Murta",
-        "winProbability": 4.66759729385376,
+        "winProbability": 5.3401641845703125,
         "actualWinner": false
       }
     ]
@@ -1712,45 +1712,45 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 RR: CHN vs UZB",
-    "predictedWinner": "Wushuang Zheng",
+    "predictedWinner": "Sevil Yuldasheva",
     "predictedTop3": [
-      "Wushuang Zheng",
-      "Xinyu Jiang",
-      "Sevil Yuldasheva"
-    ],
-    "predictedTop5": [
-      "Wushuang Zheng",
-      "Xinyu Jiang",
       "Sevil Yuldasheva",
+      "Xinyu Jiang",
       "Sabrina Olimjanova"
     ],
+    "predictedTop5": [
+      "Sevil Yuldasheva",
+      "Xinyu Jiang",
+      "Sabrina Olimjanova",
+      "Wushuang Zheng"
+    ],
     "actualWinner": "Wushuang Zheng",
-    "hitStatus": "Top Pick",
-    "prob": 0.25,
+    "hitStatus": "Top 5",
+    "prob": 0.25399184226989746,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Wushuang Zheng",
-        "winProbability": 25.0,
-        "actualWinner": true
+        "playerName": "Sevil Yuldasheva",
+        "winProbability": 25.399185180664062,
+        "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Xinyu Jiang",
-        "winProbability": 25.0,
+        "winProbability": 24.953569412231445,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Sevil Yuldasheva",
-        "winProbability": 25.0,
+        "playerName": "Sabrina Olimjanova",
+        "winProbability": 24.834970474243164,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sabrina Olimjanova",
-        "winProbability": 25.0,
-        "actualWinner": false
+        "playerName": "Wushuang Zheng",
+        "winProbability": 24.812278747558594,
+        "actualWinner": true
       }
     ]
   },
@@ -1760,41 +1760,41 @@
     "predictedWinner": "Mai Hontama",
     "predictedTop3": [
       "Mai Hontama",
-      "Wushuang Zheng",
-      "Xinyu Jiang"
+      "Xinyu Jiang",
+      "Wushuang Zheng"
     ],
     "predictedTop5": [
       "Mai Hontama",
-      "Wushuang Zheng",
       "Xinyu Jiang",
+      "Wushuang Zheng",
       "Himeno Sakatsume"
     ],
     "actualWinner": "Mai Hontama",
     "hitStatus": "Top Pick",
-    "prob": 0.535691499710083,
+    "prob": 0.6004739999771118,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mai Hontama",
-        "winProbability": 53.569149017333984,
+        "winProbability": 60.047401428222656,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Wushuang Zheng",
-        "winProbability": 29.179555892944336,
+        "playerName": "Xinyu Jiang",
+        "winProbability": 20.266895294189453,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Xinyu Jiang",
-        "winProbability": 13.194375038146973,
+        "playerName": "Wushuang Zheng",
+        "winProbability": 10.432194709777832,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Himeno Sakatsume",
-        "winProbability": 4.056916236877441,
+        "winProbability": 9.253510475158691,
         "actualWinner": false
       }
     ]
@@ -1816,30 +1816,30 @@
     ],
     "actualWinner": "Dayeon Back",
     "hitStatus": "Top Pick",
-    "prob": 0.5284407138824463,
+    "prob": 0.6354328393936157,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Dayeon Back",
-        "winProbability": 52.84407043457031,
+        "winProbability": 63.54328536987305,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Sevil Yuldasheva",
-        "winProbability": 32.44953536987305,
+        "winProbability": 24.435941696166992,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Dabin Kim",
-        "winProbability": 7.496277332305908,
+        "winProbability": 8.265323638916016,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Ominahon Valihanova",
-        "winProbability": 7.210123538970947,
+        "winProbability": 3.755452871322632,
         "actualWinner": false
       }
     ]
@@ -1850,41 +1850,41 @@
     "predictedWinner": "Petra Marcinko",
     "predictedTop3": [
       "Petra Marcinko",
-      "Lia Karatancheva",
-      "Gergana Topalova"
-    ],
-    "predictedTop5": [
-      "Petra Marcinko",
-      "Lia Karatancheva",
       "Gergana Topalova",
       "Tara Wurth"
     ],
+    "predictedTop5": [
+      "Petra Marcinko",
+      "Gergana Topalova",
+      "Tara Wurth",
+      "Lia Karatancheva"
+    ],
     "actualWinner": "Gergana Topalova",
     "hitStatus": "Top 3",
-    "prob": 0.5950954556465149,
+    "prob": 0.45429834723472595,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Petra Marcinko",
-        "winProbability": 59.509544372558594,
+        "winProbability": 45.42983627319336,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Lia Karatancheva",
-        "winProbability": 14.067609786987305,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
         "playerName": "Gergana Topalova",
-        "winProbability": 13.292835235595703,
+        "winProbability": 25.075090408325195,
         "actualWinner": true
       },
       {
-        "rank": 4,
+        "rank": 3,
         "playerName": "Tara Wurth",
-        "winProbability": 13.130002975463867,
+        "winProbability": 14.888551712036133,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 14.606528282165527,
         "actualWinner": false
       }
     ]
@@ -1906,30 +1906,30 @@
     ],
     "actualWinner": "Clara Tauson",
     "hitStatus": "Top Pick",
-    "prob": 0.48662465810775757,
+    "prob": 0.6854950189590454,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Clara Tauson",
-        "winProbability": 48.6624641418457,
+        "winProbability": 68.54949951171875,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Gergana Topalova",
-        "winProbability": 31.12389373779297,
+        "winProbability": 16.566919326782227,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Lia Karatancheva",
-        "winProbability": 11.66926383972168,
+        "winProbability": 11.874809265136719,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Rebecca Munk Mortensen",
-        "winProbability": 8.5443754196167,
+        "winProbability": 3.0087730884552,
         "actualWinner": false
       }
     ]
@@ -1940,41 +1940,41 @@
     "predictedWinner": "Beatrise Zeltina",
     "predictedTop3": [
       "Beatrise Zeltina",
-      "Lilly Elida Haseth",
-      "Emilie Elde"
+      "Emilie Elde",
+      "Lilly Elida Haseth"
     ],
     "predictedTop5": [
       "Beatrise Zeltina",
-      "Lilly Elida Haseth",
       "Emilie Elde",
+      "Lilly Elida Haseth",
       "Adelina Lachinova"
     ],
     "actualWinner": "Beatrise Zeltina",
     "hitStatus": "Top Pick",
-    "prob": 0.2854050099849701,
+    "prob": 0.7248116135597229,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Beatrise Zeltina",
-        "winProbability": 28.54050064086914,
+        "winProbability": 72.48116302490234,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Lilly Elida Haseth",
-        "winProbability": 23.81983184814453,
+        "playerName": "Emilie Elde",
+        "winProbability": 9.228340148925781,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Emilie Elde",
-        "winProbability": 23.81983184814453,
+        "playerName": "Lilly Elida Haseth",
+        "winProbability": 9.227886199951172,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Adelina Lachinova",
-        "winProbability": 23.81983184814453,
+        "winProbability": 9.062607765197754,
         "actualWinner": false
       }
     ]
@@ -1985,41 +1985,41 @@
     "predictedWinner": "Noelia Zeballos Melgar",
     "predictedTop3": [
       "Noelia Zeballos Melgar",
-      "Lucciana Perez Alarcon",
-      "Catalina Padilla Udaeta"
+      "Anastasia Iamachkine",
+      "Lucciana Perez Alarcon"
     ],
     "predictedTop5": [
       "Noelia Zeballos Melgar",
+      "Anastasia Iamachkine",
       "Lucciana Perez Alarcon",
-      "Catalina Padilla Udaeta",
-      "Anastasia Iamachkine"
+      "Catalina Padilla Udaeta"
     ],
     "actualWinner": "Noelia Zeballos Melgar",
     "hitStatus": "Top Pick",
-    "prob": 0.3137530982494354,
+    "prob": 0.45664864778518677,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Noelia Zeballos Melgar",
-        "winProbability": 31.375308990478516,
+        "winProbability": 45.66486358642578,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Lucciana Perez Alarcon",
-        "winProbability": 31.18918800354004,
+        "playerName": "Anastasia Iamachkine",
+        "winProbability": 25.606294631958008,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Catalina Padilla Udaeta",
-        "winProbability": 18.71869468688965,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 19.309415817260742,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Anastasia Iamachkine",
-        "winProbability": 18.716812133789062,
+        "playerName": "Catalina Padilla Udaeta",
+        "winProbability": 9.419419288635254,
         "actualWinner": false
       }
     ]
@@ -2041,30 +2041,30 @@
     ],
     "actualWinner": "Moyuka Uchijima",
     "hitStatus": "Top 3",
-    "prob": 0.6474888920783997,
+    "prob": 0.5834147334098816,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mai Hontama",
-        "winProbability": 64.74888610839844,
+        "winProbability": 58.34147262573242,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Moyuka Uchijima",
-        "winProbability": 18.4462947845459,
+        "winProbability": 29.07956314086914,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Boyoung Jeong",
-        "winProbability": 8.803319931030273,
+        "winProbability": 7.890666961669922,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Yeon Woo Ku",
-        "winProbability": 8.00149917602539,
+        "winProbability": 4.688297748565674,
         "actualWinner": false
       }
     ]
@@ -2075,41 +2075,41 @@
     "predictedWinner": "Mai Hontama",
     "predictedTop3": [
       "Mai Hontama",
-      "Anchisa Chanta",
-      "Moyuka Uchijima"
+      "Moyuka Uchijima",
+      "Anchisa Chanta"
     ],
     "predictedTop5": [
       "Mai Hontama",
-      "Anchisa Chanta",
       "Moyuka Uchijima",
+      "Anchisa Chanta",
       "Mananchaya Sawangkaew"
     ],
     "actualWinner": "Mananchaya Sawangkaew",
     "hitStatus": "Top 5",
-    "prob": 0.3975578844547272,
+    "prob": 0.5023185610771179,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mai Hontama",
-        "winProbability": 39.75578689575195,
+        "winProbability": 50.23185729980469,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Anchisa Chanta",
-        "winProbability": 37.021995544433594,
+        "playerName": "Moyuka Uchijima",
+        "winProbability": 22.474899291992188,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Moyuka Uchijima",
-        "winProbability": 19.2325382232666,
+        "playerName": "Anchisa Chanta",
+        "winProbability": 20.430200576782227,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Mananchaya Sawangkaew",
-        "winProbability": 3.989683151245117,
+        "winProbability": 6.863048076629639,
         "actualWinner": true
       }
     ]
@@ -2120,41 +2120,41 @@
     "predictedWinner": "Sevil Yuldasheva",
     "predictedTop3": [
       "Sevil Yuldasheva",
-      "Sabrina Olimjanova",
-      "Mai Hontama"
-    ],
-    "predictedTop5": [
-      "Sevil Yuldasheva",
-      "Sabrina Olimjanova",
       "Mai Hontama",
       "Himeno Sakatsume"
     ],
+    "predictedTop5": [
+      "Sevil Yuldasheva",
+      "Mai Hontama",
+      "Himeno Sakatsume",
+      "Sabrina Olimjanova"
+    ],
     "actualWinner": "Mai Hontama",
     "hitStatus": "Top 3",
-    "prob": 0.30097371339797974,
+    "prob": 0.3981056213378906,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Sevil Yuldasheva",
-        "winProbability": 30.09737205505371,
+        "winProbability": 39.81056213378906,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Sabrina Olimjanova",
-        "winProbability": 27.80270004272461,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
         "playerName": "Mai Hontama",
-        "winProbability": 25.98397445678711,
+        "winProbability": 28.12037467956543,
         "actualWinner": true
       },
       {
-        "rank": 4,
+        "rank": 3,
         "playerName": "Himeno Sakatsume",
-        "winProbability": 16.115955352783203,
+        "winProbability": 20.48563575744629,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Sabrina Olimjanova",
+        "winProbability": 11.583430290222168,
         "actualWinner": false
       }
     ]
@@ -2166,40 +2166,40 @@
     "predictedTop3": [
       "Maileen Nuudi",
       "Elena Malygina",
-      "Ruth Copas"
+      "Caragh Courtney"
     ],
     "predictedTop5": [
       "Maileen Nuudi",
       "Elena Malygina",
-      "Ruth Copas",
-      "Caragh Courtney"
+      "Caragh Courtney",
+      "Ruth Copas"
     ],
     "actualWinner": "Elena Malygina",
     "hitStatus": "Top 3",
-    "prob": 0.37814977765083313,
+    "prob": 0.6223790645599365,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Maileen Nuudi",
-        "winProbability": 37.814979553222656,
+        "winProbability": 62.23790740966797,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Elena Malygina",
-        "winProbability": 37.11810302734375,
+        "winProbability": 16.30898094177246,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Ruth Copas",
-        "winProbability": 12.533458709716797,
+        "playerName": "Caragh Courtney",
+        "winProbability": 11.081298828125,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Caragh Courtney",
-        "winProbability": 12.533458709716797,
+        "playerName": "Ruth Copas",
+        "winProbability": 10.37181282043457,
         "actualWinner": false
       }
     ]
@@ -2221,30 +2221,30 @@
     ],
     "actualWinner": "Mananchaya Sawangkaew",
     "hitStatus": "Top Pick",
-    "prob": 0.5420327186584473,
+    "prob": 0.49359503388404846,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mananchaya Sawangkaew",
-        "winProbability": 54.203269958496094,
+        "winProbability": 49.35950469970703,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Boyoung Jeong",
-        "winProbability": 19.5126895904541,
+        "winProbability": 29.507720947265625,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Yeon Woo Ku",
-        "winProbability": 14.395368576049805,
+        "winProbability": 15.671655654907227,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Punnin Kovapitukted",
-        "winProbability": 11.888672828674316,
+        "winProbability": 5.461121559143066,
         "actualWinner": false
       }
     ]
@@ -2252,44 +2252,44 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G2 PM: LTU vs ISR",
-    "predictedWinner": "Shavit Kimchi",
+    "predictedWinner": "Klaudija Bubelyte",
     "predictedTop3": [
-      "Shavit Kimchi",
       "Klaudija Bubelyte",
+      "Shavit Kimchi",
       "Mika Buchnik"
     ],
     "predictedTop5": [
-      "Shavit Kimchi",
       "Klaudija Bubelyte",
+      "Shavit Kimchi",
       "Mika Buchnik",
       "Patricija Paukstyte"
     ],
     "actualWinner": "Klaudija Bubelyte",
-    "hitStatus": "Top 3",
-    "prob": 0.48916199803352356,
+    "hitStatus": "Top Pick",
+    "prob": 0.46979233622550964,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Shavit Kimchi",
-        "winProbability": 48.91619873046875,
-        "actualWinner": false
+        "playerName": "Klaudija Bubelyte",
+        "winProbability": 46.97923278808594,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Klaudija Bubelyte",
-        "winProbability": 31.464021682739258,
-        "actualWinner": true
+        "playerName": "Shavit Kimchi",
+        "winProbability": 21.82195472717285,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Mika Buchnik",
-        "winProbability": 12.111305236816406,
+        "winProbability": 16.91524887084961,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Patricija Paukstyte",
-        "winProbability": 7.508475303649902,
+        "winProbability": 14.283561706542969,
         "actualWinner": false
       }
     ]
@@ -2301,40 +2301,40 @@
     "predictedTop3": [
       "Clara Tauson",
       "Petra Marcinko",
-      "Johanne Christine Svendsen"
+      "Antonia Ruzic"
     ],
     "predictedTop5": [
       "Clara Tauson",
       "Petra Marcinko",
-      "Johanne Christine Svendsen",
-      "Antonia Ruzic"
+      "Antonia Ruzic",
+      "Johanne Christine Svendsen"
     ],
     "actualWinner": "Clara Tauson",
     "hitStatus": "Top Pick",
-    "prob": 0.6104785799980164,
+    "prob": 0.5564796328544617,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Clara Tauson",
-        "winProbability": 61.04785919189453,
+        "winProbability": 55.64796447753906,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Petra Marcinko",
-        "winProbability": 18.55023956298828,
+        "winProbability": 22.478525161743164,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Johanne Christine Svendsen",
-        "winProbability": 13.556814193725586,
+        "playerName": "Antonia Ruzic",
+        "winProbability": 14.895206451416016,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Antonia Ruzic",
-        "winProbability": 6.8450927734375,
+        "playerName": "Johanne Christine Svendsen",
+        "winProbability": 6.978297233581543,
         "actualWinner": false
       }
     ]
@@ -2345,41 +2345,41 @@
     "predictedWinner": "Lola Radivojevic",
     "predictedTop3": [
       "Lola Radivojevic",
-      "Mia Ristic",
-      "Tara Wurth"
-    ],
-    "predictedTop5": [
-      "Lola Radivojevic",
-      "Mia Ristic",
       "Tara Wurth",
       "Antonia Ruzic"
     ],
+    "predictedTop5": [
+      "Lola Radivojevic",
+      "Tara Wurth",
+      "Antonia Ruzic",
+      "Mia Ristic"
+    ],
     "actualWinner": "Lola Radivojevic",
     "hitStatus": "Top Pick",
-    "prob": 0.6770660877227783,
+    "prob": 0.4137488007545471,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Lola Radivojevic",
-        "winProbability": 67.70661163330078,
+        "winProbability": 41.374881744384766,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Mia Ristic",
-        "winProbability": 13.022753715515137,
+        "playerName": "Tara Wurth",
+        "winProbability": 20.906539916992188,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Tara Wurth",
-        "winProbability": 9.894031524658203,
+        "playerName": "Antonia Ruzic",
+        "winProbability": 20.886289596557617,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Antonia Ruzic",
-        "winProbability": 9.376605987548828,
+        "playerName": "Mia Ristic",
+        "winProbability": 16.832290649414062,
         "actualWinner": false
       }
     ]
@@ -2390,42 +2390,42 @@
     "predictedWinner": "Ana Fabia Holweg Bustillos",
     "predictedTop3": [
       "Ana Fabia Holweg Bustillos",
-      "Paloma Goldsmith Weinreich",
+      "Natalia Trigosso",
       "Antonia Vergara Rivera"
     ],
     "predictedTop5": [
       "Ana Fabia Holweg Bustillos",
-      "Paloma Goldsmith Weinreich",
+      "Natalia Trigosso",
       "Antonia Vergara Rivera",
-      "Natalia Trigosso"
+      "Paloma Goldsmith Weinreich"
     ],
     "actualWinner": "Paloma Goldsmith Weinreich",
-    "hitStatus": "Top 3",
-    "prob": 0.2804199457168579,
+    "hitStatus": "Top 5",
+    "prob": 0.5886585712432861,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Ana Fabia Holweg Bustillos",
-        "winProbability": 28.041994094848633,
+        "winProbability": 58.8658561706543,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Paloma Goldsmith Weinreich",
-        "winProbability": 23.98600196838379,
-        "actualWinner": true
+        "playerName": "Natalia Trigosso",
+        "winProbability": 14.062981605529785,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Antonia Vergara Rivera",
-        "winProbability": 23.98600196838379,
+        "winProbability": 14.039617538452148,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Natalia Trigosso",
-        "winProbability": 23.98600196838379,
-        "actualWinner": false
+        "playerName": "Paloma Goldsmith Weinreich",
+        "winProbability": 13.031543731689453,
+        "actualWinner": true
       }
     ]
   },
@@ -2436,40 +2436,40 @@
     "predictedTop3": [
       "Lola Radivojevic",
       "Mia Ristic",
-      "Rebecca Munk Mortensen"
+      "Sarafina Hansen"
     ],
     "predictedTop5": [
       "Lola Radivojevic",
       "Mia Ristic",
-      "Rebecca Munk Mortensen",
-      "Sarafina Hansen"
+      "Sarafina Hansen",
+      "Rebecca Munk Mortensen"
     ],
     "actualWinner": "Lola Radivojevic",
     "hitStatus": "Top Pick",
-    "prob": 0.5972009301185608,
+    "prob": 0.5392187237739563,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Lola Radivojevic",
-        "winProbability": 59.7200927734375,
+        "winProbability": 53.921871185302734,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Mia Ristic",
-        "winProbability": 21.967687606811523,
+        "winProbability": 28.73431968688965,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Rebecca Munk Mortensen",
-        "winProbability": 9.923856735229492,
+        "playerName": "Sarafina Hansen",
+        "winProbability": 11.741829872131348,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sarafina Hansen",
-        "winProbability": 8.388357162475586,
+        "playerName": "Rebecca Munk Mortensen",
+        "winProbability": 5.601985931396484,
         "actualWinner": false
       }
     ]
@@ -2477,44 +2477,44 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G1 RR: MEX vs ECU",
-    "predictedWinner": "Mell Elizabeth Reasco Gonzalez",
+    "predictedWinner": "Fernanda Contreras Gomez",
     "predictedTop3": [
-      "Mell Elizabeth Reasco Gonzalez",
-      "Fernanda Contreras Gomez",
-      "Giuliana Olmos"
-    ],
-    "predictedTop5": [
-      "Mell Elizabeth Reasco Gonzalez",
       "Fernanda Contreras Gomez",
       "Giuliana Olmos",
+      "Mell Elizabeth Reasco Gonzalez"
+    ],
+    "predictedTop5": [
+      "Fernanda Contreras Gomez",
+      "Giuliana Olmos",
+      "Mell Elizabeth Reasco Gonzalez",
       "Tania Isabel Andrade Sabando"
     ],
     "actualWinner": "Fernanda Contreras Gomez",
-    "hitStatus": "Top 3",
-    "prob": 0.5363983511924744,
+    "hitStatus": "Top Pick",
+    "prob": 0.38058170676231384,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Mell Elizabeth Reasco Gonzalez",
-        "winProbability": 53.639835357666016,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
         "playerName": "Fernanda Contreras Gomez",
-        "winProbability": 19.854904174804688,
+        "winProbability": 38.058170318603516,
         "actualWinner": true
       },
       {
-        "rank": 3,
+        "rank": 2,
         "playerName": "Giuliana Olmos",
-        "winProbability": 14.76158332824707,
+        "winProbability": 28.649490356445312,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Mell Elizabeth Reasco Gonzalez",
+        "winProbability": 18.798686981201172,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Tania Isabel Andrade Sabando",
-        "winProbability": 11.743678092956543,
+        "winProbability": 14.493650436401367,
         "actualWinner": false
       }
     ]
@@ -2525,41 +2525,41 @@
     "predictedWinner": "Mayar Sherif",
     "predictedTop3": [
       "Mayar Sherif",
-      "Ulrikke Eikeri",
-      "Sandra Samir"
+      "Sandra Samir",
+      "Ulrikke Eikeri"
     ],
     "predictedTop5": [
       "Mayar Sherif",
-      "Ulrikke Eikeri",
       "Sandra Samir",
+      "Ulrikke Eikeri",
       "Malene Helgo"
     ],
     "actualWinner": "Mayar Sherif",
     "hitStatus": "Top Pick",
-    "prob": 0.6964794993400574,
+    "prob": 0.5519362688064575,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mayar Sherif",
-        "winProbability": 69.64794921875,
+        "winProbability": 55.193626403808594,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 15.025533676147461,
+        "playerName": "Sandra Samir",
+        "winProbability": 25.74085807800293,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Sandra Samir",
-        "winProbability": 9.878191947937012,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 12.153620719909668,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Malene Helgo",
-        "winProbability": 5.4483232498168945,
+        "winProbability": 6.911885738372803,
         "actualWinner": false
       }
     ]
@@ -2567,44 +2567,44 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G2 PPO: NOR vs ISR",
-    "predictedWinner": "Lina Glushko",
+    "predictedWinner": "Ulrikke Eikeri",
     "predictedTop3": [
-      "Lina Glushko",
       "Ulrikke Eikeri",
+      "Lina Glushko",
       "Malene Helgo"
     ],
     "predictedTop5": [
-      "Lina Glushko",
       "Ulrikke Eikeri",
+      "Lina Glushko",
       "Malene Helgo",
       "Nicole Khirin"
     ],
     "actualWinner": "Lina Glushko",
-    "hitStatus": "Top Pick",
-    "prob": 0.5837421417236328,
+    "hitStatus": "Top 3",
+    "prob": 0.48292404413223267,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Lina Glushko",
-        "winProbability": 58.37421417236328,
-        "actualWinner": true
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 48.29240417480469,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 20.06273078918457,
-        "actualWinner": false
+        "playerName": "Lina Glushko",
+        "winProbability": 40.92247772216797,
+        "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Malene Helgo",
-        "winProbability": 13.219749450683594,
+        "winProbability": 5.999459743499756,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Nicole Khirin",
-        "winProbability": 8.343299865722656,
+        "winProbability": 4.785659313201904,
         "actualWinner": false
       }
     ]
@@ -2615,41 +2615,41 @@
     "predictedWinner": "Beatriz Haddad Maia",
     "predictedTop3": [
       "Beatriz Haddad Maia",
-      "Maria Lourdes Carle",
-      "Laura Pigossi"
+      "Laura Pigossi",
+      "Maria Lourdes Carle"
     ],
     "predictedTop5": [
       "Beatriz Haddad Maia",
-      "Maria Lourdes Carle",
       "Laura Pigossi",
+      "Maria Lourdes Carle",
       "Solana Sierra"
     ],
     "actualWinner": "Beatriz Haddad Maia",
     "hitStatus": "Top Pick",
-    "prob": 0.568236231803894,
+    "prob": 0.6995155811309814,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Beatriz Haddad Maia",
-        "winProbability": 56.82362365722656,
+        "winProbability": 69.9515609741211,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Maria Lourdes Carle",
-        "winProbability": 27.712764739990234,
+        "playerName": "Laura Pigossi",
+        "winProbability": 16.699777603149414,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Laura Pigossi",
-        "winProbability": 10.393559455871582,
+        "playerName": "Maria Lourdes Carle",
+        "winProbability": 11.496227264404297,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Solana Sierra",
-        "winProbability": 5.070050239562988,
+        "winProbability": 1.852441430091858,
         "actualWinner": false
       }
     ]
@@ -2661,40 +2661,40 @@
     "predictedTop3": [
       "Beatriz Haddad Maia",
       "Laura Pigossi",
-      "Barbara Gatica"
+      "Daniela Seguel"
     ],
     "predictedTop5": [
       "Beatriz Haddad Maia",
       "Laura Pigossi",
-      "Barbara Gatica",
-      "Daniela Seguel"
+      "Daniela Seguel",
+      "Barbara Gatica"
     ],
     "actualWinner": "Beatriz Haddad Maia",
     "hitStatus": "Top Pick",
-    "prob": 0.3523160219192505,
+    "prob": 0.566908061504364,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Beatriz Haddad Maia",
-        "winProbability": 35.23160171508789,
+        "winProbability": 56.6908073425293,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Laura Pigossi",
-        "winProbability": 27.204469680786133,
+        "winProbability": 29.293655395507812,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Barbara Gatica",
-        "winProbability": 26.854463577270508,
+        "playerName": "Daniela Seguel",
+        "winProbability": 7.823565483093262,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Daniela Seguel",
-        "winProbability": 10.709461212158203,
+        "playerName": "Barbara Gatica",
+        "winProbability": 6.191978454589844,
         "actualWinner": false
       }
     ]
@@ -2706,40 +2706,40 @@
     "predictedTop3": [
       "Barbara Gatica",
       "Daniela Seguel",
-      "Charlotte Roemer"
+      "Valeska Alexandra San Martin Ramirez"
     ],
     "predictedTop5": [
       "Barbara Gatica",
       "Daniela Seguel",
-      "Charlotte Roemer",
-      "Valeska Alexandra San Martin Ramirez"
+      "Valeska Alexandra San Martin Ramirez",
+      "Charlotte Roemer"
     ],
     "actualWinner": "Daniela Seguel",
     "hitStatus": "Top 3",
-    "prob": 0.5511363744735718,
+    "prob": 0.576569139957428,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Barbara Gatica",
-        "winProbability": 55.1136360168457,
+        "winProbability": 57.65691375732422,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Daniela Seguel",
-        "winProbability": 27.95209503173828,
+        "winProbability": 28.5462703704834,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Charlotte Roemer",
-        "winProbability": 9.083511352539062,
+        "playerName": "Valeska Alexandra San Martin Ramirez",
+        "winProbability": 6.9008002281188965,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Valeska Alexandra San Martin Ramirez",
-        "winProbability": 7.8507513999938965,
+        "playerName": "Charlotte Roemer",
+        "winProbability": 6.896020412445068,
         "actualWinner": false
       }
     ]
@@ -2747,45 +2747,45 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G1 RR: JPN vs IND",
-    "predictedWinner": "Yuki Naito",
+    "predictedWinner": "Ankita Raina",
     "predictedTop3": [
-      "Yuki Naito",
-      "Ankita Raina",
-      "Rutuja Bhosale"
-    ],
-    "predictedTop5": [
-      "Yuki Naito",
       "Ankita Raina",
       "Rutuja Bhosale",
       "Mai Hontama"
     ],
+    "predictedTop5": [
+      "Ankita Raina",
+      "Rutuja Bhosale",
+      "Mai Hontama",
+      "Yuki Naito"
+    ],
     "actualWinner": "Mai Hontama",
-    "hitStatus": "Top 5",
-    "prob": 0.3817768096923828,
+    "hitStatus": "Top 3",
+    "prob": 0.42787787318229675,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Yuki Naito",
-        "winProbability": 38.17768096923828,
+        "playerName": "Ankita Raina",
+        "winProbability": 42.78778839111328,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Ankita Raina",
-        "winProbability": 33.38290023803711,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 31.568002700805664,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Rutuja Bhosale",
-        "winProbability": 17.797494888305664,
-        "actualWinner": false
+        "playerName": "Mai Hontama",
+        "winProbability": 21.75914764404297,
+        "actualWinner": true
       },
       {
         "rank": 4,
-        "playerName": "Mai Hontama",
-        "winProbability": 10.64193058013916,
-        "actualWinner": true
+        "playerName": "Yuki Naito",
+        "winProbability": 3.885067939758301,
+        "actualWinner": false
       }
     ]
   },
@@ -2796,40 +2796,40 @@
     "predictedTop3": [
       "Paige Mary Hourigan",
       "Ankita Raina",
-      "Valentina Ivanov"
+      "Rutuja Bhosale"
     ],
     "predictedTop5": [
       "Paige Mary Hourigan",
       "Ankita Raina",
-      "Valentina Ivanov",
-      "Rutuja Bhosale"
+      "Rutuja Bhosale",
+      "Valentina Ivanov"
     ],
     "actualWinner": "Ankita Raina",
     "hitStatus": "Top 3",
-    "prob": 0.48741957545280457,
+    "prob": 0.4897511303424835,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Paige Mary Hourigan",
-        "winProbability": 48.74195861816406,
+        "winProbability": 48.97511291503906,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Ankita Raina",
-        "winProbability": 28.247037887573242,
+        "winProbability": 30.422100067138672,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Valentina Ivanov",
-        "winProbability": 13.617860794067383,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 14.967374801635742,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Rutuja Bhosale",
-        "winProbability": 9.393138885498047,
+        "playerName": "Valentina Ivanov",
+        "winProbability": 5.635408401489258,
         "actualWinner": false
       }
     ]
@@ -2840,49 +2840,49 @@
     "predictedWinner": "Marketa Vondrousova",
     "predictedTop3": [
       "Marketa Vondrousova",
-      "Linda Fruhvirtova",
-      "Tereza Martincova"
+      "Tereza Martincova",
+      "Emma Raducanu"
     ],
     "predictedTop5": [
       "Marketa Vondrousova",
-      "Linda Fruhvirtova",
       "Tereza Martincova",
       "Emma Raducanu",
-      "Harriet Dart"
+      "Harriet Dart",
+      "Linda Fruhvirtova"
     ],
     "actualWinner": "Harriet Dart",
     "hitStatus": "Top 5",
-    "prob": 0.4118310511112213,
+    "prob": 0.580909013748169,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Marketa Vondrousova",
-        "winProbability": 41.18310546875,
+        "winProbability": 58.09090042114258,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Linda Fruhvirtova",
-        "winProbability": 23.541210174560547,
+        "playerName": "Tereza Martincova",
+        "winProbability": 23.636795043945312,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Tereza Martincova",
-        "winProbability": 14.845067024230957,
+        "playerName": "Emma Raducanu",
+        "winProbability": 7.249022483825684,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Emma Raducanu",
-        "winProbability": 12.464397430419922,
-        "actualWinner": false
+        "playerName": "Harriet Dart",
+        "winProbability": 6.894290447235107,
+        "actualWinner": true
       },
       {
         "rank": 5,
-        "playerName": "Harriet Dart",
-        "winProbability": 7.966214179992676,
-        "actualWinner": true
+        "playerName": "Linda Fruhvirtova",
+        "winProbability": 4.128990650177002,
+        "actualWinner": false
       }
     ]
   },
@@ -2892,41 +2892,41 @@
     "predictedWinner": "Mell Elizabeth Reasco Gonzalez",
     "predictedTop3": [
       "Mell Elizabeth Reasco Gonzalez",
-      "Kirsten Andrea Weedon",
-      "Charlotte Roemer"
+      "Maria Gabriela Rivera Corado",
+      "Kirsten Andrea Weedon"
     ],
     "predictedTop5": [
       "Mell Elizabeth Reasco Gonzalez",
+      "Maria Gabriela Rivera Corado",
       "Kirsten Andrea Weedon",
-      "Charlotte Roemer",
-      "Maria Gabriela Rivera Corado"
+      "Charlotte Roemer"
     ],
     "actualWinner": "Mell Elizabeth Reasco Gonzalez",
     "hitStatus": "Top Pick",
-    "prob": 0.5013716220855713,
+    "prob": 0.3905932903289795,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mell Elizabeth Reasco Gonzalez",
-        "winProbability": 50.13716125488281,
+        "winProbability": 39.059329986572266,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Kirsten Andrea Weedon",
-        "winProbability": 28.116771697998047,
+        "playerName": "Maria Gabriela Rivera Corado",
+        "winProbability": 27.874893188476562,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Charlotte Roemer",
-        "winProbability": 13.728811264038086,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 19.071502685546875,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Maria Gabriela Rivera Corado",
-        "winProbability": 8.017255783081055,
+        "playerName": "Charlotte Roemer",
+        "winProbability": 13.994280815124512,
         "actualWinner": false
       }
     ]
@@ -2938,40 +2938,40 @@
     "predictedTop3": [
       "Mai Hontama",
       "Aldila Sutjiadi",
-      "Fadona Titalyana Kusumawati"
+      "Moyuka Uchijima"
     ],
     "predictedTop5": [
       "Mai Hontama",
       "Aldila Sutjiadi",
-      "Fadona Titalyana Kusumawati",
-      "Moyuka Uchijima"
+      "Moyuka Uchijima",
+      "Fadona Titalyana Kusumawati"
     ],
     "actualWinner": "Mai Hontama",
     "hitStatus": "Top Pick",
-    "prob": 0.6913248300552368,
+    "prob": 0.49978581070899963,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mai Hontama",
-        "winProbability": 69.13248443603516,
+        "winProbability": 49.978580474853516,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Aldila Sutjiadi",
-        "winProbability": 16.841407775878906,
+        "winProbability": 34.733154296875,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Fadona Titalyana Kusumawati",
-        "winProbability": 7.013054370880127,
+        "playerName": "Moyuka Uchijima",
+        "winProbability": 8.207488059997559,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Moyuka Uchijima",
-        "winProbability": 7.013054370880127,
+        "playerName": "Fadona Titalyana Kusumawati",
+        "winProbability": 7.080770969390869,
         "actualWinner": false
       }
     ]
@@ -2993,30 +2993,30 @@
     ],
     "actualWinner": "Mayar Sherif",
     "hitStatus": "Top Pick",
-    "prob": 0.4451364576816559,
+    "prob": 0.43871667981147766,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mayar Sherif",
-        "winProbability": 44.51364517211914,
+        "winProbability": 43.87166976928711,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Justina Mikulskyte",
-        "winProbability": 23.088457107543945,
+        "winProbability": 31.02102279663086,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Sandra Samir",
-        "winProbability": 17.7435359954834,
+        "winProbability": 22.179410934448242,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Andre Lukosiute",
-        "winProbability": 14.654363632202148,
+        "winProbability": 2.9278907775878906,
         "actualWinner": false
       }
     ]
@@ -3038,30 +3038,30 @@
     ],
     "actualWinner": "Mell Elizabeth Reasco Gonzalez",
     "hitStatus": "Top 3",
-    "prob": 0.25,
+    "prob": 0.27762553095817566,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Charlotte Roemer",
-        "winProbability": 25.0,
+        "winProbability": 27.76255226135254,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Susan Doldan",
-        "winProbability": 25.0,
+        "winProbability": 24.717021942138672,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Mell Elizabeth Reasco Gonzalez",
-        "winProbability": 25.0,
+        "winProbability": 24.69452667236328,
         "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Leyla Fiorella Britez Risso",
-        "winProbability": 25.0,
+        "winProbability": 22.825897216796875,
         "actualWinner": false
       }
     ]
@@ -3072,41 +3072,41 @@
     "predictedWinner": "Ana Konjuh",
     "predictedTop3": [
       "Ana Konjuh",
-      "Jacqueline Cabaj Awad",
-      "Caijsa Wilda Hennemann"
+      "Caijsa Wilda Hennemann",
+      "Jacqueline Cabaj Awad"
     ],
     "predictedTop5": [
       "Ana Konjuh",
-      "Jacqueline Cabaj Awad",
       "Caijsa Wilda Hennemann",
+      "Jacqueline Cabaj Awad",
       "Petra Marcinko"
     ],
     "actualWinner": "Ana Konjuh",
     "hitStatus": "Top Pick",
-    "prob": 0.6694384217262268,
+    "prob": 0.6733260154724121,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Ana Konjuh",
-        "winProbability": 66.94384002685547,
+        "winProbability": 67.33260345458984,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Jacqueline Cabaj Awad",
-        "winProbability": 11.018717765808105,
+        "playerName": "Caijsa Wilda Hennemann",
+        "winProbability": 11.37587833404541,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 11.018717765808105,
+        "playerName": "Jacqueline Cabaj Awad",
+        "winProbability": 10.819855690002441,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Petra Marcinko",
-        "winProbability": 11.018717765808105,
+        "winProbability": 10.47166633605957,
         "actualWinner": false
       }
     ]
@@ -3117,42 +3117,42 @@
     "predictedWinner": "Mariam Bolkvadze",
     "predictedTop3": [
       "Mariam Bolkvadze",
-      "Jacqueline Cabaj Awad",
-      "Caijsa Wilda Hennemann"
+      "Tamari Gagoshidze",
+      "Jacqueline Cabaj Awad"
     ],
     "predictedTop5": [
       "Mariam Bolkvadze",
+      "Tamari Gagoshidze",
       "Jacqueline Cabaj Awad",
-      "Caijsa Wilda Hennemann",
-      "Tamari Gagoshidze"
+      "Caijsa Wilda Hennemann"
     ],
     "actualWinner": "Caijsa Wilda Hennemann",
-    "hitStatus": "Top 3",
-    "prob": 0.5005881786346436,
+    "hitStatus": "Top 5",
+    "prob": 0.6127863526344299,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mariam Bolkvadze",
-        "winProbability": 50.05881881713867,
+        "winProbability": 61.27863693237305,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Jacqueline Cabaj Awad",
-        "winProbability": 17.546112060546875,
+        "playerName": "Tamari Gagoshidze",
+        "winProbability": 18.276580810546875,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 17.230215072631836,
-        "actualWinner": true
+        "playerName": "Jacqueline Cabaj Awad",
+        "winProbability": 13.862996101379395,
+        "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Tamari Gagoshidze",
-        "winProbability": 15.164859771728516,
-        "actualWinner": false
+        "playerName": "Caijsa Wilda Hennemann",
+        "winProbability": 6.5817766189575195,
+        "actualWinner": true
       }
     ]
   },
@@ -3173,30 +3173,30 @@
     ],
     "actualWinner": "Caijsa Wilda Hennemann",
     "hitStatus": "Top Pick",
-    "prob": 0.46481478214263916,
+    "prob": 0.4540173411369324,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 46.48147964477539,
+        "winProbability": 45.4017333984375,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Julia Grabher",
-        "winProbability": 39.50823974609375,
+        "winProbability": 43.69684982299805,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Sinja Kraus",
-        "winProbability": 7.533780574798584,
+        "winProbability": 7.6883697509765625,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Jacqueline Cabaj Awad",
-        "winProbability": 6.47650146484375,
+        "winProbability": 3.213045358657837,
         "actualWinner": false
       }
     ]
@@ -3208,40 +3208,40 @@
     "predictedTop3": [
       "Caijsa Wilda Hennemann",
       "Elena Malygina",
-      "Jacqueline Cabaj Awad"
+      "Maileen Nuudi"
     ],
     "predictedTop5": [
       "Caijsa Wilda Hennemann",
       "Elena Malygina",
-      "Jacqueline Cabaj Awad",
-      "Maileen Nuudi"
+      "Maileen Nuudi",
+      "Jacqueline Cabaj Awad"
     ],
     "actualWinner": "Caijsa Wilda Hennemann",
     "hitStatus": "Top Pick",
-    "prob": 0.5466623902320862,
+    "prob": 0.47974905371665955,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 54.66624069213867,
+        "winProbability": 47.97490692138672,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Elena Malygina",
-        "winProbability": 17.83474349975586,
+        "winProbability": 21.53723907470703,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Jacqueline Cabaj Awad",
-        "winProbability": 14.812582969665527,
+        "playerName": "Maileen Nuudi",
+        "winProbability": 19.030929565429688,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Maileen Nuudi",
-        "winProbability": 12.686431884765625,
+        "playerName": "Jacqueline Cabaj Awad",
+        "winProbability": 11.456923484802246,
         "actualWinner": false
       }
     ]
@@ -3252,41 +3252,41 @@
     "predictedWinner": "Pia Lovric",
     "predictedTop3": [
       "Pia Lovric",
-      "Kajsa Rinaldo Persson",
-      "Julita Saner"
+      "Julita Saner",
+      "Kajsa Rinaldo Persson"
     ],
     "predictedTop5": [
       "Pia Lovric",
-      "Kajsa Rinaldo Persson",
       "Julita Saner",
+      "Kajsa Rinaldo Persson",
       "Ziva Falkner"
     ],
     "actualWinner": "Ziva Falkner",
     "hitStatus": "Top 5",
-    "prob": 0.26103895902633667,
+    "prob": 0.5316495895385742,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Pia Lovric",
-        "winProbability": 26.10389518737793,
+        "winProbability": 53.16495895385742,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Kajsa Rinaldo Persson",
-        "winProbability": 25.203927993774414,
+        "playerName": "Julita Saner",
+        "winProbability": 18.7971248626709,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Julita Saner",
-        "winProbability": 25.203927993774414,
+        "playerName": "Kajsa Rinaldo Persson",
+        "winProbability": 18.70876693725586,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Ziva Falkner",
-        "winProbability": 23.488252639770508,
+        "winProbability": 9.329144477844238,
         "actualWinner": true
       }
     ]
@@ -3297,41 +3297,41 @@
     "predictedWinner": "Tamara Zidansek",
     "predictedTop3": [
       "Tamara Zidansek",
-      "Kaja Juvan",
-      "Julia Grabher"
+      "Julia Grabher",
+      "Kaja Juvan"
     ],
     "predictedTop5": [
       "Tamara Zidansek",
-      "Kaja Juvan",
       "Julia Grabher",
+      "Kaja Juvan",
       "Sinja Kraus"
     ],
     "actualWinner": "Julia Grabher",
     "hitStatus": "Top 3",
-    "prob": 0.6121341586112976,
+    "prob": 0.7792662382125854,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Tamara Zidansek",
-        "winProbability": 61.213417053222656,
+        "winProbability": 77.92662048339844,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Kaja Juvan",
-        "winProbability": 16.60761260986328,
-        "actualWinner": false
+        "playerName": "Julia Grabher",
+        "winProbability": 13.925004005432129,
+        "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Julia Grabher",
-        "winProbability": 15.823488235473633,
-        "actualWinner": true
+        "playerName": "Kaja Juvan",
+        "winProbability": 5.991257190704346,
+        "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Sinja Kraus",
-        "winProbability": 6.355480194091797,
+        "winProbability": 2.1571121215820312,
         "actualWinner": false
       }
     ]
@@ -3342,41 +3342,41 @@
     "predictedWinner": "Julia Grabher",
     "predictedTop3": [
       "Julia Grabher",
-      "Zoziya Kardava",
-      "Nino Natsvlishvili"
-    ],
-    "predictedTop5": [
-      "Julia Grabher",
-      "Zoziya Kardava",
       "Nino Natsvlishvili",
       "Sinja Kraus"
     ],
+    "predictedTop5": [
+      "Julia Grabher",
+      "Nino Natsvlishvili",
+      "Sinja Kraus",
+      "Zoziya Kardava"
+    ],
     "actualWinner": "Julia Grabher",
     "hitStatus": "Top Pick",
-    "prob": 0.705420970916748,
+    "prob": 0.770033061504364,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Julia Grabher",
-        "winProbability": 70.54209899902344,
+        "winProbability": 77.00330352783203,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Zoziya Kardava",
-        "winProbability": 11.231515884399414,
+        "playerName": "Nino Natsvlishvili",
+        "winProbability": 9.911524772644043,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Nino Natsvlishvili",
-        "winProbability": 9.395835876464844,
+        "playerName": "Sinja Kraus",
+        "winProbability": 7.54378080368042,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sinja Kraus",
-        "winProbability": 8.830554008483887,
+        "playerName": "Zoziya Kardava",
+        "winProbability": 5.541390895843506,
         "actualWinner": false
       }
     ]
@@ -3398,30 +3398,30 @@
     ],
     "actualWinner": "Barbara Gatica",
     "hitStatus": "Top Pick",
-    "prob": 0.5009993314743042,
+    "prob": 0.6397385597229004,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Barbara Gatica",
-        "winProbability": 50.09993362426758,
+        "winProbability": 63.973854064941406,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Leyla Fiorella Britez Risso",
-        "winProbability": 18.872669219970703,
+        "winProbability": 12.045448303222656,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Fernanda Labrana",
-        "winProbability": 15.513697624206543,
+        "winProbability": 12.017508506774902,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Paulina Franco Martinessi",
-        "winProbability": 15.513697624206543,
+        "winProbability": 11.96318531036377,
         "actualWinner": false
       }
     ]
@@ -3432,48 +3432,48 @@
     "predictedWinner": "Qinwen Zheng",
     "predictedTop3": [
       "Qinwen Zheng",
-      "Xin Yu Wang",
+      "Kaja Juvan",
       "Xiyu Wang"
     ],
     "predictedTop5": [
       "Qinwen Zheng",
-      "Xin Yu Wang",
-      "Xiyu Wang",
       "Kaja Juvan",
+      "Xiyu Wang",
+      "Xin Yu Wang",
       "Nina Potocnik"
     ],
     "actualWinner": "Nina Potocnik",
     "hitStatus": "Top 5",
-    "prob": 0.32076048851013184,
+    "prob": 0.34386178851127625,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Qinwen Zheng",
-        "winProbability": 32.0760498046875,
+        "winProbability": 34.38617706298828,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Xin Yu Wang",
-        "winProbability": 22.237464904785156,
+        "playerName": "Kaja Juvan",
+        "winProbability": 21.67304039001465,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Xiyu Wang",
-        "winProbability": 21.871450424194336,
+        "winProbability": 18.381872177124023,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Kaja Juvan",
-        "winProbability": 21.09392547607422,
+        "playerName": "Xin Yu Wang",
+        "winProbability": 15.849349021911621,
         "actualWinner": false
       },
       {
         "rank": 5,
         "playerName": "Nina Potocnik",
-        "winProbability": 2.7211127281188965,
+        "winProbability": 9.70956039428711,
         "actualWinner": true
       }
     ]
@@ -3481,89 +3481,89 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G2 RR: FIN vs LTU",
-    "predictedWinner": "Justina Mikulskyte",
+    "predictedWinner": "Venla Ahti",
     "predictedTop3": [
-      "Justina Mikulskyte",
-      "Ella Haavisto",
-      "Venla Ahti"
+      "Venla Ahti",
+      "Andre Lukosiute",
+      "Ella Haavisto"
     ],
     "predictedTop5": [
-      "Justina Mikulskyte",
-      "Ella Haavisto",
       "Venla Ahti",
-      "Andre Lukosiute"
+      "Andre Lukosiute",
+      "Ella Haavisto",
+      "Justina Mikulskyte"
     ],
     "actualWinner": "Justina Mikulskyte",
-    "hitStatus": "Top Pick",
-    "prob": 0.25,
+    "hitStatus": "Top 5",
+    "prob": 0.2550318241119385,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Justina Mikulskyte",
-        "winProbability": 25.0,
-        "actualWinner": true
+        "playerName": "Venla Ahti",
+        "winProbability": 25.50318145751953,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Ella Haavisto",
-        "winProbability": 25.0,
+        "playerName": "Andre Lukosiute",
+        "winProbability": 25.45586585998535,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Venla Ahti",
-        "winProbability": 25.0,
+        "playerName": "Ella Haavisto",
+        "winProbability": 25.421798706054688,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Andre Lukosiute",
-        "winProbability": 25.0,
-        "actualWinner": false
+        "playerName": "Justina Mikulskyte",
+        "winProbability": 23.61915397644043,
+        "actualWinner": true
       }
     ]
   },
   {
     "year": 2022,
     "tournament": "BJK Cup G2 RR: LTU vs ISR",
-    "predictedWinner": "Lina Glushko",
+    "predictedWinner": "Justina Mikulskyte",
     "predictedTop3": [
-      "Lina Glushko",
       "Justina Mikulskyte",
-      "Nicole Khirin"
-    ],
-    "predictedTop5": [
       "Lina Glushko",
-      "Justina Mikulskyte",
-      "Nicole Khirin",
       "Andre Lukosiute"
     ],
+    "predictedTop5": [
+      "Justina Mikulskyte",
+      "Lina Glushko",
+      "Andre Lukosiute",
+      "Nicole Khirin"
+    ],
     "actualWinner": "Justina Mikulskyte",
-    "hitStatus": "Top 3",
-    "prob": 0.5012364387512207,
+    "hitStatus": "Top Pick",
+    "prob": 0.5247833132743835,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Lina Glushko",
-        "winProbability": 50.12364196777344,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
         "playerName": "Justina Mikulskyte",
-        "winProbability": 27.95272445678711,
+        "winProbability": 52.47833251953125,
         "actualWinner": true
       },
       {
+        "rank": 2,
+        "playerName": "Lina Glushko",
+        "winProbability": 42.23227310180664,
+        "actualWinner": false
+      },
+      {
         "rank": 3,
-        "playerName": "Nicole Khirin",
-        "winProbability": 11.06090259552002,
+        "playerName": "Andre Lukosiute",
+        "winProbability": 2.7606968879699707,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Andre Lukosiute",
-        "winProbability": 10.862727165222168,
+        "playerName": "Nicole Khirin",
+        "winProbability": 2.528697967529297,
         "actualWinner": false
       }
     ]
@@ -3574,41 +3574,41 @@
     "predictedWinner": "Paige Mary Hourigan",
     "predictedTop3": [
       "Paige Mary Hourigan",
-      "Valentina Ivanov",
-      "Yuki Naito"
+      "Yuki Naito",
+      "Valentina Ivanov"
     ],
     "predictedTop5": [
       "Paige Mary Hourigan",
-      "Valentina Ivanov",
       "Yuki Naito",
+      "Valentina Ivanov",
       "Moyuka Uchijima"
     ],
     "actualWinner": "Moyuka Uchijima",
     "hitStatus": "Top 5",
-    "prob": 0.6025093197822571,
+    "prob": 0.7843911051750183,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Paige Mary Hourigan",
-        "winProbability": 60.25093078613281,
+        "winProbability": 78.4391098022461,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Valentina Ivanov",
-        "winProbability": 15.366937637329102,
+        "playerName": "Yuki Naito",
+        "winProbability": 17.876689910888672,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Yuki Naito",
-        "winProbability": 14.102933883666992,
+        "playerName": "Valentina Ivanov",
+        "winProbability": 3.251023530960083,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Moyuka Uchijima",
-        "winProbability": 10.279195785522461,
+        "winProbability": 0.43317711353302,
         "actualWinner": true
       }
     ]
@@ -3620,40 +3620,40 @@
     "predictedTop3": [
       "Tamara Zidansek",
       "Mariam Bolkvadze",
-      "Kaja Juvan"
+      "Zoziya Kardava"
     ],
     "predictedTop5": [
       "Tamara Zidansek",
       "Mariam Bolkvadze",
-      "Kaja Juvan",
-      "Zoziya Kardava"
+      "Zoziya Kardava",
+      "Kaja Juvan"
     ],
     "actualWinner": "Tamara Zidansek",
     "hitStatus": "Top Pick",
-    "prob": 0.5821054577827454,
+    "prob": 0.5981087684631348,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Tamara Zidansek",
-        "winProbability": 58.21054458618164,
+        "winProbability": 59.810874938964844,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Mariam Bolkvadze",
-        "winProbability": 25.187808990478516,
+        "winProbability": 23.919523239135742,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Kaja Juvan",
-        "winProbability": 12.855779647827148,
+        "playerName": "Zoziya Kardava",
+        "winProbability": 9.37220287322998,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Zoziya Kardava",
-        "winProbability": 3.7458722591400146,
+        "playerName": "Kaja Juvan",
+        "winProbability": 6.897395133972168,
         "actualWinner": false
       }
     ]
@@ -3661,44 +3661,44 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G1 REL: DEN vs GEO",
-    "predictedWinner": "Sofia Nami Samavati",
+    "predictedWinner": "Mariam Bolkvadze",
     "predictedTop3": [
-      "Sofia Nami Samavati",
-      "Zoziya Kardava",
-      "Mariam Bolkvadze"
-    ],
-    "predictedTop5": [
-      "Sofia Nami Samavati",
-      "Zoziya Kardava",
       "Mariam Bolkvadze",
+      "Sofia Nami Samavati",
       "Johanne Christine Svendsen"
     ],
+    "predictedTop5": [
+      "Mariam Bolkvadze",
+      "Sofia Nami Samavati",
+      "Johanne Christine Svendsen",
+      "Zoziya Kardava"
+    ],
     "actualWinner": "Sofia Nami Samavati",
-    "hitStatus": "Top Pick",
-    "prob": 0.6527484655380249,
+    "hitStatus": "Top 3",
+    "prob": 0.487338662147522,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Sofia Nami Samavati",
-        "winProbability": 65.27484893798828,
-        "actualWinner": true
-      },
-      {
-        "rank": 2,
-        "playerName": "Zoziya Kardava",
-        "winProbability": 15.523431777954102,
+        "playerName": "Mariam Bolkvadze",
+        "winProbability": 48.73386764526367,
         "actualWinner": false
       },
       {
+        "rank": 2,
+        "playerName": "Sofia Nami Samavati",
+        "winProbability": 41.810218811035156,
+        "actualWinner": true
+      },
+      {
         "rank": 3,
-        "playerName": "Mariam Bolkvadze",
-        "winProbability": 10.465344429016113,
+        "playerName": "Johanne Christine Svendsen",
+        "winProbability": 8.125935554504395,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Johanne Christine Svendsen",
-        "winProbability": 8.736382484436035,
+        "playerName": "Zoziya Kardava",
+        "winProbability": 1.3299757242202759,
         "actualWinner": false
       }
     ]
@@ -3709,41 +3709,41 @@
     "predictedWinner": "Panna Udvardy",
     "predictedTop3": [
       "Panna Udvardy",
-      "Maileen Nuudi",
-      "Anna Bondar"
+      "Anna Bondar",
+      "Maileen Nuudi"
     ],
     "predictedTop5": [
       "Panna Udvardy",
-      "Maileen Nuudi",
       "Anna Bondar",
+      "Maileen Nuudi",
       "Katriin Saar"
     ],
     "actualWinner": "Anna Bondar",
     "hitStatus": "Top 3",
-    "prob": 0.5938667058944702,
+    "prob": 0.49204710125923157,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Panna Udvardy",
-        "winProbability": 59.38666915893555,
+        "winProbability": 49.2047119140625,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Maileen Nuudi",
-        "winProbability": 23.135744094848633,
-        "actualWinner": false
+        "playerName": "Anna Bondar",
+        "winProbability": 35.67560958862305,
+        "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Anna Bondar",
-        "winProbability": 9.858098983764648,
-        "actualWinner": true
+        "playerName": "Maileen Nuudi",
+        "winProbability": 8.20731258392334,
+        "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Katriin Saar",
-        "winProbability": 7.6194891929626465,
+        "winProbability": 6.912370204925537,
         "actualWinner": false
       }
     ]
@@ -3751,44 +3751,44 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G2 RR: FIN vs ISR",
-    "predictedWinner": "Nicole Khirin",
+    "predictedWinner": "Shavit Kimchi",
     "predictedTop3": [
-      "Nicole Khirin",
-      "Ella Haavisto",
-      "Shavit Kimchi"
+      "Shavit Kimchi",
+      "Stella Remander",
+      "Nicole Khirin"
     ],
     "predictedTop5": [
-      "Nicole Khirin",
-      "Ella Haavisto",
       "Shavit Kimchi",
-      "Stella Remander"
+      "Stella Remander",
+      "Nicole Khirin",
+      "Ella Haavisto"
     ],
     "actualWinner": "Shavit Kimchi",
-    "hitStatus": "Top 3",
-    "prob": 0.2781536877155304,
+    "hitStatus": "Top Pick",
+    "prob": 0.4321731925010681,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Nicole Khirin",
-        "winProbability": 27.81536865234375,
-        "actualWinner": false
+        "playerName": "Shavit Kimchi",
+        "winProbability": 43.21731948852539,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Ella Haavisto",
-        "winProbability": 26.455095291137695,
+        "playerName": "Stella Remander",
+        "winProbability": 40.03794860839844,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Shavit Kimchi",
-        "winProbability": 22.86476707458496,
-        "actualWinner": true
+        "playerName": "Nicole Khirin",
+        "winProbability": 13.820112228393555,
+        "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Stella Remander",
-        "winProbability": 22.86476707458496,
+        "playerName": "Ella Haavisto",
+        "winProbability": 2.9246246814727783,
         "actualWinner": false
       }
     ]
@@ -3796,45 +3796,45 @@
   {
     "year": 2022,
     "tournament": "BJK Cup G1 RR: EST vs DEN",
-    "predictedWinner": "Sofia Nami Samavati",
+    "predictedWinner": "Elena Malygina",
     "predictedTop3": [
-      "Sofia Nami Samavati",
-      "Elena Malygina",
-      "Maileen Nuudi"
-    ],
-    "predictedTop5": [
-      "Sofia Nami Samavati",
       "Elena Malygina",
       "Maileen Nuudi",
       "Johanne Christine Svendsen"
     ],
+    "predictedTop5": [
+      "Elena Malygina",
+      "Maileen Nuudi",
+      "Johanne Christine Svendsen",
+      "Sofia Nami Samavati"
+    ],
     "actualWinner": "Sofia Nami Samavati",
-    "hitStatus": "Top Pick",
-    "prob": 0.44814378023147583,
+    "hitStatus": "Top 5",
+    "prob": 0.5453272461891174,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Sofia Nami Samavati",
-        "winProbability": 44.81437683105469,
-        "actualWinner": true
+        "playerName": "Elena Malygina",
+        "winProbability": 54.5327262878418,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Elena Malygina",
-        "winProbability": 25.16230583190918,
+        "playerName": "Maileen Nuudi",
+        "winProbability": 28.501880645751953,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Maileen Nuudi",
-        "winProbability": 19.50925636291504,
+        "playerName": "Johanne Christine Svendsen",
+        "winProbability": 11.730508804321289,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Johanne Christine Svendsen",
-        "winProbability": 10.514056205749512,
-        "actualWinner": false
+        "playerName": "Sofia Nami Samavati",
+        "winProbability": 5.234886169433594,
+        "actualWinner": true
       }
     ]
   },
@@ -3855,30 +3855,30 @@
     ],
     "actualWinner": "Elise Mertens",
     "hitStatus": "Top Pick",
-    "prob": 0.5166712403297424,
+    "prob": 0.4710731506347656,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Elise Mertens",
-        "winProbability": 51.6671257019043,
+        "winProbability": 47.10731506347656,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Aliaksandra Sasnovich",
-        "winProbability": 34.70930099487305,
+        "winProbability": 36.25767517089844,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Greet Minnen",
-        "winProbability": 10.892783164978027,
+        "winProbability": 12.929603576660156,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Iryna Shymanovich",
-        "winProbability": 2.730790376663208,
+        "winProbability": 3.705404281616211,
         "actualWinner": false
       }
     ]
@@ -3886,44 +3886,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G1 RR: CHI vs MEX",
-    "predictedWinner": "Daniela Seguel",
+    "predictedWinner": "Giuliana Olmos",
     "predictedTop3": [
-      "Daniela Seguel",
       "Giuliana Olmos",
-      "Fernanda Contreras Gomez"
-    ],
-    "predictedTop5": [
       "Daniela Seguel",
-      "Giuliana Olmos",
-      "Fernanda Contreras Gomez",
       "Barbara Gatica"
     ],
+    "predictedTop5": [
+      "Giuliana Olmos",
+      "Daniela Seguel",
+      "Barbara Gatica",
+      "Fernanda Contreras Gomez"
+    ],
     "actualWinner": "Daniela Seguel",
-    "hitStatus": "Top Pick",
-    "prob": 0.5195091366767883,
+    "hitStatus": "Top 3",
+    "prob": 0.583302915096283,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Daniela Seguel",
-        "winProbability": 51.95091247558594,
-        "actualWinner": true
-      },
-      {
-        "rank": 2,
         "playerName": "Giuliana Olmos",
-        "winProbability": 33.810150146484375,
+        "winProbability": 58.330291748046875,
         "actualWinner": false
       },
       {
+        "rank": 2,
+        "playerName": "Daniela Seguel",
+        "winProbability": 27.121084213256836,
+        "actualWinner": true
+      },
+      {
         "rank": 3,
-        "playerName": "Fernanda Contreras Gomez",
-        "winProbability": 7.1314191818237305,
+        "playerName": "Barbara Gatica",
+        "winProbability": 8.924339294433594,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Barbara Gatica",
-        "winProbability": 7.107516288757324,
+        "playerName": "Fernanda Contreras Gomez",
+        "winProbability": 5.624283790588379,
         "actualWinner": false
       }
     ]
@@ -3935,40 +3935,40 @@
     "predictedTop3": [
       "Daniela Seguel",
       "Barbara Gatica",
-      "Dana Guzman"
+      "Romina Ccuno"
     ],
     "predictedTop5": [
       "Daniela Seguel",
       "Barbara Gatica",
-      "Dana Guzman",
-      "Romina Ccuno"
+      "Romina Ccuno",
+      "Dana Guzman"
     ],
     "actualWinner": "Daniela Seguel",
     "hitStatus": "Top Pick",
-    "prob": 0.25,
+    "prob": 0.27236780524253845,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Daniela Seguel",
-        "winProbability": 25.0,
+        "winProbability": 27.236780166625977,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Barbara Gatica",
-        "winProbability": 25.0,
+        "winProbability": 24.342615127563477,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Dana Guzman",
-        "winProbability": 25.0,
+        "playerName": "Romina Ccuno",
+        "winProbability": 24.28278350830078,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Romina Ccuno",
-        "winProbability": 25.0,
+        "playerName": "Dana Guzman",
+        "winProbability": 24.137821197509766,
         "actualWinner": false
       }
     ]
@@ -3976,44 +3976,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G1 RR: TPE vs IND",
-    "predictedWinner": "En Shuo Liang",
+    "predictedWinner": "Ankita Raina",
     "predictedTop3": [
-      "En Shuo Liang",
       "Ankita Raina",
-      "Ya Yi Yang"
-    ],
-    "predictedTop5": [
       "En Shuo Liang",
-      "Ankita Raina",
-      "Ya Yi Yang",
       "Rutuja Bhosale"
     ],
+    "predictedTop5": [
+      "Ankita Raina",
+      "En Shuo Liang",
+      "Rutuja Bhosale",
+      "Ya Yi Yang"
+    ],
     "actualWinner": "En Shuo Liang",
-    "hitStatus": "Top Pick",
-    "prob": 0.38674023747444153,
+    "hitStatus": "Top 3",
+    "prob": 0.44137948751449585,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "En Shuo Liang",
-        "winProbability": 38.67402267456055,
-        "actualWinner": true
-      },
-      {
-        "rank": 2,
         "playerName": "Ankita Raina",
-        "winProbability": 38.34746551513672,
+        "winProbability": 44.13794708251953,
         "actualWinner": false
       },
       {
+        "rank": 2,
+        "playerName": "En Shuo Liang",
+        "winProbability": 36.84099197387695,
+        "actualWinner": true
+      },
+      {
         "rank": 3,
-        "playerName": "Ya Yi Yang",
-        "winProbability": 17.203824996948242,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 17.06060218811035,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Rutuja Bhosale",
-        "winProbability": 5.774677753448486,
+        "playerName": "Ya Yi Yang",
+        "winProbability": 1.960453987121582,
         "actualWinner": false
       }
     ]
@@ -4035,30 +4035,30 @@
     ],
     "actualWinner": "Ankita Raina",
     "hitStatus": "Top 3",
-    "prob": 0.5670587420463562,
+    "prob": 0.4212779700756073,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Aldila Sutjiadi",
-        "winProbability": 56.705875396728516,
+        "winProbability": 42.1277961730957,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Ankita Raina",
-        "winProbability": 19.193435668945312,
+        "winProbability": 28.152891159057617,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Rutuja Bhosale",
-        "winProbability": 14.898758888244629,
+        "winProbability": 21.146488189697266,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Priska Madelyn Nugroho",
-        "winProbability": 9.20193099975586,
+        "winProbability": 8.572832107543945,
         "actualWinner": false
       }
     ]
@@ -4066,44 +4066,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: PHI vs GUM",
-    "predictedWinner": "Anna Clarice Patrimonio",
+    "predictedWinner": "Nadine Del Carmen",
     "predictedTop3": [
-      "Anna Clarice Patrimonio",
-      "Marian Jade Capadocia",
-      "Katrina Lai"
+      "Nadine Del Carmen",
+      "Katrina Lai",
+      "Marian Jade Capadocia"
     ],
     "predictedTop5": [
-      "Anna Clarice Patrimonio",
-      "Marian Jade Capadocia",
+      "Nadine Del Carmen",
       "Katrina Lai",
-      "Nadine Del Carmen"
+      "Marian Jade Capadocia",
+      "Anna Clarice Patrimonio"
     ],
     "actualWinner": "Marian Jade Capadocia",
     "hitStatus": "Top 3",
-    "prob": 0.25,
+    "prob": 0.2571588456630707,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Anna Clarice Patrimonio",
-        "winProbability": 25.0,
+        "playerName": "Nadine Del Carmen",
+        "winProbability": 25.715885162353516,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Marian Jade Capadocia",
-        "winProbability": 25.0,
-        "actualWinner": true
-      },
-      {
-        "rank": 3,
         "playerName": "Katrina Lai",
-        "winProbability": 25.0,
+        "winProbability": 25.33072853088379,
         "actualWinner": false
       },
       {
+        "rank": 3,
+        "playerName": "Marian Jade Capadocia",
+        "winProbability": 25.121662139892578,
+        "actualWinner": true
+      },
+      {
         "rank": 4,
-        "playerName": "Nadine Del Carmen",
-        "winProbability": 25.0,
+        "playerName": "Anna Clarice Patrimonio",
+        "winProbability": 23.831727981567383,
         "actualWinner": false
       }
     ]
@@ -4114,41 +4114,41 @@
     "predictedWinner": "Marian Jade Capadocia",
     "predictedTop3": [
       "Marian Jade Capadocia",
-      "Chompoothip Jandakate",
-      "Anna Clarice Patrimonio"
+      "Anna Clarice Patrimonio",
+      "Chompoothip Jandakate"
     ],
     "predictedTop5": [
       "Marian Jade Capadocia",
-      "Chompoothip Jandakate",
       "Anna Clarice Patrimonio",
+      "Chompoothip Jandakate",
       "Anchisa Chanta"
     ],
     "actualWinner": "Marian Jade Capadocia",
     "hitStatus": "Top Pick",
-    "prob": 0.39483898878097534,
+    "prob": 0.7031731605529785,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Marian Jade Capadocia",
-        "winProbability": 39.4838981628418,
+        "winProbability": 70.31731414794922,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Chompoothip Jandakate",
-        "winProbability": 39.4838981628418,
+        "playerName": "Anna Clarice Patrimonio",
+        "winProbability": 18.31157875061035,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Anna Clarice Patrimonio",
-        "winProbability": 10.516100883483887,
+        "playerName": "Chompoothip Jandakate",
+        "winProbability": 9.485709190368652,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Anchisa Chanta",
-        "winProbability": 10.516100883483887,
+        "winProbability": 1.8853999376296997,
         "actualWinner": false
       }
     ]
@@ -4156,44 +4156,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: PHI vs TKM",
-    "predictedWinner": "Arzuv Klycheva",
+    "predictedWinner": "Anna Clarice Patrimonio",
     "predictedTop3": [
-      "Arzuv Klycheva",
-      "Anna Clarice Patrimonio",
-      "Shaira Hope Rivera"
-    ],
-    "predictedTop5": [
-      "Arzuv Klycheva",
       "Anna Clarice Patrimonio",
       "Shaira Hope Rivera",
       "Rozhan Karajayeva"
     ],
+    "predictedTop5": [
+      "Anna Clarice Patrimonio",
+      "Shaira Hope Rivera",
+      "Rozhan Karajayeva",
+      "Arzuv Klycheva"
+    ],
     "actualWinner": "Anna Clarice Patrimonio",
-    "hitStatus": "Top 3",
-    "prob": 0.39845508337020874,
+    "hitStatus": "Top Pick",
+    "prob": 0.4688378870487213,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Arzuv Klycheva",
-        "winProbability": 39.84550857543945,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
         "playerName": "Anna Clarice Patrimonio",
-        "winProbability": 20.051496505737305,
+        "winProbability": 46.8837890625,
         "actualWinner": true
       },
       {
-        "rank": 3,
+        "rank": 2,
         "playerName": "Shaira Hope Rivera",
-        "winProbability": 20.051496505737305,
+        "winProbability": 22.887617111206055,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Rozhan Karajayeva",
+        "winProbability": 21.887765884399414,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Rozhan Karajayeva",
-        "winProbability": 20.051496505737305,
+        "playerName": "Arzuv Klycheva",
+        "winProbability": 8.340827941894531,
         "actualWinner": false
       }
     ]
@@ -4201,45 +4201,45 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: PAK vs MGL",
-    "predictedWinner": "Ushna Suhail",
+    "predictedWinner": "Mahin Qureshi",
     "predictedTop3": [
-      "Ushna Suhail",
-      "Mahin Qureshi",
-      "Erdenesuren Erdenebat"
-    ],
-    "predictedTop5": [
-      "Ushna Suhail",
       "Mahin Qureshi",
       "Erdenesuren Erdenebat",
       "Jargal Altansarnai"
     ],
+    "predictedTop5": [
+      "Mahin Qureshi",
+      "Erdenesuren Erdenebat",
+      "Jargal Altansarnai",
+      "Ushna Suhail"
+    ],
     "actualWinner": "Ushna Suhail",
-    "hitStatus": "Top Pick",
-    "prob": 0.25,
+    "hitStatus": "Top 5",
+    "prob": 0.2641691565513611,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Ushna Suhail",
-        "winProbability": 25.0,
-        "actualWinner": true
+        "playerName": "Mahin Qureshi",
+        "winProbability": 26.416915893554688,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Mahin Qureshi",
-        "winProbability": 25.0,
+        "playerName": "Erdenesuren Erdenebat",
+        "winProbability": 24.719268798828125,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Erdenesuren Erdenebat",
-        "winProbability": 25.0,
+        "playerName": "Jargal Altansarnai",
+        "winProbability": 24.66595458984375,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Jargal Altansarnai",
-        "winProbability": 25.0,
-        "actualWinner": false
+        "playerName": "Ushna Suhail",
+        "winProbability": 24.19786262512207,
+        "actualWinner": true
       }
     ]
   },
@@ -4249,42 +4249,42 @@
     "predictedWinner": "Ushna Suhail",
     "predictedTop3": [
       "Ushna Suhail",
-      "Sarah Mahboob Khan",
-      "Sarah Pang"
-    ],
-    "predictedTop5": [
-      "Ushna Suhail",
-      "Sarah Mahboob Khan",
       "Sarah Pang",
       "Hx Izabella Tan"
     ],
+    "predictedTop5": [
+      "Ushna Suhail",
+      "Sarah Pang",
+      "Hx Izabella Tan",
+      "Sarah Mahboob Khan"
+    ],
     "actualWinner": "Hx Izabella Tan",
-    "hitStatus": "Top 5",
-    "prob": 0.6035705208778381,
+    "hitStatus": "Top 3",
+    "prob": 0.5464412569999695,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Ushna Suhail",
-        "winProbability": 60.357051849365234,
+        "winProbability": 54.644126892089844,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Sarah Mahboob Khan",
-        "winProbability": 13.214317321777344,
+        "playerName": "Sarah Pang",
+        "winProbability": 18.351287841796875,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Sarah Pang",
-        "winProbability": 13.214317321777344,
-        "actualWinner": false
+        "playerName": "Hx Izabella Tan",
+        "winProbability": 14.059032440185547,
+        "actualWinner": true
       },
       {
         "rank": 4,
-        "playerName": "Hx Izabella Tan",
-        "winProbability": 13.214317321777344,
-        "actualWinner": true
+        "playerName": "Sarah Mahboob Khan",
+        "winProbability": 12.94554328918457,
+        "actualWinner": false
       }
     ]
   },
@@ -4295,85 +4295,85 @@
     "predictedTop3": [
       "Ushna Suhail",
       "Watsachol Sawasdee",
-      "Mahin Qureshi"
+      "Anchisa Chanta"
     ],
     "predictedTop5": [
       "Ushna Suhail",
       "Watsachol Sawasdee",
-      "Mahin Qureshi",
-      "Anchisa Chanta"
+      "Anchisa Chanta",
+      "Mahin Qureshi"
     ],
     "actualWinner": "Anchisa Chanta",
-    "hitStatus": "Top 5",
-    "prob": 0.48032164573669434,
+    "hitStatus": "Top 3",
+    "prob": 0.4874720275402069,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Ushna Suhail",
-        "winProbability": 48.03216552734375,
+        "winProbability": 48.7472038269043,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Watsachol Sawasdee",
-        "winProbability": 28.277700424194336,
+        "winProbability": 46.55221939086914,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Mahin Qureshi",
-        "winProbability": 11.87226390838623,
-        "actualWinner": false
+        "playerName": "Anchisa Chanta",
+        "winProbability": 3.5030429363250732,
+        "actualWinner": true
       },
       {
         "rank": 4,
-        "playerName": "Anchisa Chanta",
-        "winProbability": 11.817877769470215,
-        "actualWinner": true
+        "playerName": "Mahin Qureshi",
+        "winProbability": 1.1975303888320923,
+        "actualWinner": false
       }
     ]
   },
   {
     "year": 2020,
     "tournament": "Fed Cup G1 RR: TPE vs INA",
-    "predictedWinner": "Aldila Sutjiadi",
+    "predictedWinner": "En Shuo Liang",
     "predictedTop3": [
+      "En Shuo Liang",
+      "Aldila Sutjiadi",
+      "Priska Madelyn Nugroho"
+    ],
+    "predictedTop5": [
+      "En Shuo Liang",
       "Aldila Sutjiadi",
       "Priska Madelyn Nugroho",
       "Ya Yi Yang"
     ],
-    "predictedTop5": [
-      "Aldila Sutjiadi",
-      "Priska Madelyn Nugroho",
-      "Ya Yi Yang",
-      "En Shuo Liang"
-    ],
     "actualWinner": "Aldila Sutjiadi",
-    "hitStatus": "Top Pick",
-    "prob": 0.2502664625644684,
+    "hitStatus": "Top 3",
+    "prob": 0.39037588238716125,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Aldila Sutjiadi",
-        "winProbability": 25.02664566040039,
-        "actualWinner": true
-      },
-      {
-        "rank": 2,
-        "playerName": "Priska Madelyn Nugroho",
-        "winProbability": 25.02664566040039,
+        "playerName": "En Shuo Liang",
+        "winProbability": 39.03759002685547,
         "actualWinner": false
       },
       {
+        "rank": 2,
+        "playerName": "Aldila Sutjiadi",
+        "winProbability": 23.010986328125,
+        "actualWinner": true
+      },
+      {
         "rank": 3,
-        "playerName": "Ya Yi Yang",
-        "winProbability": 25.02664566040039,
+        "playerName": "Priska Madelyn Nugroho",
+        "winProbability": 19.128032684326172,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "En Shuo Liang",
-        "winProbability": 24.920068740844727,
+        "playerName": "Ya Yi Yang",
+        "winProbability": 18.823387145996094,
         "actualWinner": false
       }
     ]
@@ -4381,45 +4381,45 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: ISR vs MDA",
-    "predictedWinner": "Anastasia Vdovenco",
+    "predictedWinner": "Shelly Bereznyak",
     "predictedTop3": [
-      "Anastasia Vdovenco",
+      "Shelly Bereznyak",
       "Daniela Ciobanu",
-      "Lina Glushko"
+      "Anastasia Vdovenco"
     ],
     "predictedTop5": [
-      "Anastasia Vdovenco",
+      "Shelly Bereznyak",
       "Daniela Ciobanu",
-      "Lina Glushko",
-      "Shelly Bereznyak"
+      "Anastasia Vdovenco",
+      "Lina Glushko"
     ],
     "actualWinner": "Lina Glushko",
-    "hitStatus": "Top 3",
-    "prob": 0.36879095435142517,
+    "hitStatus": "Top 5",
+    "prob": 0.45329949259757996,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Anastasia Vdovenco",
-        "winProbability": 36.87909698486328,
+        "playerName": "Shelly Bereznyak",
+        "winProbability": 45.32994842529297,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Daniela Ciobanu",
-        "winProbability": 23.071142196655273,
+        "winProbability": 19.169239044189453,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Lina Glushko",
-        "winProbability": 20.109703063964844,
-        "actualWinner": true
+        "playerName": "Anastasia Vdovenco",
+        "winProbability": 18.745920181274414,
+        "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Shelly Bereznyak",
-        "winProbability": 19.9400634765625,
-        "actualWinner": false
+        "playerName": "Lina Glushko",
+        "winProbability": 16.75489616394043,
+        "actualWinner": true
       }
     ]
   },
@@ -4429,41 +4429,41 @@
     "predictedWinner": "Mayar Sherif",
     "predictedTop3": [
       "Mayar Sherif",
-      "Anastasia Vdovenco",
-      "Daniela Ciobanu"
+      "Sandra Samir",
+      "Anastasia Vdovenco"
     ],
     "predictedTop5": [
       "Mayar Sherif",
+      "Sandra Samir",
       "Anastasia Vdovenco",
-      "Daniela Ciobanu",
-      "Sandra Samir"
+      "Daniela Ciobanu"
     ],
     "actualWinner": "Mayar Sherif",
     "hitStatus": "Top Pick",
-    "prob": 0.5417609214782715,
+    "prob": 0.7375750541687012,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mayar Sherif",
-        "winProbability": 54.17609405517578,
+        "winProbability": 73.75750732421875,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Anastasia Vdovenco",
-        "winProbability": 25.41838836669922,
+        "playerName": "Sandra Samir",
+        "winProbability": 19.128021240234375,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Daniela Ciobanu",
-        "winProbability": 12.569671630859375,
+        "playerName": "Anastasia Vdovenco",
+        "winProbability": 4.865265369415283,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sandra Samir",
-        "winProbability": 7.835842609405518,
+        "playerName": "Daniela Ciobanu",
+        "winProbability": 2.2492101192474365,
         "actualWinner": false
       }
     ]
@@ -4471,44 +4471,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: POR vs EGY",
-    "predictedWinner": "Mayar Sherif",
+    "predictedWinner": "Sandra Samir",
     "predictedTop3": [
-      "Mayar Sherif",
       "Sandra Samir",
+      "Mayar Sherif",
       "Francisca Jorge"
     ],
     "predictedTop5": [
-      "Mayar Sherif",
       "Sandra Samir",
+      "Mayar Sherif",
       "Francisca Jorge",
       "Maria Ines Fonte"
     ],
     "actualWinner": "Mayar Sherif",
-    "hitStatus": "Top Pick",
-    "prob": 0.25,
+    "hitStatus": "Top 3",
+    "prob": 0.2779199481010437,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Mayar Sherif",
-        "winProbability": 25.0,
-        "actualWinner": true
+        "playerName": "Sandra Samir",
+        "winProbability": 27.791994094848633,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Sandra Samir",
-        "winProbability": 25.0,
-        "actualWinner": false
+        "playerName": "Mayar Sherif",
+        "winProbability": 26.74235725402832,
+        "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Francisca Jorge",
-        "winProbability": 25.0,
+        "winProbability": 22.801042556762695,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Maria Ines Fonte",
-        "winProbability": 25.0,
+        "winProbability": 22.664608001708984,
         "actualWinner": false
       }
     ]
@@ -4520,85 +4520,85 @@
     "predictedTop3": [
       "Mayar Sherif",
       "Sandra Samir",
-      "Anastasia Kulikova"
+      "Oona Orpana"
     ],
     "predictedTop5": [
       "Mayar Sherif",
       "Sandra Samir",
-      "Anastasia Kulikova",
-      "Oona Orpana"
+      "Oona Orpana",
+      "Anastasia Kulikova"
     ],
     "actualWinner": "Oona Orpana",
-    "hitStatus": "Top 5",
-    "prob": 0.5599129796028137,
+    "hitStatus": "Top 3",
+    "prob": 0.5302727818489075,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Mayar Sherif",
-        "winProbability": 55.99129867553711,
+        "winProbability": 53.027278900146484,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Sandra Samir",
-        "winProbability": 14.912664413452148,
+        "winProbability": 16.774507522583008,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Anastasia Kulikova",
-        "winProbability": 14.912664413452148,
-        "actualWinner": false
+        "playerName": "Oona Orpana",
+        "winProbability": 15.539397239685059,
+        "actualWinner": true
       },
       {
         "rank": 4,
-        "playerName": "Oona Orpana",
-        "winProbability": 14.183382987976074,
-        "actualWinner": true
+        "playerName": "Anastasia Kulikova",
+        "winProbability": 14.658817291259766,
+        "actualWinner": false
       }
     ]
   },
   {
     "year": 2020,
     "tournament": "Fed Cup G2 PPO: NZL vs PHI",
-    "predictedWinner": "Paige Mary Hourigan",
+    "predictedWinner": "Marian Jade Capadocia",
     "predictedTop3": [
-      "Paige Mary Hourigan",
       "Marian Jade Capadocia",
+      "Paige Mary Hourigan",
       "Valentina Ivanov"
     ],
     "predictedTop5": [
-      "Paige Mary Hourigan",
       "Marian Jade Capadocia",
+      "Paige Mary Hourigan",
       "Valentina Ivanov",
       "Shaira Hope Rivera"
     ],
     "actualWinner": "Paige Mary Hourigan",
-    "hitStatus": "Top Pick",
-    "prob": 0.47535550594329834,
+    "hitStatus": "Top 3",
+    "prob": 0.5188204050064087,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Paige Mary Hourigan",
-        "winProbability": 47.53554916381836,
-        "actualWinner": true
+        "playerName": "Marian Jade Capadocia",
+        "winProbability": 51.882041931152344,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Marian Jade Capadocia",
-        "winProbability": 34.74628829956055,
-        "actualWinner": false
+        "playerName": "Paige Mary Hourigan",
+        "winProbability": 46.222869873046875,
+        "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Valentina Ivanov",
-        "winProbability": 8.859077453613281,
+        "winProbability": 1.7639601230621338,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Shaira Hope Rivera",
-        "winProbability": 8.859077453613281,
+        "winProbability": 0.13113656640052795,
         "actualWinner": false
       }
     ]
@@ -4609,41 +4609,41 @@
     "predictedWinner": "Jasmine Paolini",
     "predictedTop3": [
       "Jasmine Paolini",
-      "Dimitra Pavlou",
-      "Michaela Laki"
+      "Elisabetta Cocciaretto",
+      "Dimitra Pavlou"
     ],
     "predictedTop5": [
       "Jasmine Paolini",
+      "Elisabetta Cocciaretto",
       "Dimitra Pavlou",
-      "Michaela Laki",
-      "Elisabetta Cocciaretto"
+      "Michaela Laki"
     ],
     "actualWinner": "Jasmine Paolini",
     "hitStatus": "Top Pick",
-    "prob": 0.7093825936317444,
+    "prob": 0.7079164385795593,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Jasmine Paolini",
-        "winProbability": 70.93826293945312,
+        "winProbability": 70.79164123535156,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Dimitra Pavlou",
-        "winProbability": 9.694191932678223,
+        "playerName": "Elisabetta Cocciaretto",
+        "winProbability": 19.981101989746094,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Michaela Laki",
-        "winProbability": 9.694191932678223,
+        "playerName": "Dimitra Pavlou",
+        "winProbability": 4.6375956535339355,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Elisabetta Cocciaretto",
-        "winProbability": 9.673361778259277,
+        "playerName": "Michaela Laki",
+        "winProbability": 4.589656829833984,
         "actualWinner": false
       }
     ]
@@ -4655,40 +4655,40 @@
     "predictedTop3": [
       "Eleonora Molinaro",
       "Nina Stojanovic",
-      "Laura Correia"
+      "Olga Danilovic"
     ],
     "predictedTop5": [
       "Eleonora Molinaro",
       "Nina Stojanovic",
-      "Laura Correia",
-      "Olga Danilovic"
+      "Olga Danilovic",
+      "Laura Correia"
     ],
     "actualWinner": "Eleonora Molinaro",
     "hitStatus": "Top Pick",
-    "prob": 0.5377235412597656,
+    "prob": 0.47174906730651855,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Eleonora Molinaro",
-        "winProbability": 53.77235412597656,
+        "winProbability": 47.17490768432617,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Nina Stojanovic",
-        "winProbability": 22.646703720092773,
+        "winProbability": 37.163551330566406,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Laura Correia",
-        "winProbability": 11.790468215942383,
+        "playerName": "Olga Danilovic",
+        "winProbability": 7.910741329193115,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Olga Danilovic",
-        "winProbability": 11.790468215942383,
+        "playerName": "Laura Correia",
+        "winProbability": 7.750796318054199,
         "actualWinner": false
       }
     ]
@@ -4696,44 +4696,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G1 PPO: SRB vs SLO",
-    "predictedWinner": "Nina Stojanovic",
+    "predictedWinner": "Tamara Zidansek",
     "predictedTop3": [
-      "Nina Stojanovic",
       "Tamara Zidansek",
-      "Olga Danilovic"
-    ],
-    "predictedTop5": [
       "Nina Stojanovic",
-      "Tamara Zidansek",
-      "Olga Danilovic",
       "Kaja Juvan"
     ],
+    "predictedTop5": [
+      "Tamara Zidansek",
+      "Nina Stojanovic",
+      "Kaja Juvan",
+      "Olga Danilovic"
+    ],
     "actualWinner": "Nina Stojanovic",
-    "hitStatus": "Top Pick",
-    "prob": 0.6222609877586365,
+    "hitStatus": "Top 3",
+    "prob": 0.5372171998023987,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Nina Stojanovic",
-        "winProbability": 62.226097106933594,
-        "actualWinner": true
-      },
-      {
-        "rank": 2,
         "playerName": "Tamara Zidansek",
-        "winProbability": 19.764204025268555,
+        "winProbability": 53.72172164916992,
         "actualWinner": false
       },
       {
+        "rank": 2,
+        "playerName": "Nina Stojanovic",
+        "winProbability": 37.13254928588867,
+        "actualWinner": true
+      },
+      {
         "rank": 3,
-        "playerName": "Olga Danilovic",
-        "winProbability": 9.822441101074219,
+        "playerName": "Kaja Juvan",
+        "winProbability": 7.603088855743408,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Kaja Juvan",
-        "winProbability": 8.187265396118164,
+        "playerName": "Olga Danilovic",
+        "winProbability": 1.5426453351974487,
         "actualWinner": false
       }
     ]
@@ -4741,44 +4741,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: SGP vs NZL",
-    "predictedWinner": "Hx Izabella Tan",
+    "predictedWinner": "Paige Mary Hourigan",
     "predictedTop3": [
-      "Hx Izabella Tan",
       "Paige Mary Hourigan",
+      "Hx Izabella Tan",
       "Sarah Pang"
     ],
     "predictedTop5": [
-      "Hx Izabella Tan",
       "Paige Mary Hourigan",
+      "Hx Izabella Tan",
       "Sarah Pang",
       "Valentina Ivanov"
     ],
     "actualWinner": "Paige Mary Hourigan",
-    "hitStatus": "Top 3",
-    "prob": 0.4503921568393707,
+    "hitStatus": "Top Pick",
+    "prob": 0.6614152193069458,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Hx Izabella Tan",
-        "winProbability": 45.039215087890625,
-        "actualWinner": false
+        "playerName": "Paige Mary Hourigan",
+        "winProbability": 66.14152526855469,
+        "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Paige Mary Hourigan",
-        "winProbability": 42.48178482055664,
-        "actualWinner": true
+        "playerName": "Hx Izabella Tan",
+        "winProbability": 31.158218383789062,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Sarah Pang",
-        "winProbability": 6.654046535491943,
+        "winProbability": 1.4649890661239624,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Valentina Ivanov",
-        "winProbability": 5.824949741363525,
+        "winProbability": 1.235273838043213,
         "actualWinner": false
       }
     ]
@@ -4786,44 +4786,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 RR: THA vs TKM",
-    "predictedWinner": "Chompoothip Jandakate",
+    "predictedWinner": "Arzuv Klycheva",
     "predictedTop3": [
-      "Chompoothip Jandakate",
+      "Arzuv Klycheva",
       "Anchisa Chanta",
-      "Arzuv Klycheva"
+      "Chompoothip Jandakate"
     ],
     "predictedTop5": [
-      "Chompoothip Jandakate",
-      "Anchisa Chanta",
       "Arzuv Klycheva",
+      "Anchisa Chanta",
+      "Chompoothip Jandakate",
       "Bahar Toymyradova"
     ],
     "actualWinner": "Chompoothip Jandakate",
-    "hitStatus": "Top Pick",
-    "prob": 0.25,
+    "hitStatus": "Top 3",
+    "prob": 0.25318989157676697,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Chompoothip Jandakate",
-        "winProbability": 25.0,
-        "actualWinner": true
+        "playerName": "Arzuv Klycheva",
+        "winProbability": 25.318988800048828,
+        "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Anchisa Chanta",
-        "winProbability": 25.0,
+        "winProbability": 25.016191482543945,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Arzuv Klycheva",
-        "winProbability": 25.0,
-        "actualWinner": false
+        "playerName": "Chompoothip Jandakate",
+        "winProbability": 24.8568172454834,
+        "actualWinner": true
       },
       {
         "rank": 4,
         "playerName": "Bahar Toymyradova",
-        "winProbability": 25.0,
+        "winProbability": 24.808008193969727,
         "actualWinner": false
       }
     ]
@@ -4834,41 +4834,41 @@
     "predictedWinner": "Nadine Del Carmen",
     "predictedTop3": [
       "Nadine Del Carmen",
-      "Tamachan Momkoonthod",
+      "Katrina Lai",
       "Watsachol Sawasdee"
     ],
     "predictedTop5": [
       "Nadine Del Carmen",
-      "Tamachan Momkoonthod",
+      "Katrina Lai",
       "Watsachol Sawasdee",
-      "Katrina Lai"
+      "Tamachan Momkoonthod"
     ],
     "actualWinner": "Watsachol Sawasdee",
     "hitStatus": "Top 3",
-    "prob": 0.7092347741127014,
+    "prob": 0.52230304479599,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Nadine Del Carmen",
-        "winProbability": 70.92347717285156,
+        "winProbability": 52.23030471801758,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Tamachan Momkoonthod",
-        "winProbability": 9.692176818847656,
+        "playerName": "Katrina Lai",
+        "winProbability": 30.767377853393555,
         "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Watsachol Sawasdee",
-        "winProbability": 9.692176818847656,
+        "winProbability": 8.504129409790039,
         "actualWinner": true
       },
       {
         "rank": 4,
-        "playerName": "Katrina Lai",
-        "winProbability": 9.692176818847656,
+        "playerName": "Tamachan Momkoonthod",
+        "winProbability": 8.498187065124512,
         "actualWinner": false
       }
     ]
@@ -4879,42 +4879,42 @@
     "predictedWinner": "Oona Orpana",
     "predictedTop3": [
       "Oona Orpana",
-      "Francisca Jorge",
+      "Maria Ines Fonte",
       "Anastasia Kulikova"
     ],
     "predictedTop5": [
       "Oona Orpana",
-      "Francisca Jorge",
+      "Maria Ines Fonte",
       "Anastasia Kulikova",
-      "Maria Ines Fonte"
+      "Francisca Jorge"
     ],
     "actualWinner": "Francisca Jorge",
-    "hitStatus": "Top 3",
-    "prob": 0.595135509967804,
+    "hitStatus": "Top 5",
+    "prob": 0.5399718880653381,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Oona Orpana",
-        "winProbability": 59.5135498046875,
+        "winProbability": 53.997188568115234,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Francisca Jorge",
-        "winProbability": 15.584224700927734,
-        "actualWinner": true
+        "playerName": "Maria Ines Fonte",
+        "winProbability": 21.6117000579834,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Anastasia Kulikova",
-        "winProbability": 15.504514694213867,
+        "winProbability": 13.086408615112305,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Maria Ines Fonte",
-        "winProbability": 9.397710800170898,
-        "actualWinner": false
+        "playerName": "Francisca Jorge",
+        "winProbability": 11.304697036743164,
+        "actualWinner": true
       }
     ]
   },
@@ -4925,40 +4925,40 @@
     "predictedTop3": [
       "Hx Izabella Tan",
       "Arzuv Klycheva",
-      "Bahar Toymyradova"
+      "Sarah Pang"
     ],
     "predictedTop5": [
       "Hx Izabella Tan",
       "Arzuv Klycheva",
-      "Bahar Toymyradova",
-      "Sarah Pang"
+      "Sarah Pang",
+      "Bahar Toymyradova"
     ],
     "actualWinner": "Hx Izabella Tan",
     "hitStatus": "Top Pick",
-    "prob": 0.5114372372627258,
+    "prob": 0.8764418363571167,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Hx Izabella Tan",
-        "winProbability": 51.14372253417969,
+        "winProbability": 87.64418029785156,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Arzuv Klycheva",
-        "winProbability": 25.715742111206055,
+        "winProbability": 7.556501865386963,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Bahar Toymyradova",
-        "winProbability": 11.773292541503906,
+        "playerName": "Sarah Pang",
+        "winProbability": 4.455964088439941,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Sarah Pang",
-        "winProbability": 11.367237091064453,
+        "playerName": "Bahar Toymyradova",
+        "winProbability": 0.3433549106121063,
         "actualWinner": false
       }
     ]
@@ -4966,44 +4966,44 @@
   {
     "year": 2020,
     "tournament": "Fed Cup G2 REL: ISR vs POR",
-    "predictedWinner": "Lina Glushko",
+    "predictedWinner": "Francisca Jorge",
     "predictedTop3": [
-      "Lina Glushko",
       "Francisca Jorge",
+      "Lina Glushko",
       "Maria Ines Fonte"
     ],
     "predictedTop5": [
-      "Lina Glushko",
       "Francisca Jorge",
+      "Lina Glushko",
       "Maria Ines Fonte",
       "Shelly Bereznyak"
     ],
     "actualWinner": "Lina Glushko",
-    "hitStatus": "Top Pick",
-    "prob": 0.42933157086372375,
+    "hitStatus": "Top 3",
+    "prob": 0.5219497680664062,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Lina Glushko",
-        "winProbability": 42.93315887451172,
-        "actualWinner": true
+        "playerName": "Francisca Jorge",
+        "winProbability": 52.194976806640625,
+        "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Francisca Jorge",
-        "winProbability": 41.763389587402344,
-        "actualWinner": false
+        "playerName": "Lina Glushko",
+        "winProbability": 36.62300491333008,
+        "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Maria Ines Fonte",
-        "winProbability": 9.348213195800781,
+        "winProbability": 9.57117748260498,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Shelly Bereznyak",
-        "winProbability": 5.955244541168213,
+        "winProbability": 1.6108423471450806,
         "actualWinner": false
       }
     ]
@@ -5014,42 +5014,42 @@
     "predictedWinner": "Hx Izabella Tan",
     "predictedTop3": [
       "Hx Izabella Tan",
-      "Jargal Altansarnai",
+      "Erdenesuren Erdenebat",
       "Tammy Tan"
     ],
     "predictedTop5": [
       "Hx Izabella Tan",
-      "Jargal Altansarnai",
+      "Erdenesuren Erdenebat",
       "Tammy Tan",
-      "Erdenesuren Erdenebat"
+      "Jargal Altansarnai"
     ],
     "actualWinner": "Jargal Altansarnai",
-    "hitStatus": "Top 3",
-    "prob": 0.5914976596832275,
+    "hitStatus": "Top 5",
+    "prob": 0.5585449934005737,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Hx Izabella Tan",
-        "winProbability": 59.14976501464844,
+        "winProbability": 55.85449981689453,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Jargal Altansarnai",
-        "winProbability": 14.983466148376465,
-        "actualWinner": true
+        "playerName": "Erdenesuren Erdenebat",
+        "winProbability": 26.1261043548584,
+        "actualWinner": false
       },
       {
         "rank": 3,
         "playerName": "Tammy Tan",
-        "winProbability": 12.94999885559082,
+        "winProbability": 13.216827392578125,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Erdenesuren Erdenebat",
-        "winProbability": 12.916770935058594,
-        "actualWinner": false
+        "playerName": "Jargal Altansarnai",
+        "winProbability": 4.802567481994629,
+        "actualWinner": true
       }
     ]
   },
@@ -5060,40 +5060,40 @@
     "predictedTop3": [
       "Nadine Del Carmen",
       "Jargal Altansarnai",
-      "Katrina Lai"
+      "Shinejargal Battur"
     ],
     "predictedTop5": [
       "Nadine Del Carmen",
       "Jargal Altansarnai",
-      "Katrina Lai",
-      "Shinejargal Battur"
+      "Shinejargal Battur",
+      "Katrina Lai"
     ],
     "actualWinner": "Nadine Del Carmen",
     "hitStatus": "Top Pick",
-    "prob": 0.4702981412410736,
+    "prob": 0.45133596658706665,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Nadine Del Carmen",
-        "winProbability": 47.029815673828125,
+        "winProbability": 45.13359832763672,
         "actualWinner": true
       },
       {
         "rank": 2,
         "playerName": "Jargal Altansarnai",
-        "winProbability": 40.91612243652344,
+        "winProbability": 44.22346496582031,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Katrina Lai",
-        "winProbability": 6.465782165527344,
+        "playerName": "Shinejargal Battur",
+        "winProbability": 6.601137638092041,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Shinejargal Battur",
-        "winProbability": 5.588284969329834,
+        "playerName": "Katrina Lai",
+        "winProbability": 4.041796684265137,
         "actualWinner": false
       }
     ]
@@ -5115,30 +5115,30 @@
     ],
     "actualWinner": "Nadine Del Carmen",
     "hitStatus": "Top 3",
-    "prob": 0.25,
+    "prob": 0.4568561613559723,
     "fullField": [
       {
         "rank": 1,
         "playerName": "Katrina Lai",
-        "winProbability": 25.0,
+        "winProbability": 45.68561553955078,
         "actualWinner": false
       },
       {
         "rank": 2,
         "playerName": "Nadine Del Carmen",
-        "winProbability": 25.0,
+        "winProbability": 45.27278137207031,
         "actualWinner": true
       },
       {
         "rank": 3,
         "playerName": "Arzuv Klycheva",
-        "winProbability": 25.0,
+        "winProbability": 8.847088813781738,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Bahar Toymyradova",
-        "winProbability": 25.0,
+        "winProbability": 0.19452016055583954,
         "actualWinner": false
       }
     ]

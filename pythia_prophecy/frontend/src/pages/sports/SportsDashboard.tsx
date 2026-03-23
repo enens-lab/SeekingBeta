@@ -7,15 +7,15 @@ import upcomingTournamentsWTA from '../../data/wta_upcoming_tournaments.json';
 import historicalBacktestsWTA from '../../data/wta_historical_backtests.json';
 import './SportsDashboard.css';
 
-type SportCategory = 'PGA' | 'Tennis' | 'NBA' | 'MLB' | 'NFL' | 'NHL';
+type SportCategory = 'Golf' | 'Tennis' | 'NBA' | 'MLB' | 'NFL' | 'NHL';
 
 function SportsDashboard() {
-  const [activeSport, setActiveSport] = useState<SportCategory>('PGA');
+  const [activeSport, setActiveSport] = useState<SportCategory>('Golf');
   const [pgaTab, setPgaTab] = useState<'upcoming' | 'backtest'>('upcoming');
   
   // Data selection based on sport
-  const currentUpcoming = activeSport === 'PGA' ? upcomingTournamentsPGA : upcomingTournamentsWTA;
-  const currentBacktests = activeSport === 'PGA' ? historicalBacktestsPGA : historicalBacktestsWTA;
+  const currentUpcoming = activeSport === 'Golf' ? upcomingTournamentsPGA : upcomingTournamentsWTA;
+  const currentBacktests = activeSport === 'Golf' ? historicalBacktestsPGA : historicalBacktestsWTA;
 
   const [activeEventId, setActiveEventId] = useState<string>(currentUpcoming[0]?.id || '');
   const [showAllPredictions, setShowAllPredictions] = useState(false);
@@ -26,15 +26,16 @@ function SportsDashboard() {
   const [backtestSearchQuery, setBacktestSearchQuery] = useState('');
   const [backtestFilter, setBacktestFilter] = useState<'All' | 'Hit: Top Pick' | 'Hit: Top 3' | 'Hit: Top 5' | 'Miss'>('All');
   const [tennisTourFilter, setTennisTourFilter] = useState<'All' | 'ATP' | 'WTA'>('All');
+  const [golfTourFilter, setGolfTourFilter] = useState<'All' | 'PGA' | 'LPGA'>('All');
 
   const handleSportChange = (sport: SportCategory) => {
-    if (sport !== 'PGA' && sport !== 'Tennis') return;
+    if (sport !== 'Golf' && sport !== 'Tennis') return;
     
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
     
     // Reset tournament-specific state when switching sports
-    const nextUpcoming = sport === 'PGA' ? upcomingTournamentsPGA : upcomingTournamentsWTA;
+    const nextUpcoming = sport === 'Golf' ? upcomingTournamentsPGA : upcomingTournamentsWTA;
     setActiveEventId(nextUpcoming[0]?.id || '');
     setShowAllPredictions(false);
     setExpandedBacktest(null);
@@ -42,22 +43,28 @@ function SportsDashboard() {
     setBacktestSearchQuery('');
     setBacktestFilter('All');
     setTennisTourFilter('All');
+    setGolfTourFilter('All');
   };
 
   const activeEvent = currentUpcoming.find(t => t.id === activeEventId) || currentUpcoming[0];
   
-  // Filter current upcoming by tour if in Tennis tab
+  // Filter current upcoming by tour
   const filteredUpcoming = useMemo(() => {
-    if (activeSport !== 'Tennis' || tennisTourFilter === 'All') return currentUpcoming;
-    return (currentUpcoming as any[]).filter(t => t.tour === tennisTourFilter);
-  }, [activeSport, tennisTourFilter, currentUpcoming]);
+    if (activeSport === 'Tennis' && tennisTourFilter !== 'All') {
+      return (currentUpcoming as any[]).filter(t => t.tour === tennisTourFilter);
+    }
+    if (activeSport === 'Golf' && golfTourFilter !== 'All') {
+      return (currentUpcoming as any[]).filter(t => t.tour === golfTourFilter);
+    }
+    return currentUpcoming;
+  }, [activeSport, tennisTourFilter, golfTourFilter, currentUpcoming]);
 
   // Adjust active event if filter changed
   useMemo(() => {
-    if (activeSport === 'Tennis' && !filteredUpcoming.find(t => t.id === activeEventId)) {
+    if (!filteredUpcoming.find(t => t.id === activeEventId)) {
       setActiveEventId(filteredUpcoming[0]?.id || '');
     }
-  }, [filteredUpcoming, activeEventId, activeSport]);
+  }, [filteredUpcoming, activeEventId]);
 
   const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map(p => p.winProbability)) : 100;
   
@@ -78,11 +85,17 @@ function SportsDashboard() {
       const matchesSearch = bt.tournament.toLowerCase().includes(backtestSearchQuery.toLowerCase()) || 
                             bt.actualWinner.toLowerCase().includes(backtestSearchQuery.toLowerCase());
       const matchesFilter = backtestFilter === 'All' || bt.hitStatus === backtestFilter.replace('Hit: ', '');
-      const matchesTour = activeSport !== 'Tennis' || tennisTourFilter === 'All' || bt.tour === tennisTourFilter;
+      
+      let matchesTour = true;
+      if (activeSport === 'Tennis') {
+        matchesTour = tennisTourFilter === 'All' || bt.tour === tennisTourFilter;
+      } else if (activeSport === 'Golf') {
+        matchesTour = golfTourFilter === 'All' || bt.tour === golfTourFilter;
+      }
       
       return matchesSearch && matchesFilter && matchesTour;
     });
-  }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, activeSport]);
+  }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, activeSport]);
 
   const toggleBacktestDetails = (idx: number) => {
     if (expandedBacktest === idx) {
@@ -106,16 +119,16 @@ function SportsDashboard() {
         <div className="sports-navigation">
           <div className="sports-tabs">
             <button 
-              className={`sport-tab ${activeSport === 'PGA' ? 'active' : ''}`}
-              onClick={() => handleSportChange('PGA')}
+              className={`sport-tab ${activeSport === 'Golf' ? 'active' : ''}`}
+              onClick={() => handleSportChange('Golf')}
             >
-              PGA Golf
+              Golf
             </button>
             <button 
               className={`sport-tab ${activeSport === 'Tennis' ? 'active' : ''}`}
               onClick={() => handleSportChange('Tennis')}
             >
-              Tennis (WTA)
+              Tennis
             </button>
             <button 
               className={`sport-tab ${activeSport === 'NBA' ? 'active' : ''} disabled-tab`}
@@ -145,7 +158,7 @@ function SportsDashboard() {
         </div>
 
         <div className="sports-content">
-          {(activeSport === 'PGA' || activeSport === 'Tennis') ? (
+          {(activeSport === 'Golf' || activeSport === 'Tennis') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
                 <button 
@@ -178,7 +191,7 @@ function SportsDashboard() {
                       >
                         {filteredUpcoming.map(t => (
                           <option key={t.id} value={t.id}>
-                            {activeSport === 'Tennis' ? `[${t.tour}] ` : ''}{t.name}
+                            [{t.tour}] {t.name}
                           </option>
                         ))}
                       </select>
@@ -198,6 +211,21 @@ function SportsDashboard() {
                         </select>
                       </div>
                     )}
+
+                    {activeSport === 'Golf' && (
+                      <div className="selector-group tour-filter-group">
+                        <label>Filter: </label>
+                        <select 
+                          value={golfTourFilter}
+                          onChange={(e) => setGolfTourFilter(e.target.value as any)}
+                          className="sports-filter-dropdown"
+                        >
+                          <option value="All">All Golf</option>
+                          <option value="PGA">Men's (PGA)</option>
+                          <option value="LPGA">Women's (LPGA)</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                   
                   {activeEvent && (
@@ -210,7 +238,7 @@ function SportsDashboard() {
                         <div className="header-search">
                           <input 
                             type="text" 
-                            placeholder={`Search ${activeSport === 'PGA' ? 'player' : 'player'}...`} 
+                            placeholder={`Search player...`} 
                             value={playerSearchQuery}
                             onChange={(e) => setPlayerSearchQuery(e.target.value)}
                             className="sports-search-input"
@@ -218,19 +246,19 @@ function SportsDashboard() {
                         </div>
                       </div>
                       <div className="tournament-details">
-                        <p><strong>{activeSport === 'PGA' ? 'Course' : 'Surface'}:</strong> {activeEvent.course}</p>
+                        <p><strong>{activeSport === 'Golf' ? 'Course' : 'Surface'}:</strong> {activeEvent.course}</p>
                         <p><strong>Model:</strong> Tournament-Aware Softmax Ranker</p>
                       </div>
 
                       {displayedPredictions.length === 0 ? (
                         <div className="no-results-message">
-                          No {activeSport === 'PGA' ? 'players' : 'players'} found matching "{playerSearchQuery}"
+                          No players found matching "{playerSearchQuery}"
                         </div>
                       ) : (
                         <div className="prediction-leaderboard">
                           <div className="leaderboard-header">
                             <span>Rank</span>
-                            <span>{activeSport === 'PGA' ? 'Player' : 'Player'}</span>
+                            <span>Player</span>
                             <span>Win Probability</span>
                           </div>
                           {displayedPredictions.map((pred) => (
@@ -257,7 +285,7 @@ function SportsDashboard() {
                             className="btn btn-outline"
                             onClick={() => setShowAllPredictions(true)}
                           >
-                            View All {activeSport === 'PGA' ? 'Players' : 'Players'} ({activeEvent.predictions.length})
+                            View All Players ({activeEvent.predictions.length})
                           </button>
                         </div>
                       )}
@@ -283,6 +311,17 @@ function SportsDashboard() {
                           <option value="All">All Tennis</option>
                           <option value="ATP">Men's (ATP)</option>
                           <option value="WTA">Women's (WTA)</option>
+                        </select>
+                      )}
+                      {activeSport === 'Golf' && (
+                        <select 
+                          value={golfTourFilter}
+                          onChange={(e) => setGolfTourFilter(e.target.value as any)}
+                          className="sports-filter-dropdown"
+                        >
+                          <option value="All">All Golf</option>
+                          <option value="PGA">Men's (PGA)</option>
+                          <option value="LPGA">Women's (LPGA)</option>
                         </select>
                       )}
                       <input 
@@ -326,7 +365,7 @@ function SportsDashboard() {
                             <span>{bt.year}</span>
                             <div className="tournament-info-col">
                               <strong>{bt.tournament}</strong>
-                              {activeSport === 'Tennis' && <div className="tour-label">{bt.tour}</div>}
+                              <div className="tour-label">{bt.tour}</div>
                             </div>
                             <div className="top-picks-col">
                               <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />

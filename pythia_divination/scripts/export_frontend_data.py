@@ -4,19 +4,20 @@ from pathlib import Path
 
 # Load data
 preds = pd.read_csv('pythia_divination/artifacts/pga_tournament_ranker_torch/validation_predictions.csv')
-meta = pd.read_csv('pythia_divination/data/sports/pga/normalized/pga_training_dataset_latest.csv', low_memory=False)
-meta = meta[['tournament_id', 'tournament_name', 'season_year', 'display_date', 'course_name', 'course_state_code']].drop_duplicates(subset=['tournament_id'])
+meta = pd.read_csv('pythia_divination/data/sports/pga/normalized/golf_training_dataset_latest.csv', low_memory=False)
+meta = meta[['tournament_id', 'tournament_name', 'season_year', 'display_date', 'course_name', 'course_state_code', 'tour']].drop_duplicates(subset=['tournament_id'])
 
 # Merge
 df = preds.merge(meta, on='tournament_id', how='left')
 
 # 1. Generate Historical Backtests (2024-2025 validation set)
-# We will evaluate Top 1, Top 3, and Top 5 predictions against the actual winner, and store the full field for modal views.
+# We will evaluate Top 1, Top 3, and Top 5 predictions against the actual winner.
 backtests = []
 for t_id, group in df.groupby('tournament_id'):
     try:
         t_name = group['tournament_name_x'].iloc[0] if 'tournament_name_x' in group.columns else group['tournament_name'].iloc[0]
         year = group['season_year'].iloc[0]
+        tour = group['tour'].iloc[0]
         
         # Sort by prediction
         top_preds = group.sort_values('winner_probability', ascending=False)
@@ -58,6 +59,7 @@ for t_id, group in df.groupby('tournament_id'):
         backtests.append({
             'year': int(year) if pd.notna(year) else 2024,
             'tournament': t_name,
+            'tour': tour,
             'predictedWinner': pred_top_1,
             'predictedTop3': pred_top_3,
             'predictedTop5': pred_top_5,
@@ -80,11 +82,12 @@ with open('pythia_prophecy/frontend/src/data/historical_backtests.json', 'w') as
 upcoming_data = []
 
 # Get all unique tournament names from the dataset to build the 2026 schedule
-unique_tournaments = df['tournament_name_x'].dropna().unique()
+unique_tournaments = df[['tournament_name_x', 'tour']].drop_duplicates().values
 
-for event_name in unique_tournaments:
+for event_name, tour in unique_tournaments:
+    if pd.isna(event_name): continue
     # Find the most recent instance of this event in the predictions
-    matches = df[df['tournament_name_x'] == event_name]
+    matches = df[(df['tournament_name_x'] == event_name) & (df['tour'] == tour)]
     if not matches.empty:
         # Get the latest year
         latest_year = matches['season_year'].max()
@@ -107,9 +110,10 @@ for event_name in unique_tournaments:
         if pd.isna(state): state = ""
             
         upcoming_data.append({
-            'id': event_name.replace(' ', '-').lower(),
+            'id': f"{tour.lower()}-{event_name.replace(' ', '-').lower()}",
             'name': f"2026 {event_name}",
-            'original_name': event_name, # keep for sorting logic if needed
+            'original_name': event_name,
+            'tour': tour,
             'course': f"{course}, {state}".strip(", "),
             'predictions': predictions
         })

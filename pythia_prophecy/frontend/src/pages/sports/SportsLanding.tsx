@@ -21,7 +21,7 @@ function SportsLanding() {
             <h1 className="sports-title">Advanced Sports Prediction Markets</h1>
             <p className="sports-subtitle">
               SeekingBeta brings predictive modeling to the sports world. 
-              Our tournament-aware system evaluates entire PGA fields to output realistic, mathematically sound win probabilities.
+              Our tournament-aware system evaluates entire Golf fields (PGA & LPGA) to output realistic, mathematically sound win probabilities.
             </p>
             <div className="sports-cta">
               <Link

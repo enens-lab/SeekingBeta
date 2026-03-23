@@ -36,7 +36,8 @@ def export_wta_frontend_data():
     model.eval()
     
     # 1. Historical Backtests
-    # Get recent tournaments from validation (last 20%)
+    # Get recent tournaments from validation (last 20%) - sort by date first!
+    df = df.sort_values("date")
     tourneys = df["tournament_id"].unique()
     val_ids = tourneys[int(len(tourneys) * 0.8):]
     val_df = df[df["tournament_id"].isin(val_ids)].copy()

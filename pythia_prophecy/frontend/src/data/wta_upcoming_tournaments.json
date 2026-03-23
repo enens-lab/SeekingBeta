@@ -1,0 +1,742 @@
+[
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: SRB vs NOR",
+    "predictedWinner": "Lola Radivojevic",
+    "predictedTop3": [
+      "Lola Radivojevic",
+      "Ulrikke Eikeri",
+      "Malene Helgo"
+    ],
+    "predictedTop5": [
+      "Lola Radivojevic",
+      "Ulrikke Eikeri",
+      "Malene Helgo",
+      "Mia Ristic"
+    ],
+    "actualWinner": "Lola Radivojevic",
+    "hitStatus": "Top Pick",
+    "prob": 0.5370644330978394,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Lola Radivojevic",
+        "winProbability": 53.706443786621094,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 25.948646545410156,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Malene Helgo",
+        "winProbability": 10.18128776550293,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Mia Ristic",
+        "winProbability": 10.163616180419922,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: SRB vs NOR",
+    "id": "bjk-cup-g1-rr:-srb-vs-nor",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Lola Radivojevic",
+        "winProbability": 53.706443786621094,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 25.948646545410156,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Malene Helgo",
+        "winProbability": 10.18128776550293,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Mia Ristic",
+        "winProbability": 10.163616180419922,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: DEN vs NOR",
+    "predictedWinner": "Ulrikke Eikeri",
+    "predictedTop3": [
+      "Ulrikke Eikeri",
+      "Malene Helgo",
+      "Johanne Christine Svendsen"
+    ],
+    "predictedTop5": [
+      "Ulrikke Eikeri",
+      "Malene Helgo",
+      "Johanne Christine Svendsen",
+      "Rebecca Munk Mortensen"
+    ],
+    "actualWinner": "Malene Helgo",
+    "hitStatus": "Top 3",
+    "prob": 0.3164597153663635,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 31.645971298217773,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Malene Helgo",
+        "winProbability": 31.468360900878906,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Johanne Christine Svendsen",
+        "winProbability": 20.000154495239258,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Rebecca Munk Mortensen",
+        "winProbability": 16.885509490966797,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: DEN vs NOR",
+    "id": "bjk-cup-g1-rr:-den-vs-nor",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 31.645971298217773,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Malene Helgo",
+        "winProbability": 31.468360900878906,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Johanne Christine Svendsen",
+        "winProbability": 20.000154495239258,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Rebecca Munk Mortensen",
+        "winProbability": 16.885509490966797,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: BUL vs NOR",
+    "predictedWinner": "Gergana Topalova",
+    "predictedTop3": [
+      "Gergana Topalova",
+      "Malene Helgo",
+      "Ulrikke Eikeri"
+    ],
+    "predictedTop5": [
+      "Gergana Topalova",
+      "Malene Helgo",
+      "Ulrikke Eikeri",
+      "Lia Karatancheva"
+    ],
+    "actualWinner": "Malene Helgo",
+    "hitStatus": "Top 3",
+    "prob": 0.36911314725875854,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Gergana Topalova",
+        "winProbability": 36.91131591796875,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Malene Helgo",
+        "winProbability": 29.76450538635254,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 22.262577056884766,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 11.061598777770996,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: BUL vs NOR",
+    "id": "bjk-cup-g1-rr:-bul-vs-nor",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Gergana Topalova",
+        "winProbability": 36.91131591796875,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Malene Helgo",
+        "winProbability": 29.76450538635254,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 22.262577056884766,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 11.061598777770996,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CRO vs NOR",
+    "predictedWinner": "Malene Helgo",
+    "predictedTop3": [
+      "Malene Helgo",
+      "Tara Wurth",
+      "Ulrikke Eikeri"
+    ],
+    "predictedTop5": [
+      "Malene Helgo",
+      "Tara Wurth",
+      "Ulrikke Eikeri",
+      "Antonia Ruzic"
+    ],
+    "actualWinner": "Tara Wurth",
+    "hitStatus": "Top 3",
+    "prob": 0.3535524904727936,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Malene Helgo",
+        "winProbability": 35.355247497558594,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Tara Wurth",
+        "winProbability": 27.94363784790039,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 26.443603515625,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Antonia Ruzic",
+        "winProbability": 10.257509231567383,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CRO vs NOR",
+    "id": "bjk-cup-g1-rr:-cro-vs-nor",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Malene Helgo",
+        "winProbability": 35.355247497558594,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Tara Wurth",
+        "winProbability": 27.94363784790039,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 26.443603515625,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Antonia Ruzic",
+        "winProbability": 10.257509231567383,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHI vs PER",
+    "predictedWinner": "Daniela Seguel",
+    "predictedTop3": [
+      "Daniela Seguel",
+      "Romina Ccuno",
+      "Fernanda Labrana"
+    ],
+    "predictedTop5": [
+      "Daniela Seguel",
+      "Romina Ccuno",
+      "Fernanda Labrana",
+      "Lucciana Perez Alarcon"
+    ],
+    "actualWinner": "Daniela Seguel",
+    "hitStatus": "Top Pick",
+    "prob": 0.40571269392967224,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 40.57126998901367,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Romina Ccuno",
+        "winProbability": 38.62950134277344,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 11.476316452026367,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 9.322907447814941,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHI vs PER",
+    "id": "bjk-cup-g1-rr:-chi-vs-per",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 40.57126998901367,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Romina Ccuno",
+        "winProbability": 38.62950134277344,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 11.476316452026367,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 9.322907447814941,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: ARG vs CHI",
+    "predictedWinner": "Daniela Seguel",
+    "predictedTop3": [
+      "Daniela Seguel",
+      "Julia Riera",
+      "Martina Capurro Taborda"
+    ],
+    "predictedTop5": [
+      "Daniela Seguel",
+      "Julia Riera",
+      "Martina Capurro Taborda",
+      "Fernanda Labrana"
+    ],
+    "actualWinner": "Julia Riera",
+    "hitStatus": "Top 3",
+    "prob": 0.47717589139938354,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 47.71759033203125,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Julia Riera",
+        "winProbability": 32.121925354003906,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 12.148331642150879,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 8.012158393859863,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: ARG vs CHI",
+    "id": "bjk-cup-g1-rr:-arg-vs-chi",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 47.71759033203125,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Julia Riera",
+        "winProbability": 32.121925354003906,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 12.148331642150879,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 8.012158393859863,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: COL vs CHI",
+    "predictedWinner": "Maria Fernanda Herazo Gonzalez",
+    "predictedTop3": [
+      "Maria Fernanda Herazo Gonzalez",
+      "Emiliana Arango",
+      "Daniela Seguel"
+    ],
+    "predictedTop5": [
+      "Maria Fernanda Herazo Gonzalez",
+      "Emiliana Arango",
+      "Daniela Seguel",
+      "Fernanda Labrana"
+    ],
+    "actualWinner": "Emiliana Arango",
+    "hitStatus": "Top 3",
+    "prob": 0.3761746287345886,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Maria Fernanda Herazo Gonzalez",
+        "winProbability": 37.617462158203125,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Emiliana Arango",
+        "winProbability": 30.473636627197266,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Daniela Seguel",
+        "winProbability": 26.979108810424805,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 4.929787635803223,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: COL vs CHI",
+    "id": "bjk-cup-g1-rr:-col-vs-chi",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Maria Fernanda Herazo Gonzalez",
+        "winProbability": 37.617462158203125,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Emiliana Arango",
+        "winProbability": 30.473636627197266,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Daniela Seguel",
+        "winProbability": 26.979108810424805,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 4.929787635803223,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: IND vs UZB",
+    "predictedWinner": "Ankita Raina",
+    "predictedTop3": [
+      "Ankita Raina",
+      "Rutuja Bhosale",
+      "Sevil Yuldasheva"
+    ],
+    "predictedTop5": [
+      "Ankita Raina",
+      "Rutuja Bhosale",
+      "Sevil Yuldasheva",
+      "Sabrina Olimjanova"
+    ],
+    "actualWinner": "Ankita Raina",
+    "hitStatus": "Top Pick",
+    "prob": 0.5280216336250305,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Ankita Raina",
+        "winProbability": 52.802162170410156,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 31.173372268676758,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Sevil Yuldasheva",
+        "winProbability": 8.012231826782227,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Sabrina Olimjanova",
+        "winProbability": 8.012231826782227,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: IND vs UZB",
+    "id": "bjk-cup-g1-rr:-ind-vs-uzb",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Ankita Raina",
+        "winProbability": 52.802162170410156,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 31.173372268676758,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Sevil Yuldasheva",
+        "winProbability": 8.012231826782227,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Sabrina Olimjanova",
+        "winProbability": 8.012231826782227,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHN vs IND",
+    "predictedWinner": "Ankita Raina",
+    "predictedTop3": [
+      "Ankita Raina",
+      "Yue Yuan",
+      "Rutuja Bhosale"
+    ],
+    "predictedTop5": [
+      "Ankita Raina",
+      "Yue Yuan",
+      "Rutuja Bhosale",
+      "Xinyu Jiang"
+    ],
+    "actualWinner": "Yue Yuan",
+    "hitStatus": "Top 3",
+    "prob": 0.43565401434898376,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Ankita Raina",
+        "winProbability": 43.56540298461914,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Yue Yuan",
+        "winProbability": 40.574127197265625,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 8.832335472106934,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Xinyu Jiang",
+        "winProbability": 7.028132438659668,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHN vs IND",
+    "id": "bjk-cup-g1-rr:-chn-vs-ind",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Ankita Raina",
+        "winProbability": 43.56540298461914,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Yue Yuan",
+        "winProbability": 40.574127197265625,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 8.832335472106934,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Xinyu Jiang",
+        "winProbability": 7.028132438659668,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: JPN vs IND",
+    "predictedWinner": "Mai Hontama",
+    "predictedTop3": [
+      "Mai Hontama",
+      "Ankita Raina",
+      "Moyuka Uchijima"
+    ],
+    "predictedTop5": [
+      "Mai Hontama",
+      "Ankita Raina",
+      "Moyuka Uchijima",
+      "Rutuja Bhosale"
+    ],
+    "actualWinner": "Moyuka Uchijima",
+    "hitStatus": "Top 3",
+    "prob": 0.49456489086151123,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Mai Hontama",
+        "winProbability": 49.45648956298828,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Ankita Raina",
+        "winProbability": 36.63127136230469,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Moyuka Uchijima",
+        "winProbability": 8.129717826843262,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 5.7825164794921875,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: JPN vs IND",
+    "id": "bjk-cup-g1-rr:-jpn-vs-ind",
+    "course": "TBD Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Mai Hontama",
+        "winProbability": 49.45648956298828,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Ankita Raina",
+        "winProbability": 36.63127136230469,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Moyuka Uchijima",
+        "winProbability": 8.129717826843262,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 5.7825164794921875,
+        "actualWinner": false
+      }
+    ]
+  }
+]

@@ -306,3 +306,141 @@
   color: var(--text-main);
   margin-bottom: 0.5rem;
 }
+
+.view-all-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.backtest-row-container {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.backtest-row-container:last-child {
+  border-bottom: none;
+}
+
+.backtest-row {
+  display: grid;
+  grid-template-columns: 50px 1.5fr 2fr 1fr 100px 100px;
+  padding: 1rem;
+  align-items: center;
+  color: var(--text-main);
+  border-bottom: none;
+}
+
+.backtest-header {
+  display: grid;
+  grid-template-columns: 50px 1.5fr 2fr 1fr 100px 100px;
+  padding: 1rem;
+  background-color: var(--bg-body);
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.top-picks-col {
+  line-height: 1.4;
+}
+
+.top-picks-col strong {
+  color: var(--text-main);
+}
+
+.top-picks-col small {
+  color: var(--text-muted);
+}
+
+.result-badge.top-pick {
+  color: #3b82f6;
+}
+
+.result-badge.top-3 {
+  color: #10b981;
+}
+
+.result-badge.top-5 {
+  color: #84cc16;
+}
+
+.details-toggle {
+  font-size: 0.85rem;
+  color: var(--brand-blue);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  text-align: right;
+}
+
+.details-toggle:hover {
+  color: #60a5fa;
+}
+
+.backtest-details-panel {
+  background-color: var(--bg-body);
+  padding: 1.5rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.backtest-details-panel h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.detail-player {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.detail-player.actual-winner-highlight {
+  border-color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.05);
+}
+
+.dp-rank {
+  font-weight: bold;
+  color: var(--text-muted);
+  min-width: 24px;
+}
+
+.dp-name {
+  color: var(--text-main);
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dp-prob {
+  font-weight: 600;
+  color: var(--brand-blue);
+}
+
+.dp-badge {
+  background-color: #22c55e;
+  color: white;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: bold;
+}

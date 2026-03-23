@@ -11,6 +11,8 @@ function SportsDashboard() {
   const [activeSport, setActiveSport] = useState<SportCategory>('PGA');
   const [pgaTab, setPgaTab] = useState<'upcoming' | 'backtest'>('upcoming');
   const [activeEventId, setActiveEventId] = useState<string>(upcomingTournaments[0]?.id || '');
+  const [showAllPredictions, setShowAllPredictions] = useState(false);
+  const [expandedBacktest, setExpandedBacktest] = useState<number | null>(null);
 
   const handleSportChange = (sport: SportCategory) => {
     trackEvent('sports_category_change', { sport });
@@ -19,6 +21,19 @@ function SportsDashboard() {
 
   const activeEvent = upcomingTournaments.find(t => t.id === activeEventId) || upcomingTournaments[0];
   const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map(p => p.winProbability)) : 100;
+  
+  const displayedPredictions = showAllPredictions 
+    ? activeEvent?.predictions 
+    : activeEvent?.predictions.slice(0, 15);
+
+  const toggleBacktestDetails = (idx: number) => {
+    if (expandedBacktest === idx) {
+      setExpandedBacktest(null);
+    } else {
+      setExpandedBacktest(idx);
+      trackEvent('sports_backtest_details_click', { tournament: historicalBacktests[idx].tournament });
+    }
+  };
 
   return (
     <div className="dashboard-page sports-dashboard">
@@ -95,7 +110,10 @@ function SportsDashboard() {
                     <label>Select Tournament: </label>
                     <select 
                       value={activeEventId} 
-                      onChange={(e) => setActiveEventId(e.target.value)}
+                      onChange={(e) => {
+                        setActiveEventId(e.target.value);
+                        setShowAllPredictions(false);
+                      }}
                       className="tournament-dropdown"
                     >
                       {upcomingTournaments.map(t => (
@@ -121,7 +139,7 @@ function SportsDashboard() {
                           <span>Player</span>
                           <span>Win Probability</span>
                         </div>
-                        {activeEvent.predictions.map((pred) => (
+                        {displayedPredictions?.map((pred) => (
                           <div key={pred.rank} className="leaderboard-row">
                             <span className="player-rank">#{pred.rank}</span>
                             <span className="player-name">{pred.playerName}</span>
@@ -137,6 +155,17 @@ function SportsDashboard() {
                           </div>
                         ))}
                       </div>
+                      
+                      {!showAllPredictions && activeEvent.predictions.length > 15 && (
+                        <div className="view-all-container">
+                          <button 
+                            className="btn btn-outline"
+                            onClick={() => setShowAllPredictions(true)}
+                          >
+                            View All Players ({activeEvent.predictions.length})
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -144,26 +173,55 @@ function SportsDashboard() {
 
               {pgaTab === 'backtest' && (
                 <div className="backtest-container">
-                  <h2>Model Track Record (2020 - 2025)</h2>
-                  <p className="backtest-desc">Comparing the model's top predicted pick against the actual tournament winner for major and high-confidence events.</p>
+                  <h2>Model Track Record (2024 - 2025)</h2>
+                  <p className="backtest-desc">Comparing the model's top predicted picks against the actual tournament winner. We evaluate Top Pick (1st), Top 3, and Top 5 probabilities.</p>
                   
                   <div className="backtest-table">
                     <div className="backtest-header">
                       <span>Year</span>
                       <span>Tournament</span>
-                      <span>Predicted Top Pick</span>
+                      <span>Top Predicted Picks</span>
                       <span>Actual Winner</span>
                       <span>Result</span>
+                      <span>Details</span>
                     </div>
                     {historicalBacktests.map((bt, idx) => (
-                      <div key={idx} className={`backtest-row ${bt.hit ? 'hit' : 'miss'}`}>
-                        <span>{bt.year}</span>
-                        <span>{bt.tournament}</span>
-                        <span>{bt.predictedWinner} <small>({(bt.prob * 100).toFixed(1)}%)</small></span>
-                        <span>{bt.actualWinner}</span>
-                        <span className="result-badge">
-                          {bt.hit ? 'Hit' : 'Miss'}
-                        </span>
+                      <div key={idx} className="backtest-row-container">
+                        <div className={`backtest-row ${bt.hitStatus !== 'Miss' ? 'hit' : 'miss'}`}>
+                          <span>{bt.year}</span>
+                          <span>{bt.tournament}</span>
+                          <div className="top-picks-col">
+                            <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
+                            <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
+                            <small>4. {bt.predictedTop5?.[3]} | 5. {bt.predictedTop5?.[4]}</small>
+                          </div>
+                          <span>{bt.actualWinner}</span>
+                          <span className={`result-badge ${bt.hitStatus.toLowerCase().replace(' ', '-')}`}>
+                            {bt.hitStatus !== 'Miss' ? `Hit: ${bt.hitStatus}` : 'Miss'}
+                          </span>
+                          <button 
+                            className="btn-text details-toggle"
+                            onClick={() => toggleBacktestDetails(idx)}
+                          >
+                            {expandedBacktest === idx ? 'Hide Details' : 'View Details'}
+                          </button>
+                        </div>
+                        
+                        {expandedBacktest === idx && (
+                          <div className="backtest-details-panel">
+                            <h4>Full Model Field Ranking</h4>
+                            <div className="details-grid">
+                              {bt.fullField?.map(player => (
+                                <div key={player.rank} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
+                                  <span className="dp-rank">#{player.rank}</span>
+                                  <span className="dp-name">{player.playerName}</span>
+                                  <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
+                                  {player.actualWinner && <span className="dp-badge">Winner</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

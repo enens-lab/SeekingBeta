@@ -11,7 +11,7 @@ meta = meta[['tournament_id', 'tournament_name', 'season_year', 'display_date', 
 df = preds.merge(meta, on='tournament_id', how='left')
 
 # 1. Generate Historical Backtests (2024-2025 validation set)
-# We will show the top predicted player vs the actual winner.
+# We will evaluate Top 1, Top 3, and Top 5 predictions against the actual winner, and store the full field for modal views.
 backtests = []
 for t_id, group in df.groupby('tournament_id'):
     try:
@@ -19,8 +19,11 @@ for t_id, group in df.groupby('tournament_id'):
         year = group['season_year'].iloc[0]
         
         # Sort by prediction
-        top_pred = group.sort_values('winner_probability', ascending=False).iloc[0]
-        pred_winner = top_pred['player_name']
+        top_preds = group.sort_values('winner_probability', ascending=False)
+        
+        pred_top_1 = top_preds.iloc[0]['player_name']
+        pred_top_3 = top_preds.head(3)['player_name'].tolist()
+        pred_top_5 = top_preds.head(5)['player_name'].tolist()
         
         # Actual winner
         actual_winners = group[group['won'] == 1]
@@ -29,18 +32,40 @@ for t_id, group in df.groupby('tournament_id'):
         else:
             actual_winner = "Unknown"
             
-        hit = (pred_winner == actual_winner)
+        hit_top_1 = actual_winner == pred_top_1
+        hit_top_3 = actual_winner in pred_top_3
+        hit_top_5 = actual_winner in pred_top_5
         
-        # To keep the list clean, let's only include events where the top-pick probability was > 5% or it was a major
-        if top_pred['winner_probability'] > 0.05 or 'Masters' in t_name or 'Open' in t_name or 'Championship' in t_name:
-             backtests.append({
-                 'year': int(year) if pd.notna(year) else 2024,
-                 'tournament': t_name,
-                 'predictedWinner': pred_winner,
-                 'actualWinner': actual_winner,
-                 'hit': bool(hit),
-                 'prob': float(top_pred['winner_probability'])
-             })
+        # Determine the best hit category to display
+        hit_status = "Miss"
+        if hit_top_1:
+            hit_status = "Top Pick"
+        elif hit_top_3:
+            hit_status = "Top 3"
+        elif hit_top_5:
+            hit_status = "Top 5"
+            
+        # Store full field for detail view
+        full_field = []
+        for rank, (_, row) in enumerate(top_preds.iterrows(), 1):
+            full_field.append({
+                'rank': rank,
+                'playerName': row['player_name'],
+                'winProbability': float(row['winner_probability'] * 100),
+                'actualWinner': row['won'] == 1
+            })
+        
+        backtests.append({
+            'year': int(year) if pd.notna(year) else 2024,
+            'tournament': t_name,
+            'predictedWinner': pred_top_1,
+            'predictedTop3': pred_top_3,
+            'predictedTop5': pred_top_5,
+            'actualWinner': actual_winner,
+            'hitStatus': hit_status,
+            'prob': float(top_preds.iloc[0]['winner_probability']),
+            'fullField': full_field
+        })
     except Exception as e:
         pass
 
@@ -48,35 +73,28 @@ for t_id, group in df.groupby('tournament_id'):
 backtests = sorted(backtests, key=lambda x: (-x['year'], -x['prob']))
 
 with open('pythia_prophecy/frontend/src/data/historical_backtests.json', 'w') as f:
-    json.dump(backtests[:50], f, indent=2) # Keep top 50 for the UI
+    json.dump(backtests, f, indent=2) # Include all backtests
 
 
-# 2. Generate Upcoming Tournaments (Mocking 2026 using 2025 data for UI demonstration)
-upcoming_events = [
-    'Masters Tournament',
-    'PGA Championship',
-    'U.S. Open',
-    'The Open Championship',
-    'THE PLAYERS Championship',
-    'Arnold Palmer Invitational',
-    'The Genesis Invitational'
-]
-
+# 2. Generate Upcoming Tournaments (Mocking 2026 using the latest instance of ALL unique tournaments)
 upcoming_data = []
 
-for event_name in upcoming_events:
+# Get all unique tournament names from the dataset to build the 2026 schedule
+unique_tournaments = df['tournament_name_x'].dropna().unique()
+
+for event_name in unique_tournaments:
     # Find the most recent instance of this event in the predictions
-    matches = df[df['tournament_name_x'].str.contains(event_name, na=False, case=False)]
+    matches = df[df['tournament_name_x'] == event_name]
     if not matches.empty:
         # Get the latest year
         latest_year = matches['season_year'].max()
         latest_event = matches[matches['season_year'] == latest_year].copy()
         
-        # Get top 15 predictions
-        top_15 = latest_event.sort_values('winner_probability', ascending=False).head(15)
+        # Get ALL predictions (not just top 15) to support "View All"
+        all_preds = latest_event.sort_values('winner_probability', ascending=False)
         
         predictions = []
-        for rank, (_, row) in enumerate(top_15.iterrows(), 1):
+        for rank, (_, row) in enumerate(all_preds.iterrows(), 1):
             predictions.append({
                 'rank': rank,
                 'playerName': row['player_name'],
@@ -91,9 +109,22 @@ for event_name in upcoming_events:
         upcoming_data.append({
             'id': event_name.replace(' ', '-').lower(),
             'name': f"2026 {event_name}",
+            'original_name': event_name, # keep for sorting logic if needed
             'course': f"{course}, {state}".strip(", "),
             'predictions': predictions
         })
+
+# Sort so Majors are near the top, followed by others
+def sort_priority(event):
+    name = event['name'].lower()
+    if 'masters' in name: return 1
+    if 'pga championship' in name: return 2
+    if 'u.s. open' in name: return 3
+    if 'open championship' in name: return 4
+    if 'players championship' in name: return 5
+    return 10
+
+upcoming_data = sorted(upcoming_data, key=lambda x: (sort_priority(x), x['name']))
 
 with open('pythia_prophecy/frontend/src/data/upcoming_tournaments.json', 'w') as f:
     json.dump(upcoming_data, f, indent=2)

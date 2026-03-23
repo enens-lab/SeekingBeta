@@ -1,0 +1,576 @@
+[
+  {
+    "id": "masters-tournament",
+    "name": "2026 Masters Tournament",
+    "course": "Augusta National Golf Club, GA",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 5.6016594171524
+      },
+      {
+        "rank": 2,
+        "playerName": "Collin Morikawa",
+        "winProbability": 2.8894955292344
+      },
+      {
+        "rank": 3,
+        "playerName": "Rory McIlroy",
+        "winProbability": 2.624904923141
+      },
+      {
+        "rank": 4,
+        "playerName": "Jon Rahm",
+        "winProbability": 2.47873049229383
+      },
+      {
+        "rank": 5,
+        "playerName": "Russell Henley",
+        "winProbability": 2.24565267562866
+      },
+      {
+        "rank": 6,
+        "playerName": "Sepp Straka",
+        "winProbability": 2.03299205750226
+      },
+      {
+        "rank": 7,
+        "playerName": "Xander Schauffele",
+        "winProbability": 1.99432391673326
+      },
+      {
+        "rank": 8,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 1.92509051412343
+      },
+      {
+        "rank": 9,
+        "playerName": "Justin Thomas",
+        "winProbability": 1.9191026687622001
+      },
+      {
+        "rank": 10,
+        "playerName": "Robert MacIntyre",
+        "winProbability": 1.8737804144620802
+      },
+      {
+        "rank": 11,
+        "playerName": "Bryson DeChambeau",
+        "winProbability": 1.8279099836945498
+      },
+      {
+        "rank": 12,
+        "playerName": "Patrick Cantlay",
+        "winProbability": 1.82397086173295
+      },
+      {
+        "rank": 13,
+        "playerName": "Viktor Hovland",
+        "winProbability": 1.8206737935543
+      },
+      {
+        "rank": 14,
+        "playerName": "Ludvig \u00c5berg",
+        "winProbability": 1.81891713291406
+      },
+      {
+        "rank": 15,
+        "playerName": "Hideki Matsuyama",
+        "winProbability": 1.77848413586616
+      }
+    ]
+  },
+  {
+    "id": "pga-championship",
+    "name": "2026 PGA Championship",
+    "course": "Quail Hollow Club, NC",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 2.68400907516479
+      },
+      {
+        "rank": 2,
+        "playerName": "Rory McIlroy",
+        "winProbability": 2.28985864669084
+      },
+      {
+        "rank": 3,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 1.6365153715014398
+      },
+      {
+        "rank": 4,
+        "playerName": "Xander Schauffele",
+        "winProbability": 1.54288839548826
+      },
+      {
+        "rank": 5,
+        "playerName": "Bryson DeChambeau",
+        "winProbability": 1.52364149689674
+      },
+      {
+        "rank": 6,
+        "playerName": "Justin Thomas",
+        "winProbability": 1.50860771536827
+      },
+      {
+        "rank": 7,
+        "playerName": "Russell Henley",
+        "winProbability": 1.45953772589564
+      },
+      {
+        "rank": 8,
+        "playerName": "Collin Morikawa",
+        "winProbability": 1.4004303142428298
+      },
+      {
+        "rank": 9,
+        "playerName": "Sepp Straka",
+        "winProbability": 1.36422934010624
+      },
+      {
+        "rank": 10,
+        "playerName": "Jon Rahm",
+        "winProbability": 1.32518522441387
+      },
+      {
+        "rank": 11,
+        "playerName": "Shane Lowry",
+        "winProbability": 1.26478876918554
+      },
+      {
+        "rank": 12,
+        "playerName": "Patrick Cantlay",
+        "winProbability": 1.23385414481163
+      },
+      {
+        "rank": 13,
+        "playerName": "Corey Conners",
+        "winProbability": 1.22692976146936
+      },
+      {
+        "rank": 14,
+        "playerName": "Maverick McNealy",
+        "winProbability": 1.19329942390322
+      },
+      {
+        "rank": 15,
+        "playerName": "Patrick Reed",
+        "winProbability": 1.18435593321919
+      }
+    ]
+  },
+  {
+    "id": "u.s.-open",
+    "name": "2026 U.S. Open",
+    "course": "Oakmont Country Club, PA",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 3.13878841698169
+      },
+      {
+        "rank": 2,
+        "playerName": "Bryson DeChambeau",
+        "winProbability": 1.81994400918483
+      },
+      {
+        "rank": 3,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 1.8102806061506198
+      },
+      {
+        "rank": 4,
+        "playerName": "Xander Schauffele",
+        "winProbability": 1.7745295539498303
+      },
+      {
+        "rank": 5,
+        "playerName": "Rory McIlroy",
+        "winProbability": 1.7734205350279801
+      },
+      {
+        "rank": 6,
+        "playerName": "Jon Rahm",
+        "winProbability": 1.75349060446023
+      },
+      {
+        "rank": 7,
+        "playerName": "Patrick Cantlay",
+        "winProbability": 1.6220197081565801
+      },
+      {
+        "rank": 8,
+        "playerName": "Justin Thomas",
+        "winProbability": 1.6129296272993001
+      },
+      {
+        "rank": 9,
+        "playerName": "Collin Morikawa",
+        "winProbability": 1.54971508309245
+      },
+      {
+        "rank": 10,
+        "playerName": "Sepp Straka",
+        "winProbability": 1.53996618464589
+      },
+      {
+        "rank": 11,
+        "playerName": "Si Woo Kim",
+        "winProbability": 1.53214326128363
+      },
+      {
+        "rank": 12,
+        "playerName": "Keegan Bradley",
+        "winProbability": 1.53202600777149
+      },
+      {
+        "rank": 13,
+        "playerName": "Joaquin Niemann",
+        "winProbability": 1.46145280450582
+      },
+      {
+        "rank": 14,
+        "playerName": "Maverick McNealy",
+        "winProbability": 1.4591165818274001
+      },
+      {
+        "rank": 15,
+        "playerName": "Sam Burns",
+        "winProbability": 1.45422164350748
+      }
+    ]
+  },
+  {
+    "id": "the-open-championship",
+    "name": "2026 The Open Championship",
+    "course": "Royal Portrush Golf Club",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 3.54607217013835
+      },
+      {
+        "rank": 2,
+        "playerName": "Rory McIlroy",
+        "winProbability": 2.33166273683309
+      },
+      {
+        "rank": 3,
+        "playerName": "Jon Rahm",
+        "winProbability": 1.95965282618999
+      },
+      {
+        "rank": 4,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 1.79478488862514
+      },
+      {
+        "rank": 5,
+        "playerName": "Xander Schauffele",
+        "winProbability": 1.7568843439221298
+      },
+      {
+        "rank": 6,
+        "playerName": "Ludvig \u00c5berg",
+        "winProbability": 1.7442131415009499
+      },
+      {
+        "rank": 7,
+        "playerName": "Viktor Hovland",
+        "winProbability": 1.6787262633442799
+      },
+      {
+        "rank": 8,
+        "playerName": "Sepp Straka",
+        "winProbability": 1.63887292146682
+      },
+      {
+        "rank": 9,
+        "playerName": "Russell Henley",
+        "winProbability": 1.62830241024494
+      },
+      {
+        "rank": 10,
+        "playerName": "Matt Fitzpatrick",
+        "winProbability": 1.62408910691738
+      },
+      {
+        "rank": 11,
+        "playerName": "Maverick McNealy",
+        "winProbability": 1.58825814723968
+      },
+      {
+        "rank": 12,
+        "playerName": "Bryson DeChambeau",
+        "winProbability": 1.5791632235050201
+      },
+      {
+        "rank": 13,
+        "playerName": "Keegan Bradley",
+        "winProbability": 1.5707410871982501
+      },
+      {
+        "rank": 14,
+        "playerName": "Collin Morikawa",
+        "winProbability": 1.5706947073340398
+      },
+      {
+        "rank": 15,
+        "playerName": "Justin Thomas",
+        "winProbability": 1.5580512583255701
+      }
+    ]
+  },
+  {
+    "id": "the-players-championship",
+    "name": "2026 THE PLAYERS Championship",
+    "course": "TPC Sawgrass (THE PLAYERS Stadium Course), FL",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 4.79847230017185
+      },
+      {
+        "rank": 2,
+        "playerName": "Rory McIlroy",
+        "winProbability": 2.0384220406413
+      },
+      {
+        "rank": 3,
+        "playerName": "Xander Schauffele",
+        "winProbability": 1.71097200363874
+      },
+      {
+        "rank": 4,
+        "playerName": "Russell Henley",
+        "winProbability": 1.64226833730936
+      },
+      {
+        "rank": 5,
+        "playerName": "Collin Morikawa",
+        "winProbability": 1.62603370845317
+      },
+      {
+        "rank": 6,
+        "playerName": "Hideki Matsuyama",
+        "winProbability": 1.6097273677587498
+      },
+      {
+        "rank": 7,
+        "playerName": "Ludvig \u00c5berg",
+        "winProbability": 1.58018991351127
+      },
+      {
+        "rank": 8,
+        "playerName": "Sepp Straka",
+        "winProbability": 1.5381019562482798
+      },
+      {
+        "rank": 9,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 1.5089713037014
+      },
+      {
+        "rank": 10,
+        "playerName": "Justin Thomas",
+        "winProbability": 1.50429308414459
+      },
+      {
+        "rank": 11,
+        "playerName": "Patrick Cantlay",
+        "winProbability": 1.4143431559205
+      },
+      {
+        "rank": 12,
+        "playerName": "Adam Scott",
+        "winProbability": 1.28311906009912
+      },
+      {
+        "rank": 13,
+        "playerName": "Maverick McNealy",
+        "winProbability": 1.2519808486104
+      },
+      {
+        "rank": 14,
+        "playerName": "Sam Burns",
+        "winProbability": 1.22589133679866
+      },
+      {
+        "rank": 15,
+        "playerName": "Viktor Hovland",
+        "winProbability": 1.22047141194343
+      }
+    ]
+  },
+  {
+    "id": "arnold-palmer-invitational",
+    "name": "2026 Arnold Palmer Invitational",
+    "course": "Arnold Palmer's Bay Hill Club & Lodge, FL",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 6.49678632616996
+      },
+      {
+        "rank": 2,
+        "playerName": "Rory McIlroy",
+        "winProbability": 2.80379820615053
+      },
+      {
+        "rank": 3,
+        "playerName": "Xander Schauffele",
+        "winProbability": 2.68040336668491
+      },
+      {
+        "rank": 4,
+        "playerName": "Russell Henley",
+        "winProbability": 2.618901245296
+      },
+      {
+        "rank": 5,
+        "playerName": "Justin Thomas",
+        "winProbability": 2.30842623859643
+      },
+      {
+        "rank": 6,
+        "playerName": "Ludvig \u00c5berg",
+        "winProbability": 2.28138864040374
+      },
+      {
+        "rank": 7,
+        "playerName": "Patrick Cantlay",
+        "winProbability": 2.20258701592683
+      },
+      {
+        "rank": 8,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 2.14813631027936
+      },
+      {
+        "rank": 9,
+        "playerName": "Collin Morikawa",
+        "winProbability": 2.13082637637853
+      },
+      {
+        "rank": 10,
+        "playerName": "Hideki Matsuyama",
+        "winProbability": 2.11125239729881
+      },
+      {
+        "rank": 11,
+        "playerName": "Maverick McNealy",
+        "winProbability": 2.01788991689682
+      },
+      {
+        "rank": 12,
+        "playerName": "Sam Burns",
+        "winProbability": 1.91419143229722
+      },
+      {
+        "rank": 13,
+        "playerName": "Sepp Straka",
+        "winProbability": 1.8756043165922098
+      },
+      {
+        "rank": 14,
+        "playerName": "Akshay Bhatia",
+        "winProbability": 1.87163967639207
+      },
+      {
+        "rank": 15,
+        "playerName": "Viktor Hovland",
+        "winProbability": 1.7947869375348
+      }
+    ]
+  },
+  {
+    "id": "the-genesis-invitational",
+    "name": "2026 The Genesis Invitational",
+    "course": "Torrey Pines Golf Course (South Course), CA",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scottie Scheffler",
+        "winProbability": 4.7158058732748
+      },
+      {
+        "rank": 2,
+        "playerName": "Rory McIlroy",
+        "winProbability": 2.85186301916837
+      },
+      {
+        "rank": 3,
+        "playerName": "Collin Morikawa",
+        "winProbability": 2.53467857837677
+      },
+      {
+        "rank": 4,
+        "playerName": "Viktor Hovland",
+        "winProbability": 2.4686235934495904
+      },
+      {
+        "rank": 5,
+        "playerName": "Sepp Straka",
+        "winProbability": 2.43976674973964
+      },
+      {
+        "rank": 6,
+        "playerName": "Russell Henley",
+        "winProbability": 2.41274517029523
+      },
+      {
+        "rank": 7,
+        "playerName": "Hideki Matsuyama",
+        "winProbability": 2.21518166363239
+      },
+      {
+        "rank": 8,
+        "playerName": "Adam Scott",
+        "winProbability": 2.2032057866454102
+      },
+      {
+        "rank": 9,
+        "playerName": "Patrick Cantlay",
+        "winProbability": 2.15286184102296
+      },
+      {
+        "rank": 10,
+        "playerName": "Justin Thomas",
+        "winProbability": 2.13372278958559
+      },
+      {
+        "rank": 11,
+        "playerName": "Sam Burns",
+        "winProbability": 2.05218866467475
+      },
+      {
+        "rank": 12,
+        "playerName": "Taylor Pendrith",
+        "winProbability": 2.0164147019386203
+      },
+      {
+        "rank": 13,
+        "playerName": "Tommy Fleetwood",
+        "winProbability": 1.9773280248045901
+      },
+      {
+        "rank": 14,
+        "playerName": "Keegan Bradley",
+        "winProbability": 1.83611866086721
+      },
+      {
+        "rank": 15,
+        "playerName": "Shane Lowry",
+        "winProbability": 1.83089300990104
+      }
+    ]
+  }
+]

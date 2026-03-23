@@ -1,45 +1,24 @@
 import { useState } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
 import { trackEvent } from '../../lib/analytics';
+import upcomingTournaments from '../../data/upcoming_tournaments.json';
+import historicalBacktests from '../../data/historical_backtests.json';
 import './SportsDashboard.css';
 
 type SportCategory = 'PGA' | 'Tennis' | 'NBA' | 'MLB' | 'NFL' | 'NHL';
 
-interface TournamentPrediction {
-  playerName: string;
-  winProbability: number;
-  rank: number;
-}
-
-// Mock data for the demonstration of 2026 PGA tournament
-const mockPGAPredictions: TournamentPrediction[] = [
-  { playerName: 'Scottie Scheffler', winProbability: 16.4, rank: 1 },
-  { playerName: 'Xander Schauffele', winProbability: 11.2, rank: 2 },
-  { playerName: 'Rory McIlroy', winProbability: 9.8, rank: 3 },
-  { playerName: 'Collin Morikawa', winProbability: 7.5, rank: 4 },
-  { playerName: 'Ludvig Aberg', winProbability: 6.2, rank: 5 },
-  { playerName: 'Viktor Hovland', winProbability: 5.1, rank: 6 },
-  { playerName: 'Patrick Cantlay', winProbability: 4.3, rank: 7 },
-  { playerName: 'Wyndham Clark', winProbability: 3.8, rank: 8 },
-  { playerName: 'Tommy Fleetwood', winProbability: 3.1, rank: 9 },
-  { playerName: 'Max Homa', winProbability: 2.5, rank: 10 },
-];
-
-const mockBacktests = [
-  { year: 2025, tournament: 'THE PLAYERS Championship', predictedWinner: 'Scottie Scheffler', actualWinner: 'Scottie Scheffler', hit: true },
-  { year: 2024, tournament: 'Masters Tournament', predictedWinner: 'Scottie Scheffler', actualWinner: 'Scottie Scheffler', hit: true },
-  { year: 2024, tournament: 'PGA Championship', predictedWinner: 'Rory McIlroy', actualWinner: 'Xander Schauffele', hit: false },
-  { year: 2023, tournament: 'U.S. Open', predictedWinner: 'Wyndham Clark', actualWinner: 'Wyndham Clark', hit: true },
-];
-
 function SportsDashboard() {
   const [activeSport, setActiveSport] = useState<SportCategory>('PGA');
   const [pgaTab, setPgaTab] = useState<'upcoming' | 'backtest'>('upcoming');
+  const [activeEventId, setActiveEventId] = useState<string>(upcomingTournaments[0]?.id || '');
 
   const handleSportChange = (sport: SportCategory) => {
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
   };
+
+  const activeEvent = upcomingTournaments.find(t => t.id === activeEventId) || upcomingTournaments[0];
+  const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map(p => p.winProbability)) : 100;
 
   return (
     <div className="dashboard-page sports-dashboard">
@@ -111,45 +90,62 @@ function SportsDashboard() {
               </div>
 
               {pgaTab === 'upcoming' && (
-                <div className="tournament-card active-market">
-                  <div className="tournament-header">
-                    <h2>April 2026 Masters Tournament</h2>
-                    <span className="market-status live">Market Live</span>
+                <div className="upcoming-events-container">
+                  <div className="event-selector">
+                    <label>Select Tournament: </label>
+                    <select 
+                      value={activeEventId} 
+                      onChange={(e) => setActiveEventId(e.target.value)}
+                      className="tournament-dropdown"
+                    >
+                      {upcomingTournaments.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="tournament-details">
-                    <p><strong>Course:</strong> Augusta National Golf Club, Augusta, GA</p>
-                    <p><strong>Model:</strong> Tournament-Aware Softmax Ranker</p>
-                  </div>
-
-                  <div className="prediction-leaderboard">
-                    <div className="leaderboard-header">
-                      <span>Rank</span>
-                      <span>Player</span>
-                      <span>Win Probability</span>
-                    </div>
-                    {mockPGAPredictions.map((pred) => (
-                      <div key={pred.rank} className="leaderboard-row">
-                        <span className="player-rank">#{pred.rank}</span>
-                        <span className="player-name">{pred.playerName}</span>
-                        <div className="probability-container">
-                          <span className="prob-value">{pred.winProbability.toFixed(1)}%</span>
-                          <div className="prob-bar-bg">
-                            <div 
-                              className="prob-bar-fill" 
-                              style={{ width: `${Math.min(100, pred.winProbability * 3)}%` }}
-                            ></div>
-                          </div>
-                        </div>
+                  
+                  {activeEvent && (
+                    <div className="tournament-card active-market">
+                      <div className="tournament-header">
+                        <h2>{activeEvent.name}</h2>
+                        <span className="market-status live">Market Live</span>
                       </div>
-                    ))}
-                  </div>
+                      <div className="tournament-details">
+                        <p><strong>Course:</strong> {activeEvent.course}</p>
+                        <p><strong>Model:</strong> Tournament-Aware Softmax Ranker</p>
+                      </div>
+
+                      <div className="prediction-leaderboard">
+                        <div className="leaderboard-header">
+                          <span>Rank</span>
+                          <span>Player</span>
+                          <span>Win Probability</span>
+                        </div>
+                        {activeEvent.predictions.map((pred) => (
+                          <div key={pred.rank} className="leaderboard-row">
+                            <span className="player-rank">#{pred.rank}</span>
+                            <span className="player-name">{pred.playerName}</span>
+                            <div className="probability-container">
+                              <span className="prob-value">{pred.winProbability.toFixed(2)}%</span>
+                              <div className="prob-bar-bg">
+                                <div 
+                                  className="prob-bar-fill" 
+                                  style={{ width: `${(pred.winProbability / maxProb) * 100}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {pgaTab === 'backtest' && (
                 <div className="backtest-container">
-                  <h2>Model Track Record (2023 - 2025)</h2>
-                  <p className="backtest-desc">Comparing the model's top predicted pick against the actual tournament winner.</p>
+                  <h2>Model Track Record (2020 - 2025)</h2>
+                  <p className="backtest-desc">Comparing the model's top predicted pick against the actual tournament winner for major and high-confidence events.</p>
                   
                   <div className="backtest-table">
                     <div className="backtest-header">
@@ -159,14 +155,14 @@ function SportsDashboard() {
                       <span>Actual Winner</span>
                       <span>Result</span>
                     </div>
-                    {mockBacktests.map((bt, idx) => (
+                    {historicalBacktests.map((bt, idx) => (
                       <div key={idx} className={`backtest-row ${bt.hit ? 'hit' : 'miss'}`}>
                         <span>{bt.year}</span>
                         <span>{bt.tournament}</span>
-                        <span>{bt.predictedWinner}</span>
+                        <span>{bt.predictedWinner} <small>({(bt.prob * 100).toFixed(1)}%)</small></span>
                         <span>{bt.actualWinner}</span>
                         <span className="result-badge">
-                          {bt.hit ? '✅ Hit' : '❌ Miss'}
+                          {bt.hit ? 'Hit' : 'Miss'}
                         </span>
                       </div>
                     ))}
@@ -176,7 +172,6 @@ function SportsDashboard() {
             </div>
           ) : (
             <div className="tbd-container">
-              <div className="tbd-icon">🚧</div>
               <h2>{activeSport} Prediction Models</h2>
               <p>We are actively developing proprietary deep learning models for {activeSport}.</p>
               <p>Check back soon for educational probability signals.</p>

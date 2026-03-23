@@ -1,0 +1,402 @@
+[
+  {
+    "year": 2025,
+    "tournament": "Hero World Challenge",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Hideki Matsuyama",
+    "hit": false,
+    "prob": 0.1589578539133072
+  },
+  {
+    "year": 2025,
+    "tournament": "TOUR Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Tommy Fleetwood",
+    "hit": false,
+    "prob": 0.1070891991257667
+  },
+  {
+    "year": 2025,
+    "tournament": "the Memorial Tournament presented by Workday",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0688148438930511
+  },
+  {
+    "year": 2025,
+    "tournament": "Arnold Palmer Invitational presented by Mastercard",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Russell Henley",
+    "hit": false,
+    "prob": 0.0649678632616996
+  },
+  {
+    "year": 2025,
+    "tournament": "FedEx St. Jude Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Justin Rose",
+    "hit": false,
+    "prob": 0.0636967420578002
+  },
+  {
+    "year": 2025,
+    "tournament": "Travelers Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Keegan Bradley",
+    "hit": false,
+    "prob": 0.0613695085048675
+  },
+  {
+    "year": 2025,
+    "tournament": "BMW Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0609927698969841
+  },
+  {
+    "year": 2025,
+    "tournament": "RBC Heritage",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Justin Thomas",
+    "hit": false,
+    "prob": 0.0600471310317516
+  },
+  {
+    "year": 2025,
+    "tournament": "AT&T Pebble Beach Pro-Am",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Rory McIlroy",
+    "hit": false,
+    "prob": 0.056555300951004
+  },
+  {
+    "year": 2025,
+    "tournament": "Masters Tournament",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Rory McIlroy",
+    "hit": false,
+    "prob": 0.056016594171524
+  },
+  {
+    "year": 2025,
+    "tournament": "THE PLAYERS Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Rory McIlroy",
+    "hit": false,
+    "prob": 0.0479847230017185
+  },
+  {
+    "year": 2025,
+    "tournament": "Texas Children's Houston Open",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Min Woo Lee",
+    "hit": false,
+    "prob": 0.0471733063459396
+  },
+  {
+    "year": 2025,
+    "tournament": "Procore Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0409495197236537
+  },
+  {
+    "year": 2025,
+    "tournament": "WM Phoenix Open",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Thomas Detry",
+    "hit": false,
+    "prob": 0.0405670255422592
+  },
+  {
+    "year": 2025,
+    "tournament": "Genesis Scottish Open",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Chris Gotterup",
+    "hit": false,
+    "prob": 0.0376551523804664
+  },
+  {
+    "year": 2025,
+    "tournament": "The Open Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0354607217013835
+  },
+  {
+    "year": 2025,
+    "tournament": "World Wide Technology Championship",
+    "predictedWinner": "Ben Griffin",
+    "actualWinner": "Ben Griffin",
+    "hit": true,
+    "prob": 0.0335164256393909
+  },
+  {
+    "year": 2025,
+    "tournament": "Mexico Open at VidantaWorld",
+    "predictedWinner": "Akshay Bhatia",
+    "actualWinner": "Brian Campbell",
+    "hit": false,
+    "prob": 0.0326606482267379
+  },
+  {
+    "year": 2025,
+    "tournament": "U.S. Open",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "J.J. Spaun",
+    "hit": false,
+    "prob": 0.0313878841698169
+  },
+  {
+    "year": 2025,
+    "tournament": "Truist Championship",
+    "predictedWinner": "Rory McIlroy",
+    "actualWinner": "Sepp Straka",
+    "hit": false,
+    "prob": 0.0312541835010051
+  },
+  {
+    "year": 2025,
+    "tournament": "Sanderson Farms Championship",
+    "predictedWinner": "Akshay Bhatia",
+    "actualWinner": "Steven Fisk",
+    "hit": false,
+    "prob": 0.0294510852545499
+  },
+  {
+    "year": 2025,
+    "tournament": "ISCO Championship",
+    "predictedWinner": "Michael Thorbjornsen",
+    "actualWinner": "William Mouw",
+    "hit": false,
+    "prob": 0.0291783716529607
+  },
+  {
+    "year": 2025,
+    "tournament": "RBC Canadian Open",
+    "predictedWinner": "Rory McIlroy",
+    "actualWinner": "Ryan Fox",
+    "hit": false,
+    "prob": 0.028988379985094
+  },
+  {
+    "year": 2025,
+    "tournament": "Valero Texas Open",
+    "predictedWinner": "Tommy Fleetwood",
+    "actualWinner": "Brian Harman",
+    "hit": false,
+    "prob": 0.0289607662707567
+  },
+  {
+    "year": 2025,
+    "tournament": "Farmers Insurance Open",
+    "predictedWinner": "Ludvig \u00c5berg",
+    "actualWinner": "Harris English",
+    "hit": false,
+    "prob": 0.0279175750911235
+  },
+  {
+    "year": 2025,
+    "tournament": "Butterfield Bermuda Championship",
+    "predictedWinner": "Rico Hoey",
+    "actualWinner": "Adam Schenk",
+    "hit": false,
+    "prob": 0.0276318937540054
+  },
+  {
+    "year": 2025,
+    "tournament": "PGA Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0268400907516479
+  },
+  {
+    "year": 2025,
+    "tournament": "Corales Puntacana Championship",
+    "predictedWinner": "Alex Smalley",
+    "actualWinner": "Garrick Higgo",
+    "hit": false,
+    "prob": 0.0261478535830974
+  },
+  {
+    "year": 2025,
+    "tournament": "3M Open",
+    "predictedWinner": "Maverick McNealy",
+    "actualWinner": "Kurt Kitayama",
+    "hit": false,
+    "prob": 0.0260914005339145
+  },
+  {
+    "year": 2025,
+    "tournament": "Puerto Rico Open",
+    "predictedWinner": "Adrien Dumont de Chassart",
+    "actualWinner": "Karl Vilips",
+    "hit": false,
+    "prob": 0.0230834502726793
+  },
+  {
+    "year": 2025,
+    "tournament": "Wyndham Championship",
+    "predictedWinner": "Matt Fitzpatrick",
+    "actualWinner": "Cameron Young",
+    "hit": false,
+    "prob": 0.0228035375475883
+  },
+  {
+    "year": 2025,
+    "tournament": "Valspar Championship",
+    "predictedWinner": "Tommy Fleetwood",
+    "actualWinner": "Viktor Hovland",
+    "hit": false,
+    "prob": 0.0222736727446317
+  },
+  {
+    "year": 2025,
+    "tournament": "Sony Open in Hawaii",
+    "predictedWinner": "Hideki Matsuyama",
+    "actualWinner": "Nick Taylor",
+    "hit": false,
+    "prob": 0.0210933666676282
+  },
+  {
+    "year": 2025,
+    "tournament": "Barracuda Championship",
+    "predictedWinner": "Cameron Champ",
+    "actualWinner": "Ryan Gerard",
+    "hit": false,
+    "prob": 0.0151189099997282
+  },
+  {
+    "year": 2024,
+    "tournament": "Hero World Challenge",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.1296235769987106
+  },
+  {
+    "year": 2024,
+    "tournament": "TOUR Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0686641708016395
+  },
+  {
+    "year": 2024,
+    "tournament": "Men\u2019s Olympic Golf Competition",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Scottie Scheffler",
+    "hit": true,
+    "prob": 0.0563738048076629
+  },
+  {
+    "year": 2024,
+    "tournament": "BMW Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Keegan Bradley",
+    "hit": false,
+    "prob": 0.0553776435554027
+  },
+  {
+    "year": 2024,
+    "tournament": "FedEx St. Jude Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Hideki Matsuyama",
+    "hit": false,
+    "prob": 0.0541651286184787
+  },
+  {
+    "year": 2024,
+    "tournament": "ZOZO CHAMPIONSHIP",
+    "predictedWinner": "Collin Morikawa",
+    "actualWinner": "Nico Echavarria",
+    "hit": false,
+    "prob": 0.0540545955300331
+  },
+  {
+    "year": 2024,
+    "tournament": "Shriners Children's Open",
+    "predictedWinner": "Tom Kim",
+    "actualWinner": "J.T. Poston",
+    "hit": false,
+    "prob": 0.0477929599583148
+  },
+  {
+    "year": 2024,
+    "tournament": "Genesis Scottish Open",
+    "predictedWinner": "Rory McIlroy",
+    "actualWinner": "Robert MacIntyre",
+    "hit": false,
+    "prob": 0.0390714332461357
+  },
+  {
+    "year": 2024,
+    "tournament": "Procore Championship",
+    "predictedWinner": "Wyndham Clark",
+    "actualWinner": "Patton Kizzire",
+    "hit": false,
+    "prob": 0.0349766798317432
+  },
+  {
+    "year": 2024,
+    "tournament": "The Open Championship",
+    "predictedWinner": "Scottie Scheffler",
+    "actualWinner": "Xander Schauffele",
+    "hit": false,
+    "prob": 0.0341386683285236
+  },
+  {
+    "year": 2024,
+    "tournament": "World Wide Technology Championship",
+    "predictedWinner": "Max Greyserman",
+    "actualWinner": "Austin Eckroat",
+    "hit": false,
+    "prob": 0.0323807746171951
+  },
+  {
+    "year": 2024,
+    "tournament": "Butterfield Bermuda Championship",
+    "predictedWinner": "Seamus Power",
+    "actualWinner": "Rafael Campos",
+    "hit": false,
+    "prob": 0.0312933027744293
+  },
+  {
+    "year": 2024,
+    "tournament": "3M Open",
+    "predictedWinner": "Tony Finau",
+    "actualWinner": "Jhonattan Vegas",
+    "hit": false,
+    "prob": 0.0309524927288293
+  },
+  {
+    "year": 2024,
+    "tournament": "ISCO Championship",
+    "predictedWinner": "Luke Clanton",
+    "actualWinner": "Harry Hall",
+    "hit": false,
+    "prob": 0.0295098833739757
+  },
+  {
+    "year": 2024,
+    "tournament": "Black Desert Championship",
+    "predictedWinner": "Keith Mitchell",
+    "actualWinner": "Matt McCarty",
+    "hit": false,
+    "prob": 0.028495131060481
+  },
+  {
+    "year": 2024,
+    "tournament": "Sanderson Farms Championship",
+    "predictedWinner": "Mackenzie Hughes",
+    "actualWinner": "Kevin Yu",
+    "hit": false,
+    "prob": 0.025936821475625
+  }
+]

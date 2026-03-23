@@ -23,12 +23,14 @@ def export_wta_frontend_data():
     scaler = joblib.load(artifact_dir / "scaler.joblib")
     
     # Load model
-    static_columns = ["elo", "surf_elo", "player_rolling_win_rate_5", "player_elo_diff_5"]
+    with open(artifact_dir / "feature_columns.json", "r") as f:
+        static_columns = json.load(f)
+        
     model = WTATournamentRanker(
         static_feature_count=len(static_columns),
-        static_width=128,
-        dense_width=64,
-        dropout=0.2
+        static_width=256,
+        dense_width=128,
+        dropout=0.3
     )
     model.load_state_dict(torch.load(artifact_dir / "model.pt", map_location="cpu"))
     model.eval()
@@ -71,6 +73,7 @@ def export_wta_frontend_data():
             backtests.append({
                 "year": int(group["date"].iloc[0] // 10000),
                 "tournament": str(group["tournament_name"].iloc[0]),
+                "tour": str(group["tour"].iloc[0]), # Added tour field
                 "predictedWinner": str(top_winner["player_name"]),
                 "predictedTop3": [str(group.iloc[sorted_idx[i]]["player_name"]) for i in range(min(3, len(sorted_idx)))],
                 "predictedTop5": [str(group.iloc[sorted_idx[i]]["player_name"]) for i in range(min(5, len(sorted_idx)))],
@@ -83,22 +86,28 @@ def export_wta_frontend_data():
             continue
             
     # Sort by date desc
-    backtests = sorted(backtests, key=lambda x: x["year"], reverse=True)
+    backtests = sorted(backtests, key=lambda x: (-x["year"], x["tournament"]))
     
     proj_root = Path(__file__).resolve().parents[2]
     with open(proj_root / "pythia_prophecy/frontend/src/data/wta_historical_backtests.json", "w") as f:
         json.dump(backtests, f, indent=2)
         
     # 2. Upcoming (Mocking 2026 with recent 2024 versions)
-    # We will just take the latest 5 tournaments and label them 2026
+    # We will just take the latest unique tournaments and label them 2026
     upcoming = []
-    for bt in backtests[:10]:
+    seen_tourneys = set()
+    for bt in backtests:
+        t_key = (bt["tournament"], bt["tour"])
+        if t_key in seen_tourneys: continue
+        seen_tourneys.add(t_key)
+        
         up = bt.copy()
         up["name"] = f"2026 {bt['tournament']}"
-        up["id"] = bt["tournament"].replace(" ", "-").lower()
-        up["course"] = "TBD Court"
+        up["id"] = f"{bt['tour'].lower()}-{bt['tournament'].replace(' ', '-').lower()}"
+        up["course"] = "Hard Court" if "Open" in bt["tournament"] else "Clay Court"
         up["predictions"] = bt["fullField"]
         upcoming.append(up)
+        if len(upcoming) >= 20: break
         
     with open(proj_root / "pythia_prophecy/frontend/src/data/wta_upcoming_tournaments.json", "w") as f:
         json.dump(upcoming, f, indent=2)

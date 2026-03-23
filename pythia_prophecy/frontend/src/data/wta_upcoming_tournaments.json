@@ -1,7 +1,132 @@
 [
   {
     "year": 2024,
+    "tournament": "Next Gen Finals",
+    "tour": "ATP",
+    "predictedWinner": "Jakub Mensik",
+    "predictedTop3": [
+      "Jakub Mensik",
+      "Arthur Fils",
+      "Juncheng Shang"
+    ],
+    "predictedTop5": [
+      "Jakub Mensik",
+      "Arthur Fils",
+      "Juncheng Shang",
+      "Alex Michelsen",
+      "Joao Fonseca"
+    ],
+    "actualWinner": "Joao Fonseca",
+    "hitStatus": "Top 5",
+    "prob": 0.2768329977989197,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Jakub Mensik",
+        "winProbability": 27.683300018310547,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Arthur Fils",
+        "winProbability": 26.256393432617188,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Juncheng Shang",
+        "winProbability": 16.921316146850586,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Alex Michelsen",
+        "winProbability": 14.58478832244873,
+        "actualWinner": false
+      },
+      {
+        "rank": 5,
+        "playerName": "Joao Fonseca",
+        "winProbability": 6.1555914878845215,
+        "actualWinner": true
+      },
+      {
+        "rank": 6,
+        "playerName": "Learner Tien",
+        "winProbability": 3.3952858448028564,
+        "actualWinner": false
+      },
+      {
+        "rank": 7,
+        "playerName": "Luca Van Assche",
+        "winProbability": 2.5982415676116943,
+        "actualWinner": false
+      },
+      {
+        "rank": 8,
+        "playerName": "Nishesh Basavareddy",
+        "winProbability": 2.4050841331481934,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 Next Gen Finals",
+    "id": "atp-next-gen-finals",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Jakub Mensik",
+        "winProbability": 27.683300018310547,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Arthur Fils",
+        "winProbability": 26.256393432617188,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Juncheng Shang",
+        "winProbability": 16.921316146850586,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Alex Michelsen",
+        "winProbability": 14.58478832244873,
+        "actualWinner": false
+      },
+      {
+        "rank": 5,
+        "playerName": "Joao Fonseca",
+        "winProbability": 6.1555914878845215,
+        "actualWinner": true
+      },
+      {
+        "rank": 6,
+        "playerName": "Learner Tien",
+        "winProbability": 3.3952858448028564,
+        "actualWinner": false
+      },
+      {
+        "rank": 7,
+        "playerName": "Luca Van Assche",
+        "winProbability": 2.5982415676116943,
+        "actualWinner": false
+      },
+      {
+        "rank": 8,
+        "playerName": "Nishesh Basavareddy",
+        "winProbability": 2.4050841331481934,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2024,
     "tournament": "Riyadh Finals",
+    "tour": "WTA",
     "predictedWinner": "Iga Swiatek",
     "predictedTop3": [
       "Iga Swiatek",
@@ -75,8 +200,8 @@
       }
     ],
     "name": "2026 Riyadh Finals",
-    "id": "riyadh-finals",
-    "course": "TBD Court",
+    "id": "wta-riyadh-finals",
+    "course": "Clay Court",
     "predictions": [
       {
         "rank": 1,
@@ -137,6 +262,7 @@
   {
     "year": 2024,
     "tournament": "Tokyo",
+    "tour": "WTA",
     "predictedWinner": "Qinwen Zheng",
     "predictedTop3": [
       "Qinwen Zheng",
@@ -324,8 +450,8 @@
       }
     ],
     "name": "2026 Tokyo",
-    "id": "tokyo",
-    "course": "TBD Court",
+    "id": "wta-tokyo",
+    "course": "Clay Court",
     "predictions": [
       {
         "rank": 1,
@@ -498,297 +624,76 @@
     ]
   },
   {
-    "year": 2024,
-    "tournament": "Next Gen Finals",
-    "predictedWinner": "Jakub Mensik",
-    "predictedTop3": [
-      "Jakub Mensik",
-      "Arthur Fils",
-      "Juncheng Shang"
-    ],
-    "predictedTop5": [
-      "Jakub Mensik",
-      "Arthur Fils",
-      "Juncheng Shang",
-      "Alex Michelsen",
-      "Joao Fonseca"
-    ],
-    "actualWinner": "Joao Fonseca",
-    "hitStatus": "Top 5",
-    "prob": 0.2768329977989197,
-    "fullField": [
-      {
-        "rank": 1,
-        "playerName": "Jakub Mensik",
-        "winProbability": 27.683300018310547,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Arthur Fils",
-        "winProbability": 26.256393432617188,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
-        "playerName": "Juncheng Shang",
-        "winProbability": 16.921316146850586,
-        "actualWinner": false
-      },
-      {
-        "rank": 4,
-        "playerName": "Alex Michelsen",
-        "winProbability": 14.58478832244873,
-        "actualWinner": false
-      },
-      {
-        "rank": 5,
-        "playerName": "Joao Fonseca",
-        "winProbability": 6.1555914878845215,
-        "actualWinner": true
-      },
-      {
-        "rank": 6,
-        "playerName": "Learner Tien",
-        "winProbability": 3.3952858448028564,
-        "actualWinner": false
-      },
-      {
-        "rank": 7,
-        "playerName": "Luca Van Assche",
-        "winProbability": 2.5982415676116943,
-        "actualWinner": false
-      },
-      {
-        "rank": 8,
-        "playerName": "Nishesh Basavareddy",
-        "winProbability": 2.4050841331481934,
-        "actualWinner": false
-      }
-    ],
-    "name": "2026 Next Gen Finals",
-    "id": "next-gen-finals",
-    "course": "TBD Court",
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Jakub Mensik",
-        "winProbability": 27.683300018310547,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Arthur Fils",
-        "winProbability": 26.256393432617188,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
-        "playerName": "Juncheng Shang",
-        "winProbability": 16.921316146850586,
-        "actualWinner": false
-      },
-      {
-        "rank": 4,
-        "playerName": "Alex Michelsen",
-        "winProbability": 14.58478832244873,
-        "actualWinner": false
-      },
-      {
-        "rank": 5,
-        "playerName": "Joao Fonseca",
-        "winProbability": 6.1555914878845215,
-        "actualWinner": true
-      },
-      {
-        "rank": 6,
-        "playerName": "Learner Tien",
-        "winProbability": 3.3952858448028564,
-        "actualWinner": false
-      },
-      {
-        "rank": 7,
-        "playerName": "Luca Van Assche",
-        "winProbability": 2.5982415676116943,
-        "actualWinner": false
-      },
-      {
-        "rank": 8,
-        "playerName": "Nishesh Basavareddy",
-        "winProbability": 2.4050841331481934,
-        "actualWinner": false
-      }
-    ]
-  },
-  {
     "year": 2023,
-    "tournament": "BJK Cup QLS R1: SVK vs ITA",
-    "predictedWinner": "Camila Giorgi",
+    "tournament": "BJK Cup G1 PM: LAT vs NOR",
+    "tour": "WTA",
+    "predictedWinner": "Adelina Lachinova",
     "predictedTop3": [
-      "Camila Giorgi",
-      "Jasmine Paolini",
-      "Anna Karolina Schmiedlova"
+      "Adelina Lachinova",
+      "Beatrise Zeltina",
+      "Emilie Elde"
     ],
     "predictedTop5": [
-      "Camila Giorgi",
-      "Jasmine Paolini",
-      "Anna Karolina Schmiedlova",
-      "Elisabetta Cocciaretto",
-      "Viktoria Hruncakova"
+      "Adelina Lachinova",
+      "Beatrise Zeltina",
+      "Emilie Elde",
+      "Lilly Elida Haseth"
     ],
-    "actualWinner": "Viktoria Hruncakova",
-    "hitStatus": "Top 5",
-    "prob": 0.4145750105381012,
-    "fullField": [
-      {
-        "rank": 1,
-        "playerName": "Camila Giorgi",
-        "winProbability": 41.45750045776367,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Jasmine Paolini",
-        "winProbability": 16.749427795410156,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
-        "playerName": "Anna Karolina Schmiedlova",
-        "winProbability": 13.997345924377441,
-        "actualWinner": false
-      },
-      {
-        "rank": 4,
-        "playerName": "Elisabetta Cocciaretto",
-        "winProbability": 10.25314998626709,
-        "actualWinner": false
-      },
-      {
-        "rank": 5,
-        "playerName": "Viktoria Hruncakova",
-        "winProbability": 9.245193481445312,
-        "actualWinner": true
-      },
-      {
-        "rank": 6,
-        "playerName": "Martina Trevisan",
-        "winProbability": 8.297378540039062,
-        "actualWinner": false
-      }
-    ],
-    "name": "2026 BJK Cup QLS R1: SVK vs ITA",
-    "id": "bjk-cup-qls-r1:-svk-vs-ita",
-    "course": "TBD Court",
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Camila Giorgi",
-        "winProbability": 41.45750045776367,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Jasmine Paolini",
-        "winProbability": 16.749427795410156,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
-        "playerName": "Anna Karolina Schmiedlova",
-        "winProbability": 13.997345924377441,
-        "actualWinner": false
-      },
-      {
-        "rank": 4,
-        "playerName": "Elisabetta Cocciaretto",
-        "winProbability": 10.25314998626709,
-        "actualWinner": false
-      },
-      {
-        "rank": 5,
-        "playerName": "Viktoria Hruncakova",
-        "winProbability": 9.245193481445312,
-        "actualWinner": true
-      },
-      {
-        "rank": 6,
-        "playerName": "Martina Trevisan",
-        "winProbability": 8.297378540039062,
-        "actualWinner": false
-      }
-    ]
-  },
-  {
-    "year": 2023,
-    "tournament": "BJK Cup G1 RR: LAT vs HUN",
-    "predictedWinner": "Diana Marcinkevica",
-    "predictedTop3": [
-      "Diana Marcinkevica",
-      "Daniela Vismane",
-      "Reka Luca Jani"
-    ],
-    "predictedTop5": [
-      "Diana Marcinkevica",
-      "Daniela Vismane",
-      "Reka Luca Jani",
-      "Natalia Szabanin"
-    ],
-    "actualWinner": "Daniela Vismane",
+    "actualWinner": "Beatrise Zeltina",
     "hitStatus": "Top 3",
-    "prob": 0.30849897861480713,
+    "prob": 0.3323195278644562,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Diana Marcinkevica",
-        "winProbability": 30.849897384643555,
+        "playerName": "Adelina Lachinova",
+        "winProbability": 33.23195266723633,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Daniela Vismane",
-        "winProbability": 28.486745834350586,
+        "playerName": "Beatrise Zeltina",
+        "winProbability": 29.308027267456055,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Reka Luca Jani",
-        "winProbability": 23.29832649230957,
+        "playerName": "Emilie Elde",
+        "winProbability": 19.390380859375,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Natalia Szabanin",
-        "winProbability": 17.365032196044922,
+        "playerName": "Lilly Elida Haseth",
+        "winProbability": 18.069644927978516,
         "actualWinner": false
       }
     ],
-    "name": "2026 BJK Cup G1 RR: LAT vs HUN",
-    "id": "bjk-cup-g1-rr:-lat-vs-hun",
-    "course": "TBD Court",
+    "name": "2026 BJK Cup G1 PM: LAT vs NOR",
+    "id": "wta-bjk-cup-g1-pm:-lat-vs-nor",
+    "course": "Clay Court",
     "predictions": [
       {
         "rank": 1,
-        "playerName": "Diana Marcinkevica",
-        "winProbability": 30.849897384643555,
+        "playerName": "Adelina Lachinova",
+        "winProbability": 33.23195266723633,
         "actualWinner": false
       },
       {
         "rank": 2,
-        "playerName": "Daniela Vismane",
-        "winProbability": 28.486745834350586,
+        "playerName": "Beatrise Zeltina",
+        "winProbability": 29.308027267456055,
         "actualWinner": true
       },
       {
         "rank": 3,
-        "playerName": "Reka Luca Jani",
-        "winProbability": 23.29832649230957,
+        "playerName": "Emilie Elde",
+        "winProbability": 19.390380859375,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Natalia Szabanin",
-        "winProbability": 17.365032196044922,
+        "playerName": "Lilly Elida Haseth",
+        "winProbability": 18.069644927978516,
         "actualWinner": false
       }
     ]
@@ -796,6 +701,7 @@
   {
     "year": 2023,
     "tournament": "BJK Cup G1 PO: HUN vs SWE",
+    "tour": "WTA",
     "predictedWinner": "Reka Luca Jani",
     "predictedTop3": [
       "Reka Luca Jani",
@@ -838,8 +744,8 @@
       }
     ],
     "name": "2026 BJK Cup G1 PO: HUN vs SWE",
-    "id": "bjk-cup-g1-po:-hun-vs-swe",
-    "course": "TBD Court",
+    "id": "wta-bjk-cup-g1-po:-hun-vs-swe",
+    "course": "Clay Court",
     "predictions": [
       {
         "rank": 1,
@@ -869,346 +775,1126 @@
   },
   {
     "year": 2023,
-    "tournament": "Cancun Finals",
-    "predictedWinner": "Iga Swiatek",
+    "tournament": "BJK Cup G1 PPO: NED vs SRB",
+    "tour": "WTA",
+    "predictedWinner": "Olga Danilovic",
     "predictedTop3": [
-      "Iga Swiatek",
-      "Coco Gauff",
-      "Aryna Sabalenka"
+      "Olga Danilovic",
+      "Lola Radivojevic",
+      "Lesley Pattinama Kerkhove"
     ],
     "predictedTop5": [
-      "Iga Swiatek",
-      "Coco Gauff",
-      "Aryna Sabalenka",
-      "Elena Rybakina",
-      "Jessica Pegula"
+      "Olga Danilovic",
+      "Lola Radivojevic",
+      "Lesley Pattinama Kerkhove",
+      "Suzan Lamens"
     ],
-    "actualWinner": "Aryna Sabalenka",
-    "hitStatus": "Top 3",
-    "prob": 0.26090237498283386,
-    "fullField": [
-      {
-        "rank": 1,
-        "playerName": "Iga Swiatek",
-        "winProbability": 26.09023666381836,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Coco Gauff",
-        "winProbability": 22.608787536621094,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
-        "playerName": "Aryna Sabalenka",
-        "winProbability": 14.22546100616455,
-        "actualWinner": true
-      },
-      {
-        "rank": 4,
-        "playerName": "Elena Rybakina",
-        "winProbability": 10.977218627929688,
-        "actualWinner": false
-      },
-      {
-        "rank": 5,
-        "playerName": "Jessica Pegula",
-        "winProbability": 10.062071800231934,
-        "actualWinner": false
-      },
-      {
-        "rank": 6,
-        "playerName": "Maria Sakkari",
-        "winProbability": 6.249655246734619,
-        "actualWinner": false
-      },
-      {
-        "rank": 7,
-        "playerName": "Ons Jabeur",
-        "winProbability": 5.6034746170043945,
-        "actualWinner": false
-      },
-      {
-        "rank": 8,
-        "playerName": "Marketa Vondrousova",
-        "winProbability": 4.183093547821045,
-        "actualWinner": false
-      }
-    ],
-    "name": "2026 Cancun Finals",
-    "id": "cancun-finals",
-    "course": "TBD Court",
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Iga Swiatek",
-        "winProbability": 26.09023666381836,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Coco Gauff",
-        "winProbability": 22.608787536621094,
-        "actualWinner": false
-      },
-      {
-        "rank": 3,
-        "playerName": "Aryna Sabalenka",
-        "winProbability": 14.22546100616455,
-        "actualWinner": true
-      },
-      {
-        "rank": 4,
-        "playerName": "Elena Rybakina",
-        "winProbability": 10.977218627929688,
-        "actualWinner": false
-      },
-      {
-        "rank": 5,
-        "playerName": "Jessica Pegula",
-        "winProbability": 10.062071800231934,
-        "actualWinner": false
-      },
-      {
-        "rank": 6,
-        "playerName": "Maria Sakkari",
-        "winProbability": 6.249655246734619,
-        "actualWinner": false
-      },
-      {
-        "rank": 7,
-        "playerName": "Ons Jabeur",
-        "winProbability": 5.6034746170043945,
-        "actualWinner": false
-      },
-      {
-        "rank": 8,
-        "playerName": "Marketa Vondrousova",
-        "winProbability": 4.183093547821045,
-        "actualWinner": false
-      }
-    ]
-  },
-  {
-    "year": 2023,
-    "tournament": "BJK Cup QLS R1: USA vs AUT",
-    "predictedWinner": "Coco Gauff",
-    "predictedTop3": [
-      "Coco Gauff",
-      "Jessica Pegula",
-      "Sinja Kraus"
-    ],
-    "predictedTop5": [
-      "Coco Gauff",
-      "Jessica Pegula",
-      "Sinja Kraus",
-      "Julia Grabher"
-    ],
-    "actualWinner": "Jessica Pegula",
-    "hitStatus": "Top 3",
-    "prob": 0.5594457983970642,
-    "fullField": [
-      {
-        "rank": 1,
-        "playerName": "Coco Gauff",
-        "winProbability": 55.944580078125,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Jessica Pegula",
-        "winProbability": 40.373291015625,
-        "actualWinner": true
-      },
-      {
-        "rank": 3,
-        "playerName": "Sinja Kraus",
-        "winProbability": 2.1355152130126953,
-        "actualWinner": false
-      },
-      {
-        "rank": 4,
-        "playerName": "Julia Grabher",
-        "winProbability": 1.5466125011444092,
-        "actualWinner": false
-      }
-    ],
-    "name": "2026 BJK Cup QLS R1: USA vs AUT",
-    "id": "bjk-cup-qls-r1:-usa-vs-aut",
-    "course": "TBD Court",
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Coco Gauff",
-        "winProbability": 55.944580078125,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
-        "playerName": "Jessica Pegula",
-        "winProbability": 40.373291015625,
-        "actualWinner": true
-      },
-      {
-        "rank": 3,
-        "playerName": "Sinja Kraus",
-        "winProbability": 2.1355152130126953,
-        "actualWinner": false
-      },
-      {
-        "rank": 4,
-        "playerName": "Julia Grabher",
-        "winProbability": 1.5466125011444092,
-        "actualWinner": false
-      }
-    ]
-  },
-  {
-    "year": 2023,
-    "tournament": "BJK Cup G1 RR: SWE vs NOR",
-    "predictedWinner": "Rebecca Peterson",
-    "predictedTop3": [
-      "Rebecca Peterson",
-      "Ulrikke Eikeri",
-      "Caijsa Wilda Hennemann"
-    ],
-    "predictedTop5": [
-      "Rebecca Peterson",
-      "Ulrikke Eikeri",
-      "Caijsa Wilda Hennemann",
-      "Malene Helgo"
-    ],
-    "actualWinner": "Rebecca Peterson",
+    "actualWinner": "Olga Danilovic",
     "hitStatus": "Top Pick",
-    "prob": 0.4515814781188965,
+    "prob": 0.36401697993278503,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Rebecca Peterson",
-        "winProbability": 45.15814971923828,
+        "playerName": "Olga Danilovic",
+        "winProbability": 36.40169906616211,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 21.11343002319336,
+        "playerName": "Lola Radivojevic",
+        "winProbability": 25.947057723999023,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 20.955890655517578,
+        "playerName": "Lesley Pattinama Kerkhove",
+        "winProbability": 21.20651626586914,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Malene Helgo",
-        "winProbability": 12.772530555725098,
+        "playerName": "Suzan Lamens",
+        "winProbability": 16.444721221923828,
         "actualWinner": false
       }
     ],
-    "name": "2026 BJK Cup G1 RR: SWE vs NOR",
-    "id": "bjk-cup-g1-rr:-swe-vs-nor",
-    "course": "TBD Court",
+    "name": "2026 BJK Cup G1 PPO: NED vs SRB",
+    "id": "wta-bjk-cup-g1-ppo:-ned-vs-srb",
+    "course": "Clay Court",
     "predictions": [
       {
         "rank": 1,
-        "playerName": "Rebecca Peterson",
-        "winProbability": 45.15814971923828,
+        "playerName": "Olga Danilovic",
+        "winProbability": 36.40169906616211,
         "actualWinner": true
       },
       {
         "rank": 2,
-        "playerName": "Ulrikke Eikeri",
-        "winProbability": 21.11343002319336,
+        "playerName": "Lola Radivojevic",
+        "winProbability": 25.947057723999023,
         "actualWinner": false
       },
       {
         "rank": 3,
-        "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 20.955890655517578,
+        "playerName": "Lesley Pattinama Kerkhove",
+        "winProbability": 21.20651626586914,
         "actualWinner": false
       },
       {
         "rank": 4,
-        "playerName": "Malene Helgo",
-        "winProbability": 12.772530555725098,
+        "playerName": "Suzan Lamens",
+        "winProbability": 16.444721221923828,
         "actualWinner": false
       }
     ]
   },
   {
     "year": 2023,
-    "tournament": "BJK Cup G1 RR: SWE vs DEN",
-    "predictedWinner": "Rebecca Peterson",
+    "tournament": "BJK Cup G1 REL: EGY vs DEN",
+    "tour": "WTA",
+    "predictedWinner": "Clara Tauson",
     "predictedTop3": [
-      "Rebecca Peterson",
       "Clara Tauson",
-      "Caijsa Wilda Hennemann"
+      "Sandra Samir",
+      "Rebecca Munk Mortensen"
     ],
     "predictedTop5": [
-      "Rebecca Peterson",
       "Clara Tauson",
-      "Caijsa Wilda Hennemann",
+      "Sandra Samir",
+      "Rebecca Munk Mortensen",
+      "Lamis Alhussein Abdel Aziz"
+    ],
+    "actualWinner": "Clara Tauson",
+    "hitStatus": "Top Pick",
+    "prob": 0.46152016520500183,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Clara Tauson",
+        "winProbability": 46.152015686035156,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Sandra Samir",
+        "winProbability": 27.914783477783203,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Rebecca Munk Mortensen",
+        "winProbability": 17.508039474487305,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lamis Alhussein Abdel Aziz",
+        "winProbability": 8.425162315368652,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 REL: EGY vs DEN",
+    "id": "wta-bjk-cup-g1-rel:-egy-vs-den",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Clara Tauson",
+        "winProbability": 46.152015686035156,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Sandra Samir",
+        "winProbability": 27.914783477783203,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Rebecca Munk Mortensen",
+        "winProbability": 17.508039474487305,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Lamis Alhussein Abdel Aziz",
+        "winProbability": 8.425162315368652,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: ARG vs BOL",
+    "tour": "WTA",
+    "predictedWinner": "Catalina Padilla Udaeta",
+    "predictedTop3": [
+      "Catalina Padilla Udaeta",
+      "Noelia Zeballos Melgar",
+      "Martina Capurro Taborda"
+    ],
+    "predictedTop5": [
+      "Catalina Padilla Udaeta",
+      "Noelia Zeballos Melgar",
+      "Martina Capurro Taborda",
+      "Julia Riera"
+    ],
+    "actualWinner": "Julia Riera",
+    "hitStatus": "Top 5",
+    "prob": 0.3993511199951172,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Catalina Padilla Udaeta",
+        "winProbability": 39.93511199951172,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Noelia Zeballos Melgar",
+        "winProbability": 27.3078556060791,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 20.3013916015625,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Julia Riera",
+        "winProbability": 12.455648422241211,
+        "actualWinner": true
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: ARG vs BOL",
+    "id": "wta-bjk-cup-g1-rr:-arg-vs-bol",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Catalina Padilla Udaeta",
+        "winProbability": 39.93511199951172,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Noelia Zeballos Melgar",
+        "winProbability": 27.3078556060791,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 20.3013916015625,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Julia Riera",
+        "winProbability": 12.455648422241211,
+        "actualWinner": true
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: ARG vs CHI",
+    "tour": "WTA",
+    "predictedWinner": "Daniela Seguel",
+    "predictedTop3": [
+      "Daniela Seguel",
+      "Martina Capurro Taborda",
+      "Fernanda Labrana"
+    ],
+    "predictedTop5": [
+      "Daniela Seguel",
+      "Martina Capurro Taborda",
+      "Fernanda Labrana",
+      "Julia Riera"
+    ],
+    "actualWinner": "Julia Riera",
+    "hitStatus": "Top 5",
+    "prob": 0.34349286556243896,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 34.34928512573242,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 31.248464584350586,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 17.69168472290039,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Julia Riera",
+        "winProbability": 16.71056365966797,
+        "actualWinner": true
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: ARG vs CHI",
+    "id": "wta-bjk-cup-g1-rr:-arg-vs-chi",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 34.34928512573242,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 31.248464584350586,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 17.69168472290039,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Julia Riera",
+        "winProbability": 16.71056365966797,
+        "actualWinner": true
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: ARG vs COL",
+    "tour": "WTA",
+    "predictedWinner": "Maria Fernanda Herazo Gonzalez",
+    "predictedTop3": [
+      "Maria Fernanda Herazo Gonzalez",
+      "Martina Capurro Taborda",
+      "Julia Riera"
+    ],
+    "predictedTop5": [
+      "Maria Fernanda Herazo Gonzalez",
+      "Martina Capurro Taborda",
+      "Julia Riera",
+      "Yuliana Monroy"
+    ],
+    "actualWinner": "Julia Riera",
+    "hitStatus": "Top 3",
+    "prob": 0.40964457392692566,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Maria Fernanda Herazo Gonzalez",
+        "winProbability": 40.96445846557617,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 29.644229888916016,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Julia Riera",
+        "winProbability": 22.251575469970703,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Yuliana Monroy",
+        "winProbability": 7.139738082885742,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: ARG vs COL",
+    "id": "wta-bjk-cup-g1-rr:-arg-vs-col",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Maria Fernanda Herazo Gonzalez",
+        "winProbability": 40.96445846557617,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 29.644229888916016,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Julia Riera",
+        "winProbability": 22.251575469970703,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Yuliana Monroy",
+        "winProbability": 7.139738082885742,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: ARG vs GUA",
+    "tour": "WTA",
+    "predictedWinner": "Kirsten Andrea Weedon",
+    "predictedTop3": [
+      "Kirsten Andrea Weedon",
+      "Julia Riera",
+      "Maria Gabriela Rivera Corado"
+    ],
+    "predictedTop5": [
+      "Kirsten Andrea Weedon",
+      "Julia Riera",
+      "Maria Gabriela Rivera Corado",
+      "Martina Capurro Taborda"
+    ],
+    "actualWinner": "Julia Riera",
+    "hitStatus": "Top 3",
+    "prob": 0.331156462430954,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 33.11564636230469,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Julia Riera",
+        "winProbability": 26.547019958496094,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Maria Gabriela Rivera Corado",
+        "winProbability": 23.591495513916016,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 16.745830535888672,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: ARG vs GUA",
+    "id": "wta-bjk-cup-g1-rr:-arg-vs-gua",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 33.11564636230469,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Julia Riera",
+        "winProbability": 26.547019958496094,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Maria Gabriela Rivera Corado",
+        "winProbability": 23.591495513916016,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 16.745830535888672,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: ARG vs PER",
+    "tour": "WTA",
+    "predictedWinner": "Lucciana Perez Alarcon",
+    "predictedTop3": [
+      "Lucciana Perez Alarcon",
+      "Martina Capurro Taborda",
+      "Julia Riera"
+    ],
+    "predictedTop5": [
+      "Lucciana Perez Alarcon",
+      "Martina Capurro Taborda",
+      "Julia Riera",
+      "Romina Ccuno"
+    ],
+    "actualWinner": "Julia Riera",
+    "hitStatus": "Top 3",
+    "prob": 0.426410049200058,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 42.64100646972656,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 37.2480583190918,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Julia Riera",
+        "winProbability": 14.911222457885742,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Romina Ccuno",
+        "winProbability": 5.199718952178955,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: ARG vs PER",
+    "id": "wta-bjk-cup-g1-rr:-arg-vs-per",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 42.64100646972656,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Martina Capurro Taborda",
+        "winProbability": 37.2480583190918,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Julia Riera",
+        "winProbability": 14.911222457885742,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Romina Ccuno",
+        "winProbability": 5.199718952178955,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: BOL vs GUA",
+    "tour": "WTA",
+    "predictedWinner": "Melisa Morales",
+    "predictedTop3": [
+      "Melisa Morales",
+      "Kirsten Andrea Weedon",
+      "Noelia Zeballos Melgar"
+    ],
+    "predictedTop5": [
+      "Melisa Morales",
+      "Kirsten Andrea Weedon",
+      "Noelia Zeballos Melgar",
+      "Catalina Padilla Udaeta"
+    ],
+    "actualWinner": "Noelia Zeballos Melgar",
+    "hitStatus": "Top 3",
+    "prob": 0.3370349109172821,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Melisa Morales",
+        "winProbability": 33.7034912109375,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 23.276079177856445,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Noelia Zeballos Melgar",
+        "winProbability": 21.863176345825195,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Catalina Padilla Udaeta",
+        "winProbability": 21.15726089477539,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: BOL vs GUA",
+    "id": "wta-bjk-cup-g1-rr:-bol-vs-gua",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Melisa Morales",
+        "winProbability": 33.7034912109375,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 23.276079177856445,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Noelia Zeballos Melgar",
+        "winProbability": 21.863176345825195,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Catalina Padilla Udaeta",
+        "winProbability": 21.15726089477539,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: BUL vs DEN",
+    "tour": "WTA",
+    "predictedWinner": "Clara Tauson",
+    "predictedTop3": [
+      "Clara Tauson",
+      "Lia Karatancheva",
+      "Gergana Topalova"
+    ],
+    "predictedTop5": [
+      "Clara Tauson",
+      "Lia Karatancheva",
+      "Gergana Topalova",
       "Rebecca Munk Mortensen"
     ],
     "actualWinner": "Clara Tauson",
-    "hitStatus": "Top 3",
-    "prob": 0.4694702923297882,
+    "hitStatus": "Top Pick",
+    "prob": 0.3717944622039795,
     "fullField": [
       {
         "rank": 1,
-        "playerName": "Rebecca Peterson",
-        "winProbability": 46.94702911376953,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
         "playerName": "Clara Tauson",
-        "winProbability": 27.809377670288086,
+        "winProbability": 37.179447174072266,
         "actualWinner": true
       },
       {
+        "rank": 2,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 35.18345260620117,
+        "actualWinner": false
+      },
+      {
         "rank": 3,
-        "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 24.192060470581055,
+        "playerName": "Gergana Topalova",
+        "winProbability": 16.317190170288086,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Rebecca Munk Mortensen",
-        "winProbability": 1.0515371561050415,
+        "winProbability": 11.319914817810059,
         "actualWinner": false
       }
     ],
-    "name": "2026 BJK Cup G1 RR: SWE vs DEN",
-    "id": "bjk-cup-g1-rr:-swe-vs-den",
-    "course": "TBD Court",
+    "name": "2026 BJK Cup G1 RR: BUL vs DEN",
+    "id": "wta-bjk-cup-g1-rr:-bul-vs-den",
+    "course": "Clay Court",
     "predictions": [
       {
         "rank": 1,
-        "playerName": "Rebecca Peterson",
-        "winProbability": 46.94702911376953,
-        "actualWinner": false
-      },
-      {
-        "rank": 2,
         "playerName": "Clara Tauson",
-        "winProbability": 27.809377670288086,
+        "winProbability": 37.179447174072266,
         "actualWinner": true
       },
       {
+        "rank": 2,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 35.18345260620117,
+        "actualWinner": false
+      },
+      {
         "rank": 3,
-        "playerName": "Caijsa Wilda Hennemann",
-        "winProbability": 24.192060470581055,
+        "playerName": "Gergana Topalova",
+        "winProbability": 16.317190170288086,
         "actualWinner": false
       },
       {
         "rank": 4,
         "playerName": "Rebecca Munk Mortensen",
-        "winProbability": 1.0515371561050415,
+        "winProbability": 11.319914817810059,
         "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: BUL vs NOR",
+    "tour": "WTA",
+    "predictedWinner": "Ulrikke Eikeri",
+    "predictedTop3": [
+      "Ulrikke Eikeri",
+      "Lia Karatancheva",
+      "Malene Helgo"
+    ],
+    "predictedTop5": [
+      "Ulrikke Eikeri",
+      "Lia Karatancheva",
+      "Malene Helgo",
+      "Gergana Topalova"
+    ],
+    "actualWinner": "Malene Helgo",
+    "hitStatus": "Top 3",
+    "prob": 0.30159255862236023,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 30.159255981445312,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 26.292383193969727,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Malene Helgo",
+        "winProbability": 22.794973373413086,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Gergana Topalova",
+        "winProbability": 20.753387451171875,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: BUL vs NOR",
+    "id": "wta-bjk-cup-g1-rr:-bul-vs-nor",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Ulrikke Eikeri",
+        "winProbability": 30.159255981445312,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Lia Karatancheva",
+        "winProbability": 26.292383193969727,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Malene Helgo",
+        "winProbability": 22.794973373413086,
+        "actualWinner": true
+      },
+      {
+        "rank": 4,
+        "playerName": "Gergana Topalova",
+        "winProbability": 20.753387451171875,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHI vs BOL",
+    "tour": "WTA",
+    "predictedWinner": "Antonia Vergara Rivera",
+    "predictedTop3": [
+      "Antonia Vergara Rivera",
+      "Natalia Trigosso",
+      "Ana Fabia Holweg Bustillos"
+    ],
+    "predictedTop5": [
+      "Antonia Vergara Rivera",
+      "Natalia Trigosso",
+      "Ana Fabia Holweg Bustillos",
+      "Paloma Goldsmith Weinreich"
+    ],
+    "actualWinner": "Paloma Goldsmith Weinreich",
+    "hitStatus": "Top 5",
+    "prob": 0.304133802652359,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Antonia Vergara Rivera",
+        "winProbability": 30.413379669189453,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Natalia Trigosso",
+        "winProbability": 29.784635543823242,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Ana Fabia Holweg Bustillos",
+        "winProbability": 29.372600555419922,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Paloma Goldsmith Weinreich",
+        "winProbability": 10.429378509521484,
+        "actualWinner": true
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHI vs BOL",
+    "id": "wta-bjk-cup-g1-rr:-chi-vs-bol",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Antonia Vergara Rivera",
+        "winProbability": 30.413379669189453,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Natalia Trigosso",
+        "winProbability": 29.784635543823242,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Ana Fabia Holweg Bustillos",
+        "winProbability": 29.372600555419922,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Paloma Goldsmith Weinreich",
+        "winProbability": 10.429378509521484,
+        "actualWinner": true
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHI vs GUA",
+    "tour": "WTA",
+    "predictedWinner": "Daniela Seguel",
+    "predictedTop3": [
+      "Daniela Seguel",
+      "Kirsten Andrea Weedon",
+      "Melisa Morales"
+    ],
+    "predictedTop5": [
+      "Daniela Seguel",
+      "Kirsten Andrea Weedon",
+      "Melisa Morales",
+      "Fernanda Labrana"
+    ],
+    "actualWinner": "Daniela Seguel",
+    "hitStatus": "Top Pick",
+    "prob": 0.4684746265411377,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 46.84746170043945,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 24.609947204589844,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Melisa Morales",
+        "winProbability": 18.999042510986328,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 9.543550491333008,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHI vs GUA",
+    "id": "wta-bjk-cup-g1-rr:-chi-vs-gua",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Daniela Seguel",
+        "winProbability": 46.84746170043945,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Kirsten Andrea Weedon",
+        "winProbability": 24.609947204589844,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Melisa Morales",
+        "winProbability": 18.999042510986328,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 9.543550491333008,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHI vs PER",
+    "tour": "WTA",
+    "predictedWinner": "Lucciana Perez Alarcon",
+    "predictedTop3": [
+      "Lucciana Perez Alarcon",
+      "Daniela Seguel",
+      "Fernanda Labrana"
+    ],
+    "predictedTop5": [
+      "Lucciana Perez Alarcon",
+      "Daniela Seguel",
+      "Fernanda Labrana",
+      "Romina Ccuno"
+    ],
+    "actualWinner": "Daniela Seguel",
+    "hitStatus": "Top 3",
+    "prob": 0.480209082365036,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 48.02090835571289,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Daniela Seguel",
+        "winProbability": 40.53160095214844,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 6.122087478637695,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Romina Ccuno",
+        "winProbability": 5.325405120849609,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHI vs PER",
+    "id": "wta-bjk-cup-g1-rr:-chi-vs-per",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Lucciana Perez Alarcon",
+        "winProbability": 48.02090835571289,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Daniela Seguel",
+        "winProbability": 40.53160095214844,
+        "actualWinner": true
+      },
+      {
+        "rank": 3,
+        "playerName": "Fernanda Labrana",
+        "winProbability": 6.122087478637695,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Romina Ccuno",
+        "winProbability": 5.325405120849609,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHN vs IND",
+    "tour": "WTA",
+    "predictedWinner": "Yue Yuan",
+    "predictedTop3": [
+      "Yue Yuan",
+      "Ankita Raina",
+      "Rutuja Bhosale"
+    ],
+    "predictedTop5": [
+      "Yue Yuan",
+      "Ankita Raina",
+      "Rutuja Bhosale",
+      "Xinyu Jiang"
+    ],
+    "actualWinner": "Yue Yuan",
+    "hitStatus": "Top Pick",
+    "prob": 0.3121548891067505,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Yue Yuan",
+        "winProbability": 31.21548843383789,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Ankita Raina",
+        "winProbability": 27.765527725219727,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 21.125438690185547,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Xinyu Jiang",
+        "winProbability": 19.8935489654541,
+        "actualWinner": false
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHN vs IND",
+    "id": "wta-bjk-cup-g1-rr:-chn-vs-ind",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Yue Yuan",
+        "winProbability": 31.21548843383789,
+        "actualWinner": true
+      },
+      {
+        "rank": 2,
+        "playerName": "Ankita Raina",
+        "winProbability": 27.765527725219727,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Rutuja Bhosale",
+        "winProbability": 21.125438690185547,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Xinyu Jiang",
+        "winProbability": 19.8935489654541,
+        "actualWinner": false
+      }
+    ]
+  },
+  {
+    "year": 2023,
+    "tournament": "BJK Cup G1 RR: CHN vs KOR",
+    "tour": "WTA",
+    "predictedWinner": "Dabin Kim",
+    "predictedTop3": [
+      "Dabin Kim",
+      "Wushuang Zheng",
+      "Zhaoxuan Yang"
+    ],
+    "predictedTop5": [
+      "Dabin Kim",
+      "Wushuang Zheng",
+      "Zhaoxuan Yang",
+      "Dayeon Back"
+    ],
+    "actualWinner": "Dayeon Back",
+    "hitStatus": "Top 5",
+    "prob": 0.37026989459991455,
+    "fullField": [
+      {
+        "rank": 1,
+        "playerName": "Dabin Kim",
+        "winProbability": 37.0269889831543,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Wushuang Zheng",
+        "winProbability": 26.966466903686523,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Zhaoxuan Yang",
+        "winProbability": 25.508298873901367,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Dayeon Back",
+        "winProbability": 10.498248100280762,
+        "actualWinner": true
+      }
+    ],
+    "name": "2026 BJK Cup G1 RR: CHN vs KOR",
+    "id": "wta-bjk-cup-g1-rr:-chn-vs-kor",
+    "course": "Clay Court",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Dabin Kim",
+        "winProbability": 37.0269889831543,
+        "actualWinner": false
+      },
+      {
+        "rank": 2,
+        "playerName": "Wushuang Zheng",
+        "winProbability": 26.966466903686523,
+        "actualWinner": false
+      },
+      {
+        "rank": 3,
+        "playerName": "Zhaoxuan Yang",
+        "winProbability": 25.508298873901367,
+        "actualWinner": false
+      },
+      {
+        "rank": 4,
+        "playerName": "Dayeon Back",
+        "winProbability": 10.498248100280762,
+        "actualWinner": true
       }
     ]
   }

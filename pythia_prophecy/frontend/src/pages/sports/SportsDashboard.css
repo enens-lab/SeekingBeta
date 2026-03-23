@@ -497,3 +497,24 @@
   border: 1px dashed var(--border-color);
   font-size: 1.1rem;
 }
+
+.tour-filter-group {
+  margin-left: auto;
+}
+
+.tournament-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tour-label {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: var(--text-muted);
+  background-color: var(--bg-body);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  width: fit-content;
+  border: 1px solid var(--border-color);
+}

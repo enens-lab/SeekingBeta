@@ -25,6 +25,7 @@ function SportsDashboard() {
   const [playerSearchQuery, setPlayerSearchQuery] = useState('');
   const [backtestSearchQuery, setBacktestSearchQuery] = useState('');
   const [backtestFilter, setBacktestFilter] = useState<'All' | 'Hit: Top Pick' | 'Hit: Top 3' | 'Hit: Top 5' | 'Miss'>('All');
+  const [tennisTourFilter, setTennisTourFilter] = useState<'All' | 'ATP' | 'WTA'>('All');
 
   const handleSportChange = (sport: SportCategory) => {
     if (sport !== 'PGA' && sport !== 'Tennis') return;
@@ -40,9 +41,24 @@ function SportsDashboard() {
     setPlayerSearchQuery('');
     setBacktestSearchQuery('');
     setBacktestFilter('All');
+    setTennisTourFilter('All');
   };
 
   const activeEvent = currentUpcoming.find(t => t.id === activeEventId) || currentUpcoming[0];
+  
+  // Filter current upcoming by tour if in Tennis tab
+  const filteredUpcoming = useMemo(() => {
+    if (activeSport !== 'Tennis' || tennisTourFilter === 'All') return currentUpcoming;
+    return (currentUpcoming as any[]).filter(t => t.tour === tennisTourFilter);
+  }, [activeSport, tennisTourFilter, currentUpcoming]);
+
+  // Adjust active event if filter changed
+  useMemo(() => {
+    if (activeSport === 'Tennis' && !filteredUpcoming.find(t => t.id === activeEventId)) {
+      setActiveEventId(filteredUpcoming[0]?.id || '');
+    }
+  }, [filteredUpcoming, activeEventId, activeSport]);
+
   const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map(p => p.winProbability)) : 100;
   
   const displayedPredictions = useMemo(() => {
@@ -58,14 +74,15 @@ function SportsDashboard() {
   }, [activeEvent, playerSearchQuery, showAllPredictions]);
 
   const filteredBacktests = useMemo(() => {
-    return currentBacktests.filter(bt => {
+    return (currentBacktests as any[]).filter(bt => {
       const matchesSearch = bt.tournament.toLowerCase().includes(backtestSearchQuery.toLowerCase()) || 
                             bt.actualWinner.toLowerCase().includes(backtestSearchQuery.toLowerCase());
       const matchesFilter = backtestFilter === 'All' || bt.hitStatus === backtestFilter.replace('Hit: ', '');
+      const matchesTour = activeSport !== 'Tennis' || tennisTourFilter === 'All' || bt.tour === tennisTourFilter;
       
-      return matchesSearch && matchesFilter;
+      return matchesSearch && matchesFilter && matchesTour;
     });
-  }, [currentBacktests, backtestSearchQuery, backtestFilter]);
+  }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, activeSport]);
 
   const toggleBacktestDetails = (idx: number) => {
     if (expandedBacktest === idx) {
@@ -159,11 +176,28 @@ function SportsDashboard() {
                         }}
                         className="tournament-dropdown"
                       >
-                        {currentUpcoming.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
+                        {filteredUpcoming.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {activeSport === 'Tennis' ? `[${t.tour}] ` : ''}{t.name}
+                          </option>
                         ))}
                       </select>
                     </div>
+
+                    {activeSport === 'Tennis' && (
+                      <div className="selector-group tour-filter-group">
+                        <label>Filter: </label>
+                        <select 
+                          value={tennisTourFilter}
+                          onChange={(e) => setTennisTourFilter(e.target.value as any)}
+                          className="sports-filter-dropdown"
+                        >
+                          <option value="All">All Tennis</option>
+                          <option value="ATP">Men's Singles (ATP)</option>
+                          <option value="WTA">Women's Singles (WTA)</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                   
                   {activeEvent && (
@@ -240,6 +274,17 @@ function SportsDashboard() {
                       <p className="backtest-desc">Comparing the model's top predicted picks against the actual tournament winner. We evaluate Top Pick (1st), Top 3, and Top 5 probabilities.</p>
                     </div>
                     <div className="backtest-filters">
+                      {activeSport === 'Tennis' && (
+                        <select 
+                          value={tennisTourFilter}
+                          onChange={(e) => setTennisTourFilter(e.target.value as any)}
+                          className="sports-filter-dropdown"
+                        >
+                          <option value="All">All Tennis</option>
+                          <option value="ATP">Men's (ATP)</option>
+                          <option value="WTA">Women's (WTA)</option>
+                        </select>
+                      )}
                       <input 
                         type="text" 
                         placeholder="Search tournament or winner..." 
@@ -279,7 +324,10 @@ function SportsDashboard() {
                         <div key={idx} className="backtest-row-container">
                           <div className={`backtest-row ${bt.hitStatus !== 'Miss' ? 'hit' : 'miss'}`}>
                             <span>{bt.year}</span>
-                            <span>{bt.tournament}</span>
+                            <div className="tournament-info-col">
+                              <strong>{bt.tournament}</strong>
+                              {activeSport === 'Tennis' && <div className="tour-label">{bt.tour}</div>}
+                            </div>
                             <div className="top-picks-col">
                               <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
                               <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
@@ -301,7 +349,7 @@ function SportsDashboard() {
                             <div className="backtest-details-panel">
                               <h4>Full Model Field Ranking</h4>
                               <div className="details-grid">
-                                {bt.fullField?.map(player => (
+                                {bt.fullField?.map((player: any) => (
                                   <div key={player.rank} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
                                     <span className="dp-rank">#{player.rank}</span>
                                     <span className="dp-name">{player.playerName}</span>
@@ -311,8 +359,7 @@ function SportsDashboard() {
                                 ))}
                               </div>
                             </div>
-                          )}
-                        </div>
+                          )}                        </div>
                       ))}
                     </div>
                   )}

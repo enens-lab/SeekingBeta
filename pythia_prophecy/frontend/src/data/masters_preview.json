@@ -1,0 +1,52 @@
+[
+  {
+    "rank": 1,
+    "playerName": "Scottie Scheffler",
+    "winProbability": 5.6016594171524
+  },
+  {
+    "rank": 2,
+    "playerName": "Collin Morikawa",
+    "winProbability": 2.8894955292344
+  },
+  {
+    "rank": 3,
+    "playerName": "Rory McIlroy",
+    "winProbability": 2.624904923141
+  },
+  {
+    "rank": 4,
+    "playerName": "Jon Rahm",
+    "winProbability": 2.47873049229383
+  },
+  {
+    "rank": 5,
+    "playerName": "Russell Henley",
+    "winProbability": 2.24565267562866
+  },
+  {
+    "rank": 6,
+    "playerName": "Sepp Straka",
+    "winProbability": 2.03299205750226
+  },
+  {
+    "rank": 7,
+    "playerName": "Xander Schauffele",
+    "winProbability": 1.99432391673326
+  },
+  {
+    "rank": 8,
+    "playerName": "Tommy Fleetwood",
+    "winProbability": 1.92509051412343
+  },
+  {
+    "rank": 9,
+    "playerName": "Justin Thomas",
+    "winProbability": 1.9191026687622001
+  },
+  {
+    "rank": 10,
+    "playerName": "Robert MacIntyre",
+    "winProbability": 1.8737804144620802
+  }
+]

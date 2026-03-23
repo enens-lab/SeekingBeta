@@ -36,13 +36,13 @@ function Header() {
         </Link>
 
         <nav className="nav">
-          <a
-            href="/#predictions"
-            className="nav-link"
-            onClick={(e) => scrollToSection(e, 'predictions')}
-          >
-            Ratings
-          </a>
+          <div className="nav-dropdown">
+            <span className="nav-link nav-dropdown-trigger">Markets ▾</span>
+            <div className="nav-dropdown-content">
+              <Link to="/dashboard" className="nav-link">Stocks</Link>
+              <Link to="/sports" className="nav-link">Sports (PGA)</Link>
+            </div>
+          </div>
           <a
             href="/#performance"
             className="nav-link"

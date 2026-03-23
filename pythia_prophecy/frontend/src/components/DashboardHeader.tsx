@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import { trackEvent } from '../lib/analytics';
 
-type ActivePage = 'dashboard' | 'oracle' | 'analysis' | 'profile';
+type ActivePage = 'dashboard' | 'oracle' | 'analysis' | 'profile' | 'sports';
 
 interface DashboardHeaderProps {
   activePage?: ActivePage;
@@ -29,27 +29,40 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
 
       {showNav && (
         <nav className="dashboard-nav">
+          <span className="nav-group-label">Markets:</span>
           <Link
             to="/dashboard"
-            className={`nav-link${activePage === 'dashboard' ? ' active' : ''}`}
+            className={`nav-link${(activePage === 'dashboard' || activePage === 'oracle' || activePage === 'analysis') ? ' active' : ''}`}
             onClick={() => trackEvent('dashboard_nav_click', { destination: 'dashboard' })}
           >
-            Dashboard
+            Stocks
           </Link>
           <Link
-            to="/oracle"
-            className={`nav-link${activePage === 'oracle' ? ' active' : ''}`}
-            onClick={() => trackEvent('dashboard_nav_click', { destination: 'oracle' })}
+            to="/sports-dashboard"
+            className={`nav-link${activePage === 'sports' ? ' active' : ''}`}
+            onClick={() => trackEvent('dashboard_nav_click', { destination: 'sports' })}
           >
-            Watchlist
+            Sports
           </Link>
-          <Link
-            to="/analysis"
-            className={`nav-link${activePage === 'analysis' ? ' active' : ''}`}
-            onClick={() => trackEvent('dashboard_nav_click', { destination: 'analysis' })}
-          >
-            Analysis
-          </Link>
+          <div className="nav-divider"></div>
+          {activePage !== 'sports' && (
+            <>
+              <Link
+                to="/oracle"
+                className={`nav-link${activePage === 'oracle' ? ' active-sub' : ''}`}
+                onClick={() => trackEvent('dashboard_nav_click', { destination: 'oracle' })}
+              >
+                Watchlist
+              </Link>
+              <Link
+                to="/analysis"
+                className={`nav-link${activePage === 'analysis' ? ' active-sub' : ''}`}
+                onClick={() => trackEvent('dashboard_nav_click', { destination: 'analysis' })}
+              >
+                Analysis
+              </Link>
+            </>
+          )}
           <Link
             to="/profile"
             className={`nav-link${activePage === 'profile' ? ' active' : ''}`}

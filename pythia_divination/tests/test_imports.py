@@ -5,3 +5,15 @@ def test_imports():
     import features.technical
     import data.fetch
     import backtest.simulate
+    import sports.pga.client
+    import sports.pga.datagolf_client
+    import sports.pga.build_training_dataset
+    import sports.pga.feature_engineering
+    import sports.pga.ingest
+    import sports.pga.ingest_history
+    import sports.pga.ingest_profiles
+    import sports.pga.train_baseline
+    import sports.pga.train_neural_model
+    import sports.pga.train_multitask_neural_model
+    import sports.pga.train_multitask_torch
+    import sports.pga.benchmark_torch_env

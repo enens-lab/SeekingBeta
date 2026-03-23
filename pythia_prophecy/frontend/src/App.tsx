@@ -21,6 +21,8 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import RefundCancellation from './pages/RefundCancellation';
 import Methodology from './pages/Methodology';
+import SportsLanding from './pages/sports/SportsLanding';
+import SportsDashboard from './pages/sports/SportsDashboard';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -104,6 +106,12 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
     title: 'Dashboard | SeekingBeta.AI',
     description: 'Personalized model views and signal summaries.',
     canonicalPath: '/dashboard',
+    indexable: false,
+  },
+  '/sports': {
+    title: 'Sports Markets | SeekingBeta.AI',
+    description: 'Prediction markets and win probabilities for major sports events.',
+    canonicalPath: '/sports',
     indexable: false,
   },
   '/oracle': {
@@ -192,11 +200,20 @@ function AppRoutes() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund-cancellation" element={<RefundCancellation />} />
       <Route path="/methodology" element={<Methodology />} />
+      <Route path="/sports" element={<SportsLanding />} />
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sports-dashboard"
+        element={
+          <ProtectedRoute>
+            <SportsDashboard />
           </ProtectedRoute>
         }
       />

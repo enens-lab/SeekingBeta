@@ -11,21 +11,27 @@ ENV_FILE    := .env
 # Default DB URL check
 export DATABASE_URL ?= $(shell grep DATABASE_URL $(ENV_FILE) | cut -d '=' -f2)
 
-.PHONY: help install migrate migrate-status run run-dev lint test clean
+.PHONY: help install install-pga-torch migrate migrate-status run run-dev lint test clean benchmark-pga-torch train-pga-torch
 
 help:
 	@echo "Available targets:"
 	@echo "  install         Install dependencies from requirements.txt"
+	@echo "  install-pga-torch  Create/update the Apple-Silicon PGA PyTorch env"
 	@echo "  migrate         Run pending DB migrations"
 	@echo "  migrate-status  Show applied and pending migrations"
 	@echo "  run             Start API server (prod mode)"
 	@echo "  run-dev         Start API server with reload (dev mode)"
 	@echo "  lint            Run flake8 linting"
 	@echo "  test            Run pytest test suite"
+	@echo "  benchmark-pga-torch  Run an MPS/CPU benchmark for the PGA torch env"
+	@echo "  train-pga-torch  Rebuild the PGA dataset and train the multitask torch model"
 	@echo "  clean           Remove cache and build artifacts"
 
 install:
 	$(PIP) install -r requirements.txt
+
+install-pga-torch:
+	bash scripts/setup_pga_torch_env.sh
 
 migrate:
 	$(PYTHON) -m $(MIGRATE)
@@ -44,6 +50,12 @@ lint:
 
 test:
 	pytest -q
+
+benchmark-pga-torch:
+	.venv-torch/bin/python -m sports.pga.benchmark_torch_env --device auto
+
+train-pga-torch:
+	bash scripts/train_pga_multitask_torch.sh
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

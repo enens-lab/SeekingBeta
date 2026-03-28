@@ -268,6 +268,72 @@ def flatten_tournament_results(
     courses = tournament_meta.get("courses") or []
     host_course = next((course for course in courses if course.get("hostCourse")), courses[0] if courses else {})
     rows: list[dict[str, Any]] = []
+
+    if isinstance(leaderboard_payload.get("leaderboard"), list):
+        for team_row in leaderboard_payload.get("leaderboard", []):
+            players = list(team_row.get("players") or [])
+            position = team_row.get("position")
+            position_numeric = _parse_position_numeric(position)
+            rounds = list(team_row.get("rounds") or [])
+            for player in players:
+                teammate_names = [
+                    teammate.get("displayName")
+                    for teammate in players
+                    if str(teammate.get("id")) != str(player.get("id"))
+                ]
+                teammate_ids = [
+                    teammate.get("id")
+                    for teammate in players
+                    if str(teammate.get("id")) != str(player.get("id"))
+                ]
+                rows.append(
+                    {
+                        "season_year": tournament_meta.get("seasonYear"),
+                        "tournament_id": leaderboard_payload.get("id") or tournament_meta.get("id"),
+                        "tournament_name": tournament_meta.get("tournamentName"),
+                        "course_id": team_row.get("courseId") or host_course.get("id"),
+                        "course_code": host_course.get("courseCode"),
+                        "course_name_live": host_course.get("courseName"),
+                        "tournament_status": leaderboard_payload.get("tournamentStatus") or tournament_meta.get("tournamentStatus"),
+                        "round_header": leaderboard_payload.get("currentRoundScoringFormat") or leaderboard_payload.get("leaderboardRoundHeader"),
+                        "format_type": leaderboard_payload.get("formatType") or tournament_meta.get("formatType"),
+                        "team_event": True,
+                        "team_id": team_row.get("teamId"),
+                        "team_name": team_row.get("teamName"),
+                        "teammate_ids": "|".join(str(value) for value in teammate_ids if value is not None) or None,
+                        "teammate_names": " / ".join(name for name in teammate_names if name) or None,
+                        "player_id": player.get("id"),
+                        "player_name": player.get("displayName"),
+                        "country": player.get("country"),
+                        "position": position,
+                        "position_numeric": position_numeric,
+                        "total_score": team_row.get("total"),
+                        "total_score_sort": _coerce_numeric(team_row.get("totalSort")),
+                        "total_strokes": _coerce_numeric(team_row.get("totalStrokes")),
+                        "thru": team_row.get("thru"),
+                        "round_score": team_row.get("score"),
+                        "player_state": team_row.get("status"),
+                        "current_round": _coerce_numeric(team_row.get("currentRound")),
+                        "official_position": player.get("official"),
+                        "official_position_sort": _coerce_numeric(player.get("official")),
+                        "projected_fedex_rank": _coerce_numeric(player.get("projected")),
+                        "projected_fedex_rank_sort": _coerce_numeric(player.get("projected")),
+                        "won": bool(position_numeric == 1),
+                        "top_5": bool(position_numeric is not None and position_numeric <= 5),
+                        "top_10": bool(position_numeric is not None and position_numeric <= 10),
+                        "made_cut": True,
+                        "withdrawn": False,
+                        "round_1_score": rounds[0] if len(rounds) > 0 else None,
+                        "round_2_score": rounds[1] if len(rounds) > 1 else None,
+                        "round_3_score": rounds[2] if len(rounds) > 2 else None,
+                        "round_4_score": rounds[3] if len(rounds) > 3 else None,
+                    }
+                )
+        return pd.DataFrame(rows)
+
+    if isinstance(leaderboard_payload.get("matches"), list):
+        raise RuntimeError("Unsupported cup/match-play leaderboard format")
+
     for player_row in leaderboard_payload.get("players", []):
         player = player_row.get("player")
         scoring = player_row.get("scoringData")
@@ -293,6 +359,11 @@ def flatten_tournament_results(
                 "tournament_status": leaderboard_payload.get("tournamentStatus") or tournament_meta.get("tournamentStatus"),
                 "round_header": leaderboard_payload.get("leaderboardRoundHeader"),
                 "format_type": leaderboard_payload.get("formatType") or tournament_meta.get("formatType"),
+                "team_event": False,
+                "team_id": None,
+                "team_name": None,
+                "teammate_ids": None,
+                "teammate_names": None,
                 "player_id": player.get("id"),
                 "player_name": player.get("displayName"),
                 "country": player.get("country"),
@@ -520,13 +591,20 @@ class PGATourStatsClient:
             )
             try:
                 next_data = self._fetch_next_data(path)
-                leaderboard_matches = self._find_query_data(next_data, "leaderboard")
+                leaderboard_matches: list[tuple[list[Any], Any]] = []
+                leaderboard_query_name: str | None = None
+                for query_name in ("leaderboard", "teamStrokePlayLeaderboard", "cupTournamentLeaderboard"):
+                    leaderboard_matches = self._find_query_data(next_data, query_name)
+                    if leaderboard_matches:
+                        leaderboard_query_name = query_name
+                        break
                 tournament_matches = self._find_query_data(next_data, "tournament")
                 if not leaderboard_matches:
                     continue
                 return {
                     "path": path,
                     "leaderboard": leaderboard_matches[0][1],
+                    "leaderboard_query_name": leaderboard_query_name,
                     "tournament": tournament_matches[0][1] if tournament_matches else {},
                 }
             except Exception as exc:  # pragma: no cover

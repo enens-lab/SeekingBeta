@@ -867,8 +867,18 @@ def add_hometown_advantage_features(frame: pd.DataFrame) -> pd.DataFrame:
     return enriched
 
 
+def add_tour_features(frame: pd.DataFrame) -> pd.DataFrame:
+    enriched = frame.copy()
+    if "tour" in enriched.columns:
+        enriched["is_lpga"] = (enriched["tour"] == "LPGA").astype(int)
+    else:
+        enriched["is_lpga"] = 0
+    return enriched
+
+
 def engineer_training_features(dataset: pd.DataFrame) -> pd.DataFrame:
     frame = dataset.copy()
+    frame = add_tour_features(frame)
     frame = add_schedule_context_features(frame)
     frame = add_player_profile_features(frame)
     frame = add_snapshot_derived_features(frame)

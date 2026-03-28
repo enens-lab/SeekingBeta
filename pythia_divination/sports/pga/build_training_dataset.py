@@ -348,6 +348,22 @@ def _load_local_table(normalized_dir: Path, stem: str) -> pd.DataFrame:
     )
 
 
+def _load_local_label_table(normalized_dir: Path, season: int) -> tuple[pd.DataFrame, str]:
+    preferred_stems = [
+        f"season_tournament_labels_individual_{season}_latest",
+        f"season_tournament_labels_{season}_latest",
+    ]
+    for stem in preferred_stems:
+        try:
+            frame = _load_local_table(normalized_dir, stem)
+            if "team_event" in frame.columns:
+                frame = frame.loc[~frame["team_event"].fillna(False).astype(bool)].reset_index(drop=True)
+            return frame, stem
+        except FileNotFoundError:
+            continue
+    raise FileNotFoundError(f"No tournament label table found for season {season}")
+
+
 def build_training_dataset(args: argparse.Namespace) -> dict[str, Any]:
     output_root = Path(args.output_root) if args.output_root else None
     paths = build_ingestion_paths(base_dir=output_root, snapshot_tag=args.snapshot_tag)
@@ -362,12 +378,13 @@ def build_training_dataset(args: argparse.Namespace) -> dict[str, Any]:
         if season is not None and not getattr(args, "refresh_source_data", False):
             try:
                 schedule_frame = _load_local_table(paths.normalized_dir, f"schedule_{season}_latest")
-                label_frame = _load_local_table(paths.normalized_dir, f"season_tournament_labels_{season}_latest")
+                label_frame, label_source = _load_local_label_table(paths.normalized_dir, int(season))
                 manifest = {
                     "season": int(season),
                     "source": "local_store",
                     "selected_tournaments": int(schedule_frame["tournament_id"].nunique()),
                     "combined_row_count": int(len(label_frame)),
+                    "label_source": label_source,
                     "normalized_dir": str(paths.normalized_dir),
                 }
             except FileNotFoundError:
@@ -387,7 +404,8 @@ def build_training_dataset(args: argparse.Namespace) -> dict[str, Any]:
             manifest = run_history_ingestion(history_args)
             season_year = int(manifest["season"])
             schedule_frame = _load_local_table(paths.normalized_dir, f"schedule_{season_year}_latest")
-            label_frame = _load_local_table(paths.normalized_dir, f"season_tournament_labels_{season_year}_latest")
+            label_frame, label_source = _load_local_label_table(paths.normalized_dir, season_year)
+            manifest["label_source"] = label_source
 
         history_manifests.append(manifest)
         schedule_frames.append(schedule_frame)

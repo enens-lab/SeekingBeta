@@ -4,6 +4,8 @@ __pycache__/
 *$py.class
 .venv/
 venv/
+.venv-metal/
+.venv-torch/
 *.egg-info/
 
 # Node
@@ -34,6 +36,7 @@ logs/
 backups/
 
 artifacts/
+pythia_divination/data/sports/
 pythia_prophecy/frontend/Stock_Prediction_Model/
 
 # Trained model files (but not the models/ source code)

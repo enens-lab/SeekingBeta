@@ -84,6 +84,21 @@ def _select_tournaments(schedule_df: pd.DataFrame, args: argparse.Namespace) -> 
     return selected.reset_index(drop=True)
 
 
+def _partition_result_frames(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Split a combined result frame into all, individual, and team-event subsets."""
+    if frame.empty:
+        return frame.copy(), frame.copy(), frame.copy()
+
+    partitioned = frame.copy()
+    if "team_event" not in partitioned.columns:
+        partitioned["team_event"] = False
+    partitioned["team_event"] = partitioned["team_event"].fillna(False).astype(bool)
+
+    individual = partitioned.loc[~partitioned["team_event"]].reset_index(drop=True)
+    team = partitioned.loc[partitioned["team_event"]].reset_index(drop=True)
+    return partitioned.reset_index(drop=True), individual, team
+
+
 def run_history_ingestion(args: argparse.Namespace) -> dict[str, object]:
     client = PGATourStatsClient()
     paths = build_ingestion_paths(
@@ -104,6 +119,7 @@ def run_history_ingestion(args: argparse.Namespace) -> dict[str, object]:
 
     tournament_frames: list[pd.DataFrame] = []
     tournament_manifest: list[dict[str, object]] = []
+    excluded_tournaments: list[dict[str, object]] = []
     tournament_errors: list[dict[str, object]] = []
     for tournament in selected_tournaments.to_dict(orient="records"):
         logger.info(
@@ -133,6 +149,7 @@ def run_history_ingestion(args: argparse.Namespace) -> dict[str, object]:
                     "status": tournament["status"],
                     "row_count": int(len(frame)),
                     "leaderboard_path": payload["path"],
+                    "leaderboard_query_name": payload.get("leaderboard_query_name"),
                     "winner": winner,
                 }
             )
@@ -145,6 +162,22 @@ def run_history_ingestion(args: argparse.Namespace) -> dict[str, object]:
             write_csv(paths.normalized_dir / f"leaderboard_{slug}_latest.csv", frame)
             write_parquet(paths.normalized_dir / f"leaderboard_{slug}_latest.parquet", frame)
         except Exception as exc:
+            if "Unsupported cup/match-play leaderboard format" in str(exc):
+                logger.info(
+                    "Excluding tournament %s (%s): %s",
+                    tournament["tournament_name"],
+                    tournament["tournament_id"],
+                    exc,
+                )
+                excluded_tournaments.append(
+                    {
+                        "tournament_id": tournament["tournament_id"],
+                        "tournament_name": tournament["tournament_name"],
+                        "status": tournament["status"],
+                        "reason": str(exc),
+                    }
+                )
+                continue
             logger.warning(
                 "Skipping tournament %s (%s): %s",
                 tournament["tournament_name"],
@@ -162,18 +195,36 @@ def run_history_ingestion(args: argparse.Namespace) -> dict[str, object]:
 
     non_empty_frames = [frame for frame in tournament_frames if frame is not None and not frame.empty]
     combined = pd.concat(non_empty_frames, ignore_index=True) if non_empty_frames else pd.DataFrame()
-    write_csv(paths.normalized_dir / f"season_tournament_results_{season}_latest.csv", combined)
-    write_csv(paths.normalized_dir / f"season_tournament_labels_{season}_latest.csv", combined)
-    write_parquet(paths.normalized_dir / f"season_tournament_results_{season}_latest.parquet", combined)
-    write_parquet(paths.normalized_dir / f"season_tournament_labels_{season}_latest.parquet", combined)
+    combined_all, combined_individual, combined_team = _partition_result_frames(combined)
+
+    write_csv(paths.normalized_dir / f"season_tournament_results_{season}_latest.csv", combined_all)
+    write_csv(paths.normalized_dir / f"season_tournament_labels_{season}_latest.csv", combined_all)
+    write_parquet(paths.normalized_dir / f"season_tournament_results_{season}_latest.parquet", combined_all)
+    write_parquet(paths.normalized_dir / f"season_tournament_labels_{season}_latest.parquet", combined_all)
+
+    write_csv(paths.normalized_dir / f"season_tournament_results_individual_{season}_latest.csv", combined_individual)
+    write_csv(paths.normalized_dir / f"season_tournament_labels_individual_{season}_latest.csv", combined_individual)
+    write_parquet(paths.normalized_dir / f"season_tournament_results_individual_{season}_latest.parquet", combined_individual)
+    write_parquet(paths.normalized_dir / f"season_tournament_labels_individual_{season}_latest.parquet", combined_individual)
+
+    write_csv(paths.normalized_dir / f"season_tournament_results_team_{season}_latest.csv", combined_team)
+    write_csv(paths.normalized_dir / f"season_tournament_labels_team_{season}_latest.csv", combined_team)
+    write_parquet(paths.normalized_dir / f"season_tournament_results_team_{season}_latest.parquet", combined_team)
+    write_parquet(paths.normalized_dir / f"season_tournament_labels_team_{season}_latest.parquet", combined_team)
 
     manifest = {
         "snapshot_tag": paths.snapshot_tag,
         "season": season,
         "selected_tournaments": int(len(selected_tournaments)),
         "successful_tournaments": int(len(tournament_manifest)),
-        "combined_row_count": int(len(combined)),
+        "excluded_tournaments_count": int(len(excluded_tournaments)),
+        "combined_row_count": int(len(combined_all)),
+        "individual_row_count": int(len(combined_individual)),
+        "team_row_count": int(len(combined_team)),
+        "individual_tournament_count": int(combined_individual["tournament_id"].nunique()) if not combined_individual.empty else 0,
+        "team_tournament_count": int(combined_team["tournament_id"].nunique()) if not combined_team.empty else 0,
         "tournament_manifest": tournament_manifest,
+        "excluded_tournaments": excluded_tournaments,
         "tournament_errors": tournament_errors,
         "raw_dir": str(paths.raw_dir),
         "normalized_dir": str(paths.normalized_dir),
@@ -196,6 +247,7 @@ def main() -> None:
     print("=" * 72)
     print(f"Season:               {manifest['season']}")
     print(f"Tournaments fetched:  {manifest['selected_tournaments']}")
+    print(f"Excluded tournaments: {manifest['excluded_tournaments_count']}")
     print(f"Combined result rows: {manifest['combined_row_count']}")
     print(f"Raw snapshots:        {manifest['raw_dir']}")
     print(f"Normalized output:    {manifest['normalized_dir']}")

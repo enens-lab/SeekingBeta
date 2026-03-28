@@ -17,3 +17,7 @@ def test_imports():
     import sports.pga.train_multitask_neural_model
     import sports.pga.train_multitask_torch
     import sports.pga.benchmark_torch_env
+    import sports.wta.build_training_dataset
+    import sports.wta.feature_engineering
+    import sports.wta.ingest
+    import sports.wta.train_tournament_ranker_torch

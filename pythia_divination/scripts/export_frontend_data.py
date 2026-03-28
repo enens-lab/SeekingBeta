@@ -1,136 +1,337 @@
-import pandas as pd
 import json
 from pathlib import Path
 
-# Load data
-preds = pd.read_csv('pythia_divination/artifacts/pga_tournament_ranker_torch/validation_predictions.csv')
-meta = pd.read_csv('pythia_divination/data/sports/pga/normalized/golf_training_dataset_latest.csv', low_memory=False)
-meta = meta[['tournament_id', 'tournament_name', 'season_year', 'display_date', 'course_name', 'course_state_code', 'tour']].drop_duplicates(subset=['tournament_id'])
+import pandas as pd
 
-# Merge
-df = preds.merge(meta, on='tournament_id', how='left')
 
-# 1. Generate Historical Backtests (2024-2025 validation set)
-# We will evaluate Top 1, Top 3, and Top 5 predictions against the actual winner.
-backtests = []
-for t_id, group in df.groupby('tournament_id'):
-    try:
-        t_name = group['tournament_name_x'].iloc[0] if 'tournament_name_x' in group.columns else group['tournament_name'].iloc[0]
-        year = group['season_year'].iloc[0]
-        tour = group['tour'].iloc[0]
-        
-        # Sort by prediction
-        top_preds = group.sort_values('winner_probability', ascending=False)
-        
-        pred_top_1 = top_preds.iloc[0]['player_name']
-        pred_top_3 = top_preds.head(3)['player_name'].tolist()
-        pred_top_5 = top_preds.head(5)['player_name'].tolist()
-        
-        # Actual winner
-        actual_winners = group[group['won'] == 1]
-        if not actual_winners.empty:
-            actual_winner = actual_winners.iloc[0]['player_name']
-        else:
-            actual_winner = "Unknown"
-            
-        hit_top_1 = actual_winner == pred_top_1
-        hit_top_3 = actual_winner in pred_top_3
-        hit_top_5 = actual_winner in pred_top_5
-        
-        # Determine the best hit category to display
-        hit_status = "Miss"
-        if hit_top_1:
+DIV_ROOT = Path(__file__).resolve().parents[1]
+PROJ_ROOT = Path(__file__).resolve().parents[2]
+
+META_PATH = DIV_ROOT / "data" / "sports" / "pga" / "normalized" / "golf_training_dataset_latest.csv"
+FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
+
+PREDICTION_SOURCES = [
+    {
+        "path": DIV_ROOT / "artifacts" / "pga_neural_multitask_torch" / "validation_predictions.csv",
+        "probability_columns": [
+            "won_normalized_probability",
+            "won_probability",
+            "winner_probability",
+        ],
+        "top_10_column": "top_10_probability",
+        "made_cut_column": "made_cut_probability",
+        "tour_hint": "PGA",
+        "source_priority": 0,
+    },
+    {
+        "path": DIV_ROOT / "artifacts" / "pga_tournament_ranker_torch" / "validation_predictions.csv",
+        "probability_columns": ["winner_probability"],
+        "top_10_column": "top_10_probability",
+        "made_cut_column": "made_cut_probability",
+        "tour_hint": "LPGA",
+        "source_priority": 1,
+    },
+    {
+        "path": DIV_ROOT / "artifacts" / "pga_neural" / "won" / "validation_predictions.csv",
+        "probability_columns": ["normalized_win_probability", "raw_probability"],
+        "top_10_column": None,
+        "made_cut_column": None,
+        "tour_hint": "PGA",
+        "source_priority": 2,
+    },
+]
+
+TOUR_PRIORITY = {"PGA": 0, "LPGA": 1}
+UPCOMING_PER_TOUR = {"PGA": 18, "LPGA": 18}
+
+
+def _load_meta() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
+    meta = pd.read_csv(META_PATH, low_memory=False)
+
+    tournament_meta = (
+        meta[
+            [
+                "tournament_id",
+                "tournament_name",
+                "season_year",
+                "display_date",
+                "course_name",
+                "course_state_code",
+                "tour",
+            ]
+        ]
+        .dropna(subset=["tournament_id"])
+        .sort_values(["tournament_id", "season_year", "display_date"])
+        .drop_duplicates(subset=["tournament_id"], keep="last")
+    )
+
+    player_outcomes = (
+        meta[["tournament_id", "player_name", "won"]]
+        .dropna(subset=["tournament_id", "player_name"])
+        .drop_duplicates(subset=["tournament_id", "player_name"], keep="last")
+    )
+
+    winners = (
+        meta.loc[meta["won"] == 1, ["tournament_id", "player_name"]]
+        .dropna(subset=["tournament_id", "player_name"])
+        .drop_duplicates(subset=["tournament_id"], keep="last")
+        .set_index("tournament_id")["player_name"]
+        .to_dict()
+    )
+
+    return tournament_meta, player_outcomes, winners
+
+
+def _choose_probability_column(df: pd.DataFrame, candidates: list[str]) -> str:
+    for column in candidates:
+        if column in df.columns:
+            return column
+    raise ValueError(f"Missing probability column. Tried: {candidates}")
+
+
+def _load_predictions(tournament_meta: pd.DataFrame, player_outcomes: pd.DataFrame) -> pd.DataFrame:
+    frames: list[pd.DataFrame] = []
+
+    for config in PREDICTION_SOURCES:
+        path = config["path"]
+        if not path.exists():
+            continue
+
+        df = pd.read_csv(path)
+        if df.empty or "tournament_id" not in df.columns or "player_name" not in df.columns:
+            continue
+
+        probability_column = _choose_probability_column(df, config["probability_columns"])
+
+        renamed = df.copy()
+        renamed["winner_probability"] = renamed[probability_column]
+        renamed["top_10_probability"] = (
+            renamed[config["top_10_column"]]
+            if config["top_10_column"] and config["top_10_column"] in renamed.columns
+            else pd.NA
+        )
+        renamed["made_cut_probability"] = (
+            renamed[config["made_cut_column"]]
+            if config["made_cut_column"] and config["made_cut_column"] in renamed.columns
+            else pd.NA
+        )
+        renamed["source_priority"] = config["source_priority"]
+        renamed["tour_hint"] = config["tour_hint"]
+
+        merged = renamed.merge(
+            tournament_meta,
+            on="tournament_id",
+            how="left",
+            suffixes=("", "_meta"),
+        )
+        merged = merged.merge(
+            player_outcomes,
+            on=["tournament_id", "player_name"],
+            how="left",
+            suffixes=("", "_label"),
+        )
+
+        merged["tour"] = merged["tour"].fillna(merged["tour_hint"])
+        merged["tournament_name"] = merged["tournament_name"].fillna(merged.get("tournament_name_meta"))
+        merged["won"] = merged["won"].fillna(0).astype(int)
+
+        frames.append(
+            merged[
+                [
+                    "tournament_id",
+                    "tournament_name",
+                    "player_name",
+                    "winner_probability",
+                    "top_10_probability",
+                    "made_cut_probability",
+                    "won",
+                    "tour",
+                    "season_year",
+                    "display_date",
+                    "course_name",
+                    "course_state_code",
+                    "source_priority",
+                ]
+            ]
+        )
+
+    if not frames:
+        raise FileNotFoundError("No usable golf prediction artifacts were found.")
+
+    combined = pd.concat(frames, ignore_index=True)
+    combined = combined.dropna(subset=["tournament_id", "player_name", "winner_probability"])
+    combined = combined.sort_values(
+        ["source_priority", "tournament_id", "player_name", "winner_probability"],
+        ascending=[True, True, True, False],
+    )
+    combined = combined.drop_duplicates(
+        subset=["tournament_id", "player_name"],
+        keep="first",
+    )
+    combined["tournament_name"] = combined["tournament_name"].fillna("Unknown Tournament")
+    combined["tour"] = combined["tour"].fillna("PGA")
+
+    return combined
+
+
+def _sort_priority(event_name: str) -> int:
+    name = event_name.lower()
+    if "masters" in name:
+        return 1
+    if "pga championship" in name:
+        return 2
+    if "u.s. open" in name or "us open" in name:
+        return 3
+    if "open championship" in name or name == "the open":
+        return 4
+    if "players championship" in name:
+        return 5
+    if "evian" in name:
+        return 6
+    if "women's pga" in name or "womens pga" in name:
+        return 7
+    if "chevron" in name:
+        return 8
+    if "aig women's open" in name:
+        return 9
+    return 20
+
+
+def _build_backtests(df: pd.DataFrame, winners: dict[str, str]) -> list[dict]:
+    backtests: list[dict] = []
+
+    for tournament_id, group in df.groupby("tournament_id", sort=False):
+        top_preds = group.sort_values("winner_probability", ascending=False).reset_index(drop=True)
+        if top_preds.empty:
+            continue
+
+        actual_winner = winners.get(tournament_id)
+        if not actual_winner:
+            winner_rows = top_preds[top_preds["won"] == 1]
+            actual_winner = winner_rows.iloc[0]["player_name"] if not winner_rows.empty else "Unknown"
+
+        predicted_top_3 = top_preds.head(3)["player_name"].tolist()
+        predicted_top_5 = top_preds.head(5)["player_name"].tolist()
+        predicted_winner = top_preds.iloc[0]["player_name"]
+
+        if actual_winner == predicted_winner:
             hit_status = "Top Pick"
-        elif hit_top_3:
+        elif actual_winner in predicted_top_3:
             hit_status = "Top 3"
-        elif hit_top_5:
+        elif actual_winner in predicted_top_5:
             hit_status = "Top 5"
-            
-        # Store full field for detail view
+        else:
+            hit_status = "Miss"
+
         full_field = []
-        for rank, (_, row) in enumerate(top_preds.iterrows(), 1):
-            full_field.append({
-                'rank': rank,
-                'playerName': row['player_name'],
-                'winProbability': float(row['winner_probability'] * 100),
-                'actualWinner': row['won'] == 1
-            })
-        
-        backtests.append({
-            'year': int(year) if pd.notna(year) else 2024,
-            'tournament': t_name,
-            'tour': tour,
-            'predictedWinner': pred_top_1,
-            'predictedTop3': pred_top_3,
-            'predictedTop5': pred_top_5,
-            'actualWinner': actual_winner,
-            'hitStatus': hit_status,
-            'prob': float(top_preds.iloc[0]['winner_probability']),
-            'fullField': full_field
-        })
-    except Exception as e:
-        pass
+        for rank, row in enumerate(top_preds.itertuples(index=False), start=1):
+            full_field.append(
+                {
+                    "rank": rank,
+                    "playerName": row.player_name,
+                    "winProbability": float(row.winner_probability * 100),
+                    "actualWinner": bool(row.player_name == actual_winner),
+                }
+            )
 
-# Sort backtests by year desc, then hit desc
-backtests = sorted(backtests, key=lambda x: (-x['year'], -x['prob']))
+        backtests.append(
+            {
+                "year": int(top_preds.iloc[0]["season_year"]) if pd.notna(top_preds.iloc[0]["season_year"]) else 2025,
+                "tournament": str(top_preds.iloc[0]["tournament_name"]),
+                "tour": str(top_preds.iloc[0]["tour"]),
+                "predictedWinner": predicted_winner,
+                "predictedTop3": predicted_top_3,
+                "predictedTop5": predicted_top_5,
+                "actualWinner": actual_winner,
+                "hitStatus": hit_status,
+                "prob": float(top_preds.iloc[0]["winner_probability"]),
+                "fullField": full_field,
+            }
+        )
 
-with open('pythia_prophecy/frontend/src/data/historical_backtests.json', 'w') as f:
-    json.dump(backtests, f, indent=2) # Include all backtests
+    return sorted(
+        backtests,
+        key=lambda row: (
+            -row["year"],
+            TOUR_PRIORITY.get(row["tour"], 99),
+            _sort_priority(row["tournament"]),
+            row["tournament"],
+        ),
+    )
 
 
-# 2. Generate Upcoming Tournaments (Mocking 2026 using the latest instance of ALL unique tournaments)
-upcoming_data = []
+def _build_upcoming(df: pd.DataFrame) -> list[dict]:
+    upcoming: list[dict] = []
 
-# Get all unique tournament names from the dataset to build the 2026 schedule
-unique_tournaments = df[['tournament_name_x', 'tour']].drop_duplicates().values
+    event_frames = []
+    for (tour, tournament_name), group in df.groupby(["tour", "tournament_name"], sort=False):
+        latest_year = group["season_year"].max()
+        latest_event = (
+            group[group["season_year"] == latest_year]
+            .sort_values("winner_probability", ascending=False)
+            .reset_index(drop=True)
+        )
+        if latest_event.empty:
+            continue
+        event_frames.append((tour, tournament_name, latest_event))
 
-for event_name, tour in unique_tournaments:
-    if pd.isna(event_name): continue
-    # Find the most recent instance of this event in the predictions
-    matches = df[(df['tournament_name_x'] == event_name) & (df['tour'] == tour)]
-    if not matches.empty:
-        # Get the latest year
-        latest_year = matches['season_year'].max()
-        latest_event = matches[matches['season_year'] == latest_year].copy()
-        
-        # Get ALL predictions (not just top 15) to support "View All"
-        all_preds = latest_event.sort_values('winner_probability', ascending=False)
-        
-        predictions = []
-        for rank, (_, row) in enumerate(all_preds.iterrows(), 1):
-            predictions.append({
-                'rank': rank,
-                'playerName': row['player_name'],
-                'winProbability': float(row['winner_probability'] * 100)
-            })
-            
-        course = latest_event['course_name'].iloc[0]
-        state = latest_event['course_state_code'].iloc[0]
-        if pd.isna(course): course = "TBD Course"
-        if pd.isna(state): state = ""
-            
-        upcoming_data.append({
-            'id': f"{tour.lower()}-{event_name.replace(' ', '-').lower()}",
-            'name': f"2026 {event_name}",
-            'original_name': event_name,
-            'tour': tour,
-            'course': f"{course}, {state}".strip(", "),
-            'predictions': predictions
-        })
+    event_frames.sort(
+        key=lambda item: (
+            TOUR_PRIORITY.get(item[0], 99),
+            _sort_priority(item[1]),
+            item[1],
+        )
+    )
 
-# Sort so Majors are near the top, followed by others
-def sort_priority(event):
-    name = event['name'].lower()
-    if 'masters' in name: return 1
-    if 'pga championship' in name: return 2
-    if 'u.s. open' in name: return 3
-    if 'open championship' in name: return 4
-    if 'players championship' in name: return 5
-    return 10
+    per_tour_counts = {tour: 0 for tour in TOUR_PRIORITY}
+    for tour, tournament_name, latest_event in event_frames:
+        max_for_tour = UPCOMING_PER_TOUR.get(tour, 12)
+        if per_tour_counts.get(tour, 0) >= max_for_tour:
+            continue
 
-upcoming_data = sorted(upcoming_data, key=lambda x: (sort_priority(x), x['name']))
+        predictions = [
+            {
+                "rank": rank,
+                "playerName": row.player_name,
+                "winProbability": float(row.winner_probability * 100),
+            }
+            for rank, row in enumerate(latest_event.itertuples(index=False), start=1)
+        ]
 
-with open('pythia_prophecy/frontend/src/data/upcoming_tournaments.json', 'w') as f:
-    json.dump(upcoming_data, f, indent=2)
+        course = latest_event.iloc[0]["course_name"] if pd.notna(latest_event.iloc[0]["course_name"]) else "TBD Course"
+        state = latest_event.iloc[0]["course_state_code"] if pd.notna(latest_event.iloc[0]["course_state_code"]) else ""
 
-print(f"Generated {len(backtests)} backtests and {len(upcoming_data)} upcoming tournaments.")
+        upcoming.append(
+            {
+                "id": f"{tour.lower()}-{str(tournament_name).replace(' ', '-').lower()}",
+                "name": f"2026 {tournament_name}",
+                "original_name": str(tournament_name),
+                "tour": str(tour),
+                "course": f"{course}, {state}".strip(", "),
+                "predictions": predictions,
+            }
+        )
+        per_tour_counts[tour] = per_tour_counts.get(tour, 0) + 1
+
+    return upcoming
+
+
+def main() -> None:
+    tournament_meta, player_outcomes, winners = _load_meta()
+    predictions = _load_predictions(tournament_meta, player_outcomes)
+
+    backtests = _build_backtests(predictions, winners)
+    upcoming = _build_upcoming(predictions)
+
+    FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (FRONTEND_DATA_DIR / "historical_backtests.json").write_text(json.dumps(backtests, indent=2))
+    (FRONTEND_DATA_DIR / "upcoming_tournaments.json").write_text(json.dumps(upcoming, indent=2))
+
+    backtest_tours = pd.Series([row["tour"] for row in backtests]).value_counts().to_dict()
+    upcoming_tours = pd.Series([row["tour"] for row in upcoming]).value_counts().to_dict()
+    print(f"Generated {len(backtests)} golf backtests by tour: {backtest_tours}")
+    print(f"Generated {len(upcoming)} golf upcoming events by tour: {upcoming_tours}")
+
+
+if __name__ == "__main__":
+    main()

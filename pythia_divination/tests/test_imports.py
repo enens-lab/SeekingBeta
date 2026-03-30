@@ -17,6 +17,15 @@ def test_imports():
     import sports.pga.train_multitask_neural_model
     import sports.pga.train_multitask_torch
     import sports.pga.benchmark_torch_env
+    import sports.mlb.client
+    import sports.mlb.feature_engineering
+    import sports.mlb.roster_features
+    import sports.mlb.statcast_enrichment
+    import sports.mlb.collect_statcast
+    import sports.mlb.build_training_dataset
+    import sports.mlb.ingest_history
+    import sports.mlb.train_baseline
+    import sports.mlb.train_torch
     import sports.wta.build_training_dataset
     import sports.wta.feature_engineering
     import sports.wta.ingest

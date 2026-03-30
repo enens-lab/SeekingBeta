@@ -112,6 +112,52 @@ Notes:
 - `.venv-metal` is experimental only; the current TensorFlow Metal plugin path is not stable enough to rely on for day-to-day PGA training.
 - `scripts/train_pga_multitask_torch.sh` rebuilds the dataset and launches the multi-task PGA model with defaults tuned for larger local Apple-Silicon runs.
 
+## Sports expansion: MLB data collection
+
+We now have an MLB matchup pipeline under:
+
+- `sports/mlb/client.py`
+- `sports/mlb/ingest_history.py`
+- `sports/mlb/roster_features.py`
+- `sports/mlb/collect_statcast.py`
+- `sports/mlb/statcast_enrichment.py`
+- `sports/mlb/build_training_dataset.py`
+- `sports/mlb/train_baseline.py`
+- `sports/mlb/train_torch.py`
+
+It currently supports:
+
+- official MLB regular-season schedule + game-detail backfills
+- rolling team and starting-pitcher features
+- lineup-strength features from saved boxscores
+- bullpen-quality features from saved boxscores
+- optional Statcast daily feature enrichment
+- durable CSV/parquet storage for training datasets and feature tables
+
+Quick smoke test:
+
+```bash
+cd /Users/huyngo/Downloads/pythia/pythia_divination
+python -m sports.mlb.ingest_history --season 2025 --include-game-details -v
+python -m sports.mlb.build_training_dataset --season-start 2020 --season-end 2025 -v
+python -m sports.mlb.train_baseline --model hist_gradient_boosting -v
+```
+
+Multi-season Statcast backfill:
+
+```bash
+cd /Users/huyngo/Downloads/pythia/pythia_divination
+bash scripts/backfill_mlb_statcast.sh
+```
+
+Apple-Silicon MLB torch workflow:
+
+```bash
+cd /Users/huyngo/Downloads/pythia/pythia_divination
+bash scripts/setup_pga_torch_env.sh
+bash scripts/train_mlb_torch.sh
+```
+
 Output lands under:
 
 ```text

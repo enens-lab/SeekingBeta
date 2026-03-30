@@ -11,7 +11,7 @@ ENV_FILE    := .env
 # Default DB URL check
 export DATABASE_URL ?= $(shell grep DATABASE_URL $(ENV_FILE) | cut -d '=' -f2)
 
-.PHONY: help install install-pga-torch migrate migrate-status run run-dev lint test clean benchmark-pga-torch train-pga-torch
+.PHONY: help install install-pga-torch migrate migrate-status run run-dev lint test clean benchmark-pga-torch train-pga-torch backfill-mlb-statcast train-mlb-torch
 
 help:
 	@echo "Available targets:"
@@ -25,6 +25,8 @@ help:
 	@echo "  test            Run pytest test suite"
 	@echo "  benchmark-pga-torch  Run an MPS/CPU benchmark for the PGA torch env"
 	@echo "  train-pga-torch  Rebuild the PGA dataset and train the multitask torch model"
+	@echo "  backfill-mlb-statcast  Collect multi-season Statcast exports into the local cache"
+	@echo "  train-mlb-torch  Rebuild the MLB dataset and train the PyTorch home-win model"
 	@echo "  clean           Remove cache and build artifacts"
 
 install:
@@ -56,6 +58,12 @@ benchmark-pga-torch:
 
 train-pga-torch:
 	bash scripts/train_pga_multitask_torch.sh
+
+backfill-mlb-statcast:
+	bash scripts/backfill_mlb_statcast.sh
+
+train-mlb-torch:
+	bash scripts/train_mlb_torch.sh
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +

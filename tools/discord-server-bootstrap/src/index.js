@@ -204,7 +204,7 @@ async function upsertRulesPanel(guild, config) {
   const footer = config.rules?.footer || "Click I Agree to continue.";
 
   const rulesLines = items.map((item, idx) => `${idx + 1}. ${item}`).join("\n");
-  const inviteUrl = config.discordInviteUrl || "https://discord.gg/gydS5yb3";
+  const inviteUrl = config.discordInviteUrl || "https://discord.gg/ckTC8JhWU9";
 
   const embed = new EmbedBuilder()
     .setTitle(title)

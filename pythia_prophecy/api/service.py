@@ -917,7 +917,7 @@ SES_WEBHOOK_RATE_LIMIT = int(os.getenv("SES_WEBHOOK_RATE_LIMIT", "240"))
 SES_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("SES_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
 STRIPE_WEBHOOK_RATE_LIMIT = int(os.getenv("STRIPE_WEBHOOK_RATE_LIMIT", "240"))
 STRIPE_WEBHOOK_RATE_WINDOW_SECONDS = int(os.getenv("STRIPE_WEBHOOK_RATE_WINDOW_SECONDS", "60"))
-DISCORD_INVITE_URL = os.getenv("DISCORD_INVITE_URL", "https://discord.gg/gydS5yb3").strip()
+DISCORD_INVITE_URL = os.getenv("DISCORD_INVITE_URL", "https://discord.gg/ckTC8JhWU9").strip()
 FINVIZ_API_BASE_URL = os.getenv("FINVIZ_API_BASE_URL", "").strip().rstrip("/")
 FINVIZ_API_KEY = os.getenv("FINVIZ_API_KEY", "").strip()
 FINVIZ_API_AUTH_HEADER = os.getenv("FINVIZ_API_AUTH_HEADER", "X-API-KEY").strip() or "X-API-KEY"
@@ -2412,7 +2412,7 @@ async def beta_tester_signup(data: BetaTesterSignupRequest, request: Request):
 
     return BetaTesterSignupResponse(
         message=message,
-        discord_url=DISCORD_INVITE_URL or "https://discord.gg/gydS5yb3",
+        discord_url=DISCORD_INVITE_URL or "https://discord.gg/ckTC8JhWU9",
     )
 
 

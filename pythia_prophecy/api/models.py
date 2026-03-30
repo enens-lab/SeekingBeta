@@ -24,9 +24,10 @@ TIER_CONFIG = {
         "stocks_limit": 5,
         "timeframes": MODEL_HORIZONS,
         "features": [
-            "5 stocks from universe",
-            "Model horizons: 5-day and 20-day",
-            "Basic signal alerts",
+            "Track up to 5 stocks in your watchlist",
+            "5-day and 20-day model views",
+            "Dashboard, watchlist, and analysis access",
+            "10 analysis requests per day",
         ],
         # Analysis settings
         "daily_requests": 10,
@@ -42,10 +43,11 @@ TIER_CONFIG = {
         "stocks_limit": 15,
         "timeframes": MODEL_HORIZONS,
         "features": [
-            "15 stocks from universe",
-            "Model horizons: 5-day and 20-day",
-            "Email alerts",
-            "Historical prediction accuracy",
+            "Track up to 15 stocks in your watchlist",
+            "CSV export for analysis results",
+            "Up to 10 stocks per analysis request",
+            "Up to 90 days of historical analysis windows",
+            "50 analysis requests per day",
         ],
         # Analysis settings
         "daily_requests": 50,
@@ -61,11 +63,11 @@ TIER_CONFIG = {
         "stocks_limit": -1,  # unlimited
         "timeframes": MODEL_HORIZONS,
         "features": [
-            "Full universe access (6,000+ stocks)",
-            "Model horizons: 5-day and 20-day",
-            "Priority email alerts",
-            "Historical prediction accuracy",
-            "Custom watchlists",
+            "Full stock universe access",
+            "Unlimited watchlist size",
+            "Up to 50 stocks per analysis request",
+            "Up to 365 days of historical analysis windows",
+            "CSV export with the highest request limits",
         ],
         # Analysis settings
         "daily_requests": None,  # unlimited

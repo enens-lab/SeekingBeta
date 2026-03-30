@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import { betaProgram, BetaTesterSignupData } from '../api/client';
 import { trackEvent } from '../lib/analytics';
 
-const DEFAULT_DISCORD_URL = 'https://discord.gg/gydS5yb3';
+const DEFAULT_DISCORD_URL = 'https://discord.gg/ckTC8JhWU9';
 
 const EXPERIENCE_OPTIONS = [
   { value: '', label: 'Select experience level' },

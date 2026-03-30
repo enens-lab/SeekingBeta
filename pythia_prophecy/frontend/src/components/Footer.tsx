@@ -21,7 +21,7 @@ function Footer() {
             Methodology
           </Link>
           <a
-            href="https://discord.gg/gydS5yb3"
+            href="https://discord.gg/ckTC8JhWU9"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => trackEvent('discord_click', { source: 'footer' })}

@@ -25,8 +25,8 @@ function Privacy() {
             </p>
             <p>B. Usage and diagnostics data</p>
             <p>
-              App activity (including watchlist usage), request logs, feature usage, performance
-              and diagnostics data, and error reports.
+              App activity (including watchlist usage, board views, and analysis actions), request
+              logs, feature usage, performance and diagnostics data, and error reports.
             </p>
             <p>C. Email event and deliverability data</p>
             <p>
@@ -54,6 +54,7 @@ function Privacy() {
             <p>We use information to:</p>
             <ul>
               <li>Provide, operate, maintain, and secure the Service (including free and paid plans).</li>
+              <li>Generate, deliver, and improve model-driven prediction boards and related product features.</li>
               <li>Authenticate users and manage subscriptions and billing status.</li>
               <li>Send transactional communications (verification, security, billing, and account notices).</li>
               <li>Maintain deliverability and abuse prevention systems (including bounce/complaint suppression).</li>
@@ -66,10 +67,10 @@ function Privacy() {
             <h2>3. Email Communications</h2>
             <p>
               Transactional emails are sent for account operations (such as verification, security
-              notices, and billing/account notices). Marketing emails (if offered) are optional and
-              can be unsubscribed from at any time using the link in the email. We automatically
-              suppress addresses associated with repeated bounce and complaint events to reduce abuse
-              risk and protect deliverability.
+              notices, password resets, and billing/account notices). Marketing emails (if offered)
+              are optional and can be unsubscribed from at any time using the link in the email.
+              We automatically suppress addresses associated with repeated bounce and complaint
+              events to reduce abuse risk and protect deliverability.
             </p>
           </section>
 
@@ -94,7 +95,7 @@ function Privacy() {
             <ul>
               <li>AWS infrastructure and hosting services.</li>
               <li>
-                AWS SES and/or other SMTP/email delivery providers configured for transactional
+                AWS SES, Postmark, and/or other SMTP/email delivery providers configured for transactional
                 messaging and deliverability management.
               </li>
               <li>Stripe for payment processing and subscription management.</li>
@@ -151,6 +152,11 @@ function Privacy() {
               consistent with applicable law and may need to verify your request.
             </p>
             <p>
+              You may also request account deletion by contacting{' '}
+              <a href="mailto:support@seekingbeta.ai">support@seekingbeta.ai</a> or using in-app
+              account controls when available.
+            </p>
+            <p>
               If you want to update your payment method or billing details, you can do so through
               your account billing settings (powered by Stripe) or by contacting{' '}
               <a href="mailto:support@seekingbeta.ai">support@seekingbeta.ai</a>.
@@ -167,7 +173,6 @@ function Privacy() {
 
           <section>
             <h2>10. Contact</h2>
-            <p>EnEns LLC</p>
             <p>
               Email: <a href="mailto:support@seekingbeta.ai">support@seekingbeta.ai</a>
             </p>

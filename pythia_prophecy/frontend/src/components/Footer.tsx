@@ -12,9 +12,8 @@ function Footer() {
           <span className="logo-text">SeekingBeta.AI</span>
         </div>
         <p className="footer-disclaimer">
-          SeekingBeta.AI is for informational and research purposes only.
-          Past performance does not guarantee future results.
-          Always do your own research and consult a financial advisor.
+          SeekingBeta.AI publishes model-generated probabilities for research and education.
+          No betting, no trade execution, and no guarantee of future results.
         </p>
         <nav className="footer-links">
           <Link to="/methodology" onClick={() => trackEvent('footer_link_click', { destination: 'methodology' })}>

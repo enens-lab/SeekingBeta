@@ -37,7 +37,7 @@ function Header() {
 
         <nav className="nav">
           <div className="nav-dropdown">
-            <span className="nav-link nav-dropdown-trigger">Markets ▾</span>
+            <span className="nav-link nav-dropdown-trigger">Boards ▾</span>
             <div className="nav-dropdown-content">
               <Link to="/dashboard" className="nav-link">Stocks</Link>
               <Link to="/sports" className="nav-link">Sports</Link>
@@ -62,7 +62,7 @@ function Header() {
             className="nav-link"
             onClick={(e) => scrollToSection(e, 'beta-testers')}
           >
-            Beta Program
+            Founding Beta
           </a>
           <Link
             to="/methodology"
@@ -124,7 +124,7 @@ function Header() {
                 className="btn btn-primary"
                 onClick={() => trackEvent('header_signup_click')}
               >
-                Get Started
+                Start Free
               </Link>
             </>
           )}

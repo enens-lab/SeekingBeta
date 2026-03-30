@@ -15,8 +15,8 @@ const features: Feature[] = [
         <path d="M2 12l10 5 10-5" />
       </svg>
     ),
-    title: 'Clear Ratings',
-    description: 'Each stock gets a Bullish, Neutral, or Bearish rating with a probability score.',
+    title: 'Scan The Board Fast',
+    description: 'Every name is ranked with a clean label and probability so you can read the board in seconds.',
   },
   {
     icon: (
@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'Built on Market History',
-    description: 'Models are trained on historical price, trend, and volatility data to find repeatable patterns.',
+    title: 'Built On Real History',
+    description: 'Models are trained on market, tournament, and performance history to surface repeatable patterns and risk.',
   },
   {
     icon: (
@@ -40,8 +40,8 @@ const features: Feature[] = [
         <line x1="6" y1="20" x2="6" y2="16" />
       </svg>
     ),
-    title: 'Why the Rating',
-    description: 'See the prediction horizon, upside probability, and top driver summary in one place.',
+    title: 'Context Beside The Call',
+    description: 'Horizon, probability, and high-level drivers sit next to the signal instead of buried in a model report.',
   },
   {
     icon: (
@@ -51,8 +51,8 @@ const features: Feature[] = [
         <line x1="9" y1="21" x2="9" y2="9" />
       </svg>
     ),
-    title: 'Public Track Record',
-    description: 'Compare model results against the S&P 500 to judge performance with real numbers.',
+    title: 'Track Record Stays Visible',
+    description: 'Check the scorecard against SPY and historical tournament outcomes before you trust the board.',
   },
 ];
 
@@ -60,8 +60,8 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">How SeekingBeta.AI Works</h2>
-        <p className="section-subtitle">Simple model output for day-to-day research</p>
+        <h2 className="section-title">How The Boards Work</h2>
+        <p className="section-subtitle">Clear probabilities, visible context, and a scorecard you can actually inspect.</p>
       </div>
 
       <div className="features-grid">

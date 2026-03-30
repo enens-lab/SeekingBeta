@@ -150,13 +150,13 @@ function Signup() {
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
             </div>
-            <h1>Check your email</h1>
+            <h1>Check your inbox</h1>
             <p className="auth-subtitle">
               We&apos;ve sent a verification link to <strong>{formData.email}</strong>.
-              Click the link to activate your account.
+              Confirm it to unlock your boards.
             </p>
             <p className="auth-note">
-              Didn&apos;t receive the email? Check your spam folder or use resend below.
+              If it doesn&apos;t arrive in a minute, check spam or resend it below.
             </p>
             <div className="auth-actions">
               <button
@@ -165,7 +165,7 @@ function Signup() {
                 onClick={handleResendVerification}
                 disabled={resendLoading}
               >
-                {resendLoading ? 'Resending...' : 'Resend verification email'}
+                {resendLoading ? 'Resending...' : 'Resend verification link'}
               </button>
             </div>
             {resendMessage && <p className="auth-note">{resendMessage}</p>}
@@ -195,7 +195,7 @@ function Signup() {
         <div className="auth-card">
           <h1>Create your account</h1>
           <p className="auth-subtitle">
-            Start getting clear stock guidance in plain language
+            Start free and unlock stock and sports prediction boards in minutes
           </p>
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -254,7 +254,7 @@ function Signup() {
                 autoComplete="new-password"
               />
               <span className="form-hint">
-                Min 8 chars, with uppercase, lowercase, number, and special character
+                Use 8+ characters with uppercase, lowercase, a number, and a special character
               </span>
             </div>
 
@@ -308,12 +308,12 @@ function Signup() {
                 </span>
               </label>
               <p className="form-hint">Policy version: {POLICY_VERSION}</p>
-              <p className="form-hint">All new accounts start on the Free plan. Upgrade anytime from Pricing.</p>
+              <p className="form-hint">Every new account starts on Free. Upgrade later for more coverage, history, and export power.</p>
               <Link to="/pricing" className="form-link">Compare plans in detail</Link>
             </div>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create account'}
+              {loading ? 'Creating account...' : 'Create Free Account'}
             </button>
           </form>
 

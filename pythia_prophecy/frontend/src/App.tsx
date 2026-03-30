@@ -37,9 +37,9 @@ interface SeoMeta {
 
 const SITE_ORIGIN = 'https://seekingbeta.ai';
 const DEFAULT_SEO: SeoMeta = {
-  title: 'SeekingBeta.AI | Educational Stock Model Signals',
+  title: 'SeekingBeta.AI | Prediction Boards For Stocks And Sports',
   description:
-    'SeekingBeta.AI provides educational, model-driven stock signal views with transparent probabilities and benchmarked track records.',
+    'SeekingBeta.AI publishes model-driven prediction boards for stocks and sports with transparent probabilities and visible track records.',
   canonicalPath: '/',
   indexable: true,
 };
@@ -49,14 +49,14 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
   '/pricing': {
     title: 'Pricing | SeekingBeta.AI',
     description:
-      'Compare SeekingBeta.AI plans for educational stock model signals, horizons, and watchlist limits.',
+      'Compare SeekingBeta.AI plans for stock and sports prediction boards, watchlist limits, and deeper analysis access.',
     canonicalPath: '/pricing',
     indexable: true,
   },
   '/methodology': {
     title: 'Model Methodology | SeekingBeta.AI',
     description:
-      'Learn how SeekingBeta.AI model signals are generated, evaluated, and presented for educational use.',
+      'Learn how SeekingBeta.AI builds, evaluates, and presents model-generated probability boards.',
     canonicalPath: '/methodology',
     indexable: true,
   },
@@ -80,13 +80,13 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
   },
   '/login': {
     title: 'Log In | SeekingBeta.AI',
-    description: 'Log in to your SeekingBeta.AI account.',
+    description: 'Log in to access your SeekingBeta.AI prediction boards.',
     canonicalPath: '/login',
     indexable: false,
   },
   '/signup': {
     title: 'Sign Up | SeekingBeta.AI',
-    description: 'Create your SeekingBeta.AI account.',
+    description: 'Create your SeekingBeta.AI account and unlock free prediction boards.',
     canonicalPath: '/signup',
     indexable: false,
   },
@@ -104,25 +104,25 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
   },
   '/dashboard': {
     title: 'Dashboard | SeekingBeta.AI',
-    description: 'Personalized model views and signal summaries.',
+    description: 'Your personalized stock prediction board and watchlist views.',
     canonicalPath: '/dashboard',
     indexable: false,
   },
   '/sports': {
     title: 'Sports Predictions | SeekingBeta.AI',
-    description: 'Market-style probability boards for PGA, LPGA, ATP, and WTA predictions.',
+    description: 'Market-style probability boards for PGA, LPGA, ATP, and WTA without betting or trading.',
     canonicalPath: '/sports',
     indexable: false,
   },
   '/oracle': {
     title: 'Watchlist | SeekingBeta.AI',
-    description: 'Manage your watchlist and preferred model horizons.',
+    description: 'Manage your watchlist board and preferred model horizons.',
     canonicalPath: '/oracle',
     indexable: false,
   },
   '/analysis': {
     title: 'Analysis | SeekingBeta.AI',
-    description: 'Run model analysis and review signal outputs.',
+    description: 'Run board scans, compare probabilities, and review model output.',
     canonicalPath: '/analysis',
     indexable: false,
   },

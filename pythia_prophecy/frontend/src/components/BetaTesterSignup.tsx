@@ -86,15 +86,15 @@ function BetaTesterSignup() {
     <section className="beta-program-section" id="beta-testers">
       <div className="beta-program-container">
         <div className="beta-program-copy">
-          <h2 className="section-title">Apply for the Beta Tester Program</h2>
+          <h2 className="section-title">Apply for Founding Beta Access</h2>
           <p className="section-subtitle">
-            Help shape SeekingBeta.AI before broader release. We prioritize testers who can provide
-            structured product feedback and test workflows consistently.
+            Help shape the next version of SeekingBeta.AI before broader rollout. We prioritize testers who can
+            pressure-test real workflows, share precise feedback, and tell us where the board still feels unclear.
           </p>
           <ul className="beta-program-list">
-            <li>Early access to new features and model updates</li>
+            <li>Early access to new boards, models, and product releases</li>
             <li>Direct feedback channel with the product team</li>
-            <li>Priority onboarding support for selected testers</li>
+            <li>Priority onboarding for thoughtful, high-signal testers</li>
           </ul>
           <a
             className="beta-program-discord-link"
@@ -103,7 +103,7 @@ function BetaTesterSignup() {
             rel="noopener noreferrer"
             onClick={() => trackEvent('discord_click', { source: 'beta_program_copy' })}
           >
-            Join our Discord community
+            Join the community on Discord
           </a>
         </div>
 
@@ -142,7 +142,7 @@ function BetaTesterSignup() {
                 value={formData.role}
                 onChange={onInputChange}
                 maxLength={120}
-                placeholder="Retail investor, analyst, PM, etc."
+                placeholder="Researcher, trader, sports analyst, PM, etc."
               />
             </label>
 
@@ -159,7 +159,7 @@ function BetaTesterSignup() {
             </label>
 
             <label className="form-group">
-              <span>Investing Experience</span>
+              <span>Market / Research Experience</span>
               <select
                 name="investing_experience"
                 value={formData.investing_experience}
@@ -175,7 +175,7 @@ function BetaTesterSignup() {
           </div>
 
           <label className="form-group form-group-full">
-            <span>What would you like to test most? *</span>
+            <span>What do you want to pressure-test most? *</span>
             <textarea
               name="testing_focus"
               value={formData.testing_focus}
@@ -183,7 +183,7 @@ function BetaTesterSignup() {
               required
               minLength={12}
               maxLength={1200}
-              placeholder="Tell us your test goals (for example: signal quality, watchlist workflow, analysis results, or billing UX)."
+              placeholder="Tell us what you want to pressure-test most (for example: board quality, watchlist flow, analysis output, or billing UX)."
               rows={4}
             />
           </label>
@@ -201,7 +201,7 @@ function BetaTesterSignup() {
 
           <div className="beta-form-actions">
             <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Apply for Beta Access'}
+              {submitting ? 'Submitting...' : 'Apply for Founding Beta'}
             </button>
             <a
               href={DEFAULT_DISCORD_URL}
@@ -225,7 +225,7 @@ function BetaTesterSignup() {
                 rel="noopener noreferrer"
                 onClick={() => trackEvent('discord_click', { source: 'beta_program_success' })}
               >
-                Join Discord to get beta updates
+                Join Discord for release notes and tester updates
               </a>
             </div>
           )}

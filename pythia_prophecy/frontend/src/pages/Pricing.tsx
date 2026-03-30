@@ -168,7 +168,7 @@ function Pricing() {
               className="nav-link"
               onClick={() => trackEvent('pricing_nav_click', { destination: 'predictions' })}
             >
-              Model Views
+              Live Boards
             </Link>
             <Link
               to="/#performance"
@@ -216,7 +216,7 @@ function Pricing() {
                   className="btn btn-primary"
                   onClick={() => trackEvent('pricing_signup_click')}
                 >
-                  Get Started
+                  Start Free
                 </Link>
               </>
             )}
@@ -226,15 +226,15 @@ function Pricing() {
 
       <main>
         <section className="pricing-hero">
-          <h1>Simple pricing for investors who want structured model signals</h1>
-          <p>Choose the plan that fits how deeply you want to analyze model output</p>
+          <h1>Pricing built for how deeply you want to work the board</h1>
+          <p>Start free, then unlock more coverage, history, exports, and higher analysis limits as you go.</p>
         </section>
 
         {isAuthenticated && billingStatus?.billing_enabled && (
           <section className="pricing-billing-status">
             <div className="pricing-billing-status-content">
               <div>
-                <h3>Billing</h3>
+                <h3>Subscription</h3>
                 <p>
                   Current plan: <strong>{currentTier.toUpperCase()}</strong>
                   {billingStatus.subscription_status ? (
@@ -247,7 +247,7 @@ function Pricing() {
                 onClick={handleManageBilling}
                 disabled={portalLoading}
               >
-                {portalLoading ? 'Opening...' : 'Manage Billing'}
+                {portalLoading ? 'Opening...' : 'Manage Subscription'}
               </button>
             </div>
           </section>
@@ -257,7 +257,7 @@ function Pricing() {
           {loading ? (
             <div className="pricing-loading">
               <div className="spinner" />
-              <p>Loading plans...</p>
+              <p>Loading plan access...</p>
             </div>
           ) : (
             <div className="pricing-grid">
@@ -270,7 +270,7 @@ function Pricing() {
                     key={tier.tier}
                     className={`pricing-card ${tier.tier === 'basic' ? 'popular' : ''}`}
                   >
-                    {tier.tier === 'basic' && <div className="popular-badge">Most Popular</div>}
+                    {tier.tier === 'basic' && <div className="popular-badge">Best Starting Point</div>}
                     <div className="pricing-card-header">
                       <h2>{tier.name}</h2>
                       <div className="pricing-amount">
@@ -290,16 +290,16 @@ function Pricing() {
                       <div className="pricing-highlights">
                         <div className="highlight">
                           <strong>{tier.stocks_limit === -1 ? 'Unlimited' : tier.stocks_limit}</strong>
-                          <span>stocks</span>
+                          <span>watchlist</span>
                         </div>
                         <div className="highlight">
                           <strong>{tier.timeframes.length}</strong>
-                          <span>timeframe{tier.timeframes.length > 1 ? 's' : ''}</span>
+                          <span>board horizon{tier.timeframes.length > 1 ? 's' : ''}</span>
                         </div>
                       </div>
 
                       <div className="pricing-timeframes">
-                        <span className="label">Timeframes:</span>
+                        <span className="label">Board Horizons:</span>
                         <span className="values">{tier.timeframes.join(', ')}</span>
                       </div>
 
@@ -324,8 +324,8 @@ function Pricing() {
                           : isCheckoutLoading
                             ? 'Redirecting...'
                             : !isPaidTier
-                              ? 'Get Started Free'
-                              : 'Choose Plan'}
+                              ? 'Start Free'
+                              : 'Unlock Plan'}
                       </button>
                     </div>
                   </div>
@@ -336,33 +336,32 @@ function Pricing() {
         </section>
 
         <section className="pricing-faq">
-          <h2>Frequently Asked Questions</h2>
+          <h2>Pricing FAQ</h2>
           <div className="faq-grid">
             <div className="faq-item">
-              <h3>Can I change my plan later?</h3>
-              <p>Yes. You can upgrade, downgrade, or cancel from the Stripe billing portal at any time.</p>
+              <h3>Can I change plans anytime?</h3>
+              <p>Yes. You can upgrade, downgrade, or cancel from the Stripe billing portal whenever you need.</p>
             </div>
             <div className="faq-item">
-              <h3>What payment methods do you accept?</h3>
-              <p>All major credit cards supported by Stripe.</p>
+              <h3>How do payments work?</h3>
+              <p>Billing runs through Stripe and supports the major cards Stripe accepts.</p>
             </div>
             <div className="faq-item">
-              <h3>Do paid plans include a free trial?</h3>
+              <h3>Is there a free trial on paid plans?</h3>
               <p>
-                Not at this time. Paid subscriptions begin billing when activated. You can cancel at
-                any time to stop future renewals.
+                Not right now. Paid plans begin billing when activated, and you can cancel anytime to stop future renewals.
               </p>
             </div>
             <div className="faq-item">
-              <h3>What happens if I exceed my stock limit?</h3>
-              <p>Upgrade to a higher tier to unlock additional stocks and limits.</p>
+              <h3>What happens if I hit a limit?</h3>
+              <p>Upgrade to the next tier to unlock more tickers, deeper history, and higher request limits.</p>
             </div>
           </div>
         </section>
 
         <section className="pricing-cta">
-          <h2>Ready for model-driven market context?</h2>
-          <p>Use SeekingBeta.AI as a transparent decision-support layer in your research workflow.</p>
+          <h2>Ready to work from the board instead of guesswork?</h2>
+          <p>Start free, test the product in your real workflow, and upgrade only when you want more depth.</p>
           <Link
             to="/signup"
             className="btn btn-primary btn-lg"
@@ -380,8 +379,8 @@ function Pricing() {
             <span className="logo-text">SeekingBeta.AI</span>
           </div>
           <p className="footer-disclaimer">
-            SeekingBeta.AI is for informational and research purposes only.
-            Past performance does not guarantee future results.
+            SeekingBeta.AI publishes model-generated probabilities for research and education.
+            No betting, no trade execution, and no guarantee of future results.
           </p>
           <nav className="footer-links">
             <Link to="/terms" onClick={() => trackEvent('footer_link_click', { destination: 'terms' })}>

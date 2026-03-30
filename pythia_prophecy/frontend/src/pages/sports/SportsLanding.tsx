@@ -116,7 +116,7 @@ function SportsLanding() {
                   className="btn btn-primary btn-lg pulse-btn"
                   onClick={() => trackEvent('sports_landing_cta_click', { destination: 'signup' })}
                 >
-                  Unlock Sports Predictions
+                  Open Sports Boards
                 </Link>
                 <Link
                   to="/pricing"
@@ -156,7 +156,7 @@ function SportsLanding() {
                 </div>
               </div>
               <div className="market-shell-footer">
-                Built to feel fast and browseable like a market board, but grounded in model probability instead of order flow.
+                Built to feel fast and scannable like a market board, but grounded in model probability instead of order flow.
               </div>
             </div>
           </div>
@@ -165,7 +165,7 @@ function SportsLanding() {
         <section className="sports-preview-section" id="boards">
           <div className="section-heading">
             <span className="section-kicker">Board Preview</span>
-            <h2>Browse multiple tours the same way you would scan a market board.</h2>
+            <h2>Browse multiple tours the same way you would scan a live board.</h2>
             <p>
               The sports experience now spans golf and tennis, with each board built around contender ranking, field context,
               and a quick view of how sharp the distribution really is.

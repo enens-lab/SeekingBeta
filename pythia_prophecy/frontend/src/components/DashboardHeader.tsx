@@ -29,7 +29,7 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
 
       {showNav && (
         <nav className="dashboard-nav">
-          <span className="nav-group-label">Markets:</span>
+          <span className="nav-group-label">Boards:</span>
           <Link
             to="/dashboard"
             className={`nav-link${(activePage === 'dashboard' || activePage === 'oracle' || activePage === 'analysis') ? ' active' : ''}`}
@@ -92,7 +92,7 @@ function DashboardHeader({ activePage, showNav = true }: DashboardHeaderProps) {
             className="btn btn-ghost"
             onClick={() => trackEvent('dashboard_upgrade_click')}
           >
-            Upgrade
+            Unlock More
           </Link>
         )}
         <button className="btn btn-ghost" onClick={handleLogout}>Log Out</button>

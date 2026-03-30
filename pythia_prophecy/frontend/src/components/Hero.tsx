@@ -13,10 +13,10 @@ function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1 className="hero-title">AI Prediction Markets for Finance & Sports</h1>
+        <h1 className="hero-title">Prediction boards for stocks and sports</h1>
         <p className="hero-subtitle">
-          Explore educational probability signals across stock markets, PGA tournaments, and major sports. 
-          Our deep learning models are trained on vast historical datasets to rank outcomes with precision.
+          Scan model-generated probabilities across equities, golf, and tennis in one clean research interface.
+          SeekingBeta.AI brings the speed and clarity of a prediction board without betting, trading, or event contracts.
         </p>
         <div className="hero-cta">
           <Link
@@ -24,14 +24,14 @@ function Hero() {
             className="btn btn-primary btn-lg"
             onClick={() => trackEvent('hero_cta_click', { cta: 'start_free' })}
           >
-            Start Exploring
+            Start Free
           </Link>
           <button className="btn btn-outline btn-lg" onClick={scrollToFeatures}>
-            How It Works
+            See How It Works
           </button>
         </div>
         <p className="hero-disclaimer">
-          For educational and informational use only. Not financial or betting advice.
+          Educational probabilities only. No wagering, no settlement layer, and no financial or betting advice.
         </p>
       </div>
     </section>

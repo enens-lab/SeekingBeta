@@ -41,7 +41,7 @@ type ChartState = {
 };
 
 const MODEL_OPTIONS: Array<{ value: TrackModel; label: string }> = [
-  { value: 'lstm_5d', label: 'Production 5-Day' },
+  { value: 'lstm_5d', label: 'Core 5-Day' },
   { value: 'lstm_jackpot', label: 'Jackpot 20-Day' },
 ];
 
@@ -233,7 +233,7 @@ function PerformanceComparison() {
     return (
       <section className="performance-showcase">
         <div className="performance-showcase-inner">
-          <div className="performance-loading">Loading performance track record...</div>
+          <div className="performance-loading">Loading the scorecard...</div>
         </div>
       </section>
     );
@@ -254,7 +254,7 @@ function PerformanceComparison() {
       <section className="performance-showcase">
         <div className="performance-showcase-inner">
           <div className="performance-empty">
-            {data.curve?.message || 'Track record data will appear here once backtest data is loaded.'}
+            {data.curve?.message || 'The scorecard will appear here once backtest data is available.'}
           </div>
         </div>
       </section>
@@ -303,8 +303,8 @@ function PerformanceComparison() {
     <section className="performance-showcase" id="performance">
       <div className="performance-showcase-inner">
         <div className="performance-header">
-          <h2>Track Record First</h2>
-          <p>See model performance versus the S&amp;P 500 (SPY).</p>
+          <h2>Check The Scoreboard First</h2>
+          <p>Before you trust a board, compare the model against SPY.</p>
         </div>
 
         <div className="performance-model-tabs" role="tablist" aria-label="Track record model">

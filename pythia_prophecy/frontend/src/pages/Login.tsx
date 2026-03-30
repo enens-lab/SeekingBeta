@@ -106,9 +106,9 @@ function Login() {
         </div>
 
         <div className="auth-card">
-          <h1>Welcome back</h1>
+          <h1>Welcome back to the board</h1>
           <p className="auth-subtitle">
-            Log in to access your predictions
+            Log in to open your stock and sports prediction boards
           </p>
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -162,12 +162,12 @@ function Login() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
-              {loading ? 'Logging in...' : 'Log in'}
+              {loading ? 'Logging in...' : 'Open Dashboard'}
             </button>
           </form>
 
           <p className="auth-footer">
-            Don't have an account? <Link to="/signup">Sign up</Link>
+            New here? <Link to="/signup">Create your free account</Link>
           </p>
         </div>
       </div>

@@ -5,8 +5,8 @@ function CallToAction() {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>Start free and test the ratings yourself.</h2>
-        <p>Build a watchlist, review the model context, and track signals in one place.</p>
+        <h2>Open the boards for free.</h2>
+        <p>Build a watchlist, compare probabilities, and see how the models behave before you ever upgrade.</p>
         <Link
           to="/signup"
           className="btn btn-primary btn-lg"

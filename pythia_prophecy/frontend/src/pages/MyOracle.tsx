@@ -210,7 +210,7 @@ function MyOracle() {
         <DashboardHeader showNav={false} />
         <main className="oracle-main">
           <div className="verify-prompt">
-            <h1>Verify your email to access your watchlist</h1>
+            <h1>Verify your email to unlock your watchlist board</h1>
             <p>Please check your inbox and click the verification link.</p>
           </div>
         </main>
@@ -225,9 +225,9 @@ function MyOracle() {
       <main className="oracle-main">
         <div className="oracle-header">
           <div className="oracle-title-section">
-            <h1>Watchlist</h1>
+            <h1>Watchlist Board</h1>
             <p className="oracle-subtitle">
-              Build and manage your SeekingBeta.AI watchlist and preferred horizons.
+              Build the stock board you actually want to check every day, then choose the horizons you care about.
             </p>
           </div>
         </div>
@@ -243,7 +243,7 @@ function MyOracle() {
             <section className="oracle-section">
               <h2>Preferred Horizons</h2>
               <p className="section-description">
-                Select which model horizons you want to see
+                Choose which model horizons should show up across your board
               </p>
               <div className="timeframe-grid">
                 {oracleData?.available_timeframes?.map((tf) => (
@@ -266,7 +266,7 @@ function MyOracle() {
             <section className="oracle-section">
               <h2>Your Watchlist</h2>
               <p className="section-description">
-                Tickers currently tracked ({oracleData?.watchlist?.length || 0} selected)
+                Tickers currently on your board ({oracleData?.watchlist?.length || 0} selected)
               </p>
 
               {oracleData && oracleData.watchlist.length > 0 ? (
@@ -289,7 +289,7 @@ function MyOracle() {
                 </div>
               ) : (
                 <div className="empty-watchlist">
-                  <p>Your watchlist is empty. Add stocks below to start tracking.</p>
+                  <p>Your board is empty. Add tickers below to start tracking them.</p>
                 </div>
               )}
             </section>
@@ -298,7 +298,7 @@ function MyOracle() {
               <h2>Watchlist Insights</h2>
               <p className="section-description">
                 {finvizEnabled
-                  ? 'Chart and technical snapshots for your selected tickers.'
+                  ? 'Chart and technical snapshots for the names on your board.'
                   : 'Snapshot cards are available. Add Finviz API credentials for richer chart data.'}
               </p>
 
@@ -313,7 +313,7 @@ function MyOracle() {
                 </div>
               ) : watchlistInsights.length === 0 ? (
                 <div className="empty-watchlist">
-                  <p>Add tickers to your watchlist to see chart insights.</p>
+                  <p>Add tickers to your board to unlock chart insights.</p>
                 </div>
               ) : (
                 <div className="watchlist-insights-grid">
@@ -424,7 +424,7 @@ function MyOracle() {
             <section className="oracle-section">
               <h2>Add to Watchlist</h2>
               <p className="section-description">
-                Choose from {oracleData?.available_stocks?.length || 0} stocks available in your tier
+                Choose from {oracleData?.available_stocks?.length || 0} names available in your tier
               </p>
 
               {/* Search */}
@@ -476,7 +476,7 @@ function MyOracle() {
 
               {!isProPlan && (
                 <p className="upgrade-hint">
-                  <Link to="/pricing">Upgrade to Pro</Link> for access to the full universe
+                  <Link to="/pricing">Upgrade to Pro</Link> to unlock the full stock universe
                 </p>
               )}
             </section>
@@ -491,7 +491,7 @@ function MyOracle() {
                   navigate('/analysis');
                 }}
               >
-                View Predictions
+                Open Analysis
               </button>
             </div>
           </div>

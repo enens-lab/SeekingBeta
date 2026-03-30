@@ -27,22 +27,28 @@ function Terms() {
           <section>
             <h2>2. Service Description</h2>
             <p>
-              SeekingBeta.AI provides stock analysis, model outputs, and decision-support content for
-              educational and research purposes. The Service may include automated or model-driven
-              outputs.
+              SeekingBeta.AI provides stock and sports prediction boards, model outputs, and
+              decision-support content for educational and research purposes. The Service may
+              include automated, statistical, or model-driven outputs.
             </p>
           </section>
 
           <section>
-            <h2>3. No Financial Advice</h2>
+            <h2>3. No Financial or Betting Advice</h2>
             <p>
               SeekingBeta.AI is not a broker-dealer, investment adviser, or financial planner. Content
               provided by SeekingBeta.AI is not personalized investment advice and should not be the
               sole basis for any investment decision.
             </p>
             <p>
+              SeekingBeta.AI also does not operate a sportsbook, betting platform, exchange, or
+              event-contract marketplace. The Service does not facilitate wagers, order matching,
+              or real-money settlement.
+            </p>
+            <p>
               Risk disclosure: Investing involves risk, including the possible loss of principal.
-              Past performance is not indicative of future results. You are solely responsible for
+              Sports and event forecasting also involve uncertainty. Past performance is not
+              indicative of future results. You are solely responsible for
               your investment decisions.
             </p>
           </section>
@@ -99,18 +105,19 @@ function Terms() {
           </section>
 
           <section>
-            <h2>8. Market Data, Timing, and Third-Party Information Disclaimer</h2>
+            <h2>8. Market, Event, and Third-Party Data Disclaimer</h2>
             <p>
               The Service may display or reference market prices, quotes, charts, corporate actions,
-              news, indicators, or other third-party information ("Market Data"). Market Data may
-              be delayed, incomplete, inaccurate, not real-time, or subject to outage. EnEns does
-              not guarantee the accuracy, completeness, timeliness, or availability of Market Data
-              or any outputs derived from it.
+              schedules, leaderboards, player statistics, news, indicators, or other third-party
+              information ("Third-Party Data"). Third-Party Data may be delayed, incomplete,
+              inaccurate, not real-time, or subject to outage. EnEns does not guarantee the
+              accuracy, completeness, timeliness, or availability of Third-Party Data or any
+              outputs derived from it.
             </p>
             <p>
-              The Service is not intended for time-sensitive trading decisions. You are responsible
-              for verifying information independently (including through official sources) before
-              making any investment or trading decision.
+              The Service is not intended for time-sensitive trading, wagering, or event-positioning
+              decisions. You are responsible for independently verifying relevant information,
+              including through official sources, before acting on any output.
             </p>
           </section>
 
@@ -131,8 +138,8 @@ function Terms() {
             <h2>10. Disclaimers and Limitation of Liability</h2>
             <p>
               SeekingBeta.AI is provided on an "as is" and "as available" basis. We do not guarantee
-              uninterrupted availability, data accuracy, model performance, or any financial
-              outcome.
+              uninterrupted availability, data accuracy, model performance, predictive accuracy, or
+              any financial or event-related outcome.
             </p>
             <p>
               To the fullest extent permitted by law, EnEns disclaims liability for indirect,

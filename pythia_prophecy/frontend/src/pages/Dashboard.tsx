@@ -112,7 +112,7 @@ function Dashboard() {
 
   const clearWatchlist = async () => {
     if (!oracleData || oracleData.watchlist.length === 0 || watchlistSaving) return;
-    if (!window.confirm('Clear all tickers from your watchlist?')) return;
+    if (!window.confirm('Clear every ticker from your watchlist board?')) return;
     setWatchlistSaving(true);
     try {
       const updated = await oracle.updateWatchlist([]);
@@ -200,7 +200,7 @@ function Dashboard() {
             </div>
             <h1>Verify your email</h1>
             <p>
-              Please check your inbox and click the verification link to access your dashboard.
+              Please check your inbox and click the verification link to open your dashboard.
             </p>
             <p className="verify-email">
               Sent to: <strong>{user?.email}</strong>
@@ -222,9 +222,9 @@ function Dashboard() {
           <div className="dashboard-title">
             <h1>
               {viewMode === 'oracle' && hasWatchlist ? (
-                'My Watchlist'
+                'My Board'
               ) : (
-                'All Model Views'
+                'Full Stock Board'
               )}
             </h1>
             {hasWatchlist && oracleData && (
@@ -236,7 +236,7 @@ function Dashboard() {
                     setViewMode('oracle');
                   }}
                 >
-                  My Watchlist ({oracleData.watchlist.length})
+                  My Board ({oracleData.watchlist.length})
                 </button>
                 <button
                   className={`toggle-btn ${viewMode === 'universe' ? 'active' : ''}`}
@@ -245,7 +245,7 @@ function Dashboard() {
                     setViewMode('universe');
                   }}
                 >
-                  All Stocks ({oracleData.available_stocks.length})
+                  Full Universe ({oracleData.available_stocks.length})
                 </button>
               </div>
             )}
@@ -254,14 +254,14 @@ function Dashboard() {
           {viewMode === 'oracle' && hasWatchlist && oracleData && (
             <div className="dashboard-watchlist-manager">
               <div className="watchlist-manager-header">
-                <span>Manage watchlist</span>
+                <span>Tracked tickers</span>
                 <button
                   type="button"
                   className="watchlist-clear-btn"
                   onClick={clearWatchlist}
                   disabled={watchlistSaving}
                 >
-                  Clear all
+                  Clear board
                 </button>
               </div>
               <div className="watchlist-pill-list">
@@ -286,7 +286,7 @@ function Dashboard() {
             <div className="dashboard-search">
               <input
                 type="text"
-                placeholder="Search stocks..."
+                placeholder="Search tickers..."
                 value={searchQuery}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   const value = e.target.value;
@@ -335,17 +335,17 @@ function Dashboard() {
             </span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Horizons</span>
+            <span className="stat-label">Board Horizons</span>
             <span className="stat-value">{oracleData?.available_timeframes?.length || 0}</span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Bullish Signals</span>
+            <span className="stat-label">Bullish</span>
             <span className="stat-value signal-buy">
               {predictionData.filter((p) => isBullishSignal(p.signal)).length}
             </span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Bearish Signals</span>
+            <span className="stat-label">Bearish</span>
             <span className="stat-value signal-sell">
               {predictionData.filter((p) => isBearishSignal(p.signal)).length}
             </span>
@@ -355,11 +355,11 @@ function Dashboard() {
         {!hasWatchlist && (
           <div className="empty-oracle-banner">
             <div>
-              <h3>Set up your Watchlist</h3>
-              <p>Create a personalized watchlist to focus on the stocks that matter to you.</p>
+              <h3>Build your board</h3>
+              <p>Add the tickers you care about most so your dashboard opens to a focused board instead of the full universe.</p>
             </div>
             <Link to="/oracle" className="btn btn-primary">
-              Configure Watchlist
+              Set Up Watchlist
             </Link>
           </div>
         )}
@@ -367,11 +367,11 @@ function Dashboard() {
         {loading ? (
           <div className="dashboard-loading">
             <div className="spinner" />
-            <p>Loading model views...</p>
+            <p>Loading board snapshots...</p>
           </div>
         ) : filteredTickers.length === 0 ? (
           <div className="dashboard-no-results">
-            <p>No stocks matching "{searchQuery}"</p>
+            <p>No tickers match "{searchQuery}"</p>
           </div>
         ) : (
           <>
@@ -439,10 +439,10 @@ function Dashboard() {
         {oracleData && oracleData.available_stocks.length > 0 && oracleData.available_stocks.length <= 15 && (
           <div className="upgrade-banner">
             <p>
-              You have access to {oracleData.available_stocks.length} of the full universe.
+              You&apos;re viewing {oracleData.available_stocks.length} names from the full stock universe.
             </p>
             <Link to="/pricing" className="btn btn-primary">
-              Upgrade for full access
+              Unlock Full Universe
             </Link>
           </div>
         )}

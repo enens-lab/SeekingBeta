@@ -112,8 +112,8 @@ function SportsDashboard() {
 
       <main className="dashboard-main">
         <div className="dashboard-title">
-          <h1>Sports Prediction Markets</h1>
-          <p className="subtitle">Educational probability models for major sporting events.</p>
+          <h1>Sports Prediction Boards</h1>
+          <p className="subtitle">Scan live probability boards for golf and tennis without any betting or trading layer.</p>
         </div>
 
         <div className="sports-navigation">
@@ -165,13 +165,13 @@ function SportsDashboard() {
                   className={`toggle-btn ${pgaTab === 'upcoming' ? 'active' : ''}`}
                   onClick={() => setPgaTab('upcoming')}
                 >
-                  Upcoming Tournaments
+                  Live Boards
                 </button>
                 <button 
                   className={`toggle-btn ${pgaTab === 'backtest' ? 'active' : ''}`}
                   onClick={() => setPgaTab('backtest')}
                 >
-                  Historical Backtesting
+                  Track Record
                 </button>
               </div>
 
@@ -179,7 +179,7 @@ function SportsDashboard() {
                 <div className="upcoming-events-container">
                   <div className="event-selector">
                     <div className="selector-group">
-                      <label>Select Tournament: </label>
+                      <label>Select Board: </label>
                       <select 
                         value={activeEventId} 
                         onChange={(e) => {
@@ -199,7 +199,7 @@ function SportsDashboard() {
 
                     {activeSport === 'Tennis' && (
                       <div className="selector-group tour-filter-group">
-                        <label>Filter: </label>
+                        <label>Tour: </label>
                         <select 
                           value={tennisTourFilter}
                           onChange={(e) => setTennisTourFilter(e.target.value as any)}
@@ -214,7 +214,7 @@ function SportsDashboard() {
 
                     {activeSport === 'Golf' && (
                       <div className="selector-group tour-filter-group">
-                        <label>Filter: </label>
+                        <label>Tour: </label>
                         <select 
                           value={golfTourFilter}
                           onChange={(e) => setGolfTourFilter(e.target.value as any)}
@@ -233,12 +233,12 @@ function SportsDashboard() {
                       <div className="tournament-header">
                         <div className="header-left">
                           <h2>{activeEvent.name}</h2>
-                          <span className="market-status live">Market Live</span>
+                          <span className="market-status live">Board Live</span>
                         </div>
                         <div className="header-search">
                           <input 
                             type="text" 
-                            placeholder={`Search player...`} 
+                            placeholder={`Search contender...`} 
                             value={playerSearchQuery}
                             onChange={(e) => setPlayerSearchQuery(e.target.value)}
                             className="sports-search-input"
@@ -247,12 +247,12 @@ function SportsDashboard() {
                       </div>
                       <div className="tournament-details">
                         <p><strong>{activeSport === 'Golf' ? 'Course' : 'Surface'}:</strong> {activeEvent.course}</p>
-                        <p><strong>Model:</strong> Tournament-Aware Softmax Ranker</p>
+                        <p><strong>Model:</strong> Tournament-aware probability ranker</p>
                       </div>
 
                       {displayedPredictions.length === 0 ? (
                         <div className="no-results-message">
-                          No players found matching "{playerSearchQuery}"
+                          No contenders found matching "{playerSearchQuery}"
                         </div>
                       ) : (
                         <div className="prediction-leaderboard">
@@ -298,8 +298,8 @@ function SportsDashboard() {
                 <div className="backtest-container">
                   <div className="backtest-header-area">
                     <div>
-                      <h2>Model Track Record (2024 - 2025)</h2>
-                      <p className="backtest-desc">Comparing the model's top predicted picks against the actual tournament winner. We evaluate Top Pick (1st), Top 3, and Top 5 probabilities.</p>
+                      <h2>Track Record (2024 - 2025)</h2>
+                      <p className="backtest-desc">See how often the board&apos;s highest-ranked names landed the eventual winner, Top 3, or Top 5.</p>
                     </div>
                     <div className="backtest-filters">
                       {activeSport === 'Tennis' && (
@@ -380,13 +380,13 @@ function SportsDashboard() {
                               className="btn-text details-toggle"
                               onClick={() => toggleBacktestDetails(idx)}
                             >
-                              {expandedBacktest === idx ? 'Hide Details' : 'View Details'}
+                              {expandedBacktest === idx ? 'Hide Board' : 'View Board'}
                             </button>
                           </div>
                           
                           {expandedBacktest === idx && (
                             <div className="backtest-details-panel">
-                              <h4>Full Model Field Ranking</h4>
+                              <h4>Full Field Ranking</h4>
                               <div className="details-grid">
                                 {bt.fullField?.map((player: any) => (
                                   <div key={player.rank} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
@@ -407,9 +407,9 @@ function SportsDashboard() {
             </div>
           ) : (
             <div className="tbd-container">
-              <h2>{activeSport} Prediction Models</h2>
-              <p>We are actively developing proprietary deep learning models for {activeSport}.</p>
-              <p>Check back soon for educational probability signals.</p>
+              <h2>{activeSport} Boards Are In Development</h2>
+              <p>We are actively building the data and model stack for {activeSport}.</p>
+              <p>Check back soon for live probability boards and track record views.</p>
             </div>
           )}
         </div>

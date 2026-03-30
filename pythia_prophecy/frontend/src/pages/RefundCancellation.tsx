@@ -11,8 +11,8 @@ function RefundCancellation() {
           <p className="legal-updated">Last updated: February 27, 2026</p>
           <p>
             This Refund &amp; Cancellation Policy explains cancellation and refund rules for
-            SeekingBeta.AI&apos;s monthly subscription plans (including paid plans currently offered at
-            $9.99/month and $19.99/month, as displayed on the Service at the time of purchase).
+            SeekingBeta.AI&apos;s monthly subscription plans, including any paid plans displayed on
+            the Service at the time of purchase.
           </p>
 
           <section>
@@ -27,7 +27,7 @@ function RefundCancellation() {
             <h2>2. Access After Cancellation</h2>
             <p>
               After cancellation, you retain access to paid features through the remainder of the
-              monthly billing period that has already been paid.
+              billing period that has already been paid.
             </p>
           </section>
 

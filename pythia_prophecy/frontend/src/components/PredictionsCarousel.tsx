@@ -29,14 +29,14 @@ const MODELS = [
     displayName: 'LSTM 5-Day',
     endpoint: '/predict/lstm_5d',
     description:
-      'Short-horizon model focused on 5-day moves.'
+      'Core short-horizon stock board for 5-day probability moves.'
   },
   {
     name: 'lstm_jackpot',
     displayName: 'LSTM Jackpot',
     endpoint: '/predict/lstm_jackpot',
     description:
-      'Higher-volatility model focused on larger 20-day moves.'
+      'Higher-volatility stock board focused on larger 20-day breakouts.'
   },
 ];
 
@@ -166,14 +166,14 @@ function PredictionsCarousel() {
     return (
       <section className="predictions-section" id="predictions">
         <div className="section-header">
-          <h2 className="section-title">Today&apos;s Model Ratings</h2>
+          <h2 className="section-title">Live Stock Boards</h2>
           <p className="section-subtitle">
-            Compare two models across the Magnificent 7.
+            A quick read on both stock boards across the Magnificent 7.
           </p>
         </div>
         <div className="predictions-loading">
           <div className="spinner" />
-          <p>Loading today&apos;s model signals...</p>
+          <p>Loading live board snapshots...</p>
         </div>
       </section>
     );
@@ -182,9 +182,9 @@ function PredictionsCarousel() {
   return (
     <section className="predictions-section" id="predictions">
       <div className="section-header">
-        <h2 className="section-title">Today&apos;s Model Ratings</h2>
+        <h2 className="section-title">Live Stock Boards</h2>
         <p className="section-subtitle">
-          Compare two models across the Magnificent 7.
+          A quick read on both stock boards across the Magnificent 7.
         </p>
       </div>
 
@@ -213,13 +213,13 @@ function PredictionsCarousel() {
                   </button>
                 </div>
                 <span className="model-row-count">
-                  {row.predictions.length} of {MAGNIFICENT_7.length} stocks
+                  {row.predictions.length} of {MAGNIFICENT_7.length} tickers live
                 </span>
               </div>
 
               {row.error ? (
                 <div className="model-row-error">
-                  <p>Failed to load predictions for this model</p>
+                  <p>Board snapshot unavailable right now</p>
                 </div>
               ) : (
                 <div className="carousel-container">

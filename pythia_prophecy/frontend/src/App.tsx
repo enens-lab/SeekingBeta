@@ -109,8 +109,8 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
     indexable: false,
   },
   '/sports': {
-    title: 'Sports Markets | SeekingBeta.AI',
-    description: 'Prediction markets and win probabilities for major sports events.',
+    title: 'Sports Predictions | SeekingBeta.AI',
+    description: 'Market-style probability boards for PGA, LPGA, ATP, and WTA predictions.',
     canonicalPath: '/sports',
     indexable: false,
   },

@@ -40,7 +40,7 @@ function Header() {
             <span className="nav-link nav-dropdown-trigger">Markets ▾</span>
             <div className="nav-dropdown-content">
               <Link to="/dashboard" className="nav-link">Stocks</Link>
-              <Link to="/sports" className="nav-link">Sports (Golf)</Link>
+              <Link to="/sports" className="nav-link">Sports</Link>
             </div>
           </div>
           <a

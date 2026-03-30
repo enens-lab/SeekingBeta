@@ -48,21 +48,33 @@ def _parse_wind(value: Any) -> tuple[float | None, str | None]:
     return mph, direction.strip() if direction else None
 
 
+def _years_since(reference: pd.Series, start_dates: pd.Series) -> pd.Series:
+    reference_ts = pd.to_datetime(reference, errors="coerce")
+    start_ts = pd.to_datetime(start_dates, errors="coerce")
+    return (reference_ts - start_ts).dt.days / 365.25
+
+
 def prepare_games(
     schedule_df: pd.DataFrame,
     details_df: pd.DataFrame,
     *,
     team_meta_df: pd.DataFrame | None = None,
     pitcher_profiles_df: pd.DataFrame | None = None,
+    require_completed: bool = True,
 ) -> pd.DataFrame:
     """Merge normalized schedule/detail tables into one game frame."""
     games = schedule_df.copy()
     games["official_date"] = pd.to_datetime(games["official_date"], utc=True, errors="coerce").dt.tz_localize(None)
-    games = games.loc[games["winner_team_id"].notna()].copy()
+    if require_completed:
+        games = games.loc[games["winner_team_id"].notna()].copy()
     merged = games.merge(details_df, on="game_pk", how="left", suffixes=("", "_detail"))
 
-    merged["home_win"] = (merged["winner_team_id"] == merged["home_team_id"]).astype(int)
-    merged["away_win"] = 1 - merged["home_win"]
+    merged["home_win"] = np.where(
+        merged["winner_team_id"].notna(),
+        (merged["winner_team_id"] == merged["home_team_id"]).astype(float),
+        np.nan,
+    )
+    merged["away_win"] = np.where(merged["home_win"].notna(), 1.0 - merged["home_win"], np.nan)
     merged["month"] = merged["official_date"].dt.month
     merged["day_of_week"] = merged["official_date"].dt.dayofweek
     merged["is_weekend"] = merged["day_of_week"].isin([5, 6]).astype(int)
@@ -113,7 +125,166 @@ def prepare_games(
         home_profiles = home_profiles.rename(columns={"home_starter_profile_home_probable_pitcher_id": "home_probable_pitcher_id"})
         merged = merged.merge(home_profiles, on="home_probable_pitcher_id", how="left")
 
+        for side in ("away", "home"):
+            merged[f"{side}_starter_profile_years_since_debut"] = _years_since(
+                merged["official_date"],
+                merged[f"{side}_starter_profile_mlb_debut_date"],
+            )
+            merged[f"{side}_starter_profile_is_lefty"] = merged[f"{side}_starter_profile_pitch_hand"].eq("L").astype(float)
+            merged[f"{side}_starter_profile_is_righty"] = merged[f"{side}_starter_profile_pitch_hand"].eq("R").astype(float)
+
     merged = merged.sort_values(["official_date", "game_pk"]).reset_index(drop=True)
+    return merged
+
+
+def _merge_latest_feature_rows(
+    base: pd.DataFrame,
+    history: pd.DataFrame,
+    *,
+    group_col: str,
+    feature_cols: list[str],
+    on_cols: list[str],
+) -> pd.DataFrame:
+    if history.empty or base.empty:
+        return base
+
+    output_parts: list[pd.DataFrame] = []
+    history_frame = history.dropna(subset=[group_col, "official_date"]).copy()
+    history_frame["official_date"] = pd.to_datetime(history_frame["official_date"], errors="coerce")
+    history_frame = history_frame.sort_values([group_col, "official_date", "game_pk"]).reset_index(drop=True)
+
+    for key, base_group in base.groupby(group_col, sort=False):
+        history_group = history_frame.loc[history_frame[group_col] == key, ["official_date", *feature_cols]].copy()
+        base_sorted = base_group.sort_values(["official_date", "game_pk"]).reset_index(drop=True)
+        if history_group.empty:
+            for column in feature_cols:
+                base_sorted[column] = np.nan
+            output_parts.append(base_sorted)
+            continue
+        merged = pd.merge_asof(
+            base_sorted,
+            history_group.sort_values("official_date"),
+            on="official_date",
+            direction="backward",
+            allow_exact_matches=False,
+        )
+        output_parts.append(merged)
+
+    merged_base = pd.concat(output_parts, ignore_index=True)
+    return merged_base.sort_values(on_cols).reset_index(drop=True)
+
+
+def attach_pregame_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -> pd.DataFrame:
+    if team_logs.empty or games.empty:
+        return games
+
+    safe_feature_columns = [
+        column
+        for column in team_logs.columns
+        if column.endswith("_avg_last_3")
+        or column.endswith("_avg_last_5")
+        or column.endswith("_avg_last_10")
+        or column in _SAFE_TEAM_LOG_BASE_COLUMNS
+    ]
+    general_columns = [column for column in safe_feature_columns if column != "same_site_win_pct_last_10"]
+
+    merged = games.copy()
+    side_specs = (
+        ("away", "away_team_id", 0),
+        ("home", "home_team_id", 1),
+    )
+
+    for side, team_col, is_home_value in side_specs:
+        base = merged[["game_pk", "official_date", team_col]].rename(columns={team_col: "team_id"})
+        base["game_pk"] = pd.to_numeric(base["game_pk"], errors="coerce")
+        base["team_id"] = pd.to_numeric(base["team_id"], errors="coerce")
+
+        general = _merge_latest_feature_rows(
+            base,
+            team_logs[["team_id", "game_pk", "official_date", *general_columns]].rename(columns={"team_id": "team_id"}),
+            group_col="team_id",
+            feature_cols=general_columns,
+            on_cols=["official_date", "game_pk"],
+        ).rename(columns={column: f"{side}_team_{column}" for column in general_columns})
+        general = general.rename(columns={"team_id": team_col})
+        merged = merged.merge(general, on=["game_pk", "official_date", team_col], how="left")
+
+        same_site_history = team_logs.loc[team_logs["is_home"] == is_home_value, ["team_id", "game_pk", "official_date", "same_site_win_pct_last_10"]]
+        same_site = _merge_latest_feature_rows(
+            base,
+            same_site_history,
+            group_col="team_id",
+            feature_cols=["same_site_win_pct_last_10"],
+            on_cols=["official_date", "game_pk"],
+        ).rename(columns={"same_site_win_pct_last_10": f"{side}_team_same_site_win_pct_last_10", "team_id": team_col})
+        merged = merged.merge(same_site, on=["game_pk", "official_date", team_col], how="left")
+
+    return merged
+
+
+def attach_pregame_starter_features(games: pd.DataFrame, starter_logs: pd.DataFrame) -> pd.DataFrame:
+    if starter_logs.empty or games.empty:
+        return games
+
+    safe_feature_columns = [
+        column
+        for column in starter_logs.columns
+        if column.endswith("_avg_last_3")
+        or column.endswith("_avg_last_5")
+        or column in _SAFE_STARTER_LOG_BASE_COLUMNS
+    ]
+
+    merged = games.copy()
+    side_specs = (
+        ("away", "away_probable_pitcher_id", "away_team_id"),
+        ("home", "home_probable_pitcher_id", "home_team_id"),
+    )
+
+    for side, starter_col, team_col in side_specs:
+        base = merged[["game_pk", "official_date", starter_col, team_col]].copy()
+        base[starter_col] = pd.to_numeric(base[starter_col], errors="coerce")
+        base[team_col] = pd.to_numeric(base[team_col], errors="coerce")
+        base = base.rename(columns={starter_col: "starter_id", team_col: "team_id"})
+        base = base.dropna(subset=["starter_id", "team_id"]).reset_index(drop=True)
+        if base.empty:
+            continue
+
+        history = starter_logs[["starter_id", "team_id", "game_pk", "official_date", *safe_feature_columns]].copy()
+        output_parts: list[pd.DataFrame] = []
+        history["official_date"] = pd.to_datetime(history["official_date"], errors="coerce")
+        history = history.sort_values(["starter_id", "team_id", "official_date", "game_pk"]).reset_index(drop=True)
+
+        for (starter_id, team_id), base_group in base.groupby(["starter_id", "team_id"], sort=False):
+            history_group = history.loc[
+                (history["starter_id"] == starter_id) & (history["team_id"] == team_id),
+                ["official_date", *safe_feature_columns],
+            ].copy()
+            base_sorted = base_group.sort_values(["official_date", "game_pk"]).reset_index(drop=True)
+            if history_group.empty:
+                for column in safe_feature_columns:
+                    base_sorted[column] = np.nan
+                output_parts.append(base_sorted)
+                continue
+            output_parts.append(
+                pd.merge_asof(
+                    base_sorted,
+                    history_group.sort_values("official_date"),
+                    on="official_date",
+                    direction="backward",
+                    allow_exact_matches=False,
+                )
+            )
+
+        feature_frame = pd.concat(output_parts, ignore_index=True)
+        feature_frame = feature_frame.rename(
+            columns={
+                "starter_id": starter_col,
+                "team_id": team_col,
+                **{column: f"{side}_starter_{column}" for column in safe_feature_columns},
+            }
+        )
+        merged = merged.merge(feature_frame, on=["game_pk", "official_date", starter_col, team_col], how="left")
+
     return merged
 
 

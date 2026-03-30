@@ -223,6 +223,16 @@ def train_baseline(args: argparse.Namespace) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(estimator, output_dir / "model.joblib")
     pd.DataFrame({"feature": feature_columns}).to_csv(output_dir / "feature_columns.csv", index=False)
+    pd.DataFrame(
+        {
+            "game_pk": val_df["game_pk"].values,
+            "official_date": val_df["official_date"].dt.date.astype(str).values,
+            "away_team_name": val_df["away_team_name"].values,
+            "home_team_name": val_df["home_team_name"].values,
+            "home_win": y_val.values,
+            "home_win_probability": probabilities,
+        }
+    ).to_csv(output_dir / "validation_predictions.csv", index=False)
 
     if hasattr(estimator.named_steps["model"], "feature_importances_"):
         importance = pd.DataFrame(

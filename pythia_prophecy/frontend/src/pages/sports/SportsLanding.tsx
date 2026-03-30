@@ -6,6 +6,8 @@ import golfUpcoming from '../../data/upcoming_tournaments.json';
 import golfBacktests from '../../data/historical_backtests.json';
 import tennisUpcoming from '../../data/wta_upcoming_tournaments.json';
 import tennisBacktests from '../../data/wta_historical_backtests.json';
+import mlbUpcoming from '../../data/mlb_upcoming_tournaments.json';
+import mlbBacktests from '../../data/mlb_historical_backtests.json';
 import './SportsLanding.css';
 
 type EventPrediction = {
@@ -27,12 +29,16 @@ type BacktestEvent = {
   tournament: string;
   tour: string;
   hitStatus: string;
+  venue?: string;
+  fullField?: EventPrediction[];
 };
 
 const golfEvents = golfUpcoming as UpcomingEvent[];
 const tennisEvents = tennisUpcoming as UpcomingEvent[];
 const golfHistory = golfBacktests as BacktestEvent[];
 const tennisHistory = tennisBacktests as BacktestEvent[];
+const mlbEvents = mlbUpcoming as UpcomingEvent[];
+const mlbHistory = mlbBacktests as BacktestEvent[];
 
 const spotlightBoards = [
   {
@@ -48,6 +54,23 @@ const spotlightBoards = [
     description: 'Singles tournament boards with win probabilities, field strength context, and tour-specific model views.',
     event: tennisEvents[0],
     accent: 'blue',
+  },
+  {
+    label: 'MLB Replay',
+    eyebrow: 'MLB',
+    description: 'Pregame matchup boards with probable pitchers, projected lineup strength, bullpen depth, and recent injury churn.',
+    event: mlbEvents[0]
+      ? mlbEvents[0]
+      : mlbHistory[0]
+        ? {
+            id: mlbHistory[0].tournament,
+            name: mlbHistory[0].tournament,
+            tour: 'MLB',
+            course: mlbHistory[0].venue ?? 'MLB Venue',
+            predictions: mlbHistory[0].fullField ?? [],
+          }
+        : undefined,
+    accent: 'orange',
   },
 ];
 
@@ -73,17 +96,22 @@ const sportsCoverage = [
     summary: 'Women’s tour coverage with tournament-level ranking boards and historical backtests.',
   },
   {
-    title: 'Team Sports',
+    title: 'MLB',
+    status: 'Live now',
+    summary: 'Pregame daily matchup boards and historical replays powered by pitcher, lineup, bullpen, and availability context.',
+  },
+  {
+    title: 'Other Team Sports',
     status: 'Coming next',
-    summary: 'NBA, MLB, NFL, and NHL are staged as the next expansion layer once board design is finalized.',
+    summary: 'NBA, NFL, and NHL remain on deck once the team-sport board templates are fully standardized.',
   },
 ];
 
 function SportsLanding() {
-  const totalBoards = golfEvents.length + tennisEvents.length;
-  const totalBacktests = golfHistory.length + tennisHistory.length;
+  const totalBoards = golfEvents.length + tennisEvents.length + mlbEvents.length;
+  const totalBacktests = golfHistory.length + tennisHistory.length + mlbHistory.length;
   const totalTours = new Set(
-    [...golfEvents, ...tennisEvents, ...golfHistory, ...tennisHistory].map((item) => item.tour),
+    [...golfEvents, ...tennisEvents, ...golfHistory, ...tennisHistory, ...mlbHistory].map((item) => item.tour),
   ).size;
   const totalTrackedEntrants = spotlightBoards.reduce((sum, board) => sum + (board.event?.predictions.length ?? 0), 0);
 
@@ -99,7 +127,7 @@ function SportsLanding() {
               <h1 className="sports-title">Market-style sports predictions without betting, trading, or event contracts.</h1>
               <p className="sports-subtitle">
                 SeekingBeta.AI brings the clarity of a prediction board to sports. Browse calibrated probabilities across
-                golf and tennis, compare contenders instantly, and track how our models perform over time.
+                golf, tennis, and baseball, compare contenders instantly, and track how our models perform over time.
               </p>
 
               <div className="sports-hero-tags">
@@ -107,7 +135,7 @@ function SportsLanding() {
                 <span>LPGA</span>
                 <span>ATP</span>
                 <span>WTA</span>
-                <span>More sports staged next</span>
+                <span>MLB</span>
               </div>
 
               <div className="sports-cta">
@@ -156,7 +184,7 @@ function SportsLanding() {
                 </div>
               </div>
               <div className="market-shell-footer">
-                Built to feel fast and scannable like a market board, but grounded in model probability instead of order flow.
+                Built to feel fast and scannable like a market board, but grounded in model probability instead of order flow or wagers.
               </div>
             </div>
           </div>
@@ -167,8 +195,8 @@ function SportsLanding() {
             <span className="section-kicker">Board Preview</span>
             <h2>Browse multiple tours the same way you would scan a live board.</h2>
             <p>
-              The sports experience now spans golf and tennis, with each board built around contender ranking, field context,
-              and a quick view of how sharp the distribution really is.
+              The sports experience now spans golf, tennis, and baseball, with each board or replay built around fast ranking,
+              field or matchup context, and a quick view of how sharp the probability spread really is.
             </p>
           </div>
 

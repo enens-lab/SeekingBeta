@@ -100,6 +100,48 @@ def build_daily_group_features(frame: pd.DataFrame, *, group_col: str, prefix: s
     return grouped
 
 
+def _merge_asof_features(
+    base: pd.DataFrame,
+    history: pd.DataFrame,
+    *,
+    group_col: str,
+    date_col: str,
+    feature_prefix: str,
+    rename_group_to: str,
+) -> pd.DataFrame:
+    if base.empty or history.empty:
+        return base
+
+    history_frame = history.copy()
+    history_frame[date_col] = pd.to_datetime(history_frame[date_col], errors="coerce").dt.normalize()
+    history_frame = history_frame.dropna(subset=[group_col, date_col]).sort_values([group_col, date_col]).reset_index(drop=True)
+
+    feature_columns = [column for column in history_frame.columns if column not in {group_col, date_col}]
+    output_parts: list[pd.DataFrame] = []
+
+    for key, base_group in base.groupby(rename_group_to, sort=False):
+        history_group = history_frame.loc[history_frame[group_col] == key, [date_col, *feature_columns]].copy()
+        base_sorted = base_group.sort_values(["official_date", "game_pk"]).reset_index(drop=True)
+        if history_group.empty:
+            for column in feature_columns:
+                base_sorted[f"{feature_prefix}{column}"] = pd.NA
+            output_parts.append(base_sorted)
+            continue
+        merged = pd.merge_asof(
+            base_sorted,
+            history_group.sort_values(date_col),
+            left_on="official_date",
+            right_on=date_col,
+            direction="backward",
+            allow_exact_matches=True,
+        )
+        merged = merged.drop(columns=[date_col], errors="ignore")
+        merged = merged.rename(columns={column: f"{feature_prefix}{column}" for column in feature_columns})
+        output_parts.append(merged)
+
+    return pd.concat(output_parts, ignore_index=True)
+
+
 def enrich_dataset_with_statcast(dataset: pd.DataFrame, statcast_paths: Iterable[str] | None) -> pd.DataFrame:
     """Optionally merge rolling Statcast team/pitcher features onto the matchup dataset.
 
@@ -159,21 +201,51 @@ def enrich_dataset_with_statcast(dataset: pd.DataFrame, statcast_paths: Iterable
     enriched["official_date"] = pd.to_datetime(enriched["official_date"], errors="coerce").dt.normalize()
 
     if not pitcher_features.empty:
-        away_pitcher = pitcher_features.rename(columns={"pitcher_id": "away_probable_pitcher_id", "game_date": "official_date"}).add_prefix("away_")
-        away_pitcher = away_pitcher.rename(columns={"away_away_probable_pitcher_id": "away_probable_pitcher_id", "away_official_date": "official_date"})
-        enriched = enriched.merge(away_pitcher, on=["away_probable_pitcher_id", "official_date"], how="left")
+        away_base = enriched[["game_pk", "official_date", "away_probable_pitcher_id"]].copy()
+        away_base["away_probable_pitcher_id"] = pd.to_numeric(away_base["away_probable_pitcher_id"], errors="coerce")
+        away_pitcher = _merge_asof_features(
+            away_base,
+            pitcher_features,
+            group_col="pitcher_id",
+            date_col="game_date",
+            feature_prefix="away_",
+            rename_group_to="away_probable_pitcher_id",
+        )
+        enriched = enriched.merge(away_pitcher, on=["game_pk", "official_date", "away_probable_pitcher_id"], how="left")
 
-        home_pitcher = pitcher_features.rename(columns={"pitcher_id": "home_probable_pitcher_id", "game_date": "official_date"}).add_prefix("home_")
-        home_pitcher = home_pitcher.rename(columns={"home_home_probable_pitcher_id": "home_probable_pitcher_id", "home_official_date": "official_date"})
-        enriched = enriched.merge(home_pitcher, on=["home_probable_pitcher_id", "official_date"], how="left")
+        home_base = enriched[["game_pk", "official_date", "home_probable_pitcher_id"]].copy()
+        home_base["home_probable_pitcher_id"] = pd.to_numeric(home_base["home_probable_pitcher_id"], errors="coerce")
+        home_pitcher = _merge_asof_features(
+            home_base,
+            pitcher_features,
+            group_col="pitcher_id",
+            date_col="game_date",
+            feature_prefix="home_",
+            rename_group_to="home_probable_pitcher_id",
+        )
+        enriched = enriched.merge(home_pitcher, on=["game_pk", "official_date", "home_probable_pitcher_id"], how="left")
 
     if not team_features.empty and "away_team_abbreviation" in enriched.columns and "home_team_abbreviation" in enriched.columns:
-        away_team = team_features.rename(columns={"batting_team": "away_team_abbreviation", "game_date": "official_date"}).add_prefix("away_")
-        away_team = away_team.rename(columns={"away_away_team_abbreviation": "away_team_abbreviation", "away_official_date": "official_date"})
-        enriched = enriched.merge(away_team, on=["away_team_abbreviation", "official_date"], how="left")
+        away_base = enriched[["game_pk", "official_date", "away_team_abbreviation"]].copy()
+        away_team = _merge_asof_features(
+            away_base,
+            team_features,
+            group_col="batting_team",
+            date_col="game_date",
+            feature_prefix="away_",
+            rename_group_to="away_team_abbreviation",
+        )
+        enriched = enriched.merge(away_team, on=["game_pk", "official_date", "away_team_abbreviation"], how="left")
 
-        home_team = team_features.rename(columns={"batting_team": "home_team_abbreviation", "game_date": "official_date"}).add_prefix("home_")
-        home_team = home_team.rename(columns={"home_home_team_abbreviation": "home_team_abbreviation", "home_official_date": "official_date"})
-        enriched = enriched.merge(home_team, on=["home_team_abbreviation", "official_date"], how="left")
+        home_base = enriched[["game_pk", "official_date", "home_team_abbreviation"]].copy()
+        home_team = _merge_asof_features(
+            home_base,
+            team_features,
+            group_col="batting_team",
+            date_col="game_date",
+            feature_prefix="home_",
+            rename_group_to="home_team_abbreviation",
+        )
+        enriched = enriched.merge(home_team, on=["game_pk", "official_date", "home_team_abbreviation"], how="left")
 
     return enriched

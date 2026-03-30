@@ -5,17 +5,55 @@ import upcomingTournamentsPGA from '../../data/upcoming_tournaments.json';
 import historicalBacktestsPGA from '../../data/historical_backtests.json';
 import upcomingTournamentsWTA from '../../data/wta_upcoming_tournaments.json';
 import historicalBacktestsWTA from '../../data/wta_historical_backtests.json';
+import upcomingTournamentsMLB from '../../data/mlb_upcoming_tournaments.json';
+import historicalBacktestsMLB from '../../data/mlb_historical_backtests.json';
 import './SportsDashboard.css';
 
 type SportCategory = 'Golf' | 'Tennis' | 'NBA' | 'MLB' | 'NFL' | 'NHL';
+type BoardPrediction = {
+  rank: number;
+  playerName: string;
+  winProbability: number;
+};
+type AvailabilitySummary = {
+  ilAdds14?: number;
+  ilActivations14?: number;
+  rosterMoves14?: number;
+};
+type SportsBoard = {
+  id: string;
+  name: string;
+  tour: string;
+  course: string;
+  predictions: BoardPrediction[];
+  awayStarter?: string;
+  homeStarter?: string;
+  awayAvailability?: AvailabilitySummary;
+  homeAvailability?: AvailabilitySummary;
+};
+
+const sportDataMap = {
+  Golf: {
+    upcoming: upcomingTournamentsPGA as any[],
+    backtests: historicalBacktestsPGA as any[],
+  },
+  Tennis: {
+    upcoming: upcomingTournamentsWTA as any[],
+    backtests: historicalBacktestsWTA as any[],
+  },
+  MLB: {
+    upcoming: upcomingTournamentsMLB as any[],
+    backtests: historicalBacktestsMLB as any[],
+  },
+} as const;
 
 function SportsDashboard() {
   const [activeSport, setActiveSport] = useState<SportCategory>('Golf');
   const [pgaTab, setPgaTab] = useState<'upcoming' | 'backtest'>('upcoming');
   
-  // Data selection based on sport
-  const currentUpcoming = activeSport === 'Golf' ? upcomingTournamentsPGA : upcomingTournamentsWTA;
-  const currentBacktests = activeSport === 'Golf' ? historicalBacktestsPGA : historicalBacktestsWTA;
+  const sportData = sportDataMap[activeSport as keyof typeof sportDataMap];
+  const currentUpcoming = sportData?.upcoming ?? [];
+  const currentBacktests = sportData?.backtests ?? [];
 
   const [activeEventId, setActiveEventId] = useState<string>(currentUpcoming[0]?.id || '');
   const [showAllPredictions, setShowAllPredictions] = useState(false);
@@ -29,13 +67,13 @@ function SportsDashboard() {
   const [golfTourFilter, setGolfTourFilter] = useState<'All' | 'PGA' | 'LPGA'>('All');
 
   const handleSportChange = (sport: SportCategory) => {
-    if (sport !== 'Golf' && sport !== 'Tennis') return;
+    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'MLB') return;
     
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
     
     // Reset tournament-specific state when switching sports
-    const nextUpcoming = sport === 'Golf' ? upcomingTournamentsPGA : upcomingTournamentsWTA;
+    const nextUpcoming = sportDataMap[sport as keyof typeof sportDataMap]?.upcoming ?? [];
     setActiveEventId(nextUpcoming[0]?.id || '');
     setShowAllPredictions(false);
     setExpandedBacktest(null);
@@ -46,8 +84,6 @@ function SportsDashboard() {
     setGolfTourFilter('All');
   };
 
-  const activeEvent = currentUpcoming.find(t => t.id === activeEventId) || currentUpcoming[0];
-  
   // Filter current upcoming by tour
   const filteredUpcoming = useMemo(() => {
     if (activeSport === 'Tennis' && tennisTourFilter !== 'All') {
@@ -66,14 +102,16 @@ function SportsDashboard() {
     }
   }, [filteredUpcoming, activeEventId]);
 
-  const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map(p => p.winProbability)) : 100;
+  const activeEvent = (filteredUpcoming.find(t => t.id === activeEventId) || filteredUpcoming[0]) as SportsBoard | undefined;
+
+  const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map((p: BoardPrediction) => p.winProbability)) : 100;
   
   const displayedPredictions = useMemo(() => {
     let filtered = activeEvent?.predictions || [];
     
     if (playerSearchQuery.trim() !== '') {
       const query = playerSearchQuery.toLowerCase();
-      filtered = filtered.filter(p => p.playerName.toLowerCase().includes(query));
+      filtered = filtered.filter((p: BoardPrediction) => p.playerName.toLowerCase().includes(query));
       return filtered;
     }
     
@@ -113,7 +151,7 @@ function SportsDashboard() {
       <main className="dashboard-main">
         <div className="dashboard-title">
           <h1>Sports Prediction Boards</h1>
-          <p className="subtitle">Scan live probability boards for golf and tennis without any betting or trading layer.</p>
+          <p className="subtitle">Scan probability boards and model replays across golf, tennis, and baseball without any betting or trading layer.</p>
         </div>
 
         <div className="sports-navigation">
@@ -137,10 +175,10 @@ function SportsDashboard() {
               NBA <span className="badge-tbd">TBD</span>
             </button>
             <button 
-              className={`sport-tab ${activeSport === 'MLB' ? 'active' : ''} disabled-tab`}
+              className={`sport-tab ${activeSport === 'MLB' ? 'active' : ''}`}
               onClick={() => handleSportChange('MLB')}
             >
-              MLB <span className="badge-tbd">TBD</span>
+              MLB
             </button>
             <button 
               className={`sport-tab ${activeSport === 'NFL' ? 'active' : ''} disabled-tab`}
@@ -158,7 +196,7 @@ function SportsDashboard() {
         </div>
 
         <div className="sports-content">
-          {(activeSport === 'Golf' || activeSport === 'Tennis') ? (
+          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'MLB') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
                 <button 
@@ -179,7 +217,7 @@ function SportsDashboard() {
                 <div className="upcoming-events-container">
                   <div className="event-selector">
                     <div className="selector-group">
-                      <label>Select Board: </label>
+                      <label>{activeSport === 'MLB' ? 'Select Matchup: ' : 'Select Board: '}</label>
                       <select 
                         value={activeEventId} 
                         onChange={(e) => {
@@ -228,7 +266,20 @@ function SportsDashboard() {
                     )}
                   </div>
                   
-                  {activeEvent && (
+                  {activeSport === 'MLB' && currentUpcoming.length === 0 ? (
+                    <div className="tournament-card no-live-board-card">
+                      <div className="tournament-header">
+                        <div className="header-left">
+                          <h2>MLB board rollout in progress</h2>
+                          <span className="market-status staged">Track record live</span>
+                        </div>
+                      </div>
+                      <div className="tournament-details">
+                        <p><strong>Status:</strong> Historical MLB model replays are live now.</p>
+                        <p><strong>Next step:</strong> Pregame MLB board exports will appear here once the daily inference job is enabled.</p>
+                      </div>
+                    </div>
+                  ) : activeEvent ? (
                     <div className="tournament-card active-market">
                       <div className="tournament-header">
                         <div className="header-left">
@@ -246,8 +297,17 @@ function SportsDashboard() {
                         </div>
                       </div>
                       <div className="tournament-details">
-                        <p><strong>{activeSport === 'Golf' ? 'Course' : 'Surface'}:</strong> {activeEvent.course}</p>
-                        <p><strong>Model:</strong> Tournament-aware probability ranker</p>
+                        <p><strong>{activeSport === 'Golf' ? 'Course' : activeSport === 'Tennis' ? 'Surface' : 'Venue'}:</strong> {activeEvent.course}</p>
+                        <p><strong>Model:</strong> {activeSport === 'MLB' ? 'Home-win classifier with team, starter, lineup, bullpen, and Statcast context' : 'Tournament-aware probability ranker'}</p>
+                        {activeSport === 'MLB' && (
+                          <>
+                            <p><strong>Probable starters:</strong> {activeEvent.awayStarter || 'TBD'} vs {activeEvent.homeStarter || 'TBD'}</p>
+                            <p>
+                              <strong>Availability pulse:</strong>{' '}
+                              Away IL adds (14d): {activeEvent.awayAvailability?.ilAdds14 ?? 0}, Home IL adds (14d): {activeEvent.homeAvailability?.ilAdds14 ?? 0}
+                            </p>
+                          </>
+                        )}
                       </div>
 
                       {displayedPredictions.length === 0 ? (
@@ -258,10 +318,10 @@ function SportsDashboard() {
                         <div className="prediction-leaderboard">
                           <div className="leaderboard-header">
                             <span>Rank</span>
-                            <span>Player</span>
+                            <span>{activeSport === 'MLB' ? 'Side' : 'Player'}</span>
                             <span>Win Probability</span>
                           </div>
-                          {displayedPredictions.map((pred) => (
+                          {displayedPredictions.map((pred: BoardPrediction) => (
                             <div key={pred.rank} className="leaderboard-row">
                               <span className="player-rank">#{pred.rank}</span>
                               <span className="player-name">{pred.playerName}</span>
@@ -290,7 +350,7 @@ function SportsDashboard() {
                         </div>
                       )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
 
@@ -299,7 +359,11 @@ function SportsDashboard() {
                   <div className="backtest-header-area">
                     <div>
                       <h2>Track Record (2024 - 2025)</h2>
-                      <p className="backtest-desc">See how often the board&apos;s highest-ranked names landed the eventual winner, Top 3, or Top 5.</p>
+                      <p className="backtest-desc">
+                        {activeSport === 'MLB'
+                          ? 'Review historical MLB game boards and compare the model’s top side against the actual winner.'
+                          : 'See how often the board&apos;s highest-ranked names landed the eventual winner, Top 3, or Top 5.'}
+                      </p>
                     </div>
                     <div className="backtest-filters">
                       {activeSport === 'Tennis' && (
@@ -326,7 +390,7 @@ function SportsDashboard() {
                       )}
                       <input 
                         type="text" 
-                        placeholder="Search tournament or winner..." 
+                        placeholder={activeSport === 'MLB' ? 'Search matchup or winner...' : 'Search tournament or winner...'} 
                         value={backtestSearchQuery}
                         onChange={(e) => setBacktestSearchQuery(e.target.value)}
                         className="sports-search-input"
@@ -351,13 +415,13 @@ function SportsDashboard() {
                     </div>
                   ) : (
                     <div className="backtest-table">
-                      <div className="backtest-header">
-                        <span>Year</span>
-                        <span>Tournament</span>
-                        <span>Top Predicted Picks</span>
-                        <span>Actual Winner</span>
-                        <span>Result</span>
-                        <span>Details</span>
+                        <div className="backtest-header">
+                          <span>Year</span>
+                          <span>{activeSport === 'MLB' ? 'Matchup' : 'Tournament'}</span>
+                          <span>{activeSport === 'MLB' ? 'Predicted Side' : 'Top Predicted Picks'}</span>
+                          <span>Actual Winner</span>
+                          <span>Result</span>
+                          <span>Details</span>
                       </div>
                       {filteredBacktests.map((bt, idx) => (
                         <div key={idx} className="backtest-row-container">
@@ -365,12 +429,21 @@ function SportsDashboard() {
                             <span>{bt.year}</span>
                             <div className="tournament-info-col">
                               <strong>{bt.tournament}</strong>
-                              <div className="tour-label">{bt.tour}</div>
+                              <div className="tour-label">{activeSport === 'MLB' ? bt.venue : bt.tour}</div>
                             </div>
                             <div className="top-picks-col">
-                              <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
-                              <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
-                              <small>4. {bt.predictedTop5?.[3]} | 5. {bt.predictedTop5?.[4]}</small>
+                              {activeSport === 'MLB' ? (
+                                <>
+                                  <strong>{bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
+                                  <small>{bt.awayTeam} at {bt.homeTeam}</small>
+                                </>
+                              ) : (
+                                <>
+                                  <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
+                                  <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
+                                  <small>4. {bt.predictedTop5?.[3]} | 5. {bt.predictedTop5?.[4]}</small>
+                                </>
+                              )}
                             </div>
                             <span>{bt.actualWinner}</span>
                             <span className={`result-badge ${bt.hitStatus.toLowerCase().replace(' ', '-')}`}>

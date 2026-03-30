@@ -146,6 +146,17 @@
   letter-spacing: 0.5px;
 }
 
+.market-status.staged {
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #f59e0b;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .tournament-details {
   color: var(--text-muted);
   margin-bottom: 2rem;
@@ -154,6 +165,10 @@
 
 .tournament-details p {
   margin: 0.25rem 0;
+}
+
+.no-live-board-card {
+  border-style: dashed;
 }
 
 /* Leaderboard */

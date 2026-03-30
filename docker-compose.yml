@@ -74,6 +74,23 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  # Dedicated MLB trainer (torch + Statcast) isolated from the live API image
+  mlb-trainer:
+    profiles: ["training"]
+    build:
+      context: ./pythia_divination
+      dockerfile: Dockerfile.mlb-trainer
+    container_name: pythia-mlb-trainer
+    environment:
+      PYTHONUNBUFFERED: "1"
+      PYTHONPATH: /app
+    working_dir: /app
+    volumes:
+      - ./pythia_divination/artifacts:/app/artifacts
+      - ./pythia_divination/data:/app/data
+    command: ["sh", "-lc", "sleep infinity"]
+    restart: unless-stopped
+
   # Auth/User Management Backend (pythia_prophecy)
   prophecy-api:
     build:

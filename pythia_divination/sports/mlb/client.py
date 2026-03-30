@@ -21,10 +21,12 @@ from .constants import (
     MLB_GAME_WIN_PROBABILITY_PATH,
     MLB_PEOPLE_PATH,
     MLB_PLAYER_STATS_PATH,
+    MLB_TEAM_ROSTER_PATH,
     MLB_SCHEDULE_PATH,
     MLB_STATS_API_BASE_URL,
     MLB_TEAMS_PATH,
     MLB_TEAM_STATS_PATH,
+    MLB_TRANSACTIONS_PATH,
 )
 
 
@@ -225,6 +227,41 @@ class MLBStatsClient:
             params={"sportId": sport_id, "season": season},
         )
 
+    def get_team_roster(
+        self,
+        team_id: int,
+        *,
+        season: int | None = None,
+        roster_type: str | None = None,
+        date: date | datetime | str | None = None,
+    ) -> dict[str, Any]:
+        return self._get_json(
+            MLB_TEAM_ROSTER_PATH.format(team_id=team_id),
+            params={
+                "season": season,
+                "rosterType": roster_type,
+                "date": _iso(date),
+            },
+        )
+
+    def get_transactions(
+        self,
+        *,
+        start_date: date | datetime | str | None = None,
+        end_date: date | datetime | str | None = None,
+        team_id: int | None = None,
+        sport_id: int = DEFAULT_SPORT_ID,
+    ) -> dict[str, Any]:
+        return self._get_json(
+            MLB_TRANSACTIONS_PATH,
+            params={
+                "startDate": _iso(start_date),
+                "endDate": _iso(end_date),
+                "teamId": team_id,
+                "sportId": sport_id,
+            },
+        )
+
     def get_person(self, person_id: int) -> dict[str, Any]:
         return self._get_json(MLB_PEOPLE_PATH.format(person_id=person_id))
 
@@ -314,6 +351,8 @@ def flatten_schedule(schedule_payload: dict[str, Any]) -> pd.DataFrame:
             home = game.get("teams", {}).get("home", {})
             away_record = away.get("leagueRecord", {})
             home_record = home.get("leagueRecord", {})
+            away_probable_pitcher = away.get("probablePitcher", {})
+            home_probable_pitcher = home.get("probablePitcher", {})
             venue = game.get("venue", {})
             content = game.get("content", {})
             row = {
@@ -333,12 +372,16 @@ def flatten_schedule(schedule_payload: dict[str, Any]) -> pd.DataFrame:
                 "away_is_winner": away.get("isWinner"),
                 "away_wins": _safe_int(away_record.get("wins")),
                 "away_losses": _safe_int(away_record.get("losses")),
+                "away_probable_pitcher_id": away_probable_pitcher.get("id"),
+                "away_probable_pitcher_name": away_probable_pitcher.get("fullName"),
                 "home_team_id": home.get("team", {}).get("id"),
                 "home_team_name": home.get("team", {}).get("name"),
                 "home_score": home.get("score"),
                 "home_is_winner": home.get("isWinner"),
                 "home_wins": _safe_int(home_record.get("wins")),
                 "home_losses": _safe_int(home_record.get("losses")),
+                "home_probable_pitcher_id": home_probable_pitcher.get("id"),
+                "home_probable_pitcher_name": home_probable_pitcher.get("fullName"),
                 "venue_id": venue.get("id"),
                 "venue_name": venue.get("name"),
                 "day_night": game.get("dayNight"),
@@ -424,6 +467,85 @@ def flatten_person(person_payload: dict[str, Any]) -> pd.DataFrame:
                 "position_name": primary_position.get("name"),
                 "bat_side": bat_side.get("code"),
                 "pitch_hand": pitch_hand.get("code"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def flatten_game_players(live_feed: dict[str, Any]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for player in live_feed.get("gameData", {}).get("players", {}).values():
+        primary_position = player.get("primaryPosition", {})
+        bat_side = player.get("batSide", {})
+        pitch_hand = player.get("pitchHand", {})
+        rows.append(
+            {
+                "player_id": player.get("id"),
+                "full_name": player.get("fullName"),
+                "first_name": player.get("firstName"),
+                "last_name": player.get("lastName"),
+                "birth_date": player.get("birthDate"),
+                "current_age": player.get("currentAge"),
+                "birth_city": player.get("birthCity"),
+                "birth_country": player.get("birthCountry"),
+                "height": player.get("height"),
+                "weight": player.get("weight"),
+                "active": player.get("active"),
+                "mlb_debut_date": player.get("mlbDebutDate"),
+                "position_code": primary_position.get("code"),
+                "position_name": primary_position.get("name"),
+                "position_abbreviation": primary_position.get("abbreviation"),
+                "bat_side": bat_side.get("code"),
+                "pitch_hand": pitch_hand.get("code"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def flatten_roster(roster_payload: dict[str, Any], *, team_id: int | None = None, roster_type: str | None = None) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for entry in roster_payload.get("roster", []):
+        person = entry.get("person", {})
+        position = entry.get("position", {})
+        status = entry.get("status", {})
+        rows.append(
+            {
+                "team_id": team_id,
+                "roster_type": roster_type,
+                "player_id": person.get("id"),
+                "full_name": person.get("fullName"),
+                "jersey_number": entry.get("jerseyNumber"),
+                "position_code": position.get("code"),
+                "position_name": position.get("name"),
+                "position_abbreviation": position.get("abbreviation"),
+                "status_code": status.get("code"),
+                "status_description": status.get("description"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def flatten_transactions(payload: dict[str, Any]) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+    for item in payload.get("transactions", []):
+        person = item.get("person", {})
+        from_team = item.get("fromTeam", {})
+        to_team = item.get("toTeam", {})
+        rows.append(
+            {
+                "transaction_id": item.get("id"),
+                "player_id": person.get("id"),
+                "player_name": person.get("fullName"),
+                "date": item.get("date"),
+                "effective_date": item.get("effectiveDate"),
+                "resolution_date": item.get("resolutionDate"),
+                "type_code": item.get("typeCode"),
+                "type_desc": item.get("typeDesc"),
+                "description": item.get("description"),
+                "from_team_id": from_team.get("id"),
+                "from_team_name": from_team.get("name"),
+                "to_team_id": to_team.get("id"),
+                "to_team_name": to_team.get("name"),
             }
         )
     return pd.DataFrame(rows)

@@ -3016,14 +3016,24 @@ h4 {
   }
 
   .dashboard-controls h1 {
-    text-align: center;
+    text-align: left;
+    font-size: 24px;
   }
 
   .dashboard-filters {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-card);
   }
 
+  .dashboard-search,
+  .timeframe-selector,
+  .timeframe-selector select,
   .dashboard-search-input {
     width: 100%;
   }
@@ -3033,7 +3043,14 @@ h4 {
   }
 
   .timeframe-selector {
-    justify-content: center;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .upgrade-banner {
@@ -3649,6 +3666,39 @@ h4 {
 @media (max-width: 520px) {
   .analysis-main {
     padding: 20px 12px;
+  }
+
+  .dashboard-main {
+    padding: 20px 12px;
+  }
+
+  .dashboard-title {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .dashboard-controls {
+    margin-bottom: 20px;
+  }
+
+  .view-toggle {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .toggle-btn {
+    width: 100%;
+    text-align: left;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    padding: 16px;
   }
 
   .track-record-grid {
@@ -4347,6 +4397,10 @@ h4 {
     align-items: flex-start;
   }
 
+  .watchlist-pill-list {
+    gap: 10px;
+  }
+
   .empty-oracle-banner {
     flex-direction: column;
     text-align: center;
@@ -4354,6 +4408,18 @@ h4 {
 
   .empty-oracle-banner .btn {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .watchlist-pill {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 10px;
+  }
+
+  .dashboard-watchlist-manager {
+    padding: 12px;
   }
 }
 

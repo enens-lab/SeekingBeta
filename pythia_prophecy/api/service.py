@@ -80,6 +80,8 @@ from .models import (
     UpdatePreferencesRequest,
     TrackRecordResponse,
     TrackRecordCurveResponse,
+    SportsBoardsResponse,
+    SportsBoardCollection,
     BillingCheckoutSessionRequest,
     BillingCheckoutSessionResponse,
     BillingPortalSessionResponse,
@@ -843,6 +845,8 @@ async def log_requests(request, call_next):
 
 # Path to React build output
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
+SPORTS_DATA_SOURCE_DIR = Path(__file__).parent.parent / "frontend_data"
+SPORTS_FRONTEND_SOURCE_DIR = Path(__file__).parent.parent / "frontend" / "src" / "data"
 DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").rstrip("/")
 PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 ALLOW_RANDOM_FALLBACK = os.getenv("ALLOW_RANDOM_FALLBACK", "false").lower() == "true"
@@ -943,6 +947,192 @@ if stripe and STRIPE_SECRET_KEY:
 _ALPACA_COMPANY_HYDRATE_BACKOFF_UNTIL: float = 0.0
 _ALPACA_COMPANY_HYDRATE_LAST_LOG: float = 0.0
 _FINVIZ_INSIGHTS_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+
+
+def _sports_data_path(filename: str) -> Path:
+    copied_path = SPORTS_DATA_SOURCE_DIR / filename
+    if copied_path.exists():
+        return copied_path
+    return SPORTS_FRONTEND_SOURCE_DIR / filename
+
+
+def _load_sports_json(filename: str) -> list[dict[str, Any]]:
+    path = _sports_data_path(filename)
+    if not path.exists():
+        logger.warning("Sports data file not found: %s", path)
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("Failed to parse sports data file %s: %s", path, exc)
+        return []
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    logger.warning("Sports data file %s did not contain a JSON list", path)
+    return []
+
+
+def _sports_data_updated_at(filenames: list[str]) -> datetime:
+    mtimes: list[float] = []
+    for filename in filenames:
+        path = _sports_data_path(filename)
+        if path.exists():
+            mtimes.append(path.stat().st_mtime)
+    if not mtimes:
+        return datetime.now(timezone.utc)
+    return datetime.fromtimestamp(max(mtimes), tz=timezone.utc)
+
+
+def _safe_int(value: Any) -> Optional[int]:
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and math.isfinite(value):
+        return int(value)
+    if isinstance(value, str):
+        compact = re.sub(r"\D", "", value)
+        if compact:
+            try:
+                return int(compact)
+            except Exception:
+                return None
+    return None
+
+
+def _canonical_sports_name(value: Optional[str]) -> str:
+    text = (value or "").strip().lower()
+    text = re.sub(r"^\d{4}\s+", "", text)
+    text = re.sub(r"\s+", " ", text)
+    return text
+
+
+def _event_year(item: dict[str, Any]) -> Optional[int]:
+    scheduled = _safe_int(item.get("scheduledDate"))
+    if scheduled:
+        return scheduled // 10000
+
+    latest = _safe_int(item.get("latestDate"))
+    if latest:
+        return latest // 10000
+
+    name = str(item.get("name") or "").strip()
+    match = re.match(r"^(\d{4})\s+", name)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def _runtime_today_key() -> int:
+    return int(datetime.now(timezone.utc).strftime("%Y%m%d"))
+
+
+def _filter_upcoming_mlb(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    today_key = _runtime_today_key()
+    return [
+        item
+        for item in upcoming
+        if (_safe_int(item.get("scheduledDate")) or 0) >= today_key
+    ]
+
+
+def _filter_upcoming_tennis(
+    upcoming: list[dict[str, Any]],
+    backtests: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    today_key = _runtime_today_key()
+    completed = {
+        (
+            str(row.get("tour") or "").upper(),
+            _canonical_sports_name(str(row.get("tournament") or "")),
+            _safe_int(row.get("year")),
+        )
+        for row in backtests
+        if row.get("tournament") and row.get("tour") and row.get("year")
+    }
+
+    filtered: list[dict[str, Any]] = []
+    for item in upcoming:
+        scheduled = _safe_int(item.get("scheduledDate"))
+        if scheduled and scheduled < today_key:
+            continue
+        item_year = _event_year(item)
+        event_name = _canonical_sports_name(str(item.get("name") or ""))
+        tour = str(item.get("tour") or "").upper()
+        if (tour, event_name, item_year) in completed:
+            continue
+        filtered.append(item)
+    return filtered
+
+
+def _filter_upcoming_golf(
+    upcoming: list[dict[str, Any]],
+    backtests: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    current_year = datetime.now(timezone.utc).year
+    completed = {
+        (str(row.get("tour") or "").upper(), _canonical_sports_name(str(row.get("tournament") or "")))
+        for row in backtests
+        if _safe_int(row.get("year")) == current_year
+    }
+    filtered: list[dict[str, Any]] = []
+    for item in upcoming:
+        tour = str(item.get("tour") or "").upper()
+        event_name = _canonical_sports_name(str(item.get("original_name") or item.get("name") or ""))
+        if (tour, event_name) in completed:
+            continue
+        filtered.append(item)
+    return filtered
+
+
+def _sports_board_collection(
+    upcoming_filename: str,
+    backtests_filename: str,
+    sport: str,
+) -> SportsBoardCollection:
+    upcoming = _load_sports_json(upcoming_filename)
+    backtests = _load_sports_json(backtests_filename)
+
+    if sport == "tennis":
+        upcoming = _filter_upcoming_tennis(upcoming, backtests)
+    elif sport == "mlb":
+        upcoming = _filter_upcoming_mlb(upcoming)
+    elif sport == "golf":
+        upcoming = _filter_upcoming_golf(upcoming, backtests)
+
+    updated_at = _sports_data_updated_at([upcoming_filename, backtests_filename])
+    return SportsBoardCollection(
+        upcoming=upcoming,
+        backtests=backtests,
+        updated_at=updated_at,
+        source="runtime_filtered_sports_feed",
+    )
+
+
+async def _live_mlb_board_collection() -> Optional[SportsBoardCollection]:
+    backtests_filename = "mlb_historical_backtests.json"
+    backtests = _load_sports_json(backtests_filename)
+    fallback_updated_at = _sports_data_updated_at([backtests_filename])
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.get(f"{DIVINATION_API_URL}/api/sports/mlb/boards")
+        response.raise_for_status()
+        payload = response.json()
+        upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
+        if not isinstance(upcoming, list):
+            return None
+        updated_at = _to_utc_datetime(updated_at_raw) or fallback_updated_at
+        return SportsBoardCollection(
+            upcoming=upcoming,
+            backtests=backtests,
+            updated_at=updated_at,
+            source=str(payload.get("source") or "divination_live_mlb_feed"),
+        )
+    except Exception as exc:
+        logger.warning("Falling back to cached MLB board feed: %s", exc)
+        return None
 
 
 def _extract_client_ip(request: Request) -> Optional[str]:
@@ -3453,6 +3643,30 @@ def performance_track_record(model: str = Query("lstm_5d")):
 def performance_curve(model: str = Query("lstm_5d")):
     """Public model-vs-benchmark curve for homepage visualization."""
     return get_track_record_curve(model=model)
+
+
+@app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
+async def sports_boards():
+    """Runtime-filtered sports boards for public marketing and dashboard surfaces."""
+    golf = _sports_board_collection(
+        upcoming_filename="upcoming_tournaments.json",
+        backtests_filename="historical_backtests.json",
+        sport="golf",
+    )
+    tennis = _sports_board_collection(
+        upcoming_filename="wta_upcoming_tournaments.json",
+        backtests_filename="wta_historical_backtests.json",
+        sport="tennis",
+    )
+    mlb = await _live_mlb_board_collection()
+    if mlb is None:
+        mlb = _sports_board_collection(
+            upcoming_filename="mlb_upcoming_tournaments.json",
+            backtests_filename="mlb_historical_backtests.json",
+            sport="mlb",
+        )
+
+    return SportsBoardsResponse(golf=golf, tennis=tennis, mlb=mlb)
 
 
 # ============================================================

@@ -305,6 +305,82 @@ export interface BillingChangeSubscriptionResponse {
   checkout_url: string | null;
 }
 
+export interface SportsBoardPrediction {
+  rank: number;
+  playerName: string;
+  winProbability: number;
+  actualWinner?: boolean;
+  side?: string;
+}
+
+export interface SportsAvailabilitySummary {
+  ilAdds14?: number;
+  ilActivations14?: number;
+  rosterMoves14?: number;
+}
+
+export interface SportsProjectedLineupContext {
+  awayCoverage?: number | null;
+  homeCoverage?: number | null;
+  awayContinuity?: number | null;
+  homeContinuity?: number | null;
+}
+
+export interface SportsUpcomingBoard {
+  id: string;
+  name: string;
+  original_name?: string;
+  tour: string;
+  course: string;
+  scheduledDate?: number;
+  latestDate?: number;
+  venue?: string;
+  predictedWinner?: string;
+  awayTeam?: string;
+  homeTeam?: string;
+  awayStarter?: string;
+  homeStarter?: string;
+  awayAvailability?: SportsAvailabilitySummary;
+  homeAvailability?: SportsAvailabilitySummary;
+  projectedLineupContext?: SportsProjectedLineupContext;
+  predictions: SportsBoardPrediction[];
+}
+
+export interface SportsHistoricalBoard {
+  year: number;
+  tournament: string;
+  tour: string;
+  hitStatus: string;
+  predictedWinner?: string;
+  predictedTop3?: string[];
+  predictedTop5?: string[];
+  actualWinner?: string;
+  prob?: number;
+  venue?: string;
+  course?: string;
+  fullField?: SportsBoardPrediction[];
+  latestDate?: number;
+  tournamentId?: string;
+  scheduledDate?: number;
+  awayTeam?: string;
+  homeTeam?: string;
+  awayStarter?: string;
+  homeStarter?: string;
+}
+
+export interface SportsBoardCollection {
+  upcoming: SportsUpcomingBoard[];
+  backtests: SportsHistoricalBoard[];
+  updated_at: string;
+  source: string;
+}
+
+export interface SportsBoardsResponse {
+  golf: SportsBoardCollection;
+  tennis: SportsBoardCollection;
+  mlb: SportsBoardCollection;
+}
+
 type AuthErrorCallback = (() => void) | null;
 
 // ============================================================================
@@ -613,4 +689,8 @@ export const billing = {
       method: 'POST',
       body: JSON.stringify({ tier }),
     }),
+};
+
+export const sports = {
+  getBoards: (): Promise<SportsBoardsResponse> => request('/api/sports/boards'),
 };

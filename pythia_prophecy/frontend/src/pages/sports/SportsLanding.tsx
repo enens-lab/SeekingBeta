@@ -1,117 +1,145 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import {
+  sports,
+  type SportsBoardsResponse,
+  type SportsHistoricalBoard,
+  type SportsUpcomingBoard,
+} from '../../api/client';
 import { trackEvent } from '../../lib/analytics';
-import golfUpcoming from '../../data/upcoming_tournaments.json';
-import golfBacktests from '../../data/historical_backtests.json';
-import tennisUpcoming from '../../data/wta_upcoming_tournaments.json';
-import tennisBacktests from '../../data/wta_historical_backtests.json';
-import mlbUpcoming from '../../data/mlb_upcoming_tournaments.json';
-import mlbBacktests from '../../data/mlb_historical_backtests.json';
 import './SportsLanding.css';
 
-type EventPrediction = {
-  rank: number;
-  playerName: string;
-  winProbability: number;
+const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
+  golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed' },
+  tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed' },
+  mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed' },
 };
 
-type UpcomingEvent = {
-  id: string;
-  name: string;
-  original_name?: string;
-  tour: string;
-  course: string;
-  predictions: EventPrediction[];
+type SpotlightBoard = {
+  label: string;
+  eyebrow: string;
+  description: string;
+  event?: SportsUpcomingBoard;
+  accent: string;
 };
 
-type BacktestEvent = {
-  tournament: string;
-  tour: string;
-  hitStatus: string;
-  venue?: string;
-  fullField?: EventPrediction[];
-};
-
-const golfEvents = golfUpcoming as UpcomingEvent[];
-const tennisEvents = tennisUpcoming as UpcomingEvent[];
-const golfHistory = golfBacktests as BacktestEvent[];
-const tennisHistory = tennisBacktests as BacktestEvent[];
-const mlbEvents = mlbUpcoming as UpcomingEvent[];
-const mlbHistory = mlbBacktests as BacktestEvent[];
-
-const spotlightBoards = [
-  {
-    label: 'Golf Board',
-    eyebrow: 'PGA + LPGA',
-    description: 'Tournament winner probabilities with full-field rankings, course context, and calibration history.',
-    event: golfEvents[0],
-    accent: 'teal',
-  },
-  {
-    label: 'Tennis Board',
-    eyebrow: 'ATP + WTA',
-    description: 'Singles tournament boards with win probabilities, field strength context, and tour-specific model views.',
-    event: tennisEvents[0],
-    accent: 'blue',
-  },
-  {
-    label: 'MLB Replay',
-    eyebrow: 'MLB',
-    description: 'Pregame matchup boards with probable pitchers, projected lineup strength, bullpen depth, and recent injury churn.',
-    event: mlbEvents[0]
-      ? mlbEvents[0]
-      : mlbHistory[0]
-        ? {
-            id: mlbHistory[0].tournament,
-            name: mlbHistory[0].tournament,
-            tour: 'MLB',
-            course: mlbHistory[0].venue ?? 'MLB Venue',
-            predictions: mlbHistory[0].fullField ?? [],
-          }
-        : undefined,
-    accent: 'orange',
-  },
-];
-
-const sportsCoverage = [
-  {
-    title: 'PGA Tour',
-    status: 'Live now',
-    summary: 'Major championships, signature events, and standard PGA tournament fields.',
-  },
-  {
-    title: 'LPGA Tour',
-    status: 'Live now',
-    summary: 'Women’s major weeks and full-tournament winner boards with field-aware rankings.',
-  },
-  {
-    title: 'ATP Singles',
-    status: 'Live now',
-    summary: 'Men’s hard-court, clay, and indoor tournament probability boards.',
-  },
-  {
-    title: 'WTA Singles',
-    status: 'Live now',
-    summary: 'Women’s tour coverage with tournament-level ranking boards and historical backtests.',
-  },
-  {
-    title: 'MLB',
-    status: 'Live now',
-    summary: 'Pregame daily matchup boards and historical replays powered by pitcher, lineup, bullpen, and availability context.',
-  },
-  {
-    title: 'Other Team Sports',
-    status: 'Coming next',
-    summary: 'NBA, NFL, and NHL remain on deck once the team-sport board templates are fully standardized.',
-  },
-];
+function fallbackReplayEvent(backtest?: SportsHistoricalBoard): SportsUpcomingBoard | undefined {
+  if (!backtest) return undefined;
+  return {
+    id: backtest.tournamentId || `${backtest.tour}-${backtest.tournament}`,
+    name: backtest.tournament,
+    tour: backtest.tour,
+    course: backtest.venue || backtest.course || 'Venue TBD',
+    predictions: backtest.fullField || [],
+  };
+}
 
 function SportsLanding() {
+  const [sportsBoards, setSportsBoards] = useState<SportsBoardsResponse>(EMPTY_SPORTS_BOARDS);
+  const [boardsLoading, setBoardsLoading] = useState(true);
+  const [boardsError, setBoardsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBoards = async () => {
+      setBoardsLoading(true);
+      setBoardsError(null);
+      try {
+        const payload = await sports.getBoards();
+        if (!cancelled) {
+          setSportsBoards(payload);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBoardsError(error instanceof Error ? error.message : 'Unable to load sports boards right now.');
+        }
+      } finally {
+        if (!cancelled) {
+          setBoardsLoading(false);
+        }
+      }
+    };
+
+    void loadBoards();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const golfEvents = sportsBoards.golf.upcoming;
+  const tennisEvents = sportsBoards.tennis.upcoming;
+  const mlbEvents = sportsBoards.mlb.upcoming;
+  const golfHistory = sportsBoards.golf.backtests;
+  const tennisHistory = sportsBoards.tennis.backtests;
+  const mlbHistory = sportsBoards.mlb.backtests;
+
+  const spotlightBoards: SpotlightBoard[] = useMemo(
+    () => [
+      {
+        label: 'Golf Board',
+        eyebrow: 'PGA + LPGA',
+        description: 'Tournament winner probabilities with full-field rankings, course context, and calibration history.',
+        event: golfEvents[0],
+        accent: 'teal',
+      },
+      {
+        label: 'Tennis Board',
+        eyebrow: 'ATP + WTA',
+        description: 'Singles tournament boards with win probabilities, field strength context, and tour-specific model views.',
+        event: tennisEvents[0],
+        accent: 'blue',
+      },
+      {
+        label: 'MLB Board',
+        eyebrow: 'MLB',
+        description: 'Pregame matchup boards with probable pitchers, projected lineup strength, bullpen depth, and recent injury churn.',
+        event: mlbEvents[0] || fallbackReplayEvent(mlbHistory[0]),
+        accent: 'orange',
+      },
+    ],
+    [golfEvents, tennisEvents, mlbEvents, mlbHistory]
+  );
+
+  const sportsCoverage = [
+    {
+      title: 'PGA Tour',
+      status: 'Live now',
+      summary: 'Major championships, signature events, and standard PGA tournament fields.',
+    },
+    {
+      title: 'LPGA Tour',
+      status: 'Live now',
+      summary: 'Women’s major weeks and full-tournament winner boards with field-aware rankings.',
+    },
+    {
+      title: 'ATP Singles',
+      status: 'Live now',
+      summary: 'Men’s hard-court, clay, and indoor tournament probability boards.',
+    },
+    {
+      title: 'WTA Singles',
+      status: 'Live now',
+      summary: 'Women’s tour coverage with tournament-level ranking boards and historical backtests.',
+    },
+    {
+      title: 'MLB',
+      status: 'Live now',
+      summary: 'Pregame daily matchup boards and historical replays powered by pitcher, lineup, bullpen, and availability context.',
+    },
+    {
+      title: 'Other Team Sports',
+      status: 'Coming next',
+      summary: 'NBA, NFL, and NHL remain on deck once the team-sport board templates are fully standardized.',
+    },
+  ];
+
   const totalBoards = golfEvents.length + tennisEvents.length + mlbEvents.length;
   const totalBacktests = golfHistory.length + tennisHistory.length + mlbHistory.length;
   const totalTours = new Set(
-    [...golfEvents, ...tennisEvents, ...golfHistory, ...tennisHistory, ...mlbHistory].map((item) => item.tour),
+    [...golfEvents, ...tennisEvents, ...mlbEvents, ...golfHistory, ...tennisHistory, ...mlbHistory].map((item) => item.tour),
   ).size;
   const totalTrackedEntrants = spotlightBoards.reduce((sum, board) => sum + (board.event?.predictions.length ?? 0), 0);
 
@@ -120,7 +148,7 @@ function SportsLanding() {
       <Header />
       <main className="sports-landing">
         <section className="sports-hero">
-          <div className="sports-hero-glow"></div>
+          <div className="sports-hero-glow" />
           <div className="sports-hero-grid">
             <div className="sports-hero-copy">
               <span className="sports-badge">Multi-Sport Prediction Boards</span>
@@ -158,12 +186,15 @@ function SportsLanding() {
               <div className="sports-disclaimer">
                 Probability intelligence only. No wagering, no settlement layer, and no real-money contracts.
               </div>
+              {boardsError && <div className="sports-disclaimer sports-error-note">Live sports feed is refreshing: {boardsError}</div>}
             </div>
 
             <div className="sports-market-shell">
               <div className="market-shell-header">
                 <span className="market-shell-label">Live Board Snapshot</span>
-                <span className="market-shell-status">Educational probabilities</span>
+                <span className="market-shell-status">
+                  {boardsLoading ? 'Refreshing boards' : 'Educational probabilities'}
+                </span>
               </div>
               <div className="market-shell-grid">
                 <div className="market-shell-stat">
@@ -200,40 +231,44 @@ function SportsLanding() {
             </p>
           </div>
 
-          <div className="spotlight-grid">
-            {spotlightBoards.map((board) => (
-              <article
-                key={board.label}
-                className={`spotlight-card accent-${board.accent}`}
-                onClick={() => trackEvent('sports_board_preview_click', { board: board.label, tour: board.event?.tour })}
-              >
-                <div className="spotlight-card-header">
-                  <div>
-                    <span className="spotlight-eyebrow">{board.eyebrow}</span>
-                    <h3>{board.event?.name ?? board.label}</h3>
-                  </div>
-                  <span className="spotlight-tour-pill">{board.event?.tour ?? 'Live'}</span>
-                </div>
-
-                <p className="spotlight-description">{board.description}</p>
-
-                <div className="spotlight-meta">
-                  <span>{board.event?.course ?? 'Venue TBD'}</span>
-                  <span>{board.event?.predictions.length ?? 0} contenders ranked</span>
-                </div>
-
-                <div className="spotlight-board">
-                  {(board.event?.predictions ?? []).slice(0, 5).map((pred) => (
-                    <div key={`${board.label}-${pred.rank}-${pred.playerName}`} className="spotlight-row">
-                      <span className="spotlight-rank">#{pred.rank}</span>
-                      <span className="spotlight-player">{pred.playerName}</span>
-                      <span className="spotlight-prob">{pred.winProbability.toFixed(2)}%</span>
+          {boardsLoading ? (
+            <div className="spotlight-empty-state">Loading the latest board rotation...</div>
+          ) : (
+            <div className="spotlight-grid">
+              {spotlightBoards.map((board) => (
+                <article
+                  key={board.label}
+                  className={`spotlight-card accent-${board.accent}`}
+                  onClick={() => trackEvent('sports_board_preview_click', { board: board.label, tour: board.event?.tour })}
+                >
+                  <div className="spotlight-card-header">
+                    <div>
+                      <span className="spotlight-eyebrow">{board.eyebrow}</span>
+                      <h3>{board.event?.name ?? board.label}</h3>
                     </div>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
+                    <span className="spotlight-tour-pill">{board.event?.tour ?? 'Live'}</span>
+                  </div>
+
+                  <p className="spotlight-description">{board.description}</p>
+
+                  <div className="spotlight-meta">
+                    <span>{board.event?.course ?? 'Venue TBD'}</span>
+                    <span>{board.event?.predictions.length ?? 0} contenders ranked</span>
+                  </div>
+
+                  <div className="spotlight-board">
+                    {(board.event?.predictions ?? []).slice(0, 5).map((pred) => (
+                      <div key={`${board.label}-${pred.rank}-${pred.playerName}`} className="spotlight-row">
+                        <span className="spotlight-rank">#{pred.rank}</span>
+                        <span className="spotlight-player">{pred.playerName}</span>
+                        <span className="spotlight-prob">{pred.winProbability.toFixed(2)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="sports-coverage">

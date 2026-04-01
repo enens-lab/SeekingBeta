@@ -1,80 +1,107 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
+import {
+  sports,
+  type SportsBoardCollection,
+  type SportsBoardsResponse,
+  type SportsHistoricalBoard,
+  type SportsUpcomingBoard,
+} from '../../api/client';
 import { trackEvent } from '../../lib/analytics';
-import upcomingTournamentsPGA from '../../data/upcoming_tournaments.json';
-import historicalBacktestsPGA from '../../data/historical_backtests.json';
-import upcomingTournamentsWTA from '../../data/wta_upcoming_tournaments.json';
-import historicalBacktestsWTA from '../../data/wta_historical_backtests.json';
-import upcomingTournamentsMLB from '../../data/mlb_upcoming_tournaments.json';
-import historicalBacktestsMLB from '../../data/mlb_historical_backtests.json';
 import './SportsDashboard.css';
 
 type SportCategory = 'Golf' | 'Tennis' | 'NBA' | 'MLB' | 'NFL' | 'NHL';
-type BoardPrediction = {
-  rank: number;
-  playerName: string;
-  winProbability: number;
-};
-type AvailabilitySummary = {
-  ilAdds14?: number;
-  ilActivations14?: number;
-  rosterMoves14?: number;
-};
-type SportsBoard = {
-  id: string;
-  name: string;
-  tour: string;
-  course: string;
-  predictions: BoardPrediction[];
-  awayStarter?: string;
-  homeStarter?: string;
-  awayAvailability?: AvailabilitySummary;
-  homeAvailability?: AvailabilitySummary;
+
+const EMPTY_COLLECTION: SportsBoardCollection = {
+  upcoming: [],
+  backtests: [],
+  updated_at: '',
+  source: 'runtime_filtered_sports_feed',
 };
 
-const sportDataMap = {
-  Golf: {
-    upcoming: upcomingTournamentsPGA as any[],
-    backtests: historicalBacktestsPGA as any[],
-  },
-  Tennis: {
-    upcoming: upcomingTournamentsWTA as any[],
-    backtests: historicalBacktestsWTA as any[],
-  },
-  MLB: {
-    upcoming: upcomingTournamentsMLB as any[],
-    backtests: historicalBacktestsMLB as any[],
-  },
-} as const;
+const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
+  golf: EMPTY_COLLECTION,
+  tennis: EMPTY_COLLECTION,
+  mlb: EMPTY_COLLECTION,
+};
+
+function runtimeUpdatedLabel(value?: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 function SportsDashboard() {
+  const [sportsBoards, setSportsBoards] = useState<SportsBoardsResponse>(EMPTY_SPORTS_BOARDS);
+  const [boardsLoading, setBoardsLoading] = useState(true);
+  const [boardsError, setBoardsError] = useState<string | null>(null);
   const [activeSport, setActiveSport] = useState<SportCategory>('Golf');
   const [pgaTab, setPgaTab] = useState<'upcoming' | 'backtest'>('upcoming');
-  
-  const sportData = sportDataMap[activeSport as keyof typeof sportDataMap];
-  const currentUpcoming = sportData?.upcoming ?? [];
-  const currentBacktests = sportData?.backtests ?? [];
-
-  const [activeEventId, setActiveEventId] = useState<string>(currentUpcoming[0]?.id || '');
+  const [activeEventId, setActiveEventId] = useState<string>('');
   const [showAllPredictions, setShowAllPredictions] = useState(false);
   const [expandedBacktest, setExpandedBacktest] = useState<number | null>(null);
-  
-  // Search and filter states
   const [playerSearchQuery, setPlayerSearchQuery] = useState('');
   const [backtestSearchQuery, setBacktestSearchQuery] = useState('');
   const [backtestFilter, setBacktestFilter] = useState<'All' | 'Hit: Top Pick' | 'Hit: Top 3' | 'Hit: Top 5' | 'Miss'>('All');
   const [tennisTourFilter, setTennisTourFilter] = useState<'All' | 'ATP' | 'WTA'>('All');
   const [golfTourFilter, setGolfTourFilter] = useState<'All' | 'PGA' | 'LPGA'>('All');
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadBoards = async () => {
+      setBoardsLoading(true);
+      setBoardsError(null);
+      try {
+        const payload = await sports.getBoards();
+        if (!cancelled) {
+          setSportsBoards(payload);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBoardsError(error instanceof Error ? error.message : 'Unable to load sports boards right now.');
+        }
+      } finally {
+        if (!cancelled) {
+          setBoardsLoading(false);
+        }
+      }
+    };
+
+    void loadBoards();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sportDataMap = useMemo(
+    () => ({
+      Golf: sportsBoards.golf,
+      Tennis: sportsBoards.tennis,
+      MLB: sportsBoards.mlb,
+    }),
+    [sportsBoards]
+  );
+
+  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'MLB'
+    ? sportDataMap[activeSport]
+    : EMPTY_COLLECTION;
+
+  const currentUpcoming = sportData.upcoming ?? [];
+  const currentBacktests = sportData.backtests ?? [];
+
   const handleSportChange = (sport: SportCategory) => {
     if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'MLB') return;
-    
+
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
-    
-    // Reset tournament-specific state when switching sports
-    const nextUpcoming = sportDataMap[sport as keyof typeof sportDataMap]?.upcoming ?? [];
-    setActiveEventId(nextUpcoming[0]?.id || '');
+    setActiveEventId('');
     setShowAllPredictions(false);
     setExpandedBacktest(null);
     setPlayerSearchQuery('');
@@ -84,53 +111,61 @@ function SportsDashboard() {
     setGolfTourFilter('All');
   };
 
-  // Filter current upcoming by tour
   const filteredUpcoming = useMemo(() => {
     if (activeSport === 'Tennis' && tennisTourFilter !== 'All') {
-      return (currentUpcoming as any[]).filter(t => t.tour === tennisTourFilter);
+      return currentUpcoming.filter((event) => event.tour === tennisTourFilter);
     }
     if (activeSport === 'Golf' && golfTourFilter !== 'All') {
-      return (currentUpcoming as any[]).filter(t => t.tour === golfTourFilter);
+      return currentUpcoming.filter((event) => event.tour === golfTourFilter);
     }
     return currentUpcoming;
-  }, [activeSport, tennisTourFilter, golfTourFilter, currentUpcoming]);
+  }, [activeSport, currentUpcoming, tennisTourFilter, golfTourFilter]);
 
-  // Adjust active event if filter changed
-  useMemo(() => {
-    if (!filteredUpcoming.find(t => t.id === activeEventId)) {
-      setActiveEventId(filteredUpcoming[0]?.id || '');
+  useEffect(() => {
+    if (!filteredUpcoming.length) {
+      if (activeEventId !== '') {
+        setActiveEventId('');
+      }
+      return;
+    }
+    if (!filteredUpcoming.some((event) => event.id === activeEventId)) {
+      setActiveEventId(filteredUpcoming[0].id);
     }
   }, [filteredUpcoming, activeEventId]);
 
-  const activeEvent = (filteredUpcoming.find(t => t.id === activeEventId) || filteredUpcoming[0]) as SportsBoard | undefined;
+  const activeEvent = useMemo(
+    () => filteredUpcoming.find((event) => event.id === activeEventId) || filteredUpcoming[0],
+    [filteredUpcoming, activeEventId]
+  ) as SportsUpcomingBoard | undefined;
 
-  const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map((p: BoardPrediction) => p.winProbability)) : 100;
-  
+  const sportUpdatedAt = runtimeUpdatedLabel(sportData.updated_at);
+  const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map((prediction) => prediction.winProbability)) : 100;
+
   const displayedPredictions = useMemo(() => {
     let filtered = activeEvent?.predictions || [];
-    
+
     if (playerSearchQuery.trim() !== '') {
       const query = playerSearchQuery.toLowerCase();
-      filtered = filtered.filter((p: BoardPrediction) => p.playerName.toLowerCase().includes(query));
+      filtered = filtered.filter((prediction) => prediction.playerName.toLowerCase().includes(query));
       return filtered;
     }
-    
+
     return showAllPredictions ? filtered : filtered.slice(0, 15);
   }, [activeEvent, playerSearchQuery, showAllPredictions]);
 
   const filteredBacktests = useMemo(() => {
-    return (currentBacktests as any[]).filter(bt => {
-      const matchesSearch = bt.tournament.toLowerCase().includes(backtestSearchQuery.toLowerCase()) || 
-                            bt.actualWinner.toLowerCase().includes(backtestSearchQuery.toLowerCase());
-      const matchesFilter = backtestFilter === 'All' || bt.hitStatus === backtestFilter.replace('Hit: ', '');
-      
+    return currentBacktests.filter((backtest) => {
+      const haystack = `${backtest.tournament} ${backtest.actualWinner || ''}`.toLowerCase();
+      const matchesSearch = haystack.includes(backtestSearchQuery.toLowerCase());
+      const matchesFilter = backtestFilter === 'All' || backtest.hitStatus === backtestFilter.replace('Hit: ', '');
+
       let matchesTour = true;
       if (activeSport === 'Tennis') {
-        matchesTour = tennisTourFilter === 'All' || bt.tour === tennisTourFilter;
+        matchesTour = tennisTourFilter === 'All' || backtest.tour === tennisTourFilter;
       } else if (activeSport === 'Golf') {
-        matchesTour = golfTourFilter === 'All' || bt.tour === golfTourFilter;
+        matchesTour = golfTourFilter === 'All' || backtest.tour === golfTourFilter;
       }
-      
+
       return matchesSearch && matchesFilter && matchesTour;
     });
   }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, activeSport]);
@@ -138,10 +173,10 @@ function SportsDashboard() {
   const toggleBacktestDetails = (idx: number) => {
     if (expandedBacktest === idx) {
       setExpandedBacktest(null);
-    } else {
-      setExpandedBacktest(idx);
-      trackEvent('sports_backtest_details_click', { tournament: filteredBacktests[idx].tournament });
+      return;
     }
+    setExpandedBacktest(idx);
+    trackEvent('sports_backtest_details_click', { tournament: filteredBacktests[idx]?.tournament });
   };
 
   return (
@@ -149,47 +184,39 @@ function SportsDashboard() {
       <DashboardHeader activePage="sports" />
 
       <main className="dashboard-main">
-        <div className="dashboard-title">
-          <h1>Sports Prediction Boards</h1>
-          <p className="subtitle">Scan probability boards and model replays across golf, tennis, and baseball without any betting or trading layer.</p>
+        <div className="dashboard-title sports-dashboard-title">
+          <div>
+            <h1>Sports Prediction Boards</h1>
+            <p className="subtitle">
+              Scan live-looking probability boards and model replays across golf, tennis, and baseball without any betting or trading layer.
+            </p>
+          </div>
+          {sportUpdatedAt && (
+            <div className="sports-runtime-meta">
+              <span className="sports-runtime-pill">Runtime feed</span>
+              <span className="sports-runtime-stamp">Updated {sportUpdatedAt}</span>
+            </div>
+          )}
         </div>
 
         <div className="sports-navigation">
           <div className="sports-tabs">
-            <button 
-              className={`sport-tab ${activeSport === 'Golf' ? 'active' : ''}`}
-              onClick={() => handleSportChange('Golf')}
-            >
+            <button className={`sport-tab ${activeSport === 'Golf' ? 'active' : ''}`} onClick={() => handleSportChange('Golf')}>
               Golf
             </button>
-            <button 
-              className={`sport-tab ${activeSport === 'Tennis' ? 'active' : ''}`}
-              onClick={() => handleSportChange('Tennis')}
-            >
+            <button className={`sport-tab ${activeSport === 'Tennis' ? 'active' : ''}`} onClick={() => handleSportChange('Tennis')}>
               Tennis
             </button>
-            <button 
-              className={`sport-tab ${activeSport === 'NBA' ? 'active' : ''} disabled-tab`}
-              onClick={() => handleSportChange('NBA')}
-            >
+            <button className={`sport-tab ${activeSport === 'NBA' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NBA')}>
               NBA <span className="badge-tbd">TBD</span>
             </button>
-            <button 
-              className={`sport-tab ${activeSport === 'MLB' ? 'active' : ''}`}
-              onClick={() => handleSportChange('MLB')}
-            >
+            <button className={`sport-tab ${activeSport === 'MLB' ? 'active' : ''}`} onClick={() => handleSportChange('MLB')}>
               MLB
             </button>
-            <button 
-              className={`sport-tab ${activeSport === 'NFL' ? 'active' : ''} disabled-tab`}
-              onClick={() => handleSportChange('NFL')}
-            >
+            <button className={`sport-tab ${activeSport === 'NFL' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NFL')}>
               NFL <span className="badge-tbd">TBD</span>
             </button>
-            <button 
-              className={`sport-tab ${activeSport === 'NHL' ? 'active' : ''} disabled-tab`}
-              onClick={() => handleSportChange('NHL')}
-            >
+            <button className={`sport-tab ${activeSport === 'NHL' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NHL')}>
               NHL <span className="badge-tbd">TBD</span>
             </button>
           </div>
@@ -199,37 +226,51 @@ function SportsDashboard() {
           {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'MLB') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
-                <button 
-                  className={`toggle-btn ${pgaTab === 'upcoming' ? 'active' : ''}`}
-                  onClick={() => setPgaTab('upcoming')}
-                >
+                <button className={`toggle-btn ${pgaTab === 'upcoming' ? 'active' : ''}`} onClick={() => setPgaTab('upcoming')}>
                   Live Boards
                 </button>
-                <button 
-                  className={`toggle-btn ${pgaTab === 'backtest' ? 'active' : ''}`}
-                  onClick={() => setPgaTab('backtest')}
-                >
+                <button className={`toggle-btn ${pgaTab === 'backtest' ? 'active' : ''}`} onClick={() => setPgaTab('backtest')}>
                   Track Record
                 </button>
               </div>
 
-              {pgaTab === 'upcoming' && (
+              {boardsLoading ? (
+                <div className="tournament-card">
+                  <div className="dashboard-loading compact-loading">
+                    <div className="spinner" />
+                    <p>Loading live sports boards...</p>
+                  </div>
+                </div>
+              ) : boardsError ? (
+                <div className="tournament-card no-live-board-card">
+                  <div className="tournament-header">
+                    <div className="header-left">
+                      <h2>Live sports feed is temporarily unavailable</h2>
+                      <span className="market-status staged">Retry shortly</span>
+                    </div>
+                  </div>
+                  <div className="tournament-details">
+                    <p>{boardsError}</p>
+                    <p>We’re hiding stale boards instead of showing old matchups, so this section only fills when the runtime feed is healthy.</p>
+                  </div>
+                </div>
+              ) : pgaTab === 'upcoming' ? (
                 <div className="upcoming-events-container">
                   <div className="event-selector">
-                    <div className="selector-group">
-                      <label>{activeSport === 'MLB' ? 'Select Matchup: ' : 'Select Board: '}</label>
-                      <select 
-                        value={activeEventId} 
-                        onChange={(e) => {
-                          setActiveEventId(e.target.value);
+                    <div className="selector-group selector-group-primary">
+                      <label>{activeSport === 'MLB' ? 'Select Matchup:' : 'Select Board:'}</label>
+                      <select
+                        value={activeEventId}
+                        onChange={(event) => {
+                          setActiveEventId(event.target.value);
                           setShowAllPredictions(false);
                           setPlayerSearchQuery('');
                         }}
                         className="tournament-dropdown"
                       >
-                        {filteredUpcoming.map(t => (
-                          <option key={t.id} value={t.id}>
-                            [{t.tour}] {t.name}
+                        {filteredUpcoming.map((event) => (
+                          <option key={event.id} value={event.id}>
+                            [{event.tour}] {event.name}
                           </option>
                         ))}
                       </select>
@@ -237,46 +278,46 @@ function SportsDashboard() {
 
                     {activeSport === 'Tennis' && (
                       <div className="selector-group tour-filter-group">
-                        <label>Tour: </label>
-                        <select 
+                        <label>Tour:</label>
+                        <select
                           value={tennisTourFilter}
-                          onChange={(e) => setTennisTourFilter(e.target.value as any)}
+                          onChange={(event) => setTennisTourFilter(event.target.value as 'All' | 'ATP' | 'WTA')}
                           className="sports-filter-dropdown"
                         >
                           <option value="All">All Tennis</option>
-                          <option value="ATP">Men's Singles (ATP)</option>
-                          <option value="WTA">Women's Singles (WTA)</option>
+                          <option value="ATP">Men&apos;s Singles (ATP)</option>
+                          <option value="WTA">Women&apos;s Singles (WTA)</option>
                         </select>
                       </div>
                     )}
 
                     {activeSport === 'Golf' && (
                       <div className="selector-group tour-filter-group">
-                        <label>Tour: </label>
-                        <select 
+                        <label>Tour:</label>
+                        <select
                           value={golfTourFilter}
-                          onChange={(e) => setGolfTourFilter(e.target.value as any)}
+                          onChange={(event) => setGolfTourFilter(event.target.value as 'All' | 'PGA' | 'LPGA')}
                           className="sports-filter-dropdown"
                         >
                           <option value="All">All Golf</option>
-                          <option value="PGA">Men's (PGA)</option>
-                          <option value="LPGA">Women's (LPGA)</option>
+                          <option value="PGA">Men&apos;s (PGA)</option>
+                          <option value="LPGA">Women&apos;s (LPGA)</option>
                         </select>
                       </div>
                     )}
                   </div>
-                  
-                  {activeSport === 'MLB' && currentUpcoming.length === 0 ? (
+
+                  {!filteredUpcoming.length ? (
                     <div className="tournament-card no-live-board-card">
                       <div className="tournament-header">
                         <div className="header-left">
-                          <h2>MLB board rollout in progress</h2>
-                          <span className="market-status staged">Track record live</span>
+                          <h2>No active {activeSport} boards right now</h2>
+                          <span className="market-status staged">Runtime filtered</span>
                         </div>
                       </div>
                       <div className="tournament-details">
-                        <p><strong>Status:</strong> Historical MLB model replays are live now.</p>
-                        <p><strong>Next step:</strong> Pregame MLB board exports will appear here once the daily inference job is enabled.</p>
+                        <p>Completed events are filtered out automatically, so this section only shows boards that still look live or still belong in the current rotation.</p>
+                        <p>Check the Track Record tab if you want to review finished boards while the next slate loads in.</p>
                       </div>
                     </div>
                   ) : activeEvent ? (
@@ -287,11 +328,11 @@ function SportsDashboard() {
                           <span className="market-status live">Board Live</span>
                         </div>
                         <div className="header-search">
-                          <input 
-                            type="text" 
-                            placeholder={`Search contender...`} 
+                          <input
+                            type="text"
+                            placeholder="Search contender..."
                             value={playerSearchQuery}
-                            onChange={(e) => setPlayerSearchQuery(e.target.value)}
+                            onChange={(event) => setPlayerSearchQuery(event.target.value)}
                             className="sports-search-input"
                           />
                         </div>
@@ -303,17 +344,14 @@ function SportsDashboard() {
                           <>
                             <p><strong>Probable starters:</strong> {activeEvent.awayStarter || 'TBD'} vs {activeEvent.homeStarter || 'TBD'}</p>
                             <p>
-                              <strong>Availability pulse:</strong>{' '}
-                              Away IL adds (14d): {activeEvent.awayAvailability?.ilAdds14 ?? 0}, Home IL adds (14d): {activeEvent.homeAvailability?.ilAdds14 ?? 0}
+                              <strong>Availability pulse:</strong> Away IL adds (14d): {activeEvent.awayAvailability?.ilAdds14 ?? 0}, Home IL adds (14d): {activeEvent.homeAvailability?.ilAdds14 ?? 0}
                             </p>
                           </>
                         )}
                       </div>
 
                       {displayedPredictions.length === 0 ? (
-                        <div className="no-results-message">
-                          No contenders found matching "{playerSearchQuery}"
-                        </div>
+                        <div className="no-results-message">No contenders found matching &quot;{playerSearchQuery}&quot;</div>
                       ) : (
                         <div className="prediction-leaderboard">
                           <div className="leaderboard-header">
@@ -321,30 +359,27 @@ function SportsDashboard() {
                             <span>{activeSport === 'MLB' ? 'Side' : 'Player'}</span>
                             <span>Win Probability</span>
                           </div>
-                          {displayedPredictions.map((pred: BoardPrediction) => (
-                            <div key={pred.rank} className="leaderboard-row">
-                              <span className="player-rank">#{pred.rank}</span>
-                              <span className="player-name">{pred.playerName}</span>
+                          {displayedPredictions.map((prediction) => (
+                            <div key={`${prediction.rank}-${prediction.playerName}`} className="leaderboard-row">
+                              <span className="player-rank">#{prediction.rank}</span>
+                              <span className="player-name">{prediction.playerName}</span>
                               <div className="probability-container">
-                                <span className="prob-value">{pred.winProbability.toFixed(2)}%</span>
+                                <span className="prob-value">{prediction.winProbability.toFixed(2)}%</span>
                                 <div className="prob-bar-bg">
-                                  <div 
-                                    className="prob-bar-fill" 
-                                    style={{ width: `${(pred.winProbability / maxProb) * 100}%` }}
-                                  ></div>
+                                  <div
+                                    className="prob-bar-fill"
+                                    style={{ width: `${(prediction.winProbability / maxProb) * 100}%` }}
+                                  />
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
-                      
+
                       {!showAllPredictions && playerSearchQuery === '' && activeEvent.predictions.length > 15 && (
                         <div className="view-all-container">
-                          <button 
-                            className="btn btn-outline"
-                            onClick={() => setShowAllPredictions(true)}
-                          >
+                          <button className="btn btn-outline" onClick={() => setShowAllPredictions(true)}>
                             View All Players ({activeEvent.predictions.length})
                           </button>
                         </div>
@@ -352,52 +387,50 @@ function SportsDashboard() {
                     </div>
                   ) : null}
                 </div>
-              )}
-
-              {pgaTab === 'backtest' && (
+              ) : (
                 <div className="backtest-container">
                   <div className="backtest-header-area">
                     <div>
-                      <h2>Track Record (2024 - 2025)</h2>
+                      <h2>Track Record (2024 - 2026)</h2>
                       <p className="backtest-desc">
                         {activeSport === 'MLB'
                           ? 'Review historical MLB game boards and compare the model’s top side against the actual winner.'
-                          : 'See how often the board&apos;s highest-ranked names landed the eventual winner, Top 3, or Top 5.'}
+                          : 'See how often the board’s highest-ranked names landed the eventual winner, Top 3, or Top 5.'}
                       </p>
                     </div>
                     <div className="backtest-filters">
                       {activeSport === 'Tennis' && (
-                        <select 
+                        <select
                           value={tennisTourFilter}
-                          onChange={(e) => setTennisTourFilter(e.target.value as any)}
+                          onChange={(event) => setTennisTourFilter(event.target.value as 'All' | 'ATP' | 'WTA')}
                           className="sports-filter-dropdown"
                         >
                           <option value="All">All Tennis</option>
-                          <option value="ATP">Men's (ATP)</option>
-                          <option value="WTA">Women's (WTA)</option>
+                          <option value="ATP">Men&apos;s (ATP)</option>
+                          <option value="WTA">Women&apos;s (WTA)</option>
                         </select>
                       )}
                       {activeSport === 'Golf' && (
-                        <select 
+                        <select
                           value={golfTourFilter}
-                          onChange={(e) => setGolfTourFilter(e.target.value as any)}
+                          onChange={(event) => setGolfTourFilter(event.target.value as 'All' | 'PGA' | 'LPGA')}
                           className="sports-filter-dropdown"
                         >
                           <option value="All">All Golf</option>
-                          <option value="PGA">Men's (PGA)</option>
-                          <option value="LPGA">Women's (LPGA)</option>
+                          <option value="PGA">Men&apos;s (PGA)</option>
+                          <option value="LPGA">Women&apos;s (LPGA)</option>
                         </select>
                       )}
-                      <input 
-                        type="text" 
-                        placeholder={activeSport === 'MLB' ? 'Search matchup or winner...' : 'Search tournament or winner...'} 
+                      <input
+                        type="text"
+                        placeholder={activeSport === 'MLB' ? 'Search matchup or winner...' : 'Search tournament or winner...'}
                         value={backtestSearchQuery}
-                        onChange={(e) => setBacktestSearchQuery(e.target.value)}
+                        onChange={(event) => setBacktestSearchQuery(event.target.value)}
                         className="sports-search-input"
                       />
-                      <select 
+                      <select
                         value={backtestFilter}
-                        onChange={(e) => setBacktestFilter(e.target.value as any)}
+                        onChange={(event) => setBacktestFilter(event.target.value as typeof backtestFilter)}
                         className="sports-filter-dropdown"
                       >
                         <option value="All">All Results</option>
@@ -408,61 +441,56 @@ function SportsDashboard() {
                       </select>
                     </div>
                   </div>
-                  
+
                   {filteredBacktests.length === 0 ? (
-                    <div className="no-results-message">
-                      No historical results found matching your filters.
-                    </div>
+                    <div className="no-results-message">No historical results found matching your filters.</div>
                   ) : (
                     <div className="backtest-table">
-                        <div className="backtest-header">
-                          <span>Year</span>
-                          <span>{activeSport === 'MLB' ? 'Matchup' : 'Tournament'}</span>
-                          <span>{activeSport === 'MLB' ? 'Predicted Side' : 'Top Predicted Picks'}</span>
-                          <span>Actual Winner</span>
-                          <span>Result</span>
-                          <span>Details</span>
+                      <div className="backtest-header">
+                        <span>Year</span>
+                        <span>{activeSport === 'MLB' ? 'Matchup' : 'Tournament'}</span>
+                        <span>{activeSport === 'MLB' ? 'Predicted Side' : 'Top Predicted Picks'}</span>
+                        <span>Actual Winner</span>
+                        <span>Result</span>
+                        <span>Details</span>
                       </div>
-                      {filteredBacktests.map((bt, idx) => (
-                        <div key={idx} className="backtest-row-container">
-                          <div className={`backtest-row ${bt.hitStatus !== 'Miss' ? 'hit' : 'miss'}`}>
-                            <span>{bt.year}</span>
+                      {filteredBacktests.map((backtest: SportsHistoricalBoard, idx) => (
+                        <div key={`${backtest.tournament}-${backtest.year}-${idx}`} className="backtest-row-container">
+                          <div className={`backtest-row ${backtest.hitStatus !== 'Miss' ? 'hit' : 'miss'}`}>
+                            <span>{backtest.year}</span>
                             <div className="tournament-info-col">
-                              <strong>{bt.tournament}</strong>
-                              <div className="tour-label">{activeSport === 'MLB' ? bt.venue : bt.tour}</div>
+                              <strong>{backtest.tournament}</strong>
+                              <div className="tour-label">{activeSport === 'MLB' ? backtest.venue : backtest.tour}</div>
                             </div>
                             <div className="top-picks-col">
                               {activeSport === 'MLB' ? (
                                 <>
-                                  <strong>{bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
-                                  <small>{bt.awayTeam} at {bt.homeTeam}</small>
+                                  <strong>{backtest.predictedWinner}</strong> <small>({((backtest.prob || 0) * 100).toFixed(1)}%)</small><br />
+                                  <small>{backtest.awayTeam} at {backtest.homeTeam}</small>
                                 </>
                               ) : (
                                 <>
-                                  <strong>1. {bt.predictedWinner}</strong> <small>({(bt.prob * 100).toFixed(1)}%)</small><br />
-                                  <small>2. {bt.predictedTop3?.[1]} | 3. {bt.predictedTop3?.[2]}</small><br />
-                                  <small>4. {bt.predictedTop5?.[3]} | 5. {bt.predictedTop5?.[4]}</small>
+                                  <strong>1. {backtest.predictedWinner}</strong> <small>({((backtest.prob || 0) * 100).toFixed(1)}%)</small><br />
+                                  <small>2. {backtest.predictedTop3?.[1]} | 3. {backtest.predictedTop3?.[2]}</small><br />
+                                  <small>4. {backtest.predictedTop5?.[3]} | 5. {backtest.predictedTop5?.[4]}</small>
                                 </>
                               )}
                             </div>
-                            <span>{bt.actualWinner}</span>
-                            <span className={`result-badge ${bt.hitStatus.toLowerCase().replace(' ', '-')}`}>
-                              {bt.hitStatus !== 'Miss' ? `Hit: ${bt.hitStatus}` : 'Miss'}
+                            <span>{backtest.actualWinner}</span>
+                            <span className={`result-badge ${backtest.hitStatus.toLowerCase().replace(' ', '-')}`}>
+                              {backtest.hitStatus !== 'Miss' ? `Hit: ${backtest.hitStatus}` : 'Miss'}
                             </span>
-                            <button 
-                              className="btn-text details-toggle"
-                              onClick={() => toggleBacktestDetails(idx)}
-                            >
+                            <button className="btn-text details-toggle" onClick={() => toggleBacktestDetails(idx)}>
                               {expandedBacktest === idx ? 'Hide Board' : 'View Board'}
                             </button>
                           </div>
-                          
+
                           {expandedBacktest === idx && (
                             <div className="backtest-details-panel">
                               <h4>Full Field Ranking</h4>
                               <div className="details-grid">
-                                {bt.fullField?.map((player: any) => (
-                                  <div key={player.rank} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
+                                {(backtest.fullField || []).map((player) => (
+                                  <div key={`${player.rank}-${player.playerName}`} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
                                     <span className="dp-rank">#{player.rank}</span>
                                     <span className="dp-name">{player.playerName}</span>
                                     <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
@@ -471,7 +499,8 @@ function SportsDashboard() {
                                 ))}
                               </div>
                             </div>
-                          )}                        </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}

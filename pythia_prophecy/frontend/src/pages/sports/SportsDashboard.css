@@ -4,9 +4,38 @@
   padding: 2rem 1rem;
 }
 
+.sports-dashboard-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .sports-dashboard .subtitle {
   color: var(--text-muted);
   margin-top: 0.5rem;
+  max-width: 62ch;
+}
+
+.sports-runtime-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.sports-runtime-pill,
+.sports-runtime-stamp {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.sports-runtime-pill {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
 }
 
 .sports-navigation {
@@ -98,6 +127,10 @@
   min-width: 0;
 }
 
+.selector-group-primary {
+  flex: 1 1 420px;
+}
+
 .event-selector label {
   font-weight: 600;
   color: var(--text-main);
@@ -127,6 +160,10 @@
   border-radius: 12px;
   padding: 2rem;
   box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.compact-loading {
+  padding: 0.5rem 0;
 }
 
 .tournament-header {
@@ -546,6 +583,15 @@
     padding: 1.5rem 1rem 2rem;
   }
 
+  .sports-dashboard-title {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sports-runtime-meta {
+    align-items: flex-start;
+  }
+
   .sports-tabs {
     gap: 0.75rem;
   }
@@ -601,6 +647,11 @@
     font-size: 1.9rem;
   }
 
+  .sports-dashboard .subtitle {
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
   .event-selector {
     padding: 1rem;
   }
@@ -613,6 +664,7 @@
     grid-template-columns: auto 1fr;
     gap: 0.5rem 0.9rem;
     align-items: flex-start;
+    padding: 0.95rem;
   }
 
   .leaderboard-row .player-rank {
@@ -625,6 +677,7 @@
 
   .probability-container {
     gap: 0.75rem;
+    align-items: center;
   }
 
   .prob-value {
@@ -649,6 +702,10 @@
     margin: 1.25rem 0 1.5rem;
   }
 
+  .sports-dashboard .dashboard-main {
+    padding: 1.25rem 0.85rem 1.75rem;
+  }
+
   .sport-tab {
     padding: 0.7rem 0.85rem;
     font-size: 0.94rem;
@@ -669,6 +726,15 @@
   .backtest-desc,
   .no-results-message {
     font-size: 0.95rem;
+  }
+
+  .event-selector {
+    gap: 0.85rem;
+  }
+
+  .backtest-header,
+  .backtest-row {
+    min-width: 700px;
   }
 
   .market-status.live,

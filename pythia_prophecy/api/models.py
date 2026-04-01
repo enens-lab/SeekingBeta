@@ -412,6 +412,86 @@ class TrackRecordCurveResponse(BaseModel):
 
 
 # ============================================================
+# Sports Board Models
+# ============================================================
+
+class SportsBoardPrediction(BaseModel):
+    rank: int
+    playerName: str
+    winProbability: float
+    actualWinner: Optional[bool] = None
+    side: Optional[str] = None
+
+
+class SportsAvailabilitySummary(BaseModel):
+    ilAdds14: Optional[int] = None
+    ilActivations14: Optional[int] = None
+    rosterMoves14: Optional[int] = None
+
+
+class SportsProjectedLineupContext(BaseModel):
+    awayCoverage: Optional[float] = None
+    homeCoverage: Optional[float] = None
+    awayContinuity: Optional[float] = None
+    homeContinuity: Optional[float] = None
+
+
+class SportsUpcomingBoard(BaseModel):
+    id: str
+    name: str
+    tour: str
+    course: str
+    original_name: Optional[str] = None
+    scheduledDate: Optional[int] = None
+    latestDate: Optional[int] = None
+    venue: Optional[str] = None
+    predictedWinner: Optional[str] = None
+    awayTeam: Optional[str] = None
+    homeTeam: Optional[str] = None
+    awayStarter: Optional[str] = None
+    homeStarter: Optional[str] = None
+    awayAvailability: Optional[SportsAvailabilitySummary] = None
+    homeAvailability: Optional[SportsAvailabilitySummary] = None
+    projectedLineupContext: Optional[SportsProjectedLineupContext] = None
+    predictions: List[SportsBoardPrediction] = []
+
+
+class SportsHistoricalBoard(BaseModel):
+    year: int
+    tournament: str
+    tour: str
+    hitStatus: str
+    predictedWinner: Optional[str] = None
+    predictedTop3: List[str] = []
+    predictedTop5: List[str] = []
+    actualWinner: Optional[str] = None
+    prob: Optional[float] = None
+    venue: Optional[str] = None
+    course: Optional[str] = None
+    fullField: List[SportsBoardPrediction] = []
+    latestDate: Optional[int] = None
+    tournamentId: Optional[str] = None
+    scheduledDate: Optional[int] = None
+    awayTeam: Optional[str] = None
+    homeTeam: Optional[str] = None
+    awayStarter: Optional[str] = None
+    homeStarter: Optional[str] = None
+
+
+class SportsBoardCollection(BaseModel):
+    upcoming: List[SportsUpcomingBoard] = []
+    backtests: List[SportsHistoricalBoard] = []
+    updated_at: datetime
+    source: str
+
+
+class SportsBoardsResponse(BaseModel):
+    golf: SportsBoardCollection
+    tennis: SportsBoardCollection
+    mlb: SportsBoardCollection
+
+
+# ============================================================
 # Company Models
 # ============================================================
 

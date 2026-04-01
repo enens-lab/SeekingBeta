@@ -151,6 +151,9 @@ _LSTM_SINGLEFLIGHT_LOCKS: Dict[Tuple[str, str, str], Lock] = {}
 _LSTM_CACHE_LOCK = Lock()
 _HOME_CACHE_WARMER_TASK: Optional[asyncio.Task] = None
 _MARKET_DATA_SYNC_TASK: Optional[asyncio.Task] = None
+_MLB_UPCOMING_BOARDS_CACHE: Optional[Tuple[float, dict[str, Any]]] = None
+_MLB_UPCOMING_BOARDS_LOCK = Lock()
+MLB_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("MLB_UPCOMING_CACHE_TTL_SECONDS", "900"))
 
 LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
     "lstm_5d": {
@@ -180,6 +183,38 @@ LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
         "low_reco": "Low probability ({prob:.1f}%), not a jackpot candidate",
     },
 }
+
+
+def _load_live_mlb_upcoming_payload(force_refresh: bool = False) -> dict[str, Any]:
+    global _MLB_UPCOMING_BOARDS_CACHE
+
+    now_ts = time.time()
+    with _MLB_UPCOMING_BOARDS_LOCK:
+        if (
+            not force_refresh
+            and _MLB_UPCOMING_BOARDS_CACHE
+            and now_ts - _MLB_UPCOMING_BOARDS_CACHE[0] <= MLB_UPCOMING_CACHE_TTL_SECONDS
+        ):
+            return dict(_MLB_UPCOMING_BOARDS_CACHE[1])
+
+    from scripts.export_mlb_frontend_data import (
+        _build_upcoming_boards,
+        _build_upcoming_dataset,
+        _predict_upcoming,
+    )
+
+    dataset = _build_upcoming_dataset()
+    dataset = _predict_upcoming(dataset)
+    boards = _build_upcoming_boards(dataset)
+    payload = {
+        "upcoming": boards,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "source": "divination_live_mlb_feed",
+    }
+
+    with _MLB_UPCOMING_BOARDS_LOCK:
+        _MLB_UPCOMING_BOARDS_CACHE = (now_ts, payload)
+    return dict(payload)
 
 
 def _should_cache_ticker(ticker: str) -> bool:
@@ -1483,6 +1518,15 @@ async def healthz():
         "universe_size": len(settings.universe),
         "available_models": list(MODEL_REGISTRY.keys()),
     })
+
+
+@app.get("/api/sports/mlb/boards")
+async def api_live_mlb_boards(force_refresh: bool = False):
+    try:
+        return await run_in_threadpool(_load_live_mlb_upcoming_payload, force_refresh)
+    except Exception as exc:
+        logger.error("Live MLB board generation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="Live MLB boards are temporarily unavailable")
 
 
 # ---------- Auth Endpoints ----------

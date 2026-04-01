@@ -851,6 +851,9 @@ DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").r
 PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 ALLOW_RANDOM_FALLBACK = os.getenv("ALLOW_RANDOM_FALLBACK", "false").lower() == "true"
 DIVINATION_LSTM_TIMEOUT_SECONDS = float(os.getenv("DIVINATION_LSTM_TIMEOUT_SECONDS", "8"))
+SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "60"))
+TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
+TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )
@@ -1027,19 +1030,93 @@ def _runtime_today_key() -> int:
     return int(datetime.now(timezone.utc).strftime("%Y%m%d"))
 
 
+def _synthetic_next_occurrence_date(date_key: int, today_key: Optional[int] = None) -> Optional[int]:
+    if not date_key:
+        return None
+    try:
+        today = datetime.strptime(str(today_key or _runtime_today_key()), "%Y%m%d").date()
+        month_day = int(date_key) % 10000
+        month = month_day // 100
+        day = month_day % 100
+        candidate = datetime(today.year, month, day).date()
+        if candidate < today:
+            candidate = datetime(today.year + 1, month, day).date()
+        return int(candidate.strftime("%Y%m%d"))
+    except Exception:
+        return None
+
+
+def _build_dynamic_tennis_upcoming(backtests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    today_key = _runtime_today_key()
+    today_dt = datetime.strptime(str(today_key), "%Y%m%d").date()
+    max_date_key = int((today_dt + timedelta(days=TENNIS_UPCOMING_LOOKAHEAD_DAYS)).strftime("%Y%m%d"))
+    per_tour_counts = {tour: 0 for tour in TENNIS_UPCOMING_PER_TOUR}
+    seen: set[tuple[str, str]] = set()
+    upcoming: list[dict[str, Any]] = []
+
+    sorted_backtests = sorted(
+        backtests,
+        key=lambda row: (
+            _synthetic_next_occurrence_date(_safe_int(row.get("latestDate")) or 0, today_key) or 99999999,
+            str(row.get("tour") or ""),
+            str(row.get("tournament") or ""),
+        ),
+    )
+
+    for row in sorted_backtests:
+        tour = str(row.get("tour") or "").upper()
+        tournament = str(row.get("tournament") or "").strip()
+        if not tour or not tournament:
+            continue
+        scheduled = _synthetic_next_occurrence_date(_safe_int(row.get("latestDate")) or 0, today_key)
+        if not scheduled or scheduled < today_key or scheduled > max_date_key:
+            continue
+        key = (tour, _canonical_sports_name(tournament))
+        if key in seen:
+            continue
+        if per_tour_counts.get(tour, 0) >= TENNIS_UPCOMING_PER_TOUR.get(tour, 10):
+            continue
+        seen.add(key)
+        per_tour_counts[tour] = per_tour_counts.get(tour, 0) + 1
+        upcoming.append(
+            {
+                "id": f"{tour.lower()}-{_canonical_sports_name(tournament).replace(' ', '-')}",
+                "name": f"{datetime.strptime(str(scheduled), '%Y%m%d').year} {tournament}",
+                "tour": tour,
+                "course": str(row.get("surface") or "Unknown"),
+                "surface": str(row.get("surface") or "Unknown"),
+                "scheduledDate": scheduled,
+                "latestDate": scheduled,
+                "predictedWinner": row.get("predictedWinner"),
+                "predictions": row.get("fullField") or [],
+            }
+        )
+
+    return upcoming
+
+
 def _filter_upcoming_mlb(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
     today_key = _runtime_today_key()
-    return [
+    return sorted(
+        [
         item
         for item in upcoming
         if (_safe_int(item.get("scheduledDate")) or 0) >= today_key
-    ]
+        ],
+        key=lambda item: (
+            _safe_int(item.get("scheduledDate")) or 99999999,
+            str(item.get("name") or ""),
+        ),
+    )
 
 
 def _filter_upcoming_tennis(
     upcoming: list[dict[str, Any]],
     backtests: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    if not any(_safe_int(item.get("scheduledDate")) for item in upcoming):
+        upcoming = _build_dynamic_tennis_upcoming(backtests)
+
     today_key = _runtime_today_key()
     completed = {
         (
@@ -1062,7 +1139,14 @@ def _filter_upcoming_tennis(
         if (tour, event_name, item_year) in completed:
             continue
         filtered.append(item)
-    return filtered
+    return sorted(
+        filtered,
+        key=lambda item: (
+            _safe_int(item.get("scheduledDate")) or 99999999,
+            str(item.get("tour") or ""),
+            str(item.get("name") or ""),
+        ),
+    )
 
 
 def _filter_upcoming_golf(
@@ -1115,11 +1199,19 @@ async def _live_mlb_board_collection() -> Optional[SportsBoardCollection]:
     fallback_updated_at = _sports_data_updated_at([backtests_filename])
 
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
+        async with httpx.AsyncClient(timeout=SPORTS_MLB_BOARDS_TIMEOUT_SECONDS) as client:
             response = await client.get(f"{DIVINATION_API_URL}/api/sports/mlb/boards")
-        response.raise_for_status()
-        payload = response.json()
-        upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            response.raise_for_status()
+            payload = response.json()
+            upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            if isinstance(upcoming, list) and not upcoming:
+                refresh_response = await client.get(
+                    f"{DIVINATION_API_URL}/api/sports/mlb/boards",
+                    params={"force_refresh": "true"},
+                )
+                refresh_response.raise_for_status()
+                payload = refresh_response.json()
+                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
         updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
         if not isinstance(upcoming, list):
             return None

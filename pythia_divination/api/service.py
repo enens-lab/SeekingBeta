@@ -213,7 +213,10 @@ def _load_live_mlb_upcoming_payload(force_refresh: bool = False) -> dict[str, An
     }
 
     with _MLB_UPCOMING_BOARDS_LOCK:
-        _MLB_UPCOMING_BOARDS_CACHE = (now_ts, payload)
+        if boards or _MLB_UPCOMING_BOARDS_CACHE is None:
+            _MLB_UPCOMING_BOARDS_CACHE = (now_ts, payload)
+        elif _MLB_UPCOMING_BOARDS_CACHE[1].get("upcoming"):
+            return dict(_MLB_UPCOMING_BOARDS_CACHE[1])
     return dict(payload)
 
 

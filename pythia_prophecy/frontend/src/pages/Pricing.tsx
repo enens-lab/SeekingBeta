@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tiers as tiersApi, billing as billingApi, BillingStatus } from '../api/client';
 import { useToast } from '../components/Toast';
-import ThemeToggle from '../components/ThemeToggle';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 import { trackEvent } from '../lib/analytics';
 
 interface TierData {
@@ -156,73 +157,7 @@ function Pricing() {
 
   return (
     <div className="pricing-page">
-      <header className="site-header">
-        <div className="header-content">
-          <Link to="/" className="logo">
-            <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta.AI</span>
-          </Link>
-          <nav className="nav">
-            <Link
-              to="/#predictions"
-              className="nav-link"
-              onClick={() => trackEvent('pricing_nav_click', { destination: 'predictions' })}
-            >
-              Live Boards
-            </Link>
-            <Link
-              to="/#performance"
-              className="nav-link"
-              onClick={() => trackEvent('pricing_nav_click', { destination: 'performance' })}
-            >
-              Track Record
-            </Link>
-            <Link
-              to="/#features"
-              className="nav-link"
-              onClick={() => trackEvent('pricing_nav_click', { destination: 'features' })}
-            >
-              How It Works
-            </Link>
-            <Link
-              to="/pricing"
-              className="nav-link"
-              onClick={() => trackEvent('pricing_nav_click', { destination: 'pricing' })}
-            >
-              Pricing
-            </Link>
-          </nav>
-          <div className="header-actions">
-            <ThemeToggle />
-            {isAuthenticated ? (
-              <Link
-                to="/dashboard"
-                className="btn btn-primary"
-                onClick={() => trackEvent('pricing_dashboard_click')}
-              >
-                Dashboard
-              </Link>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="btn btn-ghost"
-                  onClick={() => trackEvent('pricing_login_click')}
-                >
-                  Log In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="btn btn-primary"
-                  onClick={() => trackEvent('pricing_signup_click')}
-                >
-                  Start Free
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main>
         <section className="pricing-hero">
@@ -372,35 +307,7 @@ function Pricing() {
         </section>
       </main>
 
-      <footer className="site-footer">
-        <div className="footer-content">
-          <div className="footer-brand">
-            <span className="logo-icon">β</span>
-            <span className="logo-text">SeekingBeta.AI</span>
-          </div>
-          <p className="footer-disclaimer">
-            SeekingBeta.AI publishes model-generated probabilities for research and education.
-            No betting, no trade execution, and no guarantee of future results.
-          </p>
-          <nav className="footer-links">
-            <Link to="/terms" onClick={() => trackEvent('footer_link_click', { destination: 'terms' })}>
-              Terms
-            </Link>
-            <Link to="/privacy" onClick={() => trackEvent('footer_link_click', { destination: 'privacy' })}>
-              Privacy
-            </Link>
-            <Link
-              to="/refund-cancellation"
-              onClick={() => trackEvent('footer_link_click', { destination: 'refund_cancellation' })}
-            >
-              Refund &amp; Cancellation
-            </Link>
-          </nav>
-          <p className="footer-copyright">
-            &copy; {new Date().getFullYear()} SeekingBeta.AI. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

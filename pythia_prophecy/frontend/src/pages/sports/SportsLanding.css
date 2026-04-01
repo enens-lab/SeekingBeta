@@ -382,7 +382,9 @@
 
 @media (max-width: 960px) {
   .sports-hero-grid,
-  .spotlight-grid {
+  .spotlight-grid,
+  .coverage-grid,
+  .feature-grid {
     grid-template-columns: 1fr;
   }
 
@@ -428,6 +430,15 @@
     grid-template-columns: 1fr;
   }
 
+  .market-shell-header,
+  .market-shell-footer,
+  .spotlight-card-header,
+  .spotlight-meta,
+  .coverage-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .spotlight-row {
     grid-template-columns: 44px minmax(0, 1fr) auto;
     padding: 0.85rem;
@@ -439,5 +450,54 @@
 
   .spotlight-prob {
     font-size: 0.92rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .sports-hero {
+    padding: 6.5rem 1rem 3rem;
+  }
+
+  .sports-hero-copy,
+  .sports-market-shell,
+  .spotlight-card,
+  .coverage-card,
+  .feature-card {
+    padding: 1.2rem;
+    border-radius: 20px;
+  }
+
+  .sports-title {
+    font-size: 2.15rem;
+  }
+
+  .sports-subtitle,
+  .section-heading p {
+    font-size: 0.98rem;
+  }
+
+  .sports-preview-section,
+  .sports-coverage,
+  .sports-features {
+    padding-top: 3.5rem;
+  }
+
+  .sports-features {
+    padding-bottom: 4rem;
+  }
+
+  .spotlight-grid,
+  .coverage-grid,
+  .feature-grid {
+    gap: 1rem;
+  }
+
+  .spotlight-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .spotlight-rank {
+    font-size: 0.85rem;
   }
 }

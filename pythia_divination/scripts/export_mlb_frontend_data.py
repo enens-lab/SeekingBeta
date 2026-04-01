@@ -22,6 +22,7 @@ from sports.mlb.client import (
     flatten_game_players,
     flatten_roster,
     flatten_schedule,
+    flatten_teams,
     flatten_transactions,
 )
 from sports.mlb.feature_engineering import (
@@ -65,6 +66,22 @@ def _load_table(stem: str) -> pd.DataFrame:
         NORMALIZED_DIR / f"{stem}.parquet",
         NORMALIZED_DIR / f"{stem}.csv",
     )
+
+
+def _load_table_optional(stem: str) -> pd.DataFrame:
+    try:
+        return _load_table(stem)
+    except FileNotFoundError:
+        return pd.DataFrame()
+
+
+def _load_live_teams_table(client: MLBStatsClient, *, season: int | None = None) -> pd.DataFrame:
+    payload = client.get_teams(season=season)
+    frame = flatten_teams(payload)
+    if frame.empty:
+        return frame
+    frame = frame.sort_values(["season", "team_id"], ascending=[False, True]).reset_index(drop=True)
+    return frame
 
 
 def _load_historical_source() -> pd.DataFrame:
@@ -325,8 +342,11 @@ def _build_upcoming_dataset() -> pd.DataFrame:
         return pd.DataFrame()
 
     details, _, preview_player_profiles = _fetch_preview_bundles(client, schedule)
-    team_meta = _load_table("teams_latest")
-    pitcher_profiles = _load_table("pitcher_profiles_latest")
+    season = int(pd.to_numeric(schedule["season"], errors="coerce").dropna().iloc[0]) if schedule["season"].notna().any() else None
+    team_meta = _load_table_optional("teams_latest")
+    if team_meta.empty:
+        team_meta = _load_live_teams_table(client, season=season)
+    pitcher_profiles = _load_table_optional("pitcher_profiles_latest")
     pitcher_profiles = _augment_pitcher_profiles(pitcher_profiles, preview_player_profiles, schedule)
 
     games = prepare_games(
@@ -337,35 +357,38 @@ def _build_upcoming_dataset() -> pd.DataFrame:
         require_completed=False,
     )
 
-    team_logs = _load_table("team_game_logs_latest")
-    starter_logs = _load_table("starter_game_logs_latest")
-    batter_logs = _load_table("batter_game_logs_latest")
-    reliever_logs = _load_table("reliever_game_logs_latest")
-    historical_lineups = _load_table("lineup_roster_latest")
+    team_logs = _load_table_optional("team_game_logs_latest")
+    starter_logs = _load_table_optional("starter_game_logs_latest")
+    batter_logs = _load_table_optional("batter_game_logs_latest")
+    reliever_logs = _load_table_optional("reliever_game_logs_latest")
+    historical_lineups = _load_table_optional("lineup_roster_latest")
 
     games = attach_pregame_team_features(games, team_logs)
     games = attach_pregame_starter_features(games, starter_logs)
 
     active_roster = _build_active_roster_frame(client, games, preview_player_profiles)
-    projected_lineups = build_projected_lineup_roster(active_roster, batter_logs, historical_lineups=historical_lineups)
-    projected_bullpen = build_projected_bullpen_roster(
-        active_roster,
-        probable_pitchers=pd.concat(
-            [
-                games[["game_pk", "away_team_id", "away_probable_pitcher_id"]]
-                .rename(columns={"away_team_id": "team_id", "away_probable_pitcher_id": "probable_pitcher_id"})
-                .assign(team_side="away"),
-                games[["game_pk", "home_team_id", "home_probable_pitcher_id"]]
-                .rename(columns={"home_team_id": "team_id", "home_probable_pitcher_id": "probable_pitcher_id"})
-                .assign(team_side="home"),
-            ],
-            ignore_index=True,
-        ),
-    )
-    lineup_features = build_lineup_feature_frame(projected_lineups, batter_logs)
-    bullpen_features = build_bullpen_feature_frame(projected_bullpen, reliever_logs)
-    games = merge_lineup_features(games, lineup_features)
-    games = merge_bullpen_features(games, bullpen_features)
+    if not batter_logs.empty:
+        projected_lineups = build_projected_lineup_roster(active_roster, batter_logs, historical_lineups=historical_lineups)
+        lineup_features = build_lineup_feature_frame(projected_lineups, batter_logs)
+        games = merge_lineup_features(games, lineup_features)
+
+    if not reliever_logs.empty:
+        projected_bullpen = build_projected_bullpen_roster(
+            active_roster,
+            probable_pitchers=pd.concat(
+                [
+                    games[["game_pk", "away_team_id", "away_probable_pitcher_id"]]
+                    .rename(columns={"away_team_id": "team_id", "away_probable_pitcher_id": "probable_pitcher_id"})
+                    .assign(team_side="away"),
+                    games[["game_pk", "home_team_id", "home_probable_pitcher_id"]]
+                    .rename(columns={"home_team_id": "team_id", "home_probable_pitcher_id": "probable_pitcher_id"})
+                    .assign(team_side="home"),
+                ],
+                ignore_index=True,
+            ),
+        )
+        bullpen_features = build_bullpen_feature_frame(projected_bullpen, reliever_logs)
+        games = merge_bullpen_features(games, bullpen_features)
 
     transactions = _build_transaction_frame(client, games)
     transaction_features = build_transaction_feature_frame(games, transactions)

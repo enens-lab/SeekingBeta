@@ -11,6 +11,12 @@ ENV/
 
 # Frontend (has its own Dockerfile)
 frontend/
+!frontend/
+frontend/*
+!frontend/src/
+frontend/src/*
+!frontend/src/data/
+!frontend/src/data/**
 
 # IDE
 .idea/

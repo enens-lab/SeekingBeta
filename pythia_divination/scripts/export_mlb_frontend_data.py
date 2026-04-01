@@ -84,6 +84,44 @@ def _load_live_teams_table(client: MLBStatsClient, *, season: int | None = None)
     return frame
 
 
+def _numeric_series(frame: pd.DataFrame, column: str) -> pd.Series:
+    if column not in frame.columns:
+        return pd.Series(0.0, index=frame.index, dtype=float)
+    return pd.to_numeric(frame[column], errors="coerce").fillna(0.0)
+
+
+def _sigmoid(values: pd.Series) -> pd.Series:
+    clipped = values.clip(-6.0, 6.0)
+    return 1.0 / (1.0 + np.exp(-clipped))
+
+
+def _fallback_predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
+    inference = frame.copy()
+    score = pd.Series(0.14, index=inference.index, dtype=float)
+    score += 1.35 * _numeric_series(inference, "delta_win_pct_prior")
+    score += 0.06 * _numeric_series(inference, "delta_run_diff_avg_last_10")
+    score += 0.10 * _numeric_series(inference, "delta_runs_scored_avg_last_5")
+    score -= 0.10 * _numeric_series(inference, "delta_runs_allowed_avg_last_5")
+    score -= 0.30 * _numeric_series(inference, "delta_era_like_avg_last_5")
+    score -= 0.22 * _numeric_series(inference, "delta_whip_avg_last_5")
+    score += 0.02 * _numeric_series(inference, "delta_strikeouts_avg_last_5")
+    score -= 0.02 * _numeric_series(inference, "delta_walks_avg_last_5")
+    score += 0.03 * _numeric_series(inference, "delta_days_rest")
+    score += 0.08 * (
+        _numeric_series(inference, "home_availability_il_activations_last_14")
+        - _numeric_series(inference, "away_availability_il_activations_last_14")
+    )
+    score -= 0.08 * (
+        _numeric_series(inference, "home_availability_il_additions_last_14")
+        - _numeric_series(inference, "away_availability_il_additions_last_14")
+    )
+    probabilities = _sigmoid(score)
+    inference["home_win_probability"] = probabilities
+    inference["away_win_probability"] = 1.0 - probabilities
+    inference["prediction_source"] = "heuristic_fallback"
+    return inference
+
+
 def _load_historical_source() -> pd.DataFrame:
     predictions = pd.read_csv(HISTORICAL_PREDICTIONS_PATH)
     dataset = pd.read_csv(
@@ -407,16 +445,27 @@ def _predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty:
         return frame
 
-    estimator = joblib.load(MODEL_PATH)
-    feature_columns = pd.read_csv(FEATURE_COLUMNS_PATH)["feature"].tolist()
+    if not MODEL_PATH.exists() or not FEATURE_COLUMNS_PATH.exists():
+        return _fallback_predict_upcoming(frame)
+
+    try:
+        estimator = joblib.load(MODEL_PATH)
+        feature_columns = pd.read_csv(FEATURE_COLUMNS_PATH)["feature"].tolist()
+    except Exception:
+        return _fallback_predict_upcoming(frame)
+
     inference = frame.copy()
     for column in feature_columns:
         if column not in inference.columns:
             inference[column] = np.nan
     x = inference[feature_columns].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
-    probabilities = estimator.predict_proba(x)[:, 1]
+    try:
+        probabilities = estimator.predict_proba(x)[:, 1]
+    except Exception:
+        return _fallback_predict_upcoming(frame)
     inference["home_win_probability"] = probabilities
     inference["away_win_probability"] = 1.0 - probabilities
+    inference["prediction_source"] = "mlb_baseline_model"
     return inference
 
 

@@ -321,6 +321,30 @@
   margin-bottom: 1rem;
 }
 
+.spotlight-featured-player {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spotlight-featured-label {
+  color: #8adfff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.spotlight-featured-prob {
+  color: #dbf8f1;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
 .mlb-slate-shell {
   padding: 1.5rem;
   border-radius: 28px;
@@ -421,6 +445,10 @@
   line-height: 1.5;
 }
 
+.mlb-slate-starter {
+  padding: 0.1rem 0 0.2rem;
+}
+
 .mlb-slate-prob {
   color: var(--text-main);
   font-size: 1.2rem;
@@ -489,8 +517,6 @@
 }
 
 .spotlight-player {
-  color: var(--text-main);
-  font-weight: 600;
   min-width: 0;
 }
 

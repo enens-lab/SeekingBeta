@@ -1,5 +1,6 @@
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import joblib
@@ -13,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from sports.wta.train_tournament_ranker_torch import WTATournamentRanker
+from sports.player_media import resolve_player_image
 
 
 DIV_ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +23,58 @@ ARTIFACT_DIR = DIV_ROOT / "artifacts" / "wta_tournament_ranker_torch"
 DATASET_PATH = DIV_ROOT / "data" / "sports" / "wta" / "normalized" / "wta_training_dataset_latest.csv"
 FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
 UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
+
+
+def _append_stat(stats: list[dict[str, str]], label: str, value: str | None) -> None:
+    if value:
+        stats.append({"label": label, "value": value})
+
+
+def _safe_float(value) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_tennis_profile(row) -> dict:
+    stats: list[dict[str, str]] = []
+    elo = _safe_float(getattr(row, "elo", None))
+    surf_elo = _safe_float(getattr(row, "surf_elo", None))
+    serve_won = _safe_float(getattr(row, "serve_won", None))
+    return_won = _safe_float(getattr(row, "return_won", None))
+    age = _safe_float(getattr(row, "age", None))
+    height = _safe_float(getattr(row, "height", None))
+    tour = str(getattr(row, "tour", "Tennis"))
+    surface = str(getattr(row, "surface", "Unknown"))
+
+    _append_stat(stats, "Elo", f"{elo:.0f}" if elo is not None else None)
+    _append_stat(stats, "Surface Elo", f"{surf_elo:.0f}" if surf_elo is not None else None)
+    _append_stat(stats, "Serve Won", f"{serve_won * 100:.1f}%" if serve_won is not None else None)
+    _append_stat(stats, "Return Won", f"{return_won * 100:.1f}%" if return_won is not None else None)
+    if len(stats) < 4:
+        _append_stat(stats, "Age", f"{age:.1f}" if age is not None else None)
+    if len(stats) < 4:
+        _append_stat(stats, "Height", f"{height:.0f} cm" if height is not None else None)
+
+    subtitle_parts = [tour, surface]
+    if age is not None:
+        subtitle_parts.append(f"Age {age:.1f}")
+
+    return {
+        "imageUrl": resolve_player_image(
+            name=str(row.player_name),
+            sport="tennis",
+            tour=tour,
+            player_id=getattr(row, "player_id", None),
+            player_key=getattr(row, "player_key", None),
+        ),
+        "subtitle": " | ".join(subtitle_parts),
+        "country": None,
+        "stats": stats[:4],
+    }
 
 
 def _load_model():
@@ -96,6 +150,7 @@ def _build_backtests(df: pd.DataFrame) -> list[dict]:
                     "playerName": str(row["player_name"]),
                     "winProbability": float(probs[idx] * 100),
                     "actualWinner": bool(row["won_tournament"] == 1),
+                    "profile": _build_tennis_profile(row),
                 }
             )
 
@@ -124,16 +179,26 @@ def _build_backtests(df: pd.DataFrame) -> list[dict]:
 
 
 def _build_upcoming(backtests: list[dict]) -> list[dict]:
+    today = datetime.now()
+    today_key = today.year * 10000 + today.month * 100 + today.day
     per_tour_counts = {tour: 0 for tour in UPCOMING_PER_TOUR}
     upcoming = []
     seen = set()
 
     sorted_backtests = sorted(
         backtests,
-        key=lambda row: (-row.get("latestDate", 0), row["tour"], row["tournament"]),
+        key=lambda row: ((row.get("latestDate", 0) or 0) % 10000, row["tour"], row["tournament"]),
     )
 
     for bt in sorted_backtests:
+        latest_date = int(bt.get("latestDate", 0) or 0)
+        if latest_date <= 0:
+            continue
+
+        synthetic_event_date = today.year * 10000 + (latest_date % 10000)
+        if synthetic_event_date < today_key:
+            continue
+
         tournament_key = (bt["tour"], bt["tournament"])
         if tournament_key in seen:
             continue
@@ -145,14 +210,15 @@ def _build_upcoming(backtests: list[dict]) -> list[dict]:
         upcoming.append(
             {
                 "id": f"{bt['tour'].lower()}-{bt['tournament'].replace(' ', '-').lower()}",
-                "name": f"2026 {bt['tournament']}",
+                "name": f"{today.year} {bt['tournament']}",
                 "tour": bt["tour"],
                 "course": bt.get("surface", "Unknown Surface"),
+                "scheduledDate": synthetic_event_date,
                 "predictions": bt["fullField"],
             }
         )
 
-    return upcoming
+    return sorted(upcoming, key=lambda row: (row["scheduledDate"], row["tour"], row["name"]))
 
 
 def export_wta_frontend_data():

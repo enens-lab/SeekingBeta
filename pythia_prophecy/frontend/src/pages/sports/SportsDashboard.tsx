@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
 import TeamLogo from '../../components/sports/TeamLogo';
 import StarterRadarChart from '../../components/sports/StarterRadarChart';
+import PlayerProfileCard from '../../components/sports/PlayerProfileCard';
 import {
   sports,
   type SportsBoardCollection,
@@ -325,7 +326,13 @@ function SportsDashboard() {
               {displayedPredictions.map((prediction) => (
                 <div key={`${prediction.rank}-${prediction.playerName}`} className="leaderboard-row">
                   <span className="player-rank">#{prediction.rank}</span>
-                  <span className="player-name">{prediction.playerName}</span>
+                  <div className="leaderboard-player-cell">
+                    <PlayerProfileCard
+                      name={prediction.playerName}
+                      profile={prediction.profile}
+                      compact
+                    />
+                  </div>
                   <div className="probability-container">
                     <span className="prob-value">{prediction.winProbability.toFixed(2)}%</span>
                     <div className="prob-bar-bg">
@@ -441,6 +448,15 @@ function SportsDashboard() {
                         <span className="mlb-context-chip">{board.awayTeamDetails?.recentForm || 'Form pending'}</span>
                         <span className="mlb-context-chip">{board.awayTeamDetails?.availabilitySummary || 'Roster stable'}</span>
                       </div>
+                      {board.awayStarter ? (
+                        <div className="mlb-starter-inline">
+                          <PlayerProfileCard
+                            name={board.awayStarter}
+                            profile={board.awayStarterProfile}
+                            compact
+                          />
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="mlb-matchup-middle">
@@ -474,11 +490,37 @@ function SportsDashboard() {
                         <span className="mlb-context-chip">{board.homeTeamDetails?.recentForm || 'Form pending'}</span>
                         <span className="mlb-context-chip">{board.homeTeamDetails?.availabilitySummary || 'Roster stable'}</span>
                       </div>
+                      {board.homeStarter ? (
+                        <div className="mlb-starter-inline">
+                          <PlayerProfileCard
+                            name={board.homeStarter}
+                            profile={board.homeStarterProfile}
+                            compact
+                            align="right"
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
                   {expanded && (
                     <div className="mlb-expanded-panel">
+                      <div className="mlb-starter-profile-grid">
+                        <div className="mlb-starter-profile-card">
+                          <PlayerProfileCard
+                            name={board.awayStarter || `${board.awayTeam || 'Away'} starter`}
+                            profile={board.awayStarterProfile}
+                          />
+                        </div>
+                        <div className="mlb-starter-profile-card">
+                          <PlayerProfileCard
+                            name={board.homeStarter || `${board.homeTeam || 'Home'} starter`}
+                            profile={board.homeStarterProfile}
+                            align="right"
+                          />
+                        </div>
+                      </div>
+
                       <div className="mlb-team-details-grid">
                         <div className="mlb-team-detail-card">
                           <div className="mlb-team-detail-heading">
@@ -731,10 +773,16 @@ function SportsDashboard() {
                               <div className="details-grid">
                                 {(backtest.fullField || []).map((player) => (
                                   <div key={`${player.rank}-${player.playerName}`} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
-                                    <span className="dp-rank">#{player.rank}</span>
-                                    <span className="dp-name">{player.playerName}</span>
-                                    <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
-                                    {player.actualWinner && <span className="dp-badge">Winner</span>}
+                                    <div className="detail-player-topline">
+                                      <span className="dp-rank">#{player.rank}</span>
+                                      <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
+                                      {player.actualWinner && <span className="dp-badge">Winner</span>}
+                                    </div>
+                                    <PlayerProfileCard
+                                      name={player.playerName}
+                                      profile={player.profile}
+                                      compact
+                                    />
                                   </div>
                                 ))}
                               </div>

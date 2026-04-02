@@ -214,6 +214,15 @@ def _format_weather_summary(row: Any) -> str | None:
     return " | ".join(parts) or None
 
 
+def _mlb_headshot_url(player_id: int | None) -> str | None:
+    if not player_id:
+        return None
+    return (
+        "https://img.mlbstatic.com/mlb-photos/image/upload/"
+        f"w_360,q_auto:best/v1/people/{int(player_id)}/headshot/67/current"
+    )
+
+
 def _build_team_details(row: Any, side: str) -> dict[str, Any]:
     team_id = getattr(row, f"{side}_team_id", None)
     abbreviation = _optional_text(getattr(row, f"{side}_team_abbreviation", None))
@@ -230,6 +239,51 @@ def _build_team_details(row: Any, side: str) -> dict[str, Any]:
         "lineupContinuity": _format_lineup_continuity(row, side),
         "venue": _optional_text(getattr(row, "venue_name", None)) or "MLB Venue",
         "weather": _format_weather_summary(row),
+    }
+
+
+def _build_starter_profile(row: Any, side: str) -> dict[str, Any] | None:
+    starter_name = _optional_text(getattr(row, f"{side}_probable_pitcher_name", None))
+    if not starter_name:
+        return None
+
+    pitcher_id_raw = getattr(row, f"{side}_probable_pitcher_id", None)
+    pitcher_id = int(pitcher_id_raw) if pitcher_id_raw is not None and not pd.isna(pitcher_id_raw) else None
+    age = _safe_value(row, f"{side}_starter_profile_current_age")
+    pitch_hand = _optional_text(getattr(row, f"{side}_starter_profile_pitch_hand", None))
+    height = _optional_text(getattr(row, f"{side}_starter_profile_height", None))
+    birth_country = _optional_text(getattr(row, f"{side}_starter_profile_birth_country", None))
+    era_like = _safe_value(row, f"{side}_starter_era_like_avg_last_5")
+    whip = _safe_value(row, f"{side}_starter_whip_avg_last_5")
+    strikeouts = _safe_value(row, f"{side}_starter_strikeouts_avg_last_5")
+    innings = _safe_value(row, f"{side}_starter_innings_pitched_avg_last_5")
+    days_rest = _safe_value(row, f"{side}_starter_days_rest")
+
+    stats: list[dict[str, str]] = []
+    if era_like is not None:
+        stats.append({"label": "ERA-like", "value": f"{era_like:.2f}"})
+    if whip is not None:
+        stats.append({"label": "WHIP-like", "value": f"{whip:.2f}"})
+    if strikeouts is not None:
+        stats.append({"label": "K Avg", "value": f"{strikeouts:.1f}"})
+    if innings is not None:
+        stats.append({"label": "IP Avg", "value": f"{innings:.1f}"})
+    if len(stats) < 4 and days_rest is not None:
+        stats.append({"label": "Rest", "value": f"{days_rest:.0f} days"})
+
+    subtitle_parts = []
+    if pitch_hand:
+        subtitle_parts.append(f"{pitch_hand}-handed")
+    if age is not None:
+        subtitle_parts.append(f"Age {age:.0f}")
+    if height:
+        subtitle_parts.append(height)
+
+    return {
+        "imageUrl": _mlb_headshot_url(pitcher_id),
+        "subtitle": " | ".join(subtitle_parts) if subtitle_parts else "Probable starter",
+        "country": birth_country,
+        "stats": stats[:4],
     }
 
 
@@ -731,6 +785,8 @@ def _build_upcoming_boards(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "homeTeam": row.home_team_name,
                 "awayStarter": _optional_text(row.away_probable_pitcher_name),
                 "homeStarter": _optional_text(row.home_probable_pitcher_name),
+                "awayStarterProfile": _build_starter_profile(row, "away"),
+                "homeStarterProfile": _build_starter_profile(row, "home"),
                 "awayTeamDetails": _build_team_details(row, "away"),
                 "homeTeamDetails": _build_team_details(row, "home"),
                 "awayStarterRadar": _build_starter_radar(row, "away"),

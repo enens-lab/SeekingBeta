@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import TeamLogo from '../../components/sports/TeamLogo';
+import PlayerProfileCard from '../../components/sports/PlayerProfileCard';
 import {
   sports,
   type SportsBoardsResponse,
@@ -251,6 +252,11 @@ function SportsLanding() {
                   className={`spotlight-card accent-${board.accent}`}
                   onClick={() => trackEvent('sports_board_preview_click', { board: board.label, tour: board.event?.tour })}
                 >
+                  {(() => {
+                    const featuredPrediction = board.event?.predictions?.[0];
+                    const remainingPredictions = (board.event?.predictions ?? []).slice(1, 5);
+                    return (
+                      <>
                   <div className="spotlight-card-header">
                     <div>
                       <span className="spotlight-eyebrow">{board.eyebrow}</span>
@@ -266,15 +272,35 @@ function SportsLanding() {
                     <span>{board.event?.predictions.length ?? 0} contenders ranked</span>
                   </div>
 
+                  {featuredPrediction ? (
+                    <div className="spotlight-featured-player">
+                      <div className="spotlight-featured-label">Model favorite</div>
+                      <PlayerProfileCard
+                        name={featuredPrediction.playerName}
+                        profile={featuredPrediction.profile}
+                      />
+                      <div className="spotlight-featured-prob">{featuredPrediction.winProbability.toFixed(2)}%</div>
+                    </div>
+                  ) : null}
+
                   <div className="spotlight-board">
-                    {(board.event?.predictions ?? []).slice(0, 5).map((pred) => (
+                    {remainingPredictions.map((pred) => (
                       <div key={`${board.label}-${pred.rank}-${pred.playerName}`} className="spotlight-row">
                         <span className="spotlight-rank">#{pred.rank}</span>
-                        <span className="spotlight-player">{pred.playerName}</span>
+                        <div className="spotlight-player">
+                          <PlayerProfileCard
+                            name={pred.playerName}
+                            profile={pred.profile}
+                            compact
+                          />
+                        </div>
                         <span className="spotlight-prob">{pred.winProbability.toFixed(2)}%</span>
                       </div>
                     ))}
                   </div>
+                      </>
+                    );
+                  })()}
                 </article>
               ))}
             </div>
@@ -346,6 +372,15 @@ function SportsLanding() {
                         </div>
                         <div className="mlb-slate-prob">{awayProb.toFixed(1)}%</div>
                       </div>
+                      {board.awayStarter ? (
+                        <div className="mlb-slate-starter">
+                          <PlayerProfileCard
+                            name={board.awayStarter}
+                            profile={board.awayStarterProfile}
+                            compact
+                          />
+                        </div>
+                      ) : null}
 
                       <div className="mlb-slate-team-row">
                         <div className="mlb-slate-team">
@@ -363,6 +398,15 @@ function SportsLanding() {
                         </div>
                         <div className="mlb-slate-prob">{homeProb.toFixed(1)}%</div>
                       </div>
+                      {board.homeStarter ? (
+                        <div className="mlb-slate-starter">
+                          <PlayerProfileCard
+                            name={board.homeStarter}
+                            profile={board.homeStarterProfile}
+                            compact
+                          />
+                        </div>
+                      ) : null}
 
                       <div className="mlb-slate-foot">
                         <span>{board.homeTeamDetails?.weather || 'Weather pending'}</span>

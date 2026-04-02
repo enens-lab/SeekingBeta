@@ -1,241 +1,147 @@
 [
   {
-    "id": "mlb-824135",
+    "id": "mlb-824133",
     "name": "Minnesota Twins at Kansas City Royals",
     "tour": "MLB",
     "course": "Kauffman Stadium",
     "venue": "Kauffman Stadium",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Minnesota Twins",
+    "scheduledDate": 20260402,
+    "latestDate": 20260402,
+    "predictedWinner": "Kansas City Royals",
     "awayTeam": "Minnesota Twins",
     "homeTeam": "Kansas City Royals",
-    "awayStarter": "Simeon Woods Richardson",
-    "homeStarter": "Kris Bubic",
+    "awayStarter": "Taj Bradley",
+    "homeStarter": "Cole Ragans",
+    "awayStarterProfile": {
+      "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/671737/headshot/67/current",
+      "subtitle": "R-handed | Age 25 | 6' 2\"",
+      "country": "USA",
+      "stats": [
+        {
+          "label": "ERA-like",
+          "value": "8.32"
+        },
+        {
+          "label": "WHIP-like",
+          "value": "1.66"
+        },
+        {
+          "label": "K Avg",
+          "value": "4.6"
+        },
+        {
+          "label": "IP Avg",
+          "value": "5.1"
+        }
+      ]
+    },
+    "homeStarterProfile": {
+      "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/666142/headshot/67/current",
+      "subtitle": "L-handed | Age 28 | 6' 4\"",
+      "country": "USA",
+      "stats": [
+        {
+          "label": "ERA-like",
+          "value": "7.58"
+        },
+        {
+          "label": "WHIP-like",
+          "value": "1.42"
+        },
+        {
+          "label": "K Avg",
+          "value": "6.6"
+        },
+        {
+          "label": "IP Avg",
+          "value": "4.3"
+        }
+      ]
+    },
+    "awayTeamDetails": {
+      "teamId": 142,
+      "abbreviation": "MIN",
+      "logoUrl": "https://www.mlbstatic.com/team-logos/142.svg",
+      "primaryColor": "#002B5C",
+      "secondaryColor": "#D31145",
+      "recordPrior": "417-430",
+      "recentForm": "3-2 last 5 | -0.6 run diff | 3.2 runs/game",
+      "bullpenSummary": "6 leverage arms | 2 short rest | 8.91 ERA-like",
+      "availabilitySummary": "0 IL adds | 0 activations | 23 moves",
+      "lineupContinuity": "100% lineup history coverage",
+      "venue": "Kauffman Stadium",
+      "weather": null
+    },
+    "homeTeamDetails": {
+      "teamId": 118,
+      "abbreviation": "KC",
+      "logoUrl": "https://www.mlbstatic.com/team-logos/118.svg",
+      "primaryColor": "#004687",
+      "secondaryColor": "#BD9B60",
+      "recordPrior": "378-473",
+      "recentForm": "3-2 last 5 | +2.6 run diff | 5.2 runs/game",
+      "bullpenSummary": "8 leverage arms | 1 short rest | 6.30 ERA-like",
+      "availabilitySummary": "0 IL adds | 0 activations | 19 moves",
+      "lineupContinuity": "100% lineup history coverage",
+      "venue": "Kauffman Stadium",
+      "weather": null
+    },
+    "awayStarterRadar": [
+      {
+        "label": "Run Prevention",
+        "value": 9.0
+      },
+      {
+        "label": "Strikeout Ability",
+        "value": 24.6
+      },
+      {
+        "label": "Command",
+        "value": 50.1
+      },
+      {
+        "label": "Contact Suppression",
+        "value": 39.7
+      },
+      {
+        "label": "Durability",
+        "value": 51.6
+      },
+      {
+        "label": "Recent Form",
+        "value": 5.8
+      }
+    ],
+    "homeStarterRadar": [
+      {
+        "label": "Run Prevention",
+        "value": 21.9
+      },
+      {
+        "label": "Strikeout Ability",
+        "value": 50.5
+      },
+      {
+        "label": "Command",
+        "value": 64.9
+      },
+      {
+        "label": "Contact Suppression",
+        "value": 69.7
+      },
+      {
+        "label": "Durability",
+        "value": 29.7
+      },
+      {
+        "label": "Recent Form",
+        "value": 52.5
+      }
+    ],
     "awayAvailability": {
       "ilAdds14": 0,
       "ilActivations14": 0,
       "rosterMoves14": 23
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 21
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Minnesota Twins",
-        "winProbability": 51.140325801214495,
-        "side": "away"
-      },
-      {
-        "rank": 2,
-        "playerName": "Kansas City Royals",
-        "winProbability": 48.859674198785505,
-        "side": "home"
-      }
-    ]
-  },
-  {
-    "id": "mlb-824863",
-    "name": "Texas Rangers at Baltimore Orioles",
-    "tour": "MLB",
-    "course": "Oriole Park at Camden Yards",
-    "venue": "Oriole Park at Camden Yards",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Baltimore Orioles",
-    "awayTeam": "Texas Rangers",
-    "homeTeam": "Baltimore Orioles",
-    "awayStarter": "Jack Leiter",
-    "homeStarter": "Chris Bassitt",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 16
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 35
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Baltimore Orioles",
-        "winProbability": 55.42197891807614,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Texas Rangers",
-        "winProbability": 44.57802108192386,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823484",
-    "name": "Washington Nationals at Philadelphia Phillies",
-    "tour": "MLB",
-    "course": "Citizens Bank Park",
-    "venue": "Citizens Bank Park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Washington Nationals",
-    "awayTeam": "Washington Nationals",
-    "homeTeam": "Philadelphia Phillies",
-    "awayStarter": "Foster Griffin",
-    "homeStarter": "Taijuan Walker",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 27
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 35
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Washington Nationals",
-        "winProbability": 51.25924313823161,
-        "side": "away"
-      },
-      {
-        "rank": 2,
-        "playerName": "Philadelphia Phillies",
-        "winProbability": 48.74075686176839,
-        "side": "home"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823890",
-    "name": "Chicago White Sox at Miami Marlins",
-    "tour": "MLB",
-    "course": "loanDepot park",
-    "venue": "loanDepot park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Chicago White Sox",
-    "awayTeam": "Chicago White Sox",
-    "homeTeam": "Miami Marlins",
-    "awayStarter": "Davis Martin",
-    "homeStarter": "Chris Paddack",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 27
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 23
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Chicago White Sox",
-        "winProbability": 52.19510850304512,
-        "side": "away"
-      },
-      {
-        "rank": 2,
-        "playerName": "Miami Marlins",
-        "winProbability": 47.80489149695489,
-        "side": "home"
-      }
-    ]
-  },
-  {
-    "id": "mlb-824539",
-    "name": "Pittsburgh Pirates at Cincinnati Reds",
-    "tour": "MLB",
-    "course": "Great American Ball Park",
-    "venue": "Great American Ball Park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Cincinnati Reds",
-    "awayTeam": "Pittsburgh Pirates",
-    "homeTeam": "Cincinnati Reds",
-    "awayStarter": "Braxton Ashcraft",
-    "homeStarter": "Chase Burns",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 26
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 29
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Cincinnati Reds",
-        "winProbability": 59.907564475406424,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Pittsburgh Pirates",
-        "winProbability": 40.092435524593576,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-822834",
-    "name": "Colorado Rockies at Toronto Blue Jays",
-    "tour": "MLB",
-    "course": "Rogers Centre",
-    "venue": "Rogers Centre",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Toronto Blue Jays",
-    "awayTeam": "Colorado Rockies",
-    "homeTeam": "Toronto Blue Jays",
-    "awayStarter": "Tomoyuki Sugano",
-    "homeStarter": "Cody Ponce",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 29
     },
     "homeAvailability": {
       "ilAdds14": 0,
@@ -248,126 +154,165 @@
       "awayContinuity": null,
       "homeContinuity": null
     },
+    "predictionSource": "heuristic_fallback",
     "predictions": [
       {
         "rank": 1,
-        "playerName": "Toronto Blue Jays",
-        "winProbability": 72.30045899292627,
+        "playerName": "Kansas City Royals",
+        "winProbability": 63.427535604430005,
         "side": "home"
       },
       {
         "rank": 2,
-        "playerName": "Colorado Rockies",
-        "winProbability": 27.699541007073737,
+        "playerName": "Minnesota Twins",
+        "winProbability": 36.572464395569995,
         "side": "away"
       }
     ]
   },
   {
-    "id": "mlb-824943",
-    "name": "Athletics at Atlanta Braves",
+    "id": "mlb-825105",
+    "name": "Atlanta Braves at Arizona Diamondbacks",
     "tour": "MLB",
-    "course": "Truist Park",
-    "venue": "Truist Park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Athletics",
-    "awayTeam": "Athletics",
-    "homeTeam": "Atlanta Braves",
-    "awayStarter": "Jacob Lopez",
-    "homeStarter": "Bryce Elder",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 15
+    "course": "Chase Field",
+    "venue": "Chase Field",
+    "scheduledDate": 20260402,
+    "latestDate": 20260402,
+    "predictedWinner": "Atlanta Braves",
+    "awayTeam": "Atlanta Braves",
+    "homeTeam": "Arizona Diamondbacks",
+    "awayStarter": "Reynaldo L\u00f3pez",
+    "homeStarter": "Ryne Nelson",
+    "awayStarterProfile": {
+      "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/625643/headshot/67/current",
+      "subtitle": "R-handed | Age 32 | 6' 1\"",
+      "country": "Dominican Republic",
+      "stats": [
+        {
+          "label": "ERA-like",
+          "value": "1.50"
+        },
+        {
+          "label": "WHIP-like",
+          "value": "0.80"
+        },
+        {
+          "label": "K Avg",
+          "value": "6.8"
+        },
+        {
+          "label": "IP Avg",
+          "value": "5.0"
+        }
+      ]
     },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 23
+    "homeStarterProfile": {
+      "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/669194/headshot/67/current",
+      "subtitle": "R-handed | Age 28 | 6' 3\"",
+      "country": "USA",
+      "stats": [
+        {
+          "label": "ERA-like",
+          "value": "2.22"
+        },
+        {
+          "label": "WHIP-like",
+          "value": "1.08"
+        },
+        {
+          "label": "K Avg",
+          "value": "3.6"
+        },
+        {
+          "label": "IP Avg",
+          "value": "5.8"
+        }
+      ]
     },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
+    "awayTeamDetails": {
+      "teamId": 144,
+      "abbreviation": "ATL",
+      "logoUrl": "https://www.mlbstatic.com/team-logos/144.svg",
+      "primaryColor": "#CE1141",
+      "secondaryColor": "#13274F",
+      "recordPrior": "477-366",
+      "recentForm": "2-3 last 5 | +2.2 run diff | 4.2 runs/game",
+      "bullpenSummary": "5 leverage arms | 2 short rest | 3.08 ERA-like",
+      "availabilitySummary": "0 IL adds | 0 activations | 22 moves",
+      "lineupContinuity": "100% lineup history coverage",
+      "venue": "Chase Field",
+      "weather": null
     },
-    "predictions": [
+    "homeTeamDetails": {
+      "teamId": 109,
+      "abbreviation": "AZ",
+      "logoUrl": "https://www.mlbstatic.com/team-logos/109.svg",
+      "primaryColor": "#A71930",
+      "secondaryColor": "#000000",
+      "recordPrior": "400-462",
+      "recentForm": "1-4 last 5 | -1.6 run diff | 2.8 runs/game",
+      "bullpenSummary": "6 leverage arms | 1 short rest | 4.22 ERA-like",
+      "availabilitySummary": "0 IL adds | 0 activations | 26 moves",
+      "lineupContinuity": "100% lineup history coverage",
+      "venue": "Chase Field",
+      "weather": null
+    },
+    "awayStarterRadar": [
       {
-        "rank": 1,
-        "playerName": "Athletics",
-        "winProbability": 57.66249245292045,
-        "side": "away"
+        "label": "Run Prevention",
+        "value": 96.2
       },
       {
-        "rank": 2,
-        "playerName": "Atlanta Braves",
-        "winProbability": 42.33750754707954,
-        "side": "home"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823809",
-    "name": "Tampa Bay Rays at Milwaukee Brewers",
-    "tour": "MLB",
-    "course": "American Family Field",
-    "venue": "American Family Field",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Tampa Bay Rays",
-    "awayTeam": "Tampa Bay Rays",
-    "homeTeam": "Milwaukee Brewers",
-    "awayStarter": "Nick Martinez",
-    "homeStarter": "Kyle Harrison",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 41
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 25
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Tampa Bay Rays",
-        "winProbability": 62.76697800624992,
-        "side": "away"
+        "label": "Strikeout Ability",
+        "value": 55.1
       },
       {
-        "rank": 2,
-        "playerName": "Milwaukee Brewers",
-        "winProbability": 37.23302199375008,
-        "side": "home"
+        "label": "Command",
+        "value": 80.7
+      },
+      {
+        "label": "Contact Suppression",
+        "value": 93.8
+      },
+      {
+        "label": "Durability",
+        "value": 35.3
+      },
+      {
+        "label": "Recent Form",
+        "value": 84.8
       }
-    ]
-  },
-  {
-    "id": "mlb-824702",
-    "name": "Los Angeles Angels at Chicago Cubs",
-    "tour": "MLB",
-    "course": "Wrigley Field",
-    "venue": "Wrigley Field",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Chicago Cubs",
-    "awayTeam": "Los Angeles Angels",
-    "homeTeam": "Chicago Cubs",
-    "awayStarter": "Ryan Johnson",
-    "homeStarter": "Edward Cabrera",
+    ],
+    "homeStarterRadar": [
+      {
+        "label": "Run Prevention",
+        "value": 84.3
+      },
+      {
+        "label": "Strikeout Ability",
+        "value": 19.5
+      },
+      {
+        "label": "Command",
+        "value": 60.4
+      },
+      {
+        "label": "Contact Suppression",
+        "value": 83.0
+      },
+      {
+        "label": "Durability",
+        "value": 62.5
+      },
+      {
+        "label": "Recent Form",
+        "value": 73.2
+      }
+    ],
     "awayAvailability": {
       "ilAdds14": 0,
       "ilActivations14": 0,
-      "rosterMoves14": 32
+      "rosterMoves14": 22
     },
     "homeAvailability": {
       "ilAdds14": 0,
@@ -380,43 +325,170 @@
       "awayContinuity": null,
       "homeContinuity": null
     },
+    "predictionSource": "heuristic_fallback",
     "predictions": [
       {
         "rank": 1,
-        "playerName": "Chicago Cubs",
-        "winProbability": 79.78093577795715,
-        "side": "home"
+        "playerName": "Atlanta Braves",
+        "winProbability": 99.75273768433652,
+        "side": "away"
       },
       {
         "rank": 2,
-        "playerName": "Los Angeles Angels",
-        "winProbability": 20.21906422204285,
-        "side": "away"
+        "playerName": "Arizona Diamondbacks",
+        "winProbability": 0.24726231566347742,
+        "side": "home"
       }
     ]
   },
   {
-    "id": "mlb-823080",
-    "name": "New York Mets at St. Louis Cardinals",
+    "id": "mlb-823242",
+    "name": "New York Mets at San Francisco Giants",
     "tour": "MLB",
-    "course": "Busch Stadium",
-    "venue": "Busch Stadium",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "St. Louis Cardinals",
+    "course": "Oracle Park",
+    "venue": "Oracle Park",
+    "scheduledDate": 20260402,
+    "latestDate": 20260402,
+    "predictedWinner": "San Francisco Giants",
     "awayTeam": "New York Mets",
-    "homeTeam": "St. Louis Cardinals",
-    "awayStarter": "Clay Holmes",
-    "homeStarter": "Kyle Leahy",
+    "homeTeam": "San Francisco Giants",
+    "awayStarter": "David Peterson",
+    "homeStarter": "Robbie Ray",
+    "awayStarterProfile": {
+      "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/656849/headshot/67/current",
+      "subtitle": "L-handed | Age 30 | 6' 6\"",
+      "country": "USA",
+      "stats": [
+        {
+          "label": "ERA-like",
+          "value": "12.43"
+        },
+        {
+          "label": "WHIP-like",
+          "value": "2.40"
+        },
+        {
+          "label": "K Avg",
+          "value": "4.4"
+        },
+        {
+          "label": "IP Avg",
+          "value": "4.6"
+        }
+      ]
+    },
+    "homeStarterProfile": {
+      "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/592662/headshot/67/current",
+      "subtitle": "L-handed | Age 34 | 6' 2\"",
+      "country": "USA",
+      "stats": [
+        {
+          "label": "ERA-like",
+          "value": "8.09"
+        },
+        {
+          "label": "WHIP-like",
+          "value": "1.86"
+        },
+        {
+          "label": "K Avg",
+          "value": "4.6"
+        },
+        {
+          "label": "IP Avg",
+          "value": "4.6"
+        }
+      ]
+    },
+    "awayTeamDetails": {
+      "teamId": 121,
+      "abbreviation": "NYM",
+      "logoUrl": "https://www.mlbstatic.com/team-logos/121.svg",
+      "primaryColor": "#002D72",
+      "secondaryColor": "#FF5910",
+      "recordPrior": "424-399",
+      "recentForm": "3-2 last 5 | +0.4 run diff | 5.4 runs/game",
+      "bullpenSummary": "5 leverage arms | 1 short rest | 3.17 ERA-like",
+      "availabilitySummary": "0 IL adds | 0 activations | 27 moves",
+      "lineupContinuity": "100% lineup history coverage",
+      "venue": "Oracle Park",
+      "weather": null
+    },
+    "homeTeamDetails": {
+      "teamId": 137,
+      "abbreviation": "SF",
+      "logoUrl": "https://www.mlbstatic.com/team-logos/137.svg",
+      "primaryColor": "#FD5A1E",
+      "secondaryColor": "#27251F",
+      "recordPrior": "454-405",
+      "recentForm": "3-2 last 5 | +0.3 run diff | 5.4 runs/game",
+      "bullpenSummary": "4 leverage arms | 1 short rest | 6.58 ERA-like",
+      "availabilitySummary": "0 IL adds | 0 activations | 33 moves",
+      "lineupContinuity": "100% lineup history coverage",
+      "venue": "Oracle Park",
+      "weather": null
+    },
+    "awayStarterRadar": [
+      {
+        "label": "Run Prevention",
+        "value": 13.1
+      },
+      {
+        "label": "Strikeout Ability",
+        "value": 25.7
+      },
+      {
+        "label": "Command",
+        "value": 48.8
+      },
+      {
+        "label": "Contact Suppression",
+        "value": 43.0
+      },
+      {
+        "label": "Durability",
+        "value": 44.9
+      },
+      {
+        "label": "Recent Form",
+        "value": 19.8
+      }
+    ],
+    "homeStarterRadar": [
+      {
+        "label": "Run Prevention",
+        "value": 15.0
+      },
+      {
+        "label": "Strikeout Ability",
+        "value": 20.3
+      },
+      {
+        "label": "Command",
+        "value": 31.7
+      },
+      {
+        "label": "Contact Suppression",
+        "value": 53.4
+      },
+      {
+        "label": "Durability",
+        "value": 46.8
+      },
+      {
+        "label": "Recent Form",
+        "value": 36.2
+      }
+    ],
     "awayAvailability": {
       "ilAdds14": 0,
       "ilActivations14": 0,
-      "rosterMoves14": 35
+      "rosterMoves14": 27
     },
     "homeAvailability": {
       "ilAdds14": 0,
       "ilActivations14": 0,
-      "rosterMoves14": 11
+      "rosterMoves14": 33
     },
     "projectedLineupContext": {
       "awayCoverage": 1.0,
@@ -424,369 +496,18 @@
       "awayContinuity": null,
       "homeContinuity": null
     },
+    "predictionSource": "heuristic_fallback",
     "predictions": [
       {
         "rank": 1,
-        "playerName": "St. Louis Cardinals",
-        "winProbability": 61.23619603830921,
+        "playerName": "San Francisco Giants",
+        "winProbability": 83.46168387551066,
         "side": "home"
       },
       {
         "rank": 2,
         "playerName": "New York Mets",
-        "winProbability": 38.76380396169079,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-824214",
-    "name": "Boston Red Sox at Houston Astros",
-    "tour": "MLB",
-    "course": "Daikin Park",
-    "venue": "Daikin Park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Houston Astros",
-    "awayTeam": "Boston Red Sox",
-    "homeTeam": "Houston Astros",
-    "awayStarter": "Ranger Suarez",
-    "homeStarter": "Lance McCullers Jr.",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 28
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 38
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Houston Astros",
-        "winProbability": 70.77902297512307,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Boston Red Sox",
-        "winProbability": 29.220977024876937,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823159",
-    "name": "New York Yankees at Seattle Mariners",
-    "tour": "MLB",
-    "course": "T-Mobile Park",
-    "venue": "T-Mobile Park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Seattle Mariners",
-    "awayTeam": "New York Yankees",
-    "homeTeam": "Seattle Mariners",
-    "awayStarter": "Ryan Weathers",
-    "homeStarter": "Luis Castillo",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 31
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 24
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Seattle Mariners",
-        "winProbability": 59.679816915920966,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "New York Yankees",
-        "winProbability": 40.320183084079034,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823320",
-    "name": "San Francisco Giants at San Diego Padres",
-    "tour": "MLB",
-    "course": "Petco Park",
-    "venue": "Petco Park",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "San Diego Padres",
-    "awayTeam": "San Francisco Giants",
-    "homeTeam": "San Diego Padres",
-    "awayStarter": "Landen Roupp",
-    "homeStarter": "Walker Buehler",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 33
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 26
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "San Diego Padres",
-        "winProbability": 54.92987750326126,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "San Francisco Giants",
-        "winProbability": 45.07012249673874,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823972",
-    "name": "Cleveland Guardians at Los Angeles Dodgers",
-    "tour": "MLB",
-    "course": "UNIQLO Field at Dodger Stadium",
-    "venue": "UNIQLO Field at Dodger Stadium",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Los Angeles Dodgers",
-    "awayTeam": "Cleveland Guardians",
-    "homeTeam": "Los Angeles Dodgers",
-    "awayStarter": "Parker Messick",
-    "homeStarter": "Roki Sasaki",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 27
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 20
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Los Angeles Dodgers",
-        "winProbability": 57.83149249631191,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Cleveland Guardians",
-        "winProbability": 42.16850750368809,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-825108",
-    "name": "Detroit Tigers at Arizona Diamondbacks",
-    "tour": "MLB",
-    "course": "Chase Field",
-    "venue": "Chase Field",
-    "scheduledDate": 20260330,
-    "latestDate": 20260330,
-    "predictedWinner": "Arizona Diamondbacks",
-    "awayTeam": "Detroit Tigers",
-    "homeTeam": "Arizona Diamondbacks",
-    "awayStarter": "Justin Verlander",
-    "homeStarter": "Michael Soroka",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 21
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 22
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": null,
-      "homeContinuity": null
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Arizona Diamondbacks",
-        "winProbability": 75.65979310286689,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Detroit Tigers",
-        "winProbability": 24.340206897133122,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-824861",
-    "name": "Texas Rangers at Baltimore Orioles",
-    "tour": "MLB",
-    "course": "Oriole Park at Camden Yards",
-    "venue": "Oriole Park at Camden Yards",
-    "scheduledDate": 20260331,
-    "latestDate": 20260331,
-    "predictedWinner": "Baltimore Orioles",
-    "awayTeam": "Texas Rangers",
-    "homeTeam": "Baltimore Orioles",
-    "awayStarter": null,
-    "homeStarter": "Zach Eflin",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 12
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 35
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": 1.0,
-      "homeContinuity": 1.0
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Baltimore Orioles",
-        "winProbability": 55.83808524578628,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Texas Rangers",
-        "winProbability": 44.16191475421372,
-        "side": "away"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823485",
-    "name": "Washington Nationals at Philadelphia Phillies",
-    "tour": "MLB",
-    "course": "Citizens Bank Park",
-    "venue": "Citizens Bank Park",
-    "scheduledDate": 20260331,
-    "latestDate": 20260331,
-    "predictedWinner": "Washington Nationals",
-    "awayTeam": "Washington Nationals",
-    "homeTeam": "Philadelphia Phillies",
-    "awayStarter": null,
-    "homeStarter": "Andrew Painter",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 29
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 30
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": 1.0,
-      "homeContinuity": 1.0
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Washington Nationals",
-        "winProbability": 54.815996896493004,
-        "side": "away"
-      },
-      {
-        "rank": 2,
-        "playerName": "Philadelphia Phillies",
-        "winProbability": 45.184003103506996,
-        "side": "home"
-      }
-    ]
-  },
-  {
-    "id": "mlb-823888",
-    "name": "Chicago White Sox at Miami Marlins",
-    "tour": "MLB",
-    "course": "loanDepot park",
-    "venue": "loanDepot park",
-    "scheduledDate": 20260331,
-    "latestDate": 20260331,
-    "predictedWinner": "Miami Marlins",
-    "awayTeam": "Chicago White Sox",
-    "homeTeam": "Miami Marlins",
-    "awayStarter": "Erick Fedde",
-    "homeStarter": "Janson Junk",
-    "awayAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 27
-    },
-    "homeAvailability": {
-      "ilAdds14": 0,
-      "ilActivations14": 0,
-      "rosterMoves14": 20
-    },
-    "projectedLineupContext": {
-      "awayCoverage": 1.0,
-      "homeCoverage": 1.0,
-      "awayContinuity": 1.0,
-      "homeContinuity": 1.0
-    },
-    "predictions": [
-      {
-        "rank": 1,
-        "playerName": "Miami Marlins",
-        "winProbability": 59.8414516857933,
-        "side": "home"
-      },
-      {
-        "rank": 2,
-        "playerName": "Chicago White Sox",
-        "winProbability": 40.1585483142067,
+        "winProbability": 16.538316124489338,
         "side": "away"
       }
     ]

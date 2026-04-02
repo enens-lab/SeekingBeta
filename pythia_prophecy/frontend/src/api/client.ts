@@ -311,6 +311,7 @@ export interface SportsBoardPrediction {
   winProbability: number;
   actualWinner?: boolean;
   side?: string;
+  profile?: SportsPlayerProfile;
 }
 
 export interface SportsAvailabilitySummary {
@@ -353,6 +354,18 @@ export interface SportsRadarMetric {
   value: number;
 }
 
+export interface SportsPlayerStat {
+  label: string;
+  value: string;
+}
+
+export interface SportsPlayerProfile {
+  imageUrl?: string | null;
+  subtitle?: string | null;
+  country?: string | null;
+  stats?: SportsPlayerStat[];
+}
+
 export interface SportsUpcomingBoard {
   id: string;
   name: string;
@@ -367,6 +380,8 @@ export interface SportsUpcomingBoard {
   homeTeam?: string;
   awayStarter?: string;
   homeStarter?: string;
+  awayStarterProfile?: SportsPlayerProfile;
+  homeStarterProfile?: SportsPlayerProfile;
   awayTeamDetails?: SportsTeamDetails;
   homeTeamDetails?: SportsTeamDetails;
   awayStarterRadar?: SportsRadarMetric[];

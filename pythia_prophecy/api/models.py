@@ -415,14 +415,6 @@ class TrackRecordCurveResponse(BaseModel):
 # Sports Board Models
 # ============================================================
 
-class SportsBoardPrediction(BaseModel):
-    rank: int
-    playerName: str
-    winProbability: float
-    actualWinner: Optional[bool] = None
-    side: Optional[str] = None
-
-
 class SportsAvailabilitySummary(BaseModel):
     ilAdds14: Optional[int] = None
     ilActivations14: Optional[int] = None
@@ -463,6 +455,27 @@ class SportsRadarMetric(BaseModel):
     value: float
 
 
+class SportsPlayerStat(BaseModel):
+    label: str
+    value: str
+
+
+class SportsPlayerProfile(BaseModel):
+    imageUrl: Optional[str] = None
+    subtitle: Optional[str] = None
+    country: Optional[str] = None
+    stats: List[SportsPlayerStat] = []
+
+
+class SportsBoardPrediction(BaseModel):
+    rank: int
+    playerName: str
+    winProbability: float
+    actualWinner: Optional[bool] = None
+    side: Optional[str] = None
+    profile: Optional[SportsPlayerProfile] = None
+
+
 class SportsUpcomingBoard(BaseModel):
     id: str
     name: str
@@ -477,6 +490,8 @@ class SportsUpcomingBoard(BaseModel):
     homeTeam: Optional[str] = None
     awayStarter: Optional[str] = None
     homeStarter: Optional[str] = None
+    awayStarterProfile: Optional[SportsPlayerProfile] = None
+    homeStarterProfile: Optional[SportsPlayerProfile] = None
     awayTeamDetails: Optional[SportsTeamDetails] = None
     homeTeamDetails: Optional[SportsTeamDetails] = None
     awayStarterRadar: Optional[List[SportsRadarMetric]] = None

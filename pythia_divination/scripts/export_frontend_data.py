@@ -1,4 +1,5 @@
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,10 @@ import pandas as pd
 
 DIV_ROOT = Path(__file__).resolve().parents[1]
 PROJ_ROOT = Path(__file__).resolve().parents[2]
+if str(DIV_ROOT) not in sys.path:
+    sys.path.insert(0, str(DIV_ROOT))
+
+from sports.player_media import resolve_player_image
 
 META_PATH = DIV_ROOT / "data" / "sports" / "pga" / "normalized" / "golf_training_dataset_latest.csv"
 FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
@@ -45,6 +50,55 @@ TOUR_PRIORITY = {"PGA": 0, "LPGA": 1}
 UPCOMING_PER_TOUR = {"PGA": 18, "LPGA": 18}
 
 
+def _safe_float(value) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _append_stat(stats: list[dict[str, str]], label: str, value: str | None) -> None:
+    if value:
+        stats.append({"label": label, "value": value})
+
+
+def _build_golf_profile(row) -> dict:
+    country = row.feature_country_name if pd.notna(getattr(row, "feature_country_name", None)) else getattr(row, "country", None)
+    stats: list[dict[str, str]] = []
+
+    owgr_rank = _safe_float(getattr(row, "owgr__rank", None))
+    sg_total = _safe_float(getattr(row, "sg_total__avg", None))
+    sg_approach = _safe_float(getattr(row, "sg_approach__avg", None))
+    sg_putting = _safe_float(getattr(row, "sg_putting__avg", None))
+    top10_prob = _safe_float(getattr(row, "top_10_probability", None))
+    made_cut_prob = _safe_float(getattr(row, "made_cut_probability", None))
+
+    _append_stat(stats, "OWGR", f"#{int(round(owgr_rank))}" if owgr_rank is not None else None)
+    _append_stat(stats, "SG Total", f"{sg_total:+.2f}" if sg_total is not None else None)
+    _append_stat(stats, "Approach", f"{sg_approach:+.2f}" if sg_approach is not None else None)
+    if len(stats) < 4:
+        _append_stat(stats, "Putting", f"{sg_putting:+.2f}" if sg_putting is not None else None)
+    if len(stats) < 4:
+        _append_stat(stats, "Top 10", f"{top10_prob * 100:.1f}%" if top10_prob is not None else None)
+    if len(stats) < 4:
+        _append_stat(stats, "Made Cut", f"{made_cut_prob * 100:.1f}%" if made_cut_prob is not None else None)
+
+    subtitle_parts = [part for part in [country, getattr(row, "tour", None)] if part and not pd.isna(part)]
+    return {
+        "imageUrl": resolve_player_image(
+            name=str(row.player_name),
+            sport="golf",
+            tour=str(getattr(row, "tour", "PGA")),
+            player_id=getattr(row, "player_id", None),
+        ),
+        "subtitle": " | ".join(str(part) for part in subtitle_parts) if subtitle_parts else str(getattr(row, "tour", "Golf")),
+        "country": str(country) if country and not pd.isna(country) else None,
+        "stats": stats[:4],
+    }
+
+
 def _load_meta() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
     meta = pd.read_csv(META_PATH, low_memory=False)
 
@@ -66,7 +120,20 @@ def _load_meta() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
     )
 
     player_outcomes = (
-        meta[["tournament_id", "player_name", "won"]]
+        meta[
+            [
+                "tournament_id",
+                "player_name",
+                "won",
+                "player_id",
+                "country",
+                "feature_country_name",
+                "owgr__rank",
+                "sg_total__avg",
+                "sg_approach__avg",
+                "sg_putting__avg",
+            ]
+        ]
         .dropna(subset=["tournament_id", "player_name"])
         .drop_duplicates(subset=["tournament_id", "player_name"], keep="last")
     )
@@ -150,6 +217,13 @@ def _load_predictions(tournament_meta: pd.DataFrame, player_outcomes: pd.DataFra
                     "display_date",
                     "course_name",
                     "course_state_code",
+                    "player_id",
+                    "country",
+                    "feature_country_name",
+                    "owgr__rank",
+                    "sg_total__avg",
+                    "sg_approach__avg",
+                    "sg_putting__avg",
                     "source_priority",
                 ]
             ]
@@ -231,6 +305,7 @@ def _build_backtests(df: pd.DataFrame, winners: dict[str, str]) -> list[dict]:
                     "playerName": row.player_name,
                     "winProbability": float(row.winner_probability * 100),
                     "actualWinner": bool(row.player_name == actual_winner),
+                    "profile": _build_golf_profile(row),
                 }
             )
 
@@ -294,6 +369,7 @@ def _build_upcoming(df: pd.DataFrame) -> list[dict]:
                 "rank": rank,
                 "playerName": row.player_name,
                 "winProbability": float(row.winner_probability * 100),
+                "profile": _build_golf_profile(row),
             }
             for rank, row in enumerate(latest_event.itertuples(index=False), start=1)
         ]

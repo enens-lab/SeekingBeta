@@ -146,11 +146,18 @@
   font-weight: 500;
   cursor: pointer;
   min-width: 250px;
+  color-scheme: light dark;
 }
 
 .tournament-dropdown:focus {
   outline: none;
   border-color: var(--brand-blue);
+}
+
+.tournament-dropdown option,
+.tournament-dropdown optgroup {
+  background-color: var(--bg-card);
+  color: var(--text-main);
 }
 
 /* Tournament Card */
@@ -520,6 +527,314 @@
   min-width: 250px;
 }
 
+.event-selector-mlb {
+  align-items: stretch;
+}
+
+.mlb-slate-summary {
+  min-width: 220px;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mlb-slate-summary p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.mlb-slate-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  color: #d9f7ff;
+  background: rgba(77, 153, 255, 0.12);
+  border: 1px solid rgba(77, 153, 255, 0.18);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mlb-board-list {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.mlb-matchup-card {
+  background: linear-gradient(180deg, rgba(15, 23, 39, 0.96), rgba(10, 17, 29, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 1.4rem;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.mlb-matchup-card.expanded {
+  border-color: rgba(77, 153, 255, 0.28);
+}
+
+.mlb-matchup-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.mlb-matchup-copy h2 {
+  margin: 0.55rem 0 0.5rem;
+  color: var(--text-main);
+}
+
+.mlb-matchup-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.mlb-matchup-subtitle {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.mlb-matchup-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.mlb-team-column {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.mlb-team-column.align-right {
+  text-align: right;
+}
+
+.mlb-team-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.team-header-right {
+  justify-content: flex-end;
+}
+
+.mlb-team-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.mlb-team-subtext {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.mlb-probability-stack strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.mlb-probability-stack span {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.mlb-context-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.mlb-context-chip {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.mlb-matchup-middle {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.8rem;
+  align-items: center;
+  text-align: center;
+}
+
+.mlb-edge-pill {
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  color: #dffcf6;
+  border: 1px solid rgba(36, 211, 185, 0.22);
+  background: rgba(36, 211, 185, 0.1);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.mlb-vs-marker {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mlb-middle-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.mlb-expanded-panel {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 1rem;
+}
+
+.mlb-team-details-grid,
+.mlb-radar-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.mlb-team-detail-card {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mlb-team-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.mlb-team-detail-heading h3 {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.mlb-team-detail-heading p {
+  margin: 0.2rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.mlb-detail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mlb-detail-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.mlb-detail-list span {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.mlb-detail-list strong {
+  color: var(--text-main);
+  text-align: right;
+  max-width: 56%;
+}
+
+@media (max-width: 1024px) {
+  .mlb-matchup-body {
+    grid-template-columns: 1fr;
+  }
+
+  .mlb-team-details-grid,
+  .mlb-radar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mlb-matchup-middle {
+    order: -1;
+    padding: 0.8rem 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .sports-dashboard-title,
+  .mlb-matchup-top,
+  .event-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sports-search-input,
+  .tournament-dropdown {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mlb-team-column.align-right,
+  .mlb-detail-list strong {
+    text-align: left;
+  }
+
+  .team-header-right {
+    justify-content: flex-start;
+    flex-direction: row-reverse;
+  }
+
+  .mlb-probability-stack strong {
+    font-size: 1.55rem;
+  }
+
+  .mlb-context-chip-grid,
+  .mlb-matchup-meta {
+    gap: 0.45rem;
+  }
+
+  .mlb-context-chip {
+    width: 100%;
+  }
+}
+
 .sports-search-input:focus {
   outline: none;
   border-color: var(--brand-blue);
@@ -533,6 +848,13 @@
   color: var(--text-main);
   font-size: 0.95rem;
   cursor: pointer;
+  color-scheme: light dark;
+}
+
+.sports-filter-dropdown option,
+.sports-filter-dropdown optgroup {
+  background-color: var(--bg-card);
+  color: var(--text-main);
 }
 
 .backtest-header-area {

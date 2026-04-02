@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,7 @@ if str(DIV_ROOT) not in sys.path:
 
 from sports.mlb.availability_features import build_transaction_feature_frame, merge_transaction_features
 from sports.mlb.build_training_dataset import DEFAULT_MLB_DATA_ROOT, _resolve_statcast_paths
+from sports.mlb.branding import get_team_branding
 from sports.mlb.client import (
     MLBStatsClient,
     flatten_game_bundle,
@@ -50,8 +51,8 @@ DATASET_PATH = NORMALIZED_DIR / "mlb_training_dataset_latest.csv"
 HISTORICAL_PREDICTIONS_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "validation_predictions.csv"
 MODEL_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "model.joblib"
 FEATURE_COLUMNS_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "feature_columns.csv"
-UPCOMING_LOOKAHEAD_DAYS = 6
-UPCOMING_LIMIT = 18
+UPCOMING_LOOKAHEAD_DAYS = 7
+MAX_AVAILABLE_DATES = 7
 
 
 def _optional_text(value: object) -> str | None:
@@ -62,10 +63,14 @@ def _optional_text(value: object) -> str | None:
 
 
 def _load_table(stem: str) -> pd.DataFrame:
-    return read_preferred_table(
-        NORMALIZED_DIR / f"{stem}.parquet",
-        NORMALIZED_DIR / f"{stem}.csv",
-    )
+    parquet_path = NORMALIZED_DIR / f"{stem}.parquet"
+    csv_path = NORMALIZED_DIR / f"{stem}.csv"
+    try:
+        return read_preferred_table(parquet_path, csv_path)
+    except ImportError:
+        if csv_path.exists():
+            return pd.read_csv(csv_path)
+        raise
 
 
 def _load_table_optional(stem: str) -> pd.DataFrame:
@@ -93,6 +98,215 @@ def _numeric_series(frame: pd.DataFrame, column: str) -> pd.Series:
 def _sigmoid(values: pd.Series) -> pd.Series:
     clipped = values.clip(-6.0, 6.0)
     return 1.0 / (1.0 + np.exp(-clipped))
+
+
+def _coerce_date_key(value: object) -> str | None:
+    if value in (None, ""):
+        return None
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return None
+    return timestamp.normalize().strftime("%Y-%m-%d")
+
+
+def _date_key_to_label(value: str) -> str:
+    timestamp = pd.to_datetime(value, errors="coerce")
+    if pd.isna(timestamp):
+        return value
+    return timestamp.strftime("%a, %b %d").replace(" 0", " ")
+
+
+def _safe_value(row: Any, field: str) -> float | None:
+    value = getattr(row, field, np.nan)
+    if pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_metric(value: float | None, low: float, high: float, *, inverse: bool = False) -> float | None:
+    if value is None or high <= low:
+        return None
+    clipped = min(max(value, low), high)
+    ratio = (clipped - low) / (high - low)
+    if inverse:
+        ratio = 1.0 - ratio
+    return round(ratio * 100.0, 1)
+
+
+def _combine_metric(*weighted_values: tuple[float, float | None]) -> float | None:
+    total_weight = 0.0
+    total_value = 0.0
+    for weight, value in weighted_values:
+        if value is None:
+            continue
+        total_weight += weight
+        total_value += weight * value
+    if total_weight == 0:
+        return None
+    return round(total_value / total_weight, 1)
+
+
+def _format_record_prior(games_played: float | None, win_pct: float | None) -> str | None:
+    if games_played is None or win_pct is None or games_played <= 0:
+        return None
+    wins = int(round(games_played * win_pct))
+    wins = max(0, min(wins, int(round(games_played))))
+    losses = max(int(round(games_played)) - wins, 0)
+    return f"{wins}-{losses}"
+
+
+def _format_recent_form(row: Any, side: str) -> str | None:
+    wins_rate = _safe_value(row, f"{side}_team_won_avg_last_5")
+    run_diff = _safe_value(row, f"{side}_team_run_diff_avg_last_10")
+    runs = _safe_value(row, f"{side}_team_runs_scored_avg_last_5")
+    parts: list[str] = []
+    if wins_rate is not None:
+        wins = max(0, min(5, int(round(wins_rate * 5))))
+        parts.append(f"{wins}-{5 - wins} last 5")
+    if run_diff is not None:
+        parts.append(f"{run_diff:+.1f} run diff")
+    if runs is not None:
+        parts.append(f"{runs:.1f} runs/game")
+    return " | ".join(parts) or None
+
+
+def _format_bullpen_summary(row: Any, side: str) -> str | None:
+    leverage = _safe_value(row, f"{side}_bullpen_high_leverage_arms_count")
+    short_rest = _safe_value(row, f"{side}_bullpen_high_leverage_short_rest_count")
+    era_like = _safe_value(row, f"{side}_bullpen_avg_era_like_avg_last_5")
+    parts: list[str] = []
+    if leverage is not None:
+        parts.append(f"{int(round(leverage))} leverage arms")
+    if short_rest is not None:
+        parts.append(f"{int(round(short_rest))} short rest")
+    if era_like is not None:
+        parts.append(f"{era_like:.2f} ERA-like")
+    return " | ".join(parts) or None
+
+
+def _format_availability_summary(row: Any, side: str) -> str | None:
+    il_adds = int(round(_safe_value(row, f"{side}_availability_il_additions_last_14") or 0))
+    il_activations = int(round(_safe_value(row, f"{side}_availability_il_activations_last_14") or 0))
+    roster_moves = int(round(_safe_value(row, f"{side}_availability_transactions_last_14") or 0))
+    if il_adds == 0 and il_activations == 0 and roster_moves == 0:
+        return "Quiet roster over last 14 days"
+    return f"{il_adds} IL adds | {il_activations} activations | {roster_moves} moves"
+
+
+def _format_lineup_continuity(row: Any, side: str) -> str | None:
+    overlap = _safe_value(row, f"{side}_lineup_prev_game_overlap")
+    coverage = _safe_value(row, f"{side}_lineup_history_coverage")
+    if overlap is not None:
+        return f"{overlap * 100:.0f}% overlap vs prior lineup"
+    if coverage is not None:
+        return f"{coverage * 100:.0f}% lineup history coverage"
+    return None
+
+
+def _format_weather_summary(row: Any) -> str | None:
+    condition = _optional_text(getattr(row, "weather_condition", None))
+    temp = _safe_value(row, "weather_temp_f")
+    wind = _optional_text(getattr(row, "weather_wind", None))
+    parts = [part for part in [condition, f"{temp:.0f} deg F" if temp is not None else None, wind] if part]
+    return " | ".join(parts) or None
+
+
+def _build_team_details(row: Any, side: str) -> dict[str, Any]:
+    team_id = getattr(row, f"{side}_team_id", None)
+    abbreviation = _optional_text(getattr(row, f"{side}_team_abbreviation", None))
+    branding = get_team_branding(int(team_id) if team_id is not None and not pd.isna(team_id) else None, abbreviation)
+    return {
+        **branding,
+        "recordPrior": _format_record_prior(
+            _safe_value(row, f"{side}_team_games_played_prior"),
+            _safe_value(row, f"{side}_team_win_pct_prior"),
+        ),
+        "recentForm": _format_recent_form(row, side),
+        "bullpenSummary": _format_bullpen_summary(row, side),
+        "availabilitySummary": _format_availability_summary(row, side),
+        "lineupContinuity": _format_lineup_continuity(row, side),
+        "venue": _optional_text(getattr(row, "venue_name", None)) or "MLB Venue",
+        "weather": _format_weather_summary(row),
+    }
+
+
+def _build_starter_radar(row: Any, side: str) -> list[dict[str, float]] | None:
+    prefix = f"{side}_starter_"
+    run_prevention = _combine_metric(
+        (0.55, _normalize_metric(_safe_value(row, f"{prefix}era_like_avg_last_5"), 1.75, 6.75, inverse=True)),
+        (0.30, _normalize_metric(_safe_value(row, f"{prefix}whip_avg_last_5"), 0.9, 1.7, inverse=True)),
+        (0.15, _normalize_metric(_safe_value(row, f"{prefix}home_runs_allowed_avg_last_5"), 0.2, 1.8, inverse=True)),
+    )
+    strikeout_ability = _combine_metric(
+        (0.7, _normalize_metric(_safe_value(row, f"{prefix}strikeouts_avg_last_5"), 3.0, 10.0)),
+        (0.3, _normalize_metric(_safe_value(row, f"{prefix}strike_pct_avg_last_5"), 0.58, 0.72)),
+    )
+    command = _combine_metric(
+        (0.55, _normalize_metric(_safe_value(row, f"{prefix}walks_avg_last_5"), 0.8, 4.5, inverse=True)),
+        (0.45, _normalize_metric(_safe_value(row, f"{prefix}strike_pct_avg_last_5"), 0.58, 0.72)),
+    )
+    contact_suppression = _combine_metric(
+        (0.4, _normalize_metric(_safe_value(row, f"{prefix}hits_allowed_avg_last_5"), 4.0, 9.5, inverse=True)),
+        (0.35, _normalize_metric(_safe_value(row, f"{prefix}whip_avg_last_5"), 0.9, 1.7, inverse=True)),
+        (0.25, _normalize_metric(_safe_value(row, f"{prefix}home_runs_allowed_avg_last_5"), 0.2, 1.8, inverse=True)),
+    )
+    durability = _combine_metric(
+        (0.35, _normalize_metric(_safe_value(row, f"{prefix}innings_pitched_avg_last_5"), 4.0, 7.5)),
+        (0.25, _normalize_metric(_safe_value(row, f"{prefix}batters_faced_avg_last_5"), 18.0, 29.0)),
+        (0.2, _normalize_metric(_safe_value(row, f"{prefix}pitches_thrown_avg_last_5"), 68.0, 108.0)),
+        (0.2, _normalize_metric(_safe_value(row, f"{prefix}starts_prior"), 3.0, 30.0)),
+    )
+    recent_form = _combine_metric(
+        (0.35, _normalize_metric(_safe_value(row, f"{prefix}won_avg_last_3"), 0.0, 1.0)),
+        (0.35, _normalize_metric(_safe_value(row, f"{prefix}earned_runs_avg_last_3"), 0.5, 5.5, inverse=True)),
+        (0.3, _normalize_metric(_safe_value(row, f"{prefix}era_like_avg_last_3"), 1.75, 6.75, inverse=True)),
+    )
+
+    values = [
+        ("Run Prevention", run_prevention),
+        ("Strikeout Ability", strikeout_ability),
+        ("Command", command),
+        ("Contact Suppression", contact_suppression),
+        ("Durability", durability),
+        ("Recent Form", recent_form),
+    ]
+    if all(value is None for _, value in values):
+        return None
+    return [{"label": label, "value": value or 0.0} for label, value in values]
+
+
+def _build_available_dates(schedule: pd.DataFrame) -> list[dict[str, Any]]:
+    if schedule.empty:
+        return []
+    dates = (
+        schedule.assign(official_date=pd.to_datetime(schedule["official_date"], errors="coerce").dt.normalize())
+        .dropna(subset=["official_date"])
+        .groupby("official_date", as_index=False)
+        .agg(gameCount=("game_pk", "count"))
+        .sort_values("official_date")
+        .head(MAX_AVAILABLE_DATES)
+    )
+    return [
+        {
+            "dateKey": row.official_date.strftime("%Y-%m-%d"),
+            "label": _date_key_to_label(row.official_date.strftime("%Y-%m-%d")),
+            "gameCount": int(row.gameCount),
+        }
+        for row in dates.itertuples(index=False)
+    ]
+
+
+def _resolve_selected_date(available_dates: list[dict[str, Any]], requested_date: str | None) -> str | None:
+    requested = _coerce_date_key(requested_date)
+    available_keys = {item["dateKey"] for item in available_dates}
+    if requested and requested in available_keys:
+        return requested
+    if available_dates:
+        return str(available_dates[0]["dateKey"])
+    return requested
 
 
 def _fallback_predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
@@ -200,7 +414,7 @@ def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 def _load_upcoming_schedule(client: MLBStatsClient) -> pd.DataFrame:
     today = pd.Timestamp.utcnow().normalize()
-    end_date = today + pd.Timedelta(days=UPCOMING_LOOKAHEAD_DAYS)
+    end_date = today + pd.Timedelta(days=UPCOMING_LOOKAHEAD_DAYS - 1)
     payload = client.get_schedule(
         start_date=today.date().isoformat(),
         end_date=end_date.date().isoformat(),
@@ -212,12 +426,10 @@ def _load_upcoming_schedule(client: MLBStatsClient) -> pd.DataFrame:
         return schedule
     schedule["game_date"] = pd.to_datetime(schedule["game_date"], utc=True, errors="coerce")
     schedule["official_date"] = pd.to_datetime(schedule["official_date"], errors="coerce")
-    now_utc = pd.Timestamp.now(tz="UTC")
-    preview_mask = schedule["status_abstract"].isin(["Preview", "Live"])
-    future_mask = schedule["game_date"].isna() | schedule["game_date"].gt(now_utc)
+    preview_mask = ~schedule["status_abstract"].isin(["Final", "Completed Early", "Cancelled", "Postponed"])
     probable_mask = schedule["away_team_name"].notna() & schedule["home_team_name"].notna()
-    upcoming = schedule.loc[preview_mask & future_mask & probable_mask].copy()
-    return upcoming.sort_values(["game_date", "game_pk"]).head(UPCOMING_LIMIT).reset_index(drop=True)
+    upcoming = schedule.loc[preview_mask & probable_mask].copy()
+    return upcoming.sort_values(["official_date", "game_date", "game_pk"]).reset_index(drop=True)
 
 
 def _fetch_preview_bundles(client: MLBStatsClient, schedule: pd.DataFrame) -> tuple[pd.DataFrame, dict[int, Any], pd.DataFrame]:
@@ -373,11 +585,19 @@ def _build_transaction_frame(client: MLBStatsClient, upcoming_games: pd.DataFram
     return pd.concat(transaction_frames, ignore_index=True) if transaction_frames else pd.DataFrame()
 
 
-def _build_upcoming_dataset() -> pd.DataFrame:
+def _build_upcoming_dataset(selected_date: str | None = None) -> tuple[pd.DataFrame, str | None, list[dict[str, Any]]]:
     client = MLBStatsClient()
-    schedule = _load_upcoming_schedule(client)
+    full_schedule = _load_upcoming_schedule(client)
+    available_dates = _build_available_dates(full_schedule)
+    resolved_selected_date = _resolve_selected_date(available_dates, selected_date)
+    if full_schedule.empty or not resolved_selected_date:
+        return pd.DataFrame(), resolved_selected_date, available_dates
+
+    schedule = full_schedule.loc[
+        pd.to_datetime(full_schedule["official_date"], errors="coerce").dt.strftime("%Y-%m-%d") == resolved_selected_date
+    ].copy()
     if schedule.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(), resolved_selected_date, available_dates
 
     details, _, preview_player_profiles = _fetch_preview_bundles(client, schedule)
     season = int(pd.to_numeric(schedule["season"], errors="coerce").dropna().iloc[0]) if schedule["season"].notna().any() else None
@@ -438,7 +658,7 @@ def _build_upcoming_dataset() -> pd.DataFrame:
     )
     games = enrich_dataset_with_statcast(games, statcast_paths)
     games = games.sort_values(["game_date", "game_pk"]).reset_index(drop=True)
-    return games
+    return games, resolved_selected_date, available_dates
 
 
 def _predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
@@ -511,6 +731,10 @@ def _build_upcoming_boards(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "homeTeam": row.home_team_name,
                 "awayStarter": _optional_text(row.away_probable_pitcher_name),
                 "homeStarter": _optional_text(row.home_probable_pitcher_name),
+                "awayTeamDetails": _build_team_details(row, "away"),
+                "homeTeamDetails": _build_team_details(row, "home"),
+                "awayStarterRadar": _build_starter_radar(row, "away"),
+                "homeStarterRadar": _build_starter_radar(row, "home"),
                 "awayAvailability": {
                     "ilAdds14": int(getattr(row, "away_availability_il_additions_last_14", 0) or 0),
                     "ilActivations14": int(getattr(row, "away_availability_il_activations_last_14", 0) or 0),
@@ -535,18 +759,31 @@ def _build_upcoming_boards(frame: pd.DataFrame) -> list[dict[str, Any]]:
                     if pd.notna(getattr(row, "home_lineup_prev_game_overlap", np.nan))
                     else None,
                 },
+                "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
                 "predictions": ranked,
             }
         )
     return boards
 
 
+def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
+    dataset, resolved_selected_date, available_dates = _build_upcoming_dataset(selected_date=selected_date)
+    dataset = _predict_upcoming(dataset)
+    upcoming = _build_upcoming_boards(dataset)
+    return {
+        "selectedDate": resolved_selected_date,
+        "availableDates": available_dates,
+        "upcoming": upcoming,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "source": "divination_live_mlb_feed",
+    }
+
+
 def export_mlb_frontend_data() -> None:
     historical_frame = _load_historical_source()
     backtests = _build_backtests(historical_frame)
-    upcoming_dataset = _build_upcoming_dataset()
-    upcoming_dataset = _predict_upcoming(upcoming_dataset)
-    upcoming = _build_upcoming_boards(upcoming_dataset)
+    upcoming_payload = build_live_upcoming_payload()
+    upcoming = upcoming_payload["upcoming"]
 
     FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
     (FRONTEND_DATA_DIR / "mlb_historical_backtests.json").write_text(json.dumps(backtests, indent=2))

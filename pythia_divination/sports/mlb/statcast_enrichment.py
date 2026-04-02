@@ -14,7 +14,13 @@ import pandas as pd
 
 def _read_table(path: Path) -> pd.DataFrame:
     if path.suffix == ".parquet":
-        return pd.read_parquet(path)
+        try:
+            return pd.read_parquet(path)
+        except ImportError:
+            csv_path = path.with_suffix(".csv")
+            if csv_path.exists():
+                return pd.read_csv(csv_path, low_memory=False)
+            raise
     return pd.read_csv(path, low_memory=False)
 
 

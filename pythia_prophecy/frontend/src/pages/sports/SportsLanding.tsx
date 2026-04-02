@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import TeamLogo from '../../components/sports/TeamLogo';
 import {
   sports,
   type SportsBoardsResponse,
@@ -12,9 +13,9 @@ import { trackEvent } from '../../lib/analytics';
 import './SportsLanding.css';
 
 const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
-  golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed' },
-  tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed' },
-  mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed' },
+  golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
+  tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
+  mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
 };
 
 type SpotlightBoard = {
@@ -36,10 +37,17 @@ function fallbackReplayEvent(backtest?: SportsHistoricalBoard): SportsUpcomingBo
   };
 }
 
+function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number {
+  const label = side === 'away' ? board.awayTeam : board.homeTeam;
+  const match = board.predictions.find((prediction) => prediction.side === side || prediction.playerName === label);
+  return match?.winProbability ?? 50;
+}
+
 function SportsLanding() {
   const [sportsBoards, setSportsBoards] = useState<SportsBoardsResponse>(EMPTY_SPORTS_BOARDS);
   const [boardsLoading, setBoardsLoading] = useState(true);
   const [boardsError, setBoardsError] = useState<string | null>(null);
+  const [requestedMlbDate, setRequestedMlbDate] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +56,7 @@ function SportsLanding() {
       setBoardsLoading(true);
       setBoardsError(null);
       try {
-        const payload = await sports.getBoards();
+        const payload = await sports.getBoards(requestedMlbDate || undefined);
         if (!cancelled) {
           setSportsBoards(payload);
         }
@@ -67,7 +75,7 @@ function SportsLanding() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [requestedMlbDate]);
 
   const golfEvents = sportsBoards.golf.upcoming;
   const tennisEvents = sportsBoards.tennis.upcoming;
@@ -95,7 +103,7 @@ function SportsLanding() {
       {
         label: 'MLB Board',
         eyebrow: 'MLB',
-        description: 'Pregame matchup boards with probable pitchers, projected lineup strength, bullpen depth, and recent injury churn.',
+        description: 'Same-day team boards with probable starters, lineup continuity, bullpen leverage, and roster availability context.',
         event: mlbEvents[0] || fallbackReplayEvent(mlbHistory[0]),
         accent: 'orange',
       },
@@ -112,22 +120,22 @@ function SportsLanding() {
     {
       title: 'LPGA Tour',
       status: 'Live now',
-      summary: 'Women’s major weeks and full-tournament winner boards with field-aware rankings.',
+      summary: "Women's major weeks and full-tournament winner boards with field-aware rankings.",
     },
     {
       title: 'ATP Singles',
       status: 'Live now',
-      summary: 'Men’s hard-court, clay, and indoor tournament probability boards.',
+      summary: "Men's hard-court, clay, and indoor tournament probability boards.",
     },
     {
       title: 'WTA Singles',
       status: 'Live now',
-      summary: 'Women’s tour coverage with tournament-level ranking boards and historical backtests.',
+      summary: "Women's tour coverage with tournament-level ranking boards and historical backtests.",
     },
     {
       title: 'MLB',
       status: 'Live now',
-      summary: 'Pregame daily matchup boards and historical replays powered by pitcher, lineup, bullpen, and availability context.',
+      summary: 'Pregame daily same-day matchup boards with probable-starter context and richer team detail.',
     },
     {
       title: 'Other Team Sports',
@@ -142,6 +150,8 @@ function SportsLanding() {
     [...golfEvents, ...tennisEvents, ...mlbEvents, ...golfHistory, ...tennisHistory, ...mlbHistory].map((item) => item.tour),
   ).size;
   const totalTrackedEntrants = spotlightBoards.reduce((sum, board) => sum + (board.event?.predictions.length ?? 0), 0);
+  const mlbSelectedDate = sportsBoards.mlb.selectedDate || requestedMlbDate || '';
+  const mlbSelectedLabel = (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label || 'Next active MLB slate';
 
   return (
     <>
@@ -226,8 +236,8 @@ function SportsLanding() {
             <span className="section-kicker">Board Preview</span>
             <h2>Browse multiple tours the same way you would scan a live board.</h2>
             <p>
-              The sports experience now spans golf, tennis, and baseball, with each board or replay built around fast ranking,
-              field or matchup context, and a quick view of how sharp the probability spread really is.
+              The sports experience spans golf, tennis, and baseball, with each board built around fast ranking,
+              matchup context, and a quick read on where the model sees the sharpest edge.
             </p>
           </div>
 
@@ -271,6 +281,111 @@ function SportsLanding() {
           )}
         </section>
 
+        <section className="mlb-slate-section">
+          <div className="section-heading">
+            <span className="section-kicker">MLB Same-Day Board</span>
+            <h2>All MLB matchups for one live slate, not a stale rolling list.</h2>
+            <p>
+              Pick a date, scan every same-day game, compare team logos, probable starters, and top-line probability edges,
+              then jump into the full dashboard for deeper detail.
+            </p>
+          </div>
+
+          <div className="mlb-slate-shell">
+            <div className="mlb-slate-toolbar">
+              <div className="mlb-date-pill-row">
+                {(sportsBoards.mlb.availableDates || []).map((dateOption) => (
+                  <button
+                    key={dateOption.dateKey}
+                    className={`mlb-date-pill ${dateOption.dateKey === mlbSelectedDate ? 'active' : ''}`}
+                    onClick={() => {
+                      setRequestedMlbDate(dateOption.dateKey);
+                      trackEvent('sports_landing_mlb_date_click', { date: dateOption.dateKey });
+                    }}
+                  >
+                    <span>{dateOption.label}</span>
+                    <strong>{dateOption.gameCount} games</strong>
+                  </button>
+                ))}
+              </div>
+              <div className="mlb-slate-copy">
+                <span className="sports-runtime-pill">Selected slate</span>
+                <p>{mlbSelectedLabel}</p>
+              </div>
+            </div>
+
+            {boardsLoading ? (
+              <div className="spotlight-empty-state">Loading the live MLB slate...</div>
+            ) : mlbEvents.length === 0 ? (
+              <div className="spotlight-empty-state">No live MLB slate is available for the selected date right now.</div>
+            ) : (
+              <div className="mlb-slate-grid">
+                {mlbEvents.map((board) => {
+                  const awayProb = probabilityForSide(board, 'away');
+                  const homeProb = probabilityForSide(board, 'home');
+                  return (
+                    <article key={board.id} className="mlb-slate-card">
+                      <div className="mlb-slate-card-top">
+                        <span className="spotlight-tour-pill">MLB</span>
+                        <span>{board.course}</span>
+                      </div>
+
+                      <div className="mlb-slate-team-row">
+                        <div className="mlb-slate-team">
+                          <TeamLogo
+                            logoUrl={board.awayTeamDetails?.logoUrl}
+                            label={board.awayTeam || 'Away'}
+                            abbreviation={board.awayTeamDetails?.abbreviation}
+                            primaryColor={board.awayTeamDetails?.primaryColor}
+                            size="sm"
+                          />
+                          <div>
+                            <strong>{board.awayTeam}</strong>
+                            <span>{board.awayStarter || 'Starter pending'}</span>
+                          </div>
+                        </div>
+                        <div className="mlb-slate-prob">{awayProb.toFixed(1)}%</div>
+                      </div>
+
+                      <div className="mlb-slate-team-row">
+                        <div className="mlb-slate-team">
+                          <TeamLogo
+                            logoUrl={board.homeTeamDetails?.logoUrl}
+                            label={board.homeTeam || 'Home'}
+                            abbreviation={board.homeTeamDetails?.abbreviation}
+                            primaryColor={board.homeTeamDetails?.primaryColor}
+                            size="sm"
+                          />
+                          <div>
+                            <strong>{board.homeTeam}</strong>
+                            <span>{board.homeStarter || 'Starter pending'}</span>
+                          </div>
+                        </div>
+                        <div className="mlb-slate-prob">{homeProb.toFixed(1)}%</div>
+                      </div>
+
+                      <div className="mlb-slate-foot">
+                        <span>{board.homeTeamDetails?.weather || 'Weather pending'}</span>
+                        <span>{board.homeTeamDetails?.availabilitySummary || 'Roster stable'}</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="mlb-slate-cta">
+              <Link
+                to="/sports-dashboard"
+                className="btn btn-primary"
+                onClick={() => trackEvent('sports_landing_cta_click', { destination: 'sports_dashboard' })}
+              >
+                Open Full MLB Dashboard
+              </Link>
+            </div>
+          </div>
+        </section>
+
         <section className="sports-coverage">
           <div className="section-heading">
             <span className="section-kicker">Coverage</span>
@@ -304,11 +419,11 @@ function SportsLanding() {
           <div className="features-grid">
             <div className="feature-card">
               <h3>Scan many boards quickly</h3>
-              <p>See a ranked contender board for each tournament, jump between tours, and compare probability shapes without parsing a dense spreadsheet.</p>
+              <p>See ranked contender or matchup boards across tours, jump between slates, and compare probability shapes without parsing a dense spreadsheet.</p>
             </div>
             <div className="feature-card">
               <h3>Model-driven, not crowd-driven</h3>
-              <p>Each board is generated from historical performance data, field context, and sport-specific features instead of trader sentiment or price action.</p>
+              <p>Each board is generated from historical performance data, field or team context, and sport-specific features instead of trader sentiment or price action.</p>
             </div>
             <div className="feature-card">
               <h3>Track record stays visible</h3>

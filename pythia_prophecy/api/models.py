@@ -436,6 +436,33 @@ class SportsProjectedLineupContext(BaseModel):
     homeContinuity: Optional[float] = None
 
 
+class SportsBoardDateOption(BaseModel):
+    dateKey: str
+    label: str
+    gameCount: int
+
+
+class SportsTeamDetails(BaseModel):
+    teamId: Optional[int] = None
+    abbreviation: Optional[str] = None
+    logoUrl: Optional[str] = None
+    wordmarkUrl: Optional[str] = None
+    primaryColor: Optional[str] = None
+    secondaryColor: Optional[str] = None
+    recordPrior: Optional[str] = None
+    recentForm: Optional[str] = None
+    bullpenSummary: Optional[str] = None
+    availabilitySummary: Optional[str] = None
+    lineupContinuity: Optional[str] = None
+    venue: Optional[str] = None
+    weather: Optional[str] = None
+
+
+class SportsRadarMetric(BaseModel):
+    label: str
+    value: float
+
+
 class SportsUpcomingBoard(BaseModel):
     id: str
     name: str
@@ -450,9 +477,14 @@ class SportsUpcomingBoard(BaseModel):
     homeTeam: Optional[str] = None
     awayStarter: Optional[str] = None
     homeStarter: Optional[str] = None
+    awayTeamDetails: Optional[SportsTeamDetails] = None
+    homeTeamDetails: Optional[SportsTeamDetails] = None
+    awayStarterRadar: Optional[List[SportsRadarMetric]] = None
+    homeStarterRadar: Optional[List[SportsRadarMetric]] = None
     awayAvailability: Optional[SportsAvailabilitySummary] = None
     homeAvailability: Optional[SportsAvailabilitySummary] = None
     projectedLineupContext: Optional[SportsProjectedLineupContext] = None
+    predictionSource: Optional[str] = None
     predictions: List[SportsBoardPrediction] = []
 
 
@@ -483,6 +515,8 @@ class SportsBoardCollection(BaseModel):
     backtests: List[SportsHistoricalBoard] = []
     updated_at: datetime
     source: str
+    selectedDate: Optional[str] = None
+    availableDates: List[SportsBoardDateOption] = []
 
 
 class SportsBoardsResponse(BaseModel):

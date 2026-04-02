@@ -151,7 +151,7 @@ _LSTM_SINGLEFLIGHT_LOCKS: Dict[Tuple[str, str, str], Lock] = {}
 _LSTM_CACHE_LOCK = Lock()
 _HOME_CACHE_WARMER_TASK: Optional[asyncio.Task] = None
 _MARKET_DATA_SYNC_TASK: Optional[asyncio.Task] = None
-_MLB_UPCOMING_BOARDS_CACHE: Optional[Tuple[float, dict[str, Any]]] = None
+_MLB_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _MLB_UPCOMING_BOARDS_LOCK = Lock()
 MLB_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("MLB_UPCOMING_CACHE_TTL_SECONDS", "900"))
 
@@ -185,38 +185,29 @@ LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
 }
 
 
-def _load_live_mlb_upcoming_payload(force_refresh: bool = False) -> dict[str, Any]:
+def _load_live_mlb_upcoming_payload(force_refresh: bool = False, mlb_date: str | None = None) -> dict[str, Any]:
     global _MLB_UPCOMING_BOARDS_CACHE
 
     now_ts = time.time()
+    cache_key = mlb_date or "__default__"
     with _MLB_UPCOMING_BOARDS_LOCK:
         if (
             not force_refresh
-            and _MLB_UPCOMING_BOARDS_CACHE
-            and now_ts - _MLB_UPCOMING_BOARDS_CACHE[0] <= MLB_UPCOMING_CACHE_TTL_SECONDS
+            and cache_key in _MLB_UPCOMING_BOARDS_CACHE
+            and now_ts - _MLB_UPCOMING_BOARDS_CACHE[cache_key][0] <= MLB_UPCOMING_CACHE_TTL_SECONDS
         ):
-            return dict(_MLB_UPCOMING_BOARDS_CACHE[1])
+            return dict(_MLB_UPCOMING_BOARDS_CACHE[cache_key][1])
 
-    from scripts.export_mlb_frontend_data import (
-        _build_upcoming_boards,
-        _build_upcoming_dataset,
-        _predict_upcoming,
-    )
+    from scripts.export_mlb_frontend_data import build_live_upcoming_payload
 
-    dataset = _build_upcoming_dataset()
-    dataset = _predict_upcoming(dataset)
-    boards = _build_upcoming_boards(dataset)
-    payload = {
-        "upcoming": boards,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "source": "divination_live_mlb_feed",
-    }
+    payload = build_live_upcoming_payload(selected_date=mlb_date)
+    boards = payload.get("upcoming", [])
 
     with _MLB_UPCOMING_BOARDS_LOCK:
-        if boards or _MLB_UPCOMING_BOARDS_CACHE is None:
-            _MLB_UPCOMING_BOARDS_CACHE = (now_ts, payload)
-        elif _MLB_UPCOMING_BOARDS_CACHE[1].get("upcoming"):
-            return dict(_MLB_UPCOMING_BOARDS_CACHE[1])
+        if boards or cache_key not in _MLB_UPCOMING_BOARDS_CACHE:
+            _MLB_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
+        elif _MLB_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
+            return dict(_MLB_UPCOMING_BOARDS_CACHE[cache_key][1])
     return dict(payload)
 
 
@@ -1524,9 +1515,9 @@ async def healthz():
 
 
 @app.get("/api/sports/mlb/boards")
-async def api_live_mlb_boards(force_refresh: bool = False):
+async def api_live_mlb_boards(force_refresh: bool = False, mlb_date: str | None = None):
     try:
-        return await run_in_threadpool(_load_live_mlb_upcoming_payload, force_refresh)
+        return await run_in_threadpool(_load_live_mlb_upcoming_payload, force_refresh, mlb_date)
     except Exception as exc:
         logger.error("Live MLB board generation failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=503, detail="Live MLB boards are temporarily unavailable")

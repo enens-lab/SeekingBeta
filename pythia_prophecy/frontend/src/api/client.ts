@@ -326,6 +326,33 @@ export interface SportsProjectedLineupContext {
   homeContinuity?: number | null;
 }
 
+export interface SportsBoardDateOption {
+  dateKey: string;
+  label: string;
+  gameCount: number;
+}
+
+export interface SportsTeamDetails {
+  teamId?: number | null;
+  abbreviation?: string | null;
+  logoUrl?: string | null;
+  wordmarkUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  recordPrior?: string | null;
+  recentForm?: string | null;
+  bullpenSummary?: string | null;
+  availabilitySummary?: string | null;
+  lineupContinuity?: string | null;
+  venue?: string | null;
+  weather?: string | null;
+}
+
+export interface SportsRadarMetric {
+  label: string;
+  value: number;
+}
+
 export interface SportsUpcomingBoard {
   id: string;
   name: string;
@@ -340,9 +367,14 @@ export interface SportsUpcomingBoard {
   homeTeam?: string;
   awayStarter?: string;
   homeStarter?: string;
+  awayTeamDetails?: SportsTeamDetails;
+  homeTeamDetails?: SportsTeamDetails;
+  awayStarterRadar?: SportsRadarMetric[];
+  homeStarterRadar?: SportsRadarMetric[];
   awayAvailability?: SportsAvailabilitySummary;
   homeAvailability?: SportsAvailabilitySummary;
   projectedLineupContext?: SportsProjectedLineupContext;
+  predictionSource?: string;
   predictions: SportsBoardPrediction[];
 }
 
@@ -373,6 +405,8 @@ export interface SportsBoardCollection {
   backtests: SportsHistoricalBoard[];
   updated_at: string;
   source: string;
+  selectedDate?: string;
+  availableDates?: SportsBoardDateOption[];
 }
 
 export interface SportsBoardsResponse {
@@ -692,5 +726,6 @@ export const billing = {
 };
 
 export const sports = {
-  getBoards: (): Promise<SportsBoardsResponse> => request('/api/sports/boards'),
+  getBoards: (mlbDate?: string): Promise<SportsBoardsResponse> =>
+    request(mlbDate ? `/api/sports/boards?mlb_date=${encodeURIComponent(mlbDate)}` : '/api/sports/boards'),
 };

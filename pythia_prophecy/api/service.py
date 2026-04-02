@@ -1095,18 +1095,61 @@ def _build_dynamic_tennis_upcoming(backtests: list[dict[str, Any]]) -> list[dict
     return upcoming
 
 
-def _filter_upcoming_mlb(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _build_mlb_available_dates(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    per_day: dict[str, int] = {}
+    for item in upcoming:
+        scheduled = _safe_int(item.get("scheduledDate"))
+        if not scheduled:
+            continue
+        key = datetime.strptime(str(scheduled), "%Y%m%d").strftime("%Y-%m-%d")
+        per_day[key] = per_day.get(key, 0) + 1
+
+    available: list[dict[str, Any]] = []
+    for key in sorted(per_day.keys()):
+        label = datetime.strptime(key, "%Y-%m-%d").strftime("%a, %b %d").replace(" 0", " ")
+        available.append({"dateKey": key, "label": label, "gameCount": per_day[key]})
+    return available
+
+
+def _build_mlb_collection_from_upcoming(
+    upcoming: list[dict[str, Any]],
+    backtests: list[dict[str, Any]],
+    *,
+    selected_date: str | None,
+    updated_at: datetime,
+    source: str,
+) -> SportsBoardCollection:
     today_key = _runtime_today_key()
-    return sorted(
+    filtered = sorted(
         [
-        item
-        for item in upcoming
-        if (_safe_int(item.get("scheduledDate")) or 0) >= today_key
+            item
+            for item in upcoming
+            if (_safe_int(item.get("scheduledDate")) or 0) >= today_key
         ],
         key=lambda item: (
             _safe_int(item.get("scheduledDate")) or 99999999,
             str(item.get("name") or ""),
         ),
+    )
+    available_dates = _build_mlb_available_dates(filtered)
+    available_keys = {str(item["dateKey"]) for item in available_dates}
+    resolved_selected = selected_date if selected_date and selected_date in available_keys else None
+    if resolved_selected is None and available_dates:
+        resolved_selected = str(available_dates[0]["dateKey"])
+
+    if resolved_selected:
+        resolved_date_key = int(datetime.strptime(resolved_selected, "%Y-%m-%d").strftime("%Y%m%d"))
+        filtered = [item for item in filtered if (_safe_int(item.get("scheduledDate")) or 0) == resolved_date_key]
+    else:
+        filtered = []
+
+    return SportsBoardCollection(
+        upcoming=filtered,
+        backtests=backtests,
+        updated_at=updated_at,
+        source=source,
+        selectedDate=resolved_selected,
+        availableDates=available_dates,
     )
 
 
@@ -1173,18 +1216,25 @@ def _sports_board_collection(
     upcoming_filename: str,
     backtests_filename: str,
     sport: str,
+    selected_date: str | None = None,
 ) -> SportsBoardCollection:
     upcoming = _load_sports_json(upcoming_filename)
     backtests = _load_sports_json(backtests_filename)
 
     if sport == "tennis":
         upcoming = _filter_upcoming_tennis(upcoming, backtests)
-    elif sport == "mlb":
-        upcoming = _filter_upcoming_mlb(upcoming)
     elif sport == "golf":
         upcoming = _filter_upcoming_golf(upcoming, backtests)
 
     updated_at = _sports_data_updated_at([upcoming_filename, backtests_filename])
+    if sport == "mlb":
+        return _build_mlb_collection_from_upcoming(
+            upcoming,
+            backtests,
+            selected_date=selected_date,
+            updated_at=updated_at,
+            source="runtime_filtered_sports_feed",
+        )
     return SportsBoardCollection(
         upcoming=upcoming,
         backtests=backtests,
@@ -1193,21 +1243,22 @@ def _sports_board_collection(
     )
 
 
-async def _live_mlb_board_collection() -> Optional[SportsBoardCollection]:
+async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[SportsBoardCollection]:
     backtests_filename = "mlb_historical_backtests.json"
     backtests = _load_sports_json(backtests_filename)
     fallback_updated_at = _sports_data_updated_at([backtests_filename])
 
     try:
         async with httpx.AsyncClient(timeout=SPORTS_MLB_BOARDS_TIMEOUT_SECONDS) as client:
-            response = await client.get(f"{DIVINATION_API_URL}/api/sports/mlb/boards")
+            params = {"mlb_date": mlb_date} if mlb_date else None
+            response = await client.get(f"{DIVINATION_API_URL}/api/sports/mlb/boards", params=params)
             response.raise_for_status()
             payload = response.json()
             upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
             if isinstance(upcoming, list) and not upcoming:
                 refresh_response = await client.get(
                     f"{DIVINATION_API_URL}/api/sports/mlb/boards",
-                    params={"force_refresh": "true"},
+                    params={"force_refresh": "true", **({"mlb_date": mlb_date} if mlb_date else {})},
                 )
                 refresh_response.raise_for_status()
                 payload = refresh_response.json()
@@ -1221,6 +1272,8 @@ async def _live_mlb_board_collection() -> Optional[SportsBoardCollection]:
             backtests=backtests,
             updated_at=updated_at,
             source=str(payload.get("source") or "divination_live_mlb_feed"),
+            selectedDate=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
+            availableDates=payload.get("availableDates") or [],
         )
     except Exception as exc:
         logger.warning("Falling back to cached MLB board feed: %s", exc)
@@ -3738,7 +3791,7 @@ def performance_curve(model: str = Query("lstm_5d")):
 
 
 @app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
-async def sports_boards():
+async def sports_boards(mlb_date: str | None = Query(None)):
     """Runtime-filtered sports boards for public marketing and dashboard surfaces."""
     golf = _sports_board_collection(
         upcoming_filename="upcoming_tournaments.json",
@@ -3750,12 +3803,13 @@ async def sports_boards():
         backtests_filename="wta_historical_backtests.json",
         sport="tennis",
     )
-    mlb = await _live_mlb_board_collection()
+    mlb = await _live_mlb_board_collection(mlb_date=mlb_date)
     if mlb is None:
         mlb = _sports_board_collection(
             upcoming_filename="mlb_upcoming_tournaments.json",
             backtests_filename="mlb_historical_backtests.json",
             sport="mlb",
+            selected_date=mlb_date,
         )
 
     return SportsBoardsResponse(golf=golf, tennis=tennis, mlb=mlb)

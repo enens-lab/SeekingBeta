@@ -90,21 +90,21 @@ function SportsLanding() {
       {
         label: 'Golf Board',
         eyebrow: 'PGA + LPGA',
-        description: 'Tournament winner probabilities with full-field rankings, course context, and calibration history.',
+        description: 'Tournament outrights with ranked contenders, field depth, and major-week context.',
         event: golfEvents[0],
         accent: 'teal',
       },
       {
         label: 'Tennis Board',
         eyebrow: 'ATP + WTA',
-        description: 'Singles tournament boards with win probabilities, field strength context, and tour-specific model views.',
+        description: 'Singles boards with fast reads on favorites, surface context, and tour rotation.',
         event: tennisEvents[0],
         accent: 'blue',
       },
       {
         label: 'MLB Board',
         eyebrow: 'MLB',
-        description: 'Same-day team boards with probable starters, lineup continuity, bullpen leverage, and roster availability context.',
+        description: 'Same-day matchup boards with probable starters, lineup context, and bullpen pressure.',
         event: mlbEvents[0] || fallbackReplayEvent(mlbHistory[0]),
         accent: 'orange',
       },
@@ -116,32 +116,32 @@ function SportsLanding() {
     {
       title: 'PGA Tour',
       status: 'Live now',
-      summary: 'Major championships, signature events, and standard PGA tournament fields.',
+      summary: 'Majors, signature events, and standard PGA fields in one outrights board workflow.',
     },
     {
       title: 'LPGA Tour',
       status: 'Live now',
-      summary: "Women's major weeks and full-tournament winner boards with field-aware rankings.",
+      summary: "Women's majors and LPGA stops with full-field rankings and leaderboard-style scanning.",
     },
     {
       title: 'ATP Singles',
       status: 'Live now',
-      summary: "Men's hard-court, clay, and indoor tournament probability boards.",
+      summary: "Men's draws across hard, clay, and indoor courts with tour-aware probability boards.",
     },
     {
       title: 'WTA Singles',
       status: 'Live now',
-      summary: "Women's tour coverage with tournament-level ranking boards and historical backtests.",
+      summary: "Women's draws with tournament boards, replayable track record, and clear favorite stacks.",
     },
     {
       title: 'MLB',
       status: 'Live now',
-      summary: 'Pregame daily same-day matchup boards with probable-starter context and richer team detail.',
+      summary: 'Same-day MLB slates with probable starters, team detail, and matchup-level pregame probabilities.',
     },
     {
       title: 'Other Team Sports',
       status: 'Coming next',
-      summary: 'NBA, NFL, and NHL remain on deck once the team-sport board templates are fully standardized.',
+      summary: 'NBA, NFL, and NHL are next once the team-sport board templates and inference layers are production ready.',
     },
   ];
 
@@ -163,10 +163,10 @@ function SportsLanding() {
           <div className="sports-hero-grid">
             <div className="sports-hero-copy">
               <span className="sports-badge">Multi-Sport Prediction Boards</span>
-              <h1 className="sports-title">Market-style sports predictions without betting, trading, or event contracts.</h1>
+              <h1 className="sports-title">Follow sports boards the same way you would scan a live market.</h1>
               <p className="sports-subtitle">
-                SeekingBeta.AI brings the clarity of a prediction board to sports. Browse calibrated probabilities across
-                golf, tennis, and baseball, compare contenders instantly, and track how our models perform over time.
+                Open golf outrights, tennis draws, and same-day MLB matchups in one place. Fast to scan, grounded in probability,
+                and backed by track record instead of hype.
               </p>
 
               <div className="sports-hero-tags">
@@ -195,7 +195,7 @@ function SportsLanding() {
               </div>
 
               <div className="sports-disclaimer">
-                Probability intelligence only. No wagering, no settlement layer, and no real-money contracts.
+                Research only. No wagering, no settlement layer, and no real-money contracts.
               </div>
               {boardsError && <div className="sports-disclaimer sports-error-note">Live sports feed is refreshing: {boardsError}</div>}
             </div>
@@ -226,7 +226,7 @@ function SportsLanding() {
                 </div>
               </div>
               <div className="market-shell-footer">
-                Built to feel fast and scannable like a market board, but grounded in model probability instead of order flow or wagers.
+                Designed for the same quick read you want from a market screen, but built on model probability and replayable results.
               </div>
             </div>
           </div>
@@ -235,10 +235,10 @@ function SportsLanding() {
         <section className="sports-preview-section" id="boards">
           <div className="section-heading">
             <span className="section-kicker">Board Preview</span>
-            <h2>Browse multiple tours the same way you would scan a live board.</h2>
+            <h2>See what the models like right now across every live sport we support.</h2>
             <p>
-              The sports experience spans golf, tennis, and baseball, with each board built around fast ranking,
-              matchup context, and a quick read on where the model sees the sharpest edge.
+              Each board is built for fast orientation: who is favored, where the probability clusters, and which matchup
+              or tournament deserves a closer look.
             </p>
           </div>
 

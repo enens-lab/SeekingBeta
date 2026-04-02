@@ -15,8 +15,8 @@ const features: Feature[] = [
         <path d="M2 12l10 5 10-5" />
       </svg>
     ),
-    title: 'Scan The Board Fast',
-    description: 'Every name is ranked with a clean label and probability so you can read the board in seconds.',
+    title: 'Open One Board, Not Five Tabs',
+    description: 'Probabilities, rankings, and key context sit in one place so you can get oriented in seconds.',
   },
   {
     icon: (
@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'Built On Real History',
-    description: 'Models are trained on market, tournament, and performance history to surface repeatable patterns and risk.',
+    title: 'Built From Real Historical Data',
+    description: 'The models learn from market, tournament, and game history so the boards are anchored in real outcomes, not vibes.',
   },
   {
     icon: (
@@ -40,8 +40,8 @@ const features: Feature[] = [
         <line x1="6" y1="20" x2="6" y2="16" />
       </svg>
     ),
-    title: 'Context Beside The Call',
-    description: 'Horizon, probability, and high-level drivers sit next to the signal instead of buried in a model report.',
+    title: 'See The Why Next To The Call',
+    description: 'Probability, horizon, lineup context, and high-level drivers are visible without opening a separate report.',
   },
   {
     icon: (
@@ -51,8 +51,8 @@ const features: Feature[] = [
         <line x1="9" y1="21" x2="9" y2="9" />
       </svg>
     ),
-    title: 'Track Record Stays Visible',
-    description: 'Check the scorecard against SPY and historical tournament outcomes before you trust the board.',
+    title: 'Check The Scoreboard First',
+    description: 'Track record stays visible so you can compare the model against SPY and historical sports results before you trust it.',
   },
 ];
 
@@ -60,8 +60,10 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">How The Boards Work</h2>
-        <p className="section-subtitle">Clear probabilities, visible context, and a scorecard you can actually inspect.</p>
+        <h2 className="section-title">Built for people who want signal fast.</h2>
+        <p className="section-subtitle">
+          Open the board, spot the outliers, and drill into why the model moved without losing the thread.
+        </p>
       </div>
 
       <div className="features-grid">

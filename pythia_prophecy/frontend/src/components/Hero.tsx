@@ -13,10 +13,10 @@ function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1 className="hero-title">Prediction boards for stocks and sports</h1>
+        <h1 className="hero-title">The fastest way to scan stock and sports probabilities.</h1>
         <p className="hero-subtitle">
-          Scan model-generated probabilities across equities, golf, and tennis in one clean research interface.
-          SeekingBeta.AI brings the speed and clarity of a prediction board without betting, trading, or event contracts.
+          SeekingBeta.AI gives self-directed investors one place to follow stock boards, golf outrights, tennis draws,
+          and same-day MLB matchups, with context and track record built in.
         </p>
         <div className="hero-cta">
           <Link
@@ -31,7 +31,7 @@ function Hero() {
           </button>
         </div>
         <p className="hero-disclaimer">
-          Educational probabilities only. No wagering, no settlement layer, and no financial or betting advice.
+          Research only. No brokerage, no wagering, and no event-contract settlement layer.
         </p>
       </div>
     </section>

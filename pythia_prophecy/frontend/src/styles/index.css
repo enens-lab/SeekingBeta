@@ -777,6 +777,7 @@ h4 {
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  text-align: left;
 }
 
 .sports-home-header .section-kicker {
@@ -806,20 +807,22 @@ h4 {
   max-width: 1220px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
 }
 
 .sports-home-card {
-  padding: 24px;
+  padding: 22px;
   border-radius: 24px;
   border: 1px solid var(--border);
   background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.24), transparent 32%),
-    linear-gradient(180deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+    radial-gradient(circle at top right, rgba(94, 234, 212, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(10, 17, 29, 0.94) 0%, rgba(7, 12, 22, 0.98) 100%);
   box-shadow: var(--shadow);
   display: grid;
   gap: 14px;
+  align-content: start;
+  min-height: 100%;
 }
 
 .sports-home-card.accent-teal {
@@ -830,8 +833,8 @@ h4 {
   border-color: color-mix(in srgb, var(--brand-secondary) 28%, var(--border));
 }
 
-.sports-home-card-mlb {
-  grid-column: 1 / -1;
+.sports-home-card.accent-orange {
+  border-color: color-mix(in srgb, #f2994a 32%, var(--border));
 }
 
 .sports-home-card-header {
@@ -884,26 +887,51 @@ h4 {
   font-size: 0.92rem;
 }
 
-.sports-home-featured {
-  padding: 18px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.55);
+.sports-home-player-list,
+.sports-home-mlb-list {
   display: grid;
+  gap: 10px;
+}
+
+.sports-home-player-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
 }
 
-.sports-home-featured-label {
+.sports-home-player-rank {
   color: var(--text-muted);
-  font-size: 0.76rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.82rem;
   font-weight: 700;
+  min-width: 28px;
 }
 
-.sports-home-featured-prob {
-  color: var(--accent);
-  font-size: 1.25rem;
+.sports-home-player-main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sports-home-player-main strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.sports-home-player-meta {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sports-home-list {
@@ -938,11 +966,6 @@ h4 {
   white-space: nowrap;
 }
 
-.sports-home-mlb-list {
-  display: grid;
-  gap: 12px;
-}
-
 .sports-home-mlb-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -950,8 +973,8 @@ h4 {
   align-items: center;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.48);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .sports-home-mlb-team {
@@ -1002,16 +1025,42 @@ h4 {
   border-radius: 16px;
   border: 1px dashed var(--border);
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.36);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.sports-home-cta {
-  margin-top: 4px;
+.sports-home-card-footer {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.sports-home-link {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sports-home-link:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 1180px) {
+  .sports-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sports-home-card-mlb {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 960px) {
   .sports-home-grid {
     grid-template-columns: 1fr;
+  }
+
+  .sports-home-card-mlb {
+    grid-column: auto;
   }
 }
 
@@ -1035,11 +1084,12 @@ h4 {
     padding: 20px;
   }
 
-  .sports-home-row,
+  .sports-home-player-row,
   .sports-home-mlb-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
+  .sports-home-player-rank,
   .sports-home-rank {
     display: none;
   }

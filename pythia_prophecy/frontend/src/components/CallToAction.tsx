@@ -5,8 +5,8 @@ function CallToAction() {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>Open the boards for free.</h2>
-        <p>Build a watchlist, compare probabilities, and see how the models behave before you ever upgrade.</p>
+        <h2>Start with the live board.</h2>
+        <p>Create a free account to follow stocks and sports, build a watchlist, and inspect the scorecard before you upgrade.</p>
         <Link
           to="/signup"
           className="btn btn-primary btn-lg"

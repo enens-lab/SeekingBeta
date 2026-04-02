@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import PlayerProfileCard from './sports/PlayerProfileCard';
+import PlayerPortrait from './sports/PlayerPortrait';
 import TeamLogo from './sports/TeamLogo';
 import {
   sports,
@@ -17,11 +17,12 @@ const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
 };
 
 type SpotlightBoard = {
-  label: string;
+  key: 'golf' | 'tennis';
   eyebrow: string;
   description: string;
   event?: SportsUpcomingBoard;
   accent: 'teal' | 'blue';
+  cta: string;
 };
 
 function fallbackReplayEvent(backtest?: SportsHistoricalBoard): SportsUpcomingBoard | undefined {
@@ -89,26 +90,30 @@ function SportsPreview() {
   const spotlightBoards: SpotlightBoard[] = useMemo(
     () => [
       {
-        label: 'Golf Board',
+        key: 'golf',
         eyebrow: 'PGA + LPGA',
-        description: 'Tournament winner boards with ranked contenders and live field context.',
+        description: 'Tournament outrights with ranked contenders, field depth, and major-week context.',
         event: sportsBoards.golf.upcoming[0] || fallbackReplayEvent(sportsBoards.golf.backtests[0]),
         accent: 'teal',
+        cta: 'See golf boards',
       },
       {
-        label: 'Tennis Board',
+        key: 'tennis',
         eyebrow: 'ATP + WTA',
-        description: 'Singles boards with tour-specific probabilities and quick contender reads.',
+        description: 'Singles boards with quick reads on favorites, surface context, and tour rotation.',
         event: sportsBoards.tennis.upcoming[0] || fallbackReplayEvent(sportsBoards.tennis.backtests[0]),
         accent: 'blue',
+        cta: 'See tennis boards',
       },
     ],
     [sportsBoards]
   );
 
-  const mlbEvents = sportsBoards.mlb.upcoming.slice(0, 3);
+  const mlbEvents = sportsBoards.mlb.upcoming.slice(0, 4);
   const mlbSelectedDate = sportsBoards.mlb.selectedDate;
-  const mlbSelectedLabel = (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label || 'Next active MLB slate';
+  const mlbSelectedLabel =
+    (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label ||
+    'Next active MLB slate';
   const runtimeStamp = updatedLabel(
     sportsBoards.golf.updated_at || sportsBoards.tennis.updated_at || sportsBoards.mlb.updated_at
   );
@@ -117,14 +122,14 @@ function SportsPreview() {
     <section className="sports-home-preview" id="sports-preview">
       <div className="section-header sports-home-header">
         <div>
-          <span className="section-kicker">Sports Preview</span>
-          <h2 className="section-title">Stocks are live. Sports are live too.</h2>
+          <span className="section-kicker">Sports Boards</span>
+          <h2 className="section-title">One place to scan what the models like right now.</h2>
           <p className="section-subtitle">
-            Preview the current golf, tennis, and MLB boards directly from the homepage, then open the full sports workspace for deeper detail.
+            Golf outrights, tennis tournaments, and same-day MLB matchups in one workspace. Fast to scan. Easy to verify.
           </p>
         </div>
         <div className="sports-home-actions">
-          {runtimeStamp ? <span className="sports-home-runtime">Updated {runtimeStamp}</span> : null}
+          {runtimeStamp ? <span className="sports-home-runtime">Live as of {runtimeStamp}</span> : null}
           <Link
             to="/sports"
             className="btn btn-outline"
@@ -138,59 +143,70 @@ function SportsPreview() {
       {loading ? (
         <div className="sports-home-loading">
           <div className="spinner" />
-          <p>Loading sports preview...</p>
+          <p>Loading sports boards...</p>
         </div>
       ) : error ? (
         <div className="sports-home-empty">
-          <h3>Sports preview is refreshing</h3>
+          <h3>Sports boards are refreshing</h3>
           <p>{error}</p>
         </div>
       ) : (
         <div className="sports-home-grid">
           {spotlightBoards.map((board) => {
-            const featuredPrediction = board.event?.predictions?.[0];
-            const remainingPredictions = (board.event?.predictions || []).slice(1, 4);
+            const topPredictions = (board.event?.predictions || []).slice(0, 3);
             return (
-              <article key={board.label} className={`sports-home-card accent-${board.accent}`}>
+              <article key={board.key} className={`sports-home-card accent-${board.accent}`}>
                 <div className="sports-home-card-header">
                   <div>
                     <span className="sports-home-eyebrow">{board.eyebrow}</span>
-                    <h3>{board.event?.name || board.label}</h3>
+                    <h3>{board.event?.name || `${board.key === 'golf' ? 'Golf' : 'Tennis'} board`}</h3>
                   </div>
                   <span className="sports-home-pill">{board.event?.tour || 'Live'}</span>
                 </div>
+
                 <p className="sports-home-description">{board.description}</p>
+
                 <div className="sports-home-meta">
                   <span>{board.event?.course || 'Venue TBD'}</span>
-                  <span>{board.event?.predictions?.length || 0} ranked</span>
+                  <span>{board.event?.predictions?.length || 0} tracked</span>
                 </div>
-                {featuredPrediction ? (
-                  <div className="sports-home-featured">
-                    <div className="sports-home-featured-label">Model favorite</div>
-                    <PlayerProfileCard name={featuredPrediction.playerName} profile={featuredPrediction.profile} />
-                    <strong className="sports-home-featured-prob">{featuredPrediction.winProbability.toFixed(2)}%</strong>
-                  </div>
-                ) : (
-                  <div className="sports-home-empty-inline">No current live board available.</div>
-                )}
-                {remainingPredictions.length > 0 ? (
-                  <div className="sports-home-list">
-                    {remainingPredictions.map((prediction) => (
-                      <div key={`${board.label}-${prediction.rank}-${prediction.playerName}`} className="sports-home-row">
-                        <span className="sports-home-rank">#{prediction.rank}</span>
-                        <div className="sports-home-row-player">
-                          <PlayerProfileCard name={prediction.playerName} profile={prediction.profile} compact />
+
+                {topPredictions.length > 0 ? (
+                  <div className="sports-home-player-list">
+                    {topPredictions.map((prediction) => (
+                      <div key={`${board.key}-${prediction.rank}-${prediction.playerName}`} className="sports-home-player-row">
+                        <span className="sports-home-player-rank">#{prediction.rank}</span>
+                        <PlayerPortrait imageUrl={prediction.profile?.imageUrl} label={prediction.playerName} size="sm" />
+                        <div className="sports-home-player-main">
+                          <strong>{prediction.playerName}</strong>
+                          <span className="sports-home-player-meta">
+                            {prediction.profile?.subtitle || prediction.profile?.country || 'Live model board'}
+                          </span>
                         </div>
                         <span className="sports-home-prob">{prediction.winProbability.toFixed(2)}%</span>
                       </div>
                     ))}
                   </div>
-                ) : null}
+                ) : (
+                  <div className="sports-home-empty-inline">No current live board available.</div>
+                )}
+
+                <div className="sports-home-card-footer">
+                  <Link
+                    to="/sports-dashboard"
+                    className="sports-home-link"
+                    onClick={() =>
+                      trackEvent('home_sports_preview_click', { destination: 'sports_dashboard', board: board.key })
+                    }
+                  >
+                    {board.cta}
+                  </Link>
+                </div>
               </article>
             );
           })}
 
-          <article className="sports-home-card sports-home-card-mlb">
+          <article className="sports-home-card sports-home-card-mlb accent-orange">
             <div className="sports-home-card-header">
               <div>
                 <span className="sports-home-eyebrow">MLB Same-Day Slate</span>
@@ -198,9 +214,16 @@ function SportsPreview() {
               </div>
               <span className="sports-home-pill">MLB</span>
             </div>
+
             <p className="sports-home-description">
-              Same-day MLB matchups with probable starters, team context, and top-line pregame probabilities.
+              Same-day matchups with probable starters, team context, and pregame win probabilities.
             </p>
+
+            <div className="sports-home-meta">
+              <span>{mlbEvents.length} live matchups</span>
+              <span>Updated from the runtime sports feed</span>
+            </div>
+
             {mlbEvents.length === 0 ? (
               <div className="sports-home-empty-inline">No active MLB slate in the current window.</div>
             ) : (
@@ -242,13 +265,14 @@ function SportsPreview() {
                 })}
               </div>
             )}
-            <div className="sports-home-cta">
+
+            <div className="sports-home-card-footer">
               <Link
                 to="/sports-dashboard"
-                className="btn btn-primary"
-                onClick={() => trackEvent('home_sports_preview_click', { destination: 'sports_dashboard' })}
+                className="sports-home-link"
+                onClick={() => trackEvent('home_sports_preview_click', { destination: 'sports_dashboard', board: 'mlb' })}
               >
-                Open Sports Dashboard
+                Open the full sports dashboard
               </Link>
             </div>
           </article>

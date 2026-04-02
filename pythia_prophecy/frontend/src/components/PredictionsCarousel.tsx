@@ -168,7 +168,7 @@ function PredictionsCarousel() {
         <div className="section-header">
           <h2 className="section-title">Live Stock Boards</h2>
           <p className="section-subtitle">
-            A quick read on both stock boards across the Magnificent 7.
+            See the product in one glance: two live stock boards, ranked probabilities, and no account required.
           </p>
         </div>
         <div className="predictions-loading">
@@ -184,7 +184,7 @@ function PredictionsCarousel() {
       <div className="section-header">
         <h2 className="section-title">Live Stock Boards</h2>
         <p className="section-subtitle">
-          A quick read on both stock boards across the Magnificent 7.
+          See the product in one glance: two live stock boards, ranked probabilities, and no account required.
         </p>
       </div>
 

@@ -303,8 +303,8 @@ function PerformanceComparison() {
     <section className="performance-showcase" id="performance">
       <div className="performance-showcase-inner">
         <div className="performance-header">
-          <h2>Check The Scoreboard First</h2>
-          <p>Before you trust a board, compare the model against SPY.</p>
+          <h2>Check the scorecard before you trust the board.</h2>
+          <p>If the model cannot outperform a simple benchmark, it does not deserve your attention.</p>
         </div>
 
         <div className="performance-model-tabs" role="tablist" aria-label="Track record model">

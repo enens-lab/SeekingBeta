@@ -161,8 +161,8 @@ function Pricing() {
 
       <main>
         <section className="pricing-hero">
-          <h1>Pricing built for how deeply you want to work the board</h1>
-          <p>Start free, then unlock more coverage, history, exports, and higher analysis limits as you go.</p>
+          <h1>Start free. Pay when you need more.</h1>
+          <p>See the live boards for free. Upgrade if you want more names, more history, or CSV downloads.</p>
         </section>
 
         {isAuthenticated && billingStatus?.billing_enabled && (
@@ -205,7 +205,7 @@ function Pricing() {
                     key={tier.tier}
                     className={`pricing-card ${tier.tier === 'basic' ? 'popular' : ''}`}
                   >
-                    {tier.tier === 'basic' && <div className="popular-badge">Best Starting Point</div>}
+                    {tier.tier === 'basic' && <div className="popular-badge">Most Popular</div>}
                     <div className="pricing-card-header">
                       <h2>{tier.name}</h2>
                       <div className="pricing-amount">
@@ -295,8 +295,8 @@ function Pricing() {
         </section>
 
         <section className="pricing-cta">
-          <h2>Ready to work from the board instead of guesswork?</h2>
-          <p>Start free, test the product in your real workflow, and upgrade only when you want more depth.</p>
+          <h2>Try it first. Upgrade later.</h2>
+          <p>Start with the free plan and pay only if you want more.</p>
           <Link
             to="/signup"
             className="btn btn-primary btn-lg"

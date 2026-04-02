@@ -71,7 +71,7 @@ function Header() {
             className="nav-link"
             onClick={(e) => scrollToSection(e, 'beta-testers')}
           >
-            Founding Beta
+            Early Access
           </a>
           <Link
             to="/methodology"
@@ -191,7 +191,7 @@ function Header() {
               className="nav-link"
               onClick={(e) => scrollToSection(e, 'beta-testers')}
             >
-              Founding Beta
+              Early Access
             </a>
             <Link
               to="/methodology"

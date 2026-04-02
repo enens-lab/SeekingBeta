@@ -92,18 +92,18 @@ function SportsPreview() {
       {
         key: 'golf',
         eyebrow: 'PGA + LPGA',
-        description: 'Tournament outrights with ranked contenders, field depth, and major-week context.',
+        description: 'A quick look at the next golf event and who the model likes.',
         event: sportsBoards.golf.upcoming[0] || fallbackReplayEvent(sportsBoards.golf.backtests[0]),
         accent: 'teal',
-        cta: 'See golf boards',
+        cta: 'Open golf page',
       },
       {
         key: 'tennis',
         eyebrow: 'ATP + WTA',
-        description: 'Singles boards with quick reads on favorites, surface context, and tour rotation.',
+        description: 'A quick look at the next tennis event and the top names on the board.',
         event: sportsBoards.tennis.upcoming[0] || fallbackReplayEvent(sportsBoards.tennis.backtests[0]),
         accent: 'blue',
-        cta: 'See tennis boards',
+        cta: 'Open tennis page',
       },
     ],
     [sportsBoards]
@@ -122,14 +122,14 @@ function SportsPreview() {
     <section className="sports-home-preview" id="sports-preview">
       <div className="section-header sports-home-header">
         <div>
-          <span className="section-kicker">Sports Boards</span>
-          <h2 className="section-title">One place to scan what the models like right now.</h2>
+          <span className="section-kicker">Sports</span>
+          <h2 className="section-title">See today&apos;s sports boards at a glance.</h2>
           <p className="section-subtitle">
-            Golf outrights, tennis tournaments, and same-day MLB matchups in one workspace. Fast to scan. Easy to verify.
+            A quick look at golf, tennis, and MLB.
           </p>
         </div>
         <div className="sports-home-actions">
-          {runtimeStamp ? <span className="sports-home-runtime">Live as of {runtimeStamp}</span> : null}
+          {runtimeStamp ? <span className="sports-home-runtime">Updated {runtimeStamp}</span> : null}
           <Link
             to="/sports"
             className="btn btn-outline"
@@ -143,11 +143,11 @@ function SportsPreview() {
       {loading ? (
         <div className="sports-home-loading">
           <div className="spinner" />
-          <p>Loading sports boards...</p>
+          <p>Loading sports...</p>
         </div>
       ) : error ? (
         <div className="sports-home-empty">
-          <h3>Sports boards are refreshing</h3>
+          <h3>Sports are updating</h3>
           <p>{error}</p>
         </div>
       ) : (
@@ -168,7 +168,7 @@ function SportsPreview() {
 
                 <div className="sports-home-meta">
                   <span>{board.event?.course || 'Venue TBD'}</span>
-                  <span>{board.event?.predictions?.length || 0} tracked</span>
+                  <span>{board.event?.predictions?.length || 0} names</span>
                 </div>
 
                 {topPredictions.length > 0 ? (
@@ -180,7 +180,7 @@ function SportsPreview() {
                         <div className="sports-home-player-main">
                           <strong>{prediction.playerName}</strong>
                           <span className="sports-home-player-meta">
-                            {prediction.profile?.subtitle || prediction.profile?.country || 'Live model board'}
+                            {prediction.profile?.subtitle || prediction.profile?.country || 'Live board'}
                           </span>
                         </div>
                         <span className="sports-home-prob">{prediction.winProbability.toFixed(2)}%</span>
@@ -188,7 +188,7 @@ function SportsPreview() {
                     ))}
                   </div>
                 ) : (
-                  <div className="sports-home-empty-inline">No current live board available.</div>
+                  <div className="sports-home-empty-inline">No live board right now.</div>
                 )}
 
                 <div className="sports-home-card-footer">
@@ -216,16 +216,16 @@ function SportsPreview() {
             </div>
 
             <p className="sports-home-description">
-              Same-day matchups with probable starters, team context, and pregame win probabilities.
+              Today&apos;s MLB games with starters and team notes.
             </p>
 
             <div className="sports-home-meta">
-              <span>{mlbEvents.length} live matchups</span>
-              <span>Updated from the runtime sports feed</span>
+              <span>{mlbEvents.length} games</span>
+              <span>Live feed</span>
             </div>
 
             {mlbEvents.length === 0 ? (
-              <div className="sports-home-empty-inline">No active MLB slate in the current window.</div>
+              <div className="sports-home-empty-inline">No MLB games in the current window.</div>
             ) : (
               <div className="sports-home-mlb-list">
                 {mlbEvents.map((board) => {
@@ -272,7 +272,7 @@ function SportsPreview() {
                 className="sports-home-link"
                 onClick={() => trackEvent('home_sports_preview_click', { destination: 'sports_dashboard', board: 'mlb' })}
               >
-                Open the full sports dashboard
+                Open sports dashboard
               </Link>
             </div>
           </article>

@@ -90,21 +90,21 @@ function SportsLanding() {
       {
         label: 'Golf Board',
         eyebrow: 'PGA + LPGA',
-        description: 'Tournament outrights with ranked contenders, field depth, and major-week context.',
+        description: 'The next golf event, ranked from top pick down.',
         event: golfEvents[0],
         accent: 'teal',
       },
       {
         label: 'Tennis Board',
         eyebrow: 'ATP + WTA',
-        description: 'Singles boards with fast reads on favorites, surface context, and tour rotation.',
+        description: 'The next tennis event, with the top names easy to compare.',
         event: tennisEvents[0],
         accent: 'blue',
       },
       {
         label: 'MLB Board',
         eyebrow: 'MLB',
-        description: 'Same-day matchup boards with probable starters, lineup context, and bullpen pressure.',
+        description: "Today's MLB games with starters, teams, and simple win numbers.",
         event: mlbEvents[0] || fallbackReplayEvent(mlbHistory[0]),
         accent: 'orange',
       },
@@ -116,32 +116,32 @@ function SportsLanding() {
     {
       title: 'PGA Tour',
       status: 'Live now',
-      summary: 'Majors, signature events, and standard PGA fields in one outrights board workflow.',
+      summary: 'Majors and regular PGA events with one ranked list of likely winners.',
     },
     {
       title: 'LPGA Tour',
       status: 'Live now',
-      summary: "Women's majors and LPGA stops with full-field rankings and leaderboard-style scanning.",
+      summary: "LPGA events with a simple ranked list of likely winners.",
     },
     {
       title: 'ATP Singles',
       status: 'Live now',
-      summary: "Men's draws across hard, clay, and indoor courts with tour-aware probability boards.",
+      summary: "Men's tennis events with favorites ranked in one place.",
     },
     {
       title: 'WTA Singles',
       status: 'Live now',
-      summary: "Women's draws with tournament boards, replayable track record, and clear favorite stacks.",
+      summary: "Women's tennis events with clear favorites and past results beside them.",
     },
     {
       title: 'MLB',
       status: 'Live now',
-      summary: 'Same-day MLB slates with probable starters, team detail, and matchup-level pregame probabilities.',
+      summary: "Today's MLB games with starter info, team notes, and win numbers.",
     },
     {
       title: 'Other Team Sports',
       status: 'Coming next',
-      summary: 'NBA, NFL, and NHL are next once the team-sport board templates and inference layers are production ready.',
+      summary: 'NBA, NFL, and NHL are next.',
     },
   ];
 
@@ -162,11 +162,10 @@ function SportsLanding() {
           <div className="sports-hero-glow" />
           <div className="sports-hero-grid">
             <div className="sports-hero-copy">
-              <span className="sports-badge">Multi-Sport Prediction Boards</span>
-              <h1 className="sports-title">Follow sports boards the same way you would scan a live market.</h1>
+              <span className="sports-badge">Sports</span>
+              <h1 className="sports-title">See today&apos;s sports picks in one place.</h1>
               <p className="sports-subtitle">
-                Open golf outrights, tennis draws, and same-day MLB matchups in one place. Fast to scan, grounded in probability,
-                and backed by track record instead of hype.
+                Check golf, tennis, and MLB on one page. See the top picks, the live matchups, and the past results.
               </p>
 
               <div className="sports-hero-tags">
@@ -183,7 +182,7 @@ function SportsLanding() {
                   className="btn btn-primary btn-lg pulse-btn"
                   onClick={() => trackEvent('sports_landing_cta_click', { destination: 'signup' })}
                 >
-                  Open Sports Boards
+                  Try Sports
                 </Link>
                 <Link
                   to="/pricing"
@@ -195,50 +194,47 @@ function SportsLanding() {
               </div>
 
               <div className="sports-disclaimer">
-                Research only. No wagering, no settlement layer, and no real-money contracts.
+                For research only. We do not place bets.
               </div>
-              {boardsError && <div className="sports-disclaimer sports-error-note">Live sports feed is refreshing: {boardsError}</div>}
+              {boardsError && <div className="sports-disclaimer sports-error-note">Sports feed is updating: {boardsError}</div>}
             </div>
 
             <div className="sports-market-shell">
               <div className="market-shell-header">
-                <span className="market-shell-label">Live Board Snapshot</span>
+                <span className="market-shell-label">Live Snapshot</span>
                 <span className="market-shell-status">
-                  {boardsLoading ? 'Refreshing boards' : 'Educational probabilities'}
+                  {boardsLoading ? 'Updating' : 'Live now'}
                 </span>
               </div>
               <div className="market-shell-grid">
                 <div className="market-shell-stat">
                   <strong>{totalBoards}</strong>
-                  <span>active boards</span>
+                  <span>live boards</span>
                 </div>
                 <div className="market-shell-stat">
                   <strong>{totalBacktests}</strong>
-                  <span>historical board replays</span>
+                  <span>past results</span>
                 </div>
                 <div className="market-shell-stat">
                   <strong>{totalTours}</strong>
-                  <span>live tours covered</span>
+                  <span>tours live</span>
                 </div>
                 <div className="market-shell-stat">
                   <strong>{totalTrackedEntrants}+</strong>
-                  <span>entrants in spotlight boards</span>
+                  <span>names on screen</span>
                 </div>
               </div>
-              <div className="market-shell-footer">
-                Designed for the same quick read you want from a market screen, but built on model probability and replayable results.
-              </div>
+              <div className="market-shell-footer">Easy to scan. Easy to compare. Backed by past results.</div>
             </div>
           </div>
         </section>
 
         <section className="sports-preview-section" id="boards">
           <div className="section-heading">
-            <span className="section-kicker">Board Preview</span>
-            <h2>See what the models like right now across every live sport we support.</h2>
+            <span className="section-kicker">What&apos;s Live</span>
+            <h2>See what the models like right now.</h2>
             <p>
-              Each board is built for fast orientation: who is favored, where the probability clusters, and which matchup
-              or tournament deserves a closer look.
+              Start with the top names, then open the full dashboard if you want more detail.
             </p>
           </div>
 
@@ -269,12 +265,12 @@ function SportsLanding() {
 
                   <div className="spotlight-meta">
                     <span>{board.event?.course ?? 'Venue TBD'}</span>
-                    <span>{board.event?.predictions.length ?? 0} contenders ranked</span>
+                    <span>{board.event?.predictions.length ?? 0} names ranked</span>
                   </div>
 
                   {featuredPrediction ? (
                     <div className="spotlight-featured-player">
-                      <div className="spotlight-featured-label">Model favorite</div>
+                      <div className="spotlight-featured-label">Top pick</div>
                       <PlayerProfileCard
                         name={featuredPrediction.playerName}
                         profile={featuredPrediction.profile}
@@ -309,11 +305,10 @@ function SportsLanding() {
 
         <section className="mlb-slate-section">
           <div className="section-heading">
-            <span className="section-kicker">MLB Same-Day Board</span>
-            <h2>All MLB matchups for one live slate, not a stale rolling list.</h2>
+            <span className="section-kicker">MLB Today</span>
+            <h2>All MLB games for the same day.</h2>
             <p>
-              Pick a date, scan every same-day game, compare team logos, probable starters, and top-line probability edges,
-              then jump into the full dashboard for deeper detail.
+              Pick a date, see every game, and open the full dashboard when you want more detail.
             </p>
           </div>
 
@@ -335,15 +330,15 @@ function SportsLanding() {
                 ))}
               </div>
               <div className="mlb-slate-copy">
-                <span className="sports-runtime-pill">Selected slate</span>
+                <span className="sports-runtime-pill">Selected day</span>
                 <p>{mlbSelectedLabel}</p>
               </div>
             </div>
 
             {boardsLoading ? (
-              <div className="spotlight-empty-state">Loading the live MLB slate...</div>
+              <div className="spotlight-empty-state">Loading today&apos;s MLB games...</div>
             ) : mlbEvents.length === 0 ? (
-              <div className="spotlight-empty-state">No live MLB slate is available for the selected date right now.</div>
+              <div className="spotlight-empty-state">No MLB games are available for that date right now.</div>
             ) : (
               <div className="mlb-slate-grid">
                 {mlbEvents.map((board) => {
@@ -410,7 +405,7 @@ function SportsLanding() {
 
                       <div className="mlb-slate-foot">
                         <span>{board.homeTeamDetails?.weather || 'Weather pending'}</span>
-                        <span>{board.homeTeamDetails?.availabilitySummary || 'Roster stable'}</span>
+                        <span>{board.homeTeamDetails?.availabilitySummary || 'No major roster issues'}</span>
                       </div>
                     </article>
                   );
@@ -424,7 +419,7 @@ function SportsLanding() {
                 className="btn btn-primary"
                 onClick={() => trackEvent('sports_landing_cta_click', { destination: 'sports_dashboard' })}
               >
-                Open Full MLB Dashboard
+                Open MLB Dashboard
               </Link>
             </div>
           </div>
@@ -434,7 +429,7 @@ function SportsLanding() {
           <div className="section-heading">
             <span className="section-kicker">Coverage</span>
             <h2>Available sports and tours</h2>
-            <p>We are building a broad prediction surface, starting with the sports where board-style ranking is already live and usable today.</p>
+            <p>These are the sports you can use today.</p>
           </div>
 
           <div className="coverage-grid">
@@ -452,26 +447,25 @@ function SportsLanding() {
 
         <section className="sports-features">
           <div className="section-heading">
-            <span className="section-kicker">Why It Works</span>
-            <h2>Built for probability discovery, not wagers.</h2>
+            <span className="section-kicker">Why People Use It</span>
+            <h2>Simple to read. Easy to check.</h2>
             <p>
-              The product takes the strongest part of market-style interfaces, fast scanning and side-by-side probabilities,
-              and removes the trading layer entirely.
+              The goal is simple: show what stands out without making you dig through a wall of numbers.
             </p>
           </div>
 
           <div className="features-grid">
             <div className="feature-card">
-              <h3>Scan many boards quickly</h3>
-              <p>See ranked contender or matchup boards across tours, jump between slates, and compare probability shapes without parsing a dense spreadsheet.</p>
+              <h3>Read it fast</h3>
+              <p>Open the page and quickly see the top names, top games, and biggest gaps.</p>
             </div>
             <div className="feature-card">
-              <h3>Model-driven, not crowd-driven</h3>
-              <p>Each board is generated from historical performance data, field or team context, and sport-specific features instead of trader sentiment or price action.</p>
+              <h3>Built on past results</h3>
+              <p>The boards come from real results and sport-specific data, not crowd opinion.</p>
             </div>
             <div className="feature-card">
-              <h3>Track record stays visible</h3>
-              <p>Historical backtests sit beside the live boards so users can inspect where the models landed, not just what the current rankings say.</p>
+              <h3>Past results stay visible</h3>
+              <p>You can see how the models have done before, not just what they say today.</p>
             </div>
           </div>
         </section>

@@ -86,15 +86,14 @@ function BetaTesterSignup() {
     <section className="beta-program-section" id="beta-testers">
       <div className="beta-program-container">
         <div className="beta-program-copy">
-          <h2 className="section-title">Apply for Founding Beta Access</h2>
+          <h2 className="section-title">Join early access</h2>
           <p className="section-subtitle">
-            Help shape the next version of SeekingBeta.AI before broader rollout. We prioritize testers who can
-            pressure-test real workflows, share precise feedback, and tell us where the board still feels unclear.
+            Help us improve SeekingBeta.AI before a wider launch. We want people who will really use it, notice what feels off, and tell us clearly.
           </p>
           <ul className="beta-program-list">
-            <li>Early access to new boards, models, and product releases</li>
-            <li>Direct feedback channel with the product team</li>
-            <li>Priority onboarding for thoughtful, high-signal testers</li>
+            <li>Try new features first</li>
+            <li>Talk directly with the product team</li>
+            <li>Get help getting started</li>
           </ul>
           <a
             className="beta-program-discord-link"
@@ -183,7 +182,7 @@ function BetaTesterSignup() {
               required
               minLength={12}
               maxLength={1200}
-              placeholder="Tell us what you want to pressure-test most (for example: board quality, watchlist flow, analysis output, or billing UX)."
+              placeholder="Tell us what you want to test most (for example: board quality, watchlist flow, analysis results, or billing)."
               rows={4}
             />
           </label>
@@ -201,7 +200,7 @@ function BetaTesterSignup() {
 
           <div className="beta-form-actions">
             <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Apply for Founding Beta'}
+              {submitting ? 'Submitting...' : 'Request Early Access'}
             </button>
             <a
               href={DEFAULT_DISCORD_URL}
@@ -225,7 +224,7 @@ function BetaTesterSignup() {
                 rel="noopener noreferrer"
                 onClick={() => trackEvent('discord_click', { source: 'beta_program_success' })}
               >
-                Join Discord for release notes and tester updates
+                Join Discord for updates
               </a>
             </div>
           )}

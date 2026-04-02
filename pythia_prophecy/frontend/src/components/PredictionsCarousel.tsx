@@ -26,17 +26,17 @@ const InfoIcon = () => (
 const MODELS = [
   {
     name: 'lstm_5d',
-    displayName: 'LSTM 5-Day',
+    displayName: '5-Day Board',
     endpoint: '/predict/lstm_5d',
     description:
-      'Core short-horizon stock board for 5-day probability moves.'
+      'Our short-term stock board for the next 5 trading days.'
   },
   {
     name: 'lstm_jackpot',
-    displayName: 'LSTM Jackpot',
+    displayName: '20-Day Board',
     endpoint: '/predict/lstm_jackpot',
     description:
-      'Higher-volatility stock board focused on larger 20-day breakouts.'
+      'Our higher-risk stock board for bigger moves over the next 20 trading days.'
   },
 ];
 
@@ -168,7 +168,7 @@ function PredictionsCarousel() {
         <div className="section-header">
           <h2 className="section-title">Live Stock Boards</h2>
           <p className="section-subtitle">
-            See the product in one glance: two live stock boards, ranked probabilities, and no account required.
+            A quick look at the live stock boards. No account needed to see how it works.
           </p>
         </div>
         <div className="predictions-loading">
@@ -184,7 +184,7 @@ function PredictionsCarousel() {
       <div className="section-header">
         <h2 className="section-title">Live Stock Boards</h2>
         <p className="section-subtitle">
-          See the product in one glance: two live stock boards, ranked probabilities, and no account required.
+          A quick look at the live stock boards. No account needed to see how it works.
         </p>
       </div>
 

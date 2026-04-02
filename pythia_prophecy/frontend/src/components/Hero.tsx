@@ -13,10 +13,9 @@ function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1 className="hero-title">The fastest way to scan stock and sports probabilities.</h1>
+        <h1 className="hero-title">Stock and sports picks in one place.</h1>
         <p className="hero-subtitle">
-          SeekingBeta.AI gives self-directed investors one place to follow stock boards, golf outrights, tennis draws,
-          and same-day MLB matchups, with context and track record built in.
+          See what our models like in stocks, golf, tennis, and MLB. Check the live picks, then look at past results before you trust them.
         </p>
         <div className="hero-cta">
           <Link
@@ -31,7 +30,7 @@ function Hero() {
           </button>
         </div>
         <p className="hero-disclaimer">
-          Research only. No brokerage, no wagering, and no event-contract settlement layer.
+          For research only. We do not place trades or bets.
         </p>
       </div>
     </section>

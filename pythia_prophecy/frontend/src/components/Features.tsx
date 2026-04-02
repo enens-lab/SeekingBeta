@@ -15,8 +15,8 @@ const features: Feature[] = [
         <path d="M2 12l10 5 10-5" />
       </svg>
     ),
-    title: 'Open One Board, Not Five Tabs',
-    description: 'Probabilities, rankings, and key context sit in one place so you can get oriented in seconds.',
+    title: 'See everything in one place',
+    description: 'Stocks and sports live on one screen, so you spend less time jumping between tabs.',
   },
   {
     icon: (
@@ -29,8 +29,8 @@ const features: Feature[] = [
         <line x1="12" y1="22.08" x2="12" y2="12" />
       </svg>
     ),
-    title: 'Built From Real Historical Data',
-    description: 'The models learn from market, tournament, and game history so the boards are anchored in real outcomes, not vibes.',
+    title: 'Built on past results',
+    description: 'The models learn from real prices, scores, and results.',
   },
   {
     icon: (
@@ -40,8 +40,8 @@ const features: Feature[] = [
         <line x1="6" y1="20" x2="6" y2="16" />
       </svg>
     ),
-    title: 'See The Why Next To The Call',
-    description: 'Probability, horizon, lineup context, and high-level drivers are visible without opening a separate report.',
+    title: 'See the reason, not just the pick',
+    description: 'We show the main context next to each pick, so you are not left guessing why it showed up.',
   },
   {
     icon: (
@@ -51,8 +51,8 @@ const features: Feature[] = [
         <line x1="9" y1="21" x2="9" y2="9" />
       </svg>
     ),
-    title: 'Check The Scoreboard First',
-    description: 'Track record stays visible so you can compare the model against SPY and historical sports results before you trust it.',
+    title: 'See how it has done before',
+    description: 'You can check past results before you decide whether the model is useful.',
   },
 ];
 
@@ -60,9 +60,9 @@ function Features() {
   return (
     <section className="features-section" id="features">
       <div className="section-header">
-        <h2 className="section-title">Built for people who want signal fast.</h2>
+        <h2 className="section-title">Made for people who want a quick read.</h2>
         <p className="section-subtitle">
-          Open the board, spot the outliers, and drill into why the model moved without losing the thread.
+          Open the page, find the names that matter, and decide where to look deeper.
         </p>
       </div>
 

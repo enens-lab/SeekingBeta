@@ -762,6 +762,297 @@ h4 {
   background: var(--bg-secondary);
 }
 
+.sports-home-preview {
+  padding: 84px 24px;
+  background:
+    radial-gradient(900px 280px at 12% 0%, rgba(0, 143, 122, 0.08), transparent 60%),
+    radial-gradient(820px 260px at 88% 0%, rgba(37, 99, 235, 0.08), transparent 58%),
+    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+}
+
+.sports-home-header {
+  max-width: 1220px;
+  margin: 0 auto 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.sports-home-header .section-kicker {
+  display: inline-block;
+  margin-bottom: 0.85rem;
+  color: var(--brand-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sports-home-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.sports-home-runtime {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.sports-home-grid {
+  max-width: 1220px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.sports-home-card {
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.24), transparent 32%),
+    linear-gradient(180deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 14px;
+}
+
+.sports-home-card.accent-teal {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.sports-home-card.accent-blue {
+  border-color: color-mix(in srgb, var(--brand-secondary) 28%, var(--border));
+}
+
+.sports-home-card-mlb {
+  grid-column: 1 / -1;
+}
+
+.sports-home-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sports-home-card-header h3 {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 2vw, 1.7rem);
+  color: var(--text-primary);
+}
+
+.sports-home-eyebrow {
+  display: inline-block;
+  color: var(--accent);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sports-home-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sports-home-description {
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.sports-home-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.sports-home-featured {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.55);
+  display: grid;
+  gap: 12px;
+}
+
+.sports-home-featured-label {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.sports-home-featured-prob {
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+
+.sports-home-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sports-home-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.sports-home-rank {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sports-home-row-player {
+  min-width: 0;
+}
+
+.sports-home-prob {
+  color: var(--text-primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sports-home-mlb-list {
+  display: grid;
+  gap: 12px;
+}
+
+.sports-home-mlb-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.sports-home-mlb-team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sports-home-mlb-team div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sports-home-mlb-team strong {
+  color: var(--text-primary);
+  font-size: 0.98rem;
+}
+
+.sports-home-mlb-team span {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.sports-home-mlb-vs {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.sports-home-empty,
+.sports-home-loading {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 30px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.sports-home-empty-inline {
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.sports-home-cta {
+  margin-top: 4px;
+}
+
+@media (max-width: 960px) {
+  .sports-home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .sports-home-preview {
+    padding: 68px 20px;
+  }
+
+  .sports-home-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sports-home-actions {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .sports-home-card {
+    padding: 20px;
+  }
+
+  .sports-home-row,
+  .sports-home-mlb-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sports-home-rank {
+    display: none;
+  }
+
+  .sports-home-prob {
+    justify-self: flex-start;
+  }
+
+  .sports-home-mlb-vs {
+    display: none;
+  }
+}
+
 .carousel-container {
   position: relative;
   max-width: 1200px;

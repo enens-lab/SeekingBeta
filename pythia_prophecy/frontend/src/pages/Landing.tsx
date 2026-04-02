@@ -1,6 +1,7 @@
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import PredictionsCarousel from '../components/PredictionsCarousel';
+import SportsPreview from '../components/SportsPreview';
 import PerformanceComparison from '../components/PerformanceComparison';
 import Features from '../components/Features';
 import BetaTesterSignup from '../components/BetaTesterSignup';
@@ -15,6 +16,7 @@ function Landing() {
         <Hero />
         <PerformanceComparison />
         <PredictionsCarousel />
+        <SportsPreview />
         <Features />
         <BetaTesterSignup />
         <CallToAction />

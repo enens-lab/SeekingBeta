@@ -3351,6 +3351,16 @@ h4 {
 }
 
 @media (max-width: 768px) {
+  .dashboard-main {
+    padding: 24px 16px;
+  }
+
+  .dashboard-title {
+    width: 100%;
+    display: grid;
+    gap: 12px;
+  }
+
   .dashboard-controls {
     flex-direction: column;
     align-items: stretch;
@@ -3379,8 +3389,21 @@ h4 {
     width: 100%;
   }
 
+  .dashboard-search-input,
+  .timeframe-selector select {
+    min-height: 44px;
+  }
+
   .dashboard-search-input:focus {
     width: 100%;
+  }
+
+  .search-clear {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .timeframe-selector {
@@ -3392,6 +3415,29 @@ h4 {
 
   .dashboard-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-watchlist-manager {
+    padding: 14px;
+  }
+
+  .watchlist-pill-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .watchlist-pill,
+  .watchlist-clear-btn,
+  .toggle-btn,
+  .pagination-btn,
+  .pagination-num {
+    min-height: 44px;
+  }
+
+  .watchlist-pill {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .upgrade-banner {
@@ -3958,6 +4004,10 @@ h4 {
     padding: 24px 16px;
   }
 
+  .analyze-grid {
+    gap: 16px;
+  }
+
   .card {
     padding: 18px 16px;
   }
@@ -3970,14 +4020,64 @@ h4 {
 
   .stock-limit {
     white-space: normal;
+    align-self: flex-start;
   }
 
   .model-picker {
     grid-template-columns: 1fr;
   }
 
+  .stock-categories {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .category-header {
+    min-height: 44px;
+  }
+
+  .category-stocks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .stock-checkbox,
+  .stock-chip,
+  .config-row select,
+  .stock-search-row input,
+  .btn-block {
+    min-height: 44px;
+  }
+
+  .stock-checkbox,
+  .stock-chip {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .selected-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .selected-list .placeholder {
+    grid-column: 1 / -1;
+  }
+
+  .results-header-actions {
+    width: 100%;
+  }
+
+  .results-chart {
+    height: 240px;
+    padding: 12px;
+  }
+
   .table-wrap {
     margin: 0 -4px;
+    padding-bottom: 4px;
   }
 
   .results-table {
@@ -3992,6 +4092,7 @@ h4 {
     flex-direction: column;
     gap: 8px;
     text-align: center;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
 
   .rate-limit-banner {
@@ -4001,6 +4102,7 @@ h4 {
     left: 16px;
     right: 16px;
     transform: none;
+    bottom: calc(16px + env(safe-area-inset-bottom));
   }
 }
 
@@ -4032,6 +4134,10 @@ h4 {
     text-align: left;
   }
 
+  .watchlist-pill-list {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-stats {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -4043,6 +4149,11 @@ h4 {
   }
 
   .track-record-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-stocks,
+  .selected-list {
     grid-template-columns: 1fr;
   }
 
@@ -4432,6 +4543,55 @@ h4 {
     grid-template-columns: 1fr;
   }
 
+  .oracle-header {
+    margin-bottom: 24px;
+  }
+
+  .oracle-title-section h1 {
+    font-size: 25px;
+    line-height: 1.15;
+  }
+
+  .timeframe-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .timeframe-chip {
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .watchlist-item {
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  .watchlist-insight-card {
+    padding: 16px;
+  }
+
+  .watchlist-insight-header h3 {
+    font-size: 17px;
+  }
+
+  .watchlist-insight-header-actions {
+    width: 100%;
+  }
+
+  .watchlist-insight-source {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .watchlist-insight-fullscreen-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
   .watchlist-insight-chart {
     height: 180px;
   }
@@ -4444,6 +4604,43 @@ h4 {
     width: 100%;
     height: 100%;
     border-radius: 10px;
+  }
+
+  .chart-fullscreen-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chart-fullscreen-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .chart-fullscreen-close {
+    align-self: flex-end;
+  }
+
+  .category-header {
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .category-stocks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px 0 0;
+  }
+
+  .oracle-section .stock-chip {
+    width: 100%;
+    min-height: 42px;
+    justify-content: space-between;
+  }
+
+  .oracle-actions .btn {
+    width: 100%;
   }
 }
 
@@ -4575,6 +4772,11 @@ h4 {
 
   .watchlist-insight-chart {
     height: 160px;
+  }
+
+  .timeframe-grid,
+  .category-stocks {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -5064,6 +5266,11 @@ h4 {
     width: 100vw;
     max-width: 100vw;
     padding: 24px 16px;
+  }
+
+  .company-detail-close {
+    width: 40px;
+    height: 40px;
   }
 
   .company-metrics-grid {

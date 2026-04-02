@@ -46,7 +46,7 @@ def resolve_player_image(
     tour: str | None = None,
     player_id: str | int | None = None,
     player_key: str | None = None,
-) -> str:
+) -> str | None:
     registry = _load_registry()
     sport_entries = registry.get(sport.lower(), {}) if isinstance(registry.get(sport.lower(), {}), dict) else {}
 
@@ -61,5 +61,8 @@ def resolve_player_image(
         value = sport_entries.get(str(key))
         if isinstance(value, str) and value.strip():
             return value.strip()
+
+    if sport.lower() in {"golf", "tennis"}:
+        return None
 
     return seeded_avatar_url(name, sport, tour)

@@ -366,6 +366,16 @@ export interface SportsPlayerProfile {
   stats?: SportsPlayerStat[];
 }
 
+export interface SportsLineupPlayer {
+  playerId?: number | null;
+  playerName: string;
+  lineupSlot?: number | null;
+  position?: string | null;
+  batSide?: string | null;
+  performanceSummary?: string | null;
+  profile?: SportsPlayerProfile | null;
+}
+
 export interface SportsUpcomingBoard {
   id: string;
   name: string;
@@ -390,6 +400,8 @@ export interface SportsUpcomingBoard {
   homeAvailability?: SportsAvailabilitySummary;
   projectedLineupContext?: SportsProjectedLineupContext;
   predictionSource?: string;
+  awayLineup?: SportsLineupPlayer[];
+  homeLineup?: SportsLineupPlayer[];
   predictions: SportsBoardPrediction[];
 }
 
@@ -413,6 +425,12 @@ export interface SportsHistoricalBoard {
   homeTeam?: string;
   awayStarter?: string;
   homeStarter?: string;
+  awayStarterProfile?: SportsPlayerProfile;
+  homeStarterProfile?: SportsPlayerProfile;
+  awayTeamDetails?: SportsTeamDetails;
+  homeTeamDetails?: SportsTeamDetails;
+  awayLineup?: SportsLineupPlayer[];
+  homeLineup?: SportsLineupPlayer[];
 }
 
 export interface SportsBoardCollection {

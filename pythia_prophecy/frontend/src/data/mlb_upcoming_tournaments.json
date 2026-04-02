@@ -155,6 +155,568 @@
       "homeContinuity": null
     },
     "predictionSource": "heuristic_fallback",
+    "awayLineup": [
+      {
+        "playerId": 668885,
+        "playerName": "Austin Martin",
+        "lineupSlot": 1,
+        "position": "CF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/668885/headshot/67/current",
+          "subtitle": "#1 | CF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.625"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 680777,
+        "playerName": "Ryan Jeffers",
+        "lineupSlot": 2,
+        "position": "C",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/680777/headshot/67/current",
+          "subtitle": "#2 | C | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.685"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 668904,
+        "playerName": "Royce Lewis",
+        "lineupSlot": 3,
+        "position": "3B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/668904/headshot/67/current",
+          "subtitle": "#3 | 3B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.042"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 665019,
+        "playerName": "Kody Clemens",
+        "lineupSlot": 4,
+        "position": "2B",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/665019/headshot/67/current",
+          "subtitle": "#4 | 2B | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.490"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 686797,
+        "playerName": "Brooks Lee",
+        "lineupSlot": 5,
+        "position": "3B",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/686797/headshot/67/current",
+          "subtitle": "#5 | 3B | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.615"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 605137,
+        "playerName": "Josh Bell",
+        "lineupSlot": 6,
+        "position": "1B",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/605137/headshot/67/current",
+          "subtitle": "#6 | 1B | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.935"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 621439,
+        "playerName": "Byron Buxton",
+        "lineupSlot": 7,
+        "position": "CF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/621439/headshot/67/current",
+          "subtitle": "#7 | CF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.725"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 656484,
+        "playerName": "Tristan Gray",
+        "lineupSlot": 8,
+        "position": "3B",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/656484/headshot/67/current",
+          "subtitle": "#8 | 3B | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.861"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 663616,
+        "playerName": "Trevor Larnach",
+        "lineupSlot": 9,
+        "position": "RF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/663616/headshot/67/current",
+          "subtitle": "#9 | RF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.695"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 663697,
+        "playerName": "Jonathan India",
+        "lineupSlot": 1,
+        "position": "2B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/663697/headshot/67/current",
+          "subtitle": "#1 | 2B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.595"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 695506,
+        "playerName": "Jac Caglianone",
+        "lineupSlot": 2,
+        "position": "RF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/695506/headshot/67/current",
+          "subtitle": "#2 | RF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.688"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 686475,
+        "playerName": "Tyler Tolbert",
+        "lineupSlot": 3,
+        "position": "2B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/686475/headshot/67/current",
+          "subtitle": "#3 | 2B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.042"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 521692,
+        "playerName": "Salvador Perez",
+        "lineupSlot": 4,
+        "position": "C",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/521692/headshot/67/current",
+          "subtitle": "#4 | C | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.895"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.8"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 695600,
+        "playerName": "Carter Jensen",
+        "lineupSlot": 5,
+        "position": "C",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/695600/headshot/67/current",
+          "subtitle": "#5 | C | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.797"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 677951,
+        "playerName": "Bobby Witt Jr.",
+        "lineupSlot": 6,
+        "position": "SS",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/677951/headshot/67/current",
+          "subtitle": "#6 | SS | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.850"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.8"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 516782,
+        "playerName": "Starling Marte",
+        "lineupSlot": 7,
+        "position": "LF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/516782/headshot/67/current",
+          "subtitle": "#7 | LF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.882"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 686469,
+        "playerName": "Vinnie Pasquantino",
+        "lineupSlot": 8,
+        "position": "1B",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/686469/headshot/67/current",
+          "subtitle": "#8 | 1B | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.960"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 657041,
+        "playerName": "Lane Thomas",
+        "lineupSlot": 9,
+        "position": "CF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/657041/headshot/67/current",
+          "subtitle": "#9 | CF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.768"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      }
+    ],
     "predictions": [
       {
         "rank": 1,
@@ -326,6 +888,568 @@
       "homeContinuity": null
     },
     "predictionSource": "heuristic_fallback",
+    "awayLineup": [
+      {
+        "playerId": 621566,
+        "playerName": "Matt Olson",
+        "lineupSlot": 1,
+        "position": "1B",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/621566/headshot/67/current",
+          "subtitle": "#1 | 1B | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.663"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 660670,
+        "playerName": "Ronald Acu\u00f1a Jr.",
+        "lineupSlot": 2,
+        "position": "RF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/660670/headshot/67/current",
+          "subtitle": "#2 | RF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.243"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 686948,
+        "playerName": "Drake Baldwin",
+        "lineupSlot": 3,
+        "position": "C",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/686948/headshot/67/current",
+          "subtitle": "#3 | C | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.147"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.8"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 671739,
+        "playerName": "Michael Harris II",
+        "lineupSlot": 4,
+        "position": "CF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/671739/headshot/67/current",
+          "subtitle": "#4 | CF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.130"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 571657,
+        "playerName": "Kyle Farmer",
+        "lineupSlot": 5,
+        "position": "2B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/571657/headshot/67/current",
+          "subtitle": "#5 | 2B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.267"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 642201,
+        "playerName": "Eli White",
+        "lineupSlot": 6,
+        "position": "RF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/642201/headshot/67/current",
+          "subtitle": "#6 | RF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.375"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 642086,
+        "playerName": "Dominic Smith",
+        "lineupSlot": 7,
+        "position": "1B",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/642086/headshot/67/current",
+          "subtitle": "#7 | 1B | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.868"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 573262,
+        "playerName": "Mike Yastrzemski",
+        "lineupSlot": 8,
+        "position": "RF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/573262/headshot/67/current",
+          "subtitle": "#8 | RF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.592"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 641680,
+        "playerName": "Jonah Heim",
+        "lineupSlot": 9,
+        "position": "C",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/641680/headshot/67/current",
+          "subtitle": "#9 | C | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.678"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 672515,
+        "playerName": "Gabriel Moreno",
+        "lineupSlot": 1,
+        "position": "C",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/672515/headshot/67/current",
+          "subtitle": "#1 | C | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.663"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 691783,
+        "playerName": "Jordan Lawlar",
+        "lineupSlot": 2,
+        "position": "SS",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/691783/headshot/67/current",
+          "subtitle": "#2 | SS | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.827"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 543510,
+        "playerName": "James McCann",
+        "lineupSlot": 3,
+        "position": "C",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/543510/headshot/67/current",
+          "subtitle": "#3 | C | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.765"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 545121,
+        "playerName": "Ildemaro Vargas",
+        "lineupSlot": 4,
+        "position": "2B",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/545121/headshot/67/current",
+          "subtitle": "#4 | 2B | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.632"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 677950,
+        "playerName": "Alek Thomas",
+        "lineupSlot": 5,
+        "position": "CF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/677950/headshot/67/current",
+          "subtitle": "#5 | CF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.463"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 606466,
+        "playerName": "Ketel Marte",
+        "lineupSlot": 6,
+        "position": "2B",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/606466/headshot/67/current",
+          "subtitle": "#6 | 2B | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.950"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 682998,
+        "playerName": "Corbin Carroll",
+        "lineupSlot": 7,
+        "position": "RF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/682998/headshot/67/current",
+          "subtitle": "#7 | RF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.947"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 672695,
+        "playerName": "Geraldo Perdomo",
+        "lineupSlot": 8,
+        "position": "SS",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/672695/headshot/67/current",
+          "subtitle": "#8 | SS | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.863"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 571448,
+        "playerName": "Nolan Arenado",
+        "lineupSlot": 9,
+        "position": "3B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/571448/headshot/67/current",
+          "subtitle": "#9 | 3B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.535"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      }
+    ],
     "predictions": [
       {
         "rank": 1,
@@ -497,6 +1621,568 @@
       "homeContinuity": null
     },
     "predictionSource": "heuristic_fallback",
+    "awayLineup": [
+      {
+        "playerId": 596019,
+        "playerName": "Francisco Lindor",
+        "lineupSlot": 1,
+        "position": "SS",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/596019/headshot/67/current",
+          "subtitle": "#1 | SS | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.035"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.4"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 665742,
+        "playerName": "Juan Soto",
+        "lineupSlot": 2,
+        "position": "RF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/665742/headshot/67/current",
+          "subtitle": "#2 | RF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.050"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 682626,
+        "playerName": "Francisco Alvarez",
+        "lineupSlot": 3,
+        "position": "C",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/682626/headshot/67/current",
+          "subtitle": "#3 | C | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.063"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.8"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 666182,
+        "playerName": "Bo Bichette",
+        "lineupSlot": 4,
+        "position": "SS",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/666182/headshot/67/current",
+          "subtitle": "#4 | SS | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.128"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 543760,
+        "playerName": "Marcus Semien",
+        "lineupSlot": 5,
+        "position": "2B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/543760/headshot/67/current",
+          "subtitle": "#5 | 2B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.743"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.0"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 621438,
+        "playerName": "Tyrone Taylor",
+        "lineupSlot": 6,
+        "position": "CF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/621438/headshot/67/current",
+          "subtitle": "#6 | CF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.888"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 676724,
+        "playerName": "Jared Young",
+        "lineupSlot": 7,
+        "position": "LF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/676724/headshot/67/current",
+          "subtitle": "#7 | LF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "1.250"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 593871,
+        "playerName": "Jorge Polanco",
+        "lineupSlot": 8,
+        "position": "2B",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/593871/headshot/67/current",
+          "subtitle": "#8 | 2B | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.710"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 673357,
+        "playerName": "Luis Robert Jr.",
+        "lineupSlot": 9,
+        "position": "CF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/673357/headshot/67/current",
+          "subtitle": "#9 | CF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.713"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.2"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 669477,
+        "playerName": "Casey Schmitt",
+        "lineupSlot": 1,
+        "position": "3B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/669477/headshot/67/current",
+          "subtitle": "#1 | 3B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.750"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.2"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 646240,
+        "playerName": "Rafael Devers",
+        "lineupSlot": 2,
+        "position": "DH",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/646240/headshot/67/current",
+          "subtitle": "#2 | DH | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.887"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.3"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 656305,
+        "playerName": "Matt Chapman",
+        "lineupSlot": 3,
+        "position": "3B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/656305/headshot/67/current",
+          "subtitle": "#3 | 3B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.388"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.6"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 672275,
+        "playerName": "Patrick Bailey",
+        "lineupSlot": 4,
+        "position": "C",
+        "batSide": "S",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/672275/headshot/67/current",
+          "subtitle": "#4 | C | Switch bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.592"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 683766,
+        "playerName": "Christian Koss",
+        "lineupSlot": 5,
+        "position": "2B",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/683766/headshot/67/current",
+          "subtitle": "#5 | 2B | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.822"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.0"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.0"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.2"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 650333,
+        "playerName": "Luis Arraez",
+        "lineupSlot": 6,
+        "position": "IF",
+        "batSide": "L",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/650333/headshot/67/current",
+          "subtitle": "#6 | IF | L bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.937"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 642715,
+        "playerName": "Willy Adames",
+        "lineupSlot": 7,
+        "position": "SS",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/642715/headshot/67/current",
+          "subtitle": "#7 | SS | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.612"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.6"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 671218,
+        "playerName": "Heliot Ramos",
+        "lineupSlot": 8,
+        "position": "LF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/671218/headshot/67/current",
+          "subtitle": "#8 | LF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.690"
+            },
+            {
+              "label": "Hits L5",
+              "value": "1.4"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.4"
+            },
+            {
+              "label": "RBI L5",
+              "value": "1.4"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 664056,
+        "playerName": "Harrison Bader",
+        "lineupSlot": 9,
+        "position": "LF",
+        "batSide": "R",
+        "performanceSummary": null,
+        "profile": {
+          "imageUrl": "https://img.mlbstatic.com/mlb-photos/image/upload/w_360,q_auto:best/v1/people/664056/headshot/67/current",
+          "subtitle": "#9 | LF | R bat",
+          "country": null,
+          "stats": [
+            {
+              "label": "OPS L10",
+              "value": "0.535"
+            },
+            {
+              "label": "Hits L5",
+              "value": "0.8"
+            },
+            {
+              "label": "HR L10",
+              "value": "0.1"
+            },
+            {
+              "label": "RBI L5",
+              "value": "0.0"
+            }
+          ]
+        }
+      }
+    ],
     "predictions": [
       {
         "rank": 1,

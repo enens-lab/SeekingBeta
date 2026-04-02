@@ -8,6 +8,8 @@ import {
   type SportsBoardCollection,
   type SportsBoardsResponse,
   type SportsHistoricalBoard,
+  type SportsLineupPlayer,
+  type SportsTeamDetails,
   type SportsUpcomingBoard,
   type SportsBoardPrediction,
 } from '../../api/client';
@@ -52,6 +54,58 @@ function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): 
 function predictionBarWidth(prediction: SportsBoardPrediction, maxProb: number): string {
   const safeMax = maxProb > 0 ? maxProb : 100;
   return `${(prediction.winProbability / safeMax) * 100}%`;
+}
+
+type MlbLineupCardProps = {
+  teamName?: string;
+  teamDetails?: SportsTeamDetails;
+  lineup?: SportsLineupPlayer[];
+  emptyLabel: string;
+};
+
+function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel }: MlbLineupCardProps) {
+  const players = lineup || [];
+
+  return (
+    <section className="mlb-lineup-card">
+      <div className="mlb-lineup-header">
+        <div className="mlb-team-detail-heading">
+          <TeamLogo
+            logoUrl={teamDetails?.logoUrl}
+            label={teamName || 'Team'}
+            abbreviation={teamDetails?.abbreviation}
+            primaryColor={teamDetails?.primaryColor}
+            size="sm"
+          />
+          <div>
+            <h3>{teamName || 'Team lineup'}</h3>
+            <p>{players.length > 0 ? `${players.length} projected bats` : emptyLabel}</p>
+          </div>
+        </div>
+      </div>
+      {players.length === 0 ? (
+        <div className="mlb-lineup-empty">{emptyLabel}</div>
+      ) : (
+        <div className="mlb-lineup-rows">
+          {players.map((player) => (
+            <div key={`${teamName}-${player.lineupSlot || 'x'}-${player.playerId || player.playerName}`} className="mlb-lineup-row">
+              <span className="mlb-lineup-slot">{player.lineupSlot || '-'}</span>
+              <div className="mlb-lineup-player">
+                <PlayerProfileCard
+                  name={player.playerName}
+                  profile={player.profile}
+                  compact
+                />
+                {player.performanceSummary ? (
+                  <div className="mlb-lineup-summary">{player.performanceSummary}</div>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function SportsDashboard() {
@@ -567,6 +621,21 @@ function SportsDashboard() {
                         </div>
                       </div>
 
+                      <div className="mlb-lineup-grid">
+                        <MlbLineupCard
+                          teamName={board.awayTeam}
+                          teamDetails={board.awayTeamDetails}
+                          lineup={board.awayLineup}
+                          emptyLabel="Projected away lineup is still populating."
+                        />
+                        <MlbLineupCard
+                          teamName={board.homeTeam}
+                          teamDetails={board.homeTeamDetails}
+                          lineup={board.homeLineup}
+                          emptyLabel="Projected home lineup is still populating."
+                        />
+                      </div>
+
                       <div className="mlb-radar-grid">
                         <StarterRadarChart
                           title={board.awayStarter || `${board.awayTeam || 'Away'} starter`}
@@ -769,23 +838,74 @@ function SportsDashboard() {
 
                           {expandedBacktest === idx && (
                             <div className="backtest-details-panel">
-                              <h4>Full Field Ranking</h4>
-                              <div className="details-grid">
-                                {(backtest.fullField || []).map((player) => (
-                                  <div key={`${player.rank}-${player.playerName}`} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
-                                    <div className="detail-player-topline">
-                                      <span className="dp-rank">#{player.rank}</span>
-                                      <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
-                                      {player.actualWinner && <span className="dp-badge">Winner</span>}
+                              {activeSport === 'MLB' ? (
+                                <>
+                                  <h4>Game Details</h4>
+                                  <div className="mlb-backtest-summary">
+                                    <div className="mlb-backtest-summary-column">
+                                      <span className="mlb-summary-label">Predicted side</span>
+                                      <strong>{backtest.predictedWinner}</strong>
+                                      <span>{((backtest.prob || 0) * 100).toFixed(1)}% top-side confidence</span>
                                     </div>
-                                    <PlayerProfileCard
-                                      name={player.playerName}
-                                      profile={player.profile}
-                                      compact
+                                    <div className="mlb-backtest-summary-column">
+                                      <span className="mlb-summary-label">Actual winner</span>
+                                      <strong>{backtest.actualWinner || 'Unknown'}</strong>
+                                      <span>{backtest.venue || 'MLB Venue'}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="mlb-starter-profile-grid">
+                                    <div className="mlb-starter-profile-card">
+                                      <PlayerProfileCard
+                                        name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
+                                        profile={backtest.awayStarterProfile}
+                                      />
+                                    </div>
+                                    <div className="mlb-starter-profile-card">
+                                      <PlayerProfileCard
+                                        name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
+                                        profile={backtest.homeStarterProfile}
+                                        align="right"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="mlb-lineup-grid">
+                                    <MlbLineupCard
+                                      teamName={backtest.awayTeam}
+                                      teamDetails={backtest.awayTeamDetails}
+                                      lineup={backtest.awayLineup}
+                                      emptyLabel="Historical away lineup details were not available."
+                                    />
+                                    <MlbLineupCard
+                                      teamName={backtest.homeTeam}
+                                      teamDetails={backtest.homeTeamDetails}
+                                      lineup={backtest.homeLineup}
+                                      emptyLabel="Historical home lineup details were not available."
                                     />
                                   </div>
-                                ))}
-                              </div>
+                                </>
+                              ) : (
+                                <>
+                                  <h4>Full Field Ranking</h4>
+                                  <div className="details-grid">
+                                    {(backtest.fullField || []).map((player) => (
+                                      <div key={`${player.rank}-${player.playerName}`} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
+                                        <div className="detail-player-topline">
+                                          <span className="dp-rank">#{player.rank}</span>
+                                          <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
+                                          {player.actualWinner && <span className="dp-badge">Winner</span>}
+                                        </div>
+                                        <PlayerProfileCard
+                                          name={player.playerName}
+                                          profile={player.profile}
+                                          compact
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>

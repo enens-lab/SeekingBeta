@@ -467,6 +467,16 @@ class SportsPlayerProfile(BaseModel):
     stats: List[SportsPlayerStat] = []
 
 
+class SportsLineupPlayer(BaseModel):
+    playerId: Optional[int] = None
+    playerName: str
+    lineupSlot: Optional[int] = None
+    position: Optional[str] = None
+    batSide: Optional[str] = None
+    performanceSummary: Optional[str] = None
+    profile: Optional[SportsPlayerProfile] = None
+
+
 class SportsBoardPrediction(BaseModel):
     rank: int
     playerName: str
@@ -500,6 +510,8 @@ class SportsUpcomingBoard(BaseModel):
     homeAvailability: Optional[SportsAvailabilitySummary] = None
     projectedLineupContext: Optional[SportsProjectedLineupContext] = None
     predictionSource: Optional[str] = None
+    awayLineup: List[SportsLineupPlayer] = []
+    homeLineup: List[SportsLineupPlayer] = []
     predictions: List[SportsBoardPrediction] = []
 
 
@@ -523,6 +535,12 @@ class SportsHistoricalBoard(BaseModel):
     homeTeam: Optional[str] = None
     awayStarter: Optional[str] = None
     homeStarter: Optional[str] = None
+    awayStarterProfile: Optional[SportsPlayerProfile] = None
+    homeStarterProfile: Optional[SportsPlayerProfile] = None
+    awayTeamDetails: Optional[SportsTeamDetails] = None
+    homeTeamDetails: Optional[SportsTeamDetails] = None
+    awayLineup: List[SportsLineupPlayer] = []
+    homeLineup: List[SportsLineupPlayer] = []
 
 
 class SportsBoardCollection(BaseModel):

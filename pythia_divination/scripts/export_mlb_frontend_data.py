@@ -223,6 +223,187 @@ def _mlb_headshot_url(player_id: int | None) -> str | None:
     )
 
 
+def _safe_int_value(value: object) -> int | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _bat_side_label(code: str | None) -> str | None:
+    normalized = (code or "").strip().upper()
+    return {
+        "L": "L bat",
+        "R": "R bat",
+        "S": "Switch bat",
+    }.get(normalized)
+
+
+def _build_mlb_lineup_entry(record: dict[str, Any], *, historical: bool) -> dict[str, Any]:
+    player_name = _optional_text(record.get("batter_name")) or "Unknown player"
+    player_id = _safe_int_value(record.get("batter_id"))
+    lineup_slot = _safe_int_value(record.get("lineup_slot"))
+    position = _optional_text(record.get("batter_position"))
+    bat_side = _optional_text(record.get("batter_bat_side") or record.get("bat_side_code"))
+    subtitle_parts = [f"#{lineup_slot}" if lineup_slot is not None else None, position, _bat_side_label(bat_side)]
+
+    stats: list[dict[str, str]] = []
+    performance_summary: str | None = None
+
+    if historical:
+        at_bats = _safe_int_value(record.get("at_bats")) or 0
+        hits = _safe_int_value(record.get("hits")) or 0
+        runs = _safe_int_value(record.get("runs")) or 0
+        rbi = _safe_int_value(record.get("rbi")) or 0
+        home_runs = _safe_int_value(record.get("home_runs")) or 0
+        walks = _safe_int_value(record.get("walks")) or 0
+        strikeouts = _safe_int_value(record.get("strikeouts")) or 0
+
+        stats = [
+            {"label": "Game", "value": f"{hits}-{at_bats}" if at_bats > 0 else "0-0"},
+            {"label": "R", "value": str(runs)},
+            {"label": "RBI", "value": str(rbi)},
+            {"label": "HR", "value": str(home_runs)},
+        ]
+        performance_summary = f"BB {walks} | K {strikeouts}"
+    else:
+        ops_last_10 = _safe_value(type("Row", (), record), "ops_like_avg_last_10")
+        hits_last_5 = _safe_value(type("Row", (), record), "hits_avg_last_5")
+        home_runs_last_10 = _safe_value(type("Row", (), record), "home_runs_avg_last_10")
+        rbi_last_5 = _safe_value(type("Row", (), record), "rbi_avg_last_5")
+        obp_last_10 = _safe_value(type("Row", (), record), "obp_like_avg_last_10")
+        walks_last_5 = _safe_value(type("Row", (), record), "walks_avg_last_5")
+
+        if ops_last_10 is not None:
+            stats.append({"label": "OPS L10", "value": f"{ops_last_10:.3f}"})
+        if hits_last_5 is not None:
+            stats.append({"label": "Hits L5", "value": f"{hits_last_5:.1f}"})
+        if home_runs_last_10 is not None:
+            stats.append({"label": "HR L10", "value": f"{home_runs_last_10:.1f}"})
+        if rbi_last_5 is not None:
+            stats.append({"label": "RBI L5", "value": f"{rbi_last_5:.1f}"})
+        if len(stats) < 4 and obp_last_10 is not None:
+            stats.append({"label": "OBP L10", "value": f"{obp_last_10:.3f}"})
+        if len(stats) < 4 and walks_last_5 is not None:
+            stats.append({"label": "BB L5", "value": f"{walks_last_5:.1f}"})
+
+    return {
+        "playerId": player_id,
+        "playerName": player_name,
+        "lineupSlot": lineup_slot,
+        "position": position,
+        "batSide": bat_side,
+        "performanceSummary": performance_summary,
+        "profile": {
+            "imageUrl": _mlb_headshot_url(player_id),
+            "subtitle": " | ".join(part for part in subtitle_parts if part) or "Projected lineup",
+            "country": None,
+            "stats": stats[:4],
+        },
+    }
+
+
+def _merge_projected_lineup_history(projected_lineups: pd.DataFrame, batter_logs: pd.DataFrame) -> pd.DataFrame:
+    if projected_lineups.empty or batter_logs.empty:
+        return projected_lineups.copy()
+
+    lineup = projected_lineups.copy()
+    lineup["official_date"] = pd.to_datetime(lineup["official_date"], errors="coerce").dt.normalize()
+    history = batter_logs.copy()
+    history["official_date"] = pd.to_datetime(history["official_date"], errors="coerce").dt.normalize()
+
+    history_columns = [
+        "official_date",
+        "batter_id",
+        "plate_appearances_avg_last_10",
+        "hits_avg_last_5",
+        "home_runs_avg_last_10",
+        "rbi_avg_last_5",
+        "ops_like_avg_last_10",
+        "obp_like_avg_last_10",
+        "walks_avg_last_5",
+    ]
+    history = history.loc[:, [column for column in history_columns if column in history.columns]]
+    history = history.dropna(subset=["official_date", "batter_id"]).sort_values(["official_date", "batter_id"])
+    lineup = lineup.dropna(subset=["official_date", "batter_id"]).sort_values(["official_date", "batter_id"])
+    if history.empty or lineup.empty:
+        return projected_lineups.copy()
+
+    merged = pd.merge_asof(
+        lineup,
+        history,
+        on="official_date",
+        by="batter_id",
+        direction="backward",
+        suffixes=("", "_history"),
+    )
+    return merged.sort_values(["game_pk", "team_side", "lineup_slot"]).reset_index(drop=True)
+
+
+def _build_projected_lineup_map(projected_lineups: pd.DataFrame, batter_logs: pd.DataFrame) -> dict[int, dict[str, list[dict[str, Any]]]]:
+    if projected_lineups.empty:
+        return {}
+
+    enriched = _merge_projected_lineup_history(projected_lineups, batter_logs)
+    lineup_map: dict[int, dict[str, list[dict[str, Any]]]] = {}
+    for (game_pk, team_side), group in enriched.groupby(["game_pk", "team_side"], sort=False):
+        entries = [
+            _build_mlb_lineup_entry(record, historical=False)
+            for record in group.sort_values("lineup_slot").to_dict(orient="records")
+        ]
+        lineup_map.setdefault(int(game_pk), {})[str(team_side)] = entries
+    return lineup_map
+
+
+def _load_historical_lineup_map(game_pks: set[int]) -> dict[int, dict[str, list[dict[str, Any]]]]:
+    if not game_pks:
+        return {}
+
+    lineup_roster = _load_table_optional("lineup_roster_latest")
+    batter_logs = _load_table_optional("batter_game_logs_latest")
+    if lineup_roster.empty:
+        return {}
+
+    lineup = lineup_roster.loc[lineup_roster["game_pk"].isin(game_pks)].copy()
+    if lineup.empty:
+        return {}
+
+    if not batter_logs.empty:
+        performance_columns = [
+            "game_pk",
+            "team_side",
+            "team_id",
+            "batter_id",
+            "at_bats",
+            "hits",
+            "runs",
+            "rbi",
+            "home_runs",
+            "walks",
+            "strikeouts",
+        ]
+        performance = batter_logs.loc[
+            batter_logs["game_pk"].isin(game_pks),
+            [column for column in performance_columns if column in batter_logs.columns],
+        ].copy()
+        lineup = lineup.merge(
+            performance,
+            on=["game_pk", "team_side", "team_id", "batter_id"],
+            how="left",
+        )
+
+    lineup_map: dict[int, dict[str, list[dict[str, Any]]]] = {}
+    for (game_pk, team_side), group in lineup.groupby(["game_pk", "team_side"], sort=False):
+        entries = [
+            _build_mlb_lineup_entry(record, historical=True)
+            for record in group.sort_values("lineup_slot").to_dict(orient="records")
+        ]
+        lineup_map.setdefault(int(game_pk), {})[str(team_side)] = entries
+    return lineup_map
+
+
 def _build_team_details(row: Any, side: str) -> dict[str, Any]:
     team_id = getattr(row, f"{side}_team_id", None)
     abbreviation = _optional_text(getattr(row, f"{side}_team_abbreviation", None))
@@ -392,24 +573,21 @@ def _fallback_predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
 
 def _load_historical_source() -> pd.DataFrame:
     predictions = pd.read_csv(HISTORICAL_PREDICTIONS_PATH)
-    dataset = pd.read_csv(
-        DATASET_PATH,
-        low_memory=False,
-        usecols=[
-            "game_pk",
-            "season",
-            "venue_name",
-            "away_probable_pitcher_name",
-            "home_probable_pitcher_name",
-        ],
+    dataset = pd.read_csv(DATASET_PATH, low_memory=False)
+    merged = predictions.merge(
+        dataset.drop_duplicates(subset=["game_pk"]),
+        on="game_pk",
+        how="left",
+        suffixes=("", "_dataset"),
     )
-    merged = predictions.merge(dataset.drop_duplicates(subset=["game_pk"]), on="game_pk", how="left")
-    merged["official_date"] = pd.to_datetime(merged["official_date"], errors="coerce")
+    official_date_column = "official_date_dataset" if "official_date_dataset" in merged.columns else "official_date"
+    merged["official_date"] = pd.to_datetime(merged[official_date_column], errors="coerce")
     merged = merged.dropna(subset=["game_pk", "official_date", "away_team_name", "home_team_name"])
     return merged.sort_values(["official_date", "game_pk"], ascending=[False, False]).reset_index(drop=True)
 
 
 def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    historical_lineups = _load_historical_lineup_map(set(pd.to_numeric(frame["game_pk"], errors="coerce").dropna().astype(int).tolist()))
     backtests: list[dict[str, Any]] = []
     for row in frame.itertuples(index=False):
         home_prob = float(row.home_win_probability)
@@ -461,6 +639,12 @@ def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "predictions": ranked,
                 "homeStarter": _optional_text(row.home_probable_pitcher_name),
                 "awayStarter": _optional_text(row.away_probable_pitcher_name),
+                "awayStarterProfile": _build_starter_profile(row, "away"),
+                "homeStarterProfile": _build_starter_profile(row, "home"),
+                "awayTeamDetails": _build_team_details(row, "away"),
+                "homeTeamDetails": _build_team_details(row, "home"),
+                "awayLineup": historical_lineups.get(int(row.game_pk), {}).get("away", []),
+                "homeLineup": historical_lineups.get(int(row.game_pk), {}).get("home", []),
             }
         )
     return backtests
@@ -639,19 +823,21 @@ def _build_transaction_frame(client: MLBStatsClient, upcoming_games: pd.DataFram
     return pd.concat(transaction_frames, ignore_index=True) if transaction_frames else pd.DataFrame()
 
 
-def _build_upcoming_dataset(selected_date: str | None = None) -> tuple[pd.DataFrame, str | None, list[dict[str, Any]]]:
+def _build_upcoming_dataset(
+    selected_date: str | None = None,
+) -> tuple[pd.DataFrame, str | None, list[dict[str, Any]], dict[int, dict[str, list[dict[str, Any]]]]]:
     client = MLBStatsClient()
     full_schedule = _load_upcoming_schedule(client)
     available_dates = _build_available_dates(full_schedule)
     resolved_selected_date = _resolve_selected_date(available_dates, selected_date)
     if full_schedule.empty or not resolved_selected_date:
-        return pd.DataFrame(), resolved_selected_date, available_dates
+        return pd.DataFrame(), resolved_selected_date, available_dates, {}
 
     schedule = full_schedule.loc[
         pd.to_datetime(full_schedule["official_date"], errors="coerce").dt.strftime("%Y-%m-%d") == resolved_selected_date
     ].copy()
     if schedule.empty:
-        return pd.DataFrame(), resolved_selected_date, available_dates
+        return pd.DataFrame(), resolved_selected_date, available_dates, {}
 
     details, _, preview_player_profiles = _fetch_preview_bundles(client, schedule)
     season = int(pd.to_numeric(schedule["season"], errors="coerce").dropna().iloc[0]) if schedule["season"].notna().any() else None
@@ -679,10 +865,12 @@ def _build_upcoming_dataset(selected_date: str | None = None) -> tuple[pd.DataFr
     games = attach_pregame_starter_features(games, starter_logs)
 
     active_roster = _build_active_roster_frame(client, games, preview_player_profiles)
+    lineup_map: dict[int, dict[str, list[dict[str, Any]]]] = {}
     if not batter_logs.empty:
         projected_lineups = build_projected_lineup_roster(active_roster, batter_logs, historical_lineups=historical_lineups)
         lineup_features = build_lineup_feature_frame(projected_lineups, batter_logs)
         games = merge_lineup_features(games, lineup_features)
+        lineup_map = _build_projected_lineup_map(projected_lineups, batter_logs)
 
     if not reliever_logs.empty:
         projected_bullpen = build_projected_bullpen_roster(
@@ -712,7 +900,7 @@ def _build_upcoming_dataset(selected_date: str | None = None) -> tuple[pd.DataFr
     )
     games = enrich_dataset_with_statcast(games, statcast_paths)
     games = games.sort_values(["game_date", "game_pk"]).reset_index(drop=True)
-    return games, resolved_selected_date, available_dates
+    return games, resolved_selected_date, available_dates, lineup_map
 
 
 def _predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
@@ -743,8 +931,12 @@ def _predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
     return inference
 
 
-def _build_upcoming_boards(frame: pd.DataFrame) -> list[dict[str, Any]]:
+def _build_upcoming_boards(
+    frame: pd.DataFrame,
+    lineup_map: dict[int, dict[str, list[dict[str, Any]]]] | None = None,
+) -> list[dict[str, Any]]:
     boards: list[dict[str, Any]] = []
+    lineup_map = lineup_map or {}
     for row in frame.itertuples(index=False):
         home_prob = float(row.home_win_probability)
         away_prob = float(row.away_win_probability)
@@ -816,6 +1008,8 @@ def _build_upcoming_boards(frame: pd.DataFrame) -> list[dict[str, Any]]:
                     else None,
                 },
                 "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
+                "awayLineup": lineup_map.get(int(row.game_pk), {}).get("away", []),
+                "homeLineup": lineup_map.get(int(row.game_pk), {}).get("home", []),
                 "predictions": ranked,
             }
         )
@@ -823,9 +1017,9 @@ def _build_upcoming_boards(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 
 def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
-    dataset, resolved_selected_date, available_dates = _build_upcoming_dataset(selected_date=selected_date)
+    dataset, resolved_selected_date, available_dates, lineup_map = _build_upcoming_dataset(selected_date=selected_date)
     dataset = _predict_upcoming(dataset)
-    upcoming = _build_upcoming_boards(dataset)
+    upcoming = _build_upcoming_boards(dataset, lineup_map)
     return {
         "selectedDate": resolved_selected_date,
         "availableDates": available_dates,

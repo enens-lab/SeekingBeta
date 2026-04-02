@@ -799,6 +799,105 @@
   max-width: 56%;
 }
 
+.mlb-lineup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.mlb-lineup-card {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.mlb-lineup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.mlb-lineup-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.mlb-lineup-rows {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mlb-lineup-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.mlb-lineup-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.mlb-lineup-player {
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mlb-lineup-summary {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  padding-left: 0.1rem;
+}
+
+.mlb-backtest-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.mlb-backtest-summary-column {
+  padding: 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 0.28rem;
+}
+
+.mlb-summary-label {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mlb-backtest-summary-column strong {
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.mlb-backtest-summary-column span:not(.mlb-summary-label) {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
 @media (max-width: 1024px) {
   .mlb-matchup-body {
     grid-template-columns: 1fr;
@@ -806,7 +905,9 @@
 
   .mlb-team-details-grid,
   .mlb-starter-profile-grid,
-  .mlb-radar-grid {
+  .mlb-radar-grid,
+  .mlb-lineup-grid,
+  .mlb-backtest-summary {
     grid-template-columns: 1fr;
   }
 

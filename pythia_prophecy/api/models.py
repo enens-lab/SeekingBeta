@@ -555,6 +555,7 @@ class SportsBoardCollection(BaseModel):
 class SportsBoardsResponse(BaseModel):
     golf: SportsBoardCollection
     tennis: SportsBoardCollection
+    basketball: SportsBoardCollection
     mlb: SportsBoardCollection
 
 

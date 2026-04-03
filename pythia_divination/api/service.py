@@ -154,6 +154,9 @@ _MARKET_DATA_SYNC_TASK: Optional[asyncio.Task] = None
 _MLB_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _MLB_UPCOMING_BOARDS_LOCK = Lock()
 MLB_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("MLB_UPCOMING_CACHE_TTL_SECONDS", "900"))
+_BASKETBALL_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
+_BASKETBALL_UPCOMING_BOARDS_LOCK = Lock()
+BASKETBALL_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("BASKETBALL_UPCOMING_CACHE_TTL_SECONDS", "900"))
 
 LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
     "lstm_5d": {
@@ -208,6 +211,32 @@ def _load_live_mlb_upcoming_payload(force_refresh: bool = False, mlb_date: str |
             _MLB_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
         elif _MLB_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
             return dict(_MLB_UPCOMING_BOARDS_CACHE[cache_key][1])
+    return dict(payload)
+
+
+def _load_live_basketball_upcoming_payload(force_refresh: bool = False, basketball_date: str | None = None) -> dict[str, Any]:
+    global _BASKETBALL_UPCOMING_BOARDS_CACHE
+
+    now_ts = time.time()
+    cache_key = basketball_date or "__default__"
+    with _BASKETBALL_UPCOMING_BOARDS_LOCK:
+        if (
+            not force_refresh
+            and cache_key in _BASKETBALL_UPCOMING_BOARDS_CACHE
+            and now_ts - _BASKETBALL_UPCOMING_BOARDS_CACHE[cache_key][0] <= BASKETBALL_UPCOMING_CACHE_TTL_SECONDS
+        ):
+            return dict(_BASKETBALL_UPCOMING_BOARDS_CACHE[cache_key][1])
+
+    from scripts.export_basketball_frontend_data import build_live_upcoming_payload
+
+    payload = build_live_upcoming_payload(selected_date=basketball_date)
+    boards = payload.get("upcoming", [])
+
+    with _BASKETBALL_UPCOMING_BOARDS_LOCK:
+        if boards or cache_key not in _BASKETBALL_UPCOMING_BOARDS_CACHE:
+            _BASKETBALL_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
+        elif _BASKETBALL_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
+            return dict(_BASKETBALL_UPCOMING_BOARDS_CACHE[cache_key][1])
     return dict(payload)
 
 
@@ -1521,6 +1550,15 @@ async def api_live_mlb_boards(force_refresh: bool = False, mlb_date: str | None 
     except Exception as exc:
         logger.error("Live MLB board generation failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=503, detail="Live MLB boards are temporarily unavailable")
+
+
+@app.get("/api/sports/basketball/boards")
+async def api_live_basketball_boards(force_refresh: bool = False, basketball_date: str | None = None):
+    try:
+        return await run_in_threadpool(_load_live_basketball_upcoming_payload, force_refresh, basketball_date)
+    except Exception as exc:
+        logger.error("Live Basketball board generation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="Live Basketball boards are temporarily unavailable")
 
 
 # ---------- Auth Endpoints ----------

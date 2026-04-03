@@ -16,7 +16,7 @@ import {
 import { trackEvent } from '../../lib/analytics';
 import './SportsDashboard.css';
 
-type SportCategory = 'Golf' | 'Tennis' | 'NBA' | 'MLB' | 'NFL' | 'NHL';
+type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'MLB' | 'NFL' | 'NHL';
 
 const EMPTY_COLLECTION: SportsBoardCollection = {
   upcoming: [],
@@ -30,6 +30,7 @@ const EMPTY_COLLECTION: SportsBoardCollection = {
 const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   golf: EMPTY_COLLECTION,
   tennis: EMPTY_COLLECTION,
+  basketball: EMPTY_COLLECTION,
   mlb: EMPTY_COLLECTION,
 };
 
@@ -61,9 +62,10 @@ type MlbLineupCardProps = {
   teamDetails?: SportsTeamDetails;
   lineup?: SportsLineupPlayer[];
   emptyLabel: string;
+  summaryLabel?: string;
 };
 
-function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel }: MlbLineupCardProps) {
+function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel, summaryLabel = 'projected players' }: MlbLineupCardProps) {
   const players = lineup || [];
 
   return (
@@ -79,7 +81,7 @@ function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel }: MlbLineupC
           />
           <div>
             <h3>{teamName || 'Team lineup'}</h3>
-            <p>{players.length > 0 ? `${players.length} projected bats` : emptyLabel}</p>
+            <p>{players.length > 0 ? `${players.length} ${summaryLabel}` : emptyLabel}</p>
           </div>
         </div>
       </div>
@@ -123,7 +125,9 @@ function SportsDashboard() {
   const [tennisTourFilter, setTennisTourFilter] = useState<'All' | 'ATP' | 'WTA'>('All');
   const [golfTourFilter, setGolfTourFilter] = useState<'All' | 'PGA' | 'LPGA'>('All');
   const [requestedMlbDate, setRequestedMlbDate] = useState<string>('');
+  const [requestedBasketballDate, setRequestedBasketballDate] = useState<string>('');
   const [expandedMlbMatchupId, setExpandedMlbMatchupId] = useState<string>('');
+  const [expandedBasketballMatchupId, setExpandedBasketballMatchupId] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +136,10 @@ function SportsDashboard() {
       setBoardsLoading(true);
       setBoardsError(null);
       try {
-        const payload = await sports.getBoards(requestedMlbDate || undefined);
+        const payload = await sports.getBoards({
+          mlbDate: requestedMlbDate || undefined,
+          basketballDate: requestedBasketballDate || undefined,
+        });
         if (!cancelled) {
           setSportsBoards(payload);
         }
@@ -151,18 +158,19 @@ function SportsDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [requestedMlbDate]);
+  }, [requestedMlbDate, requestedBasketballDate]);
 
   const sportDataMap = useMemo(
     () => ({
       Golf: sportsBoards.golf,
       Tennis: sportsBoards.tennis,
+      Basketball: sportsBoards.basketball,
       MLB: sportsBoards.mlb,
     }),
     [sportsBoards]
   );
 
-  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'MLB'
+  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'MLB'
     ? sportDataMap[activeSport]
     : EMPTY_COLLECTION;
 
@@ -180,7 +188,7 @@ function SportsDashboard() {
   }, [activeSport, currentUpcoming, tennisTourFilter, golfTourFilter]);
 
   useEffect(() => {
-    if (activeSport === 'MLB') return;
+    if (activeSport === 'MLB' || activeSport === 'Basketball') return;
     if (!filteredUpcoming.length) {
       if (activeEventId !== '') {
         setActiveEventId('');
@@ -203,6 +211,17 @@ function SportsDashboard() {
     }
   }, [activeSport, currentUpcoming, expandedMlbMatchupId]);
 
+  useEffect(() => {
+    if (activeSport !== 'Basketball') return;
+    if (!currentUpcoming.length) {
+      setExpandedBasketballMatchupId('');
+      return;
+    }
+    if (!currentUpcoming.some((event) => event.id === expandedBasketballMatchupId)) {
+      setExpandedBasketballMatchupId(currentUpcoming[0].id);
+    }
+  }, [activeSport, currentUpcoming, expandedBasketballMatchupId]);
+
   const activeEvent = useMemo(
     () => filteredUpcoming.find((event) => event.id === activeEventId) || filteredUpcoming[0],
     [filteredUpcoming, activeEventId]
@@ -212,6 +231,11 @@ function SportsDashboard() {
   const maxProb = activeEvent ? Math.max(...activeEvent.predictions.map((prediction) => prediction.winProbability)) : 100;
   const mlbSelectedDate = sportData.selectedDate || requestedMlbDate || '';
   const mlbSelectedLabel = (sportData.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label || 'Next active slate';
+  const basketballSelectedDate = sportsBoards.basketball.selectedDate || requestedBasketballDate || '';
+  const basketballSelectedLabel =
+    (sportsBoards.basketball.availableDates || []).find((option) => option.dateKey === basketballSelectedDate)?.label ||
+    'Next active slate';
+  const isTeamSport = activeSport === 'MLB' || activeSport === 'Basketball';
 
   const displayedPredictions = useMemo(() => {
     if (activeSport === 'MLB') return [];
@@ -272,6 +296,12 @@ function SportsDashboard() {
     setRequestedMlbDate(value);
     setExpandedMlbMatchupId('');
     trackEvent('mlb_date_selector_change', { date: value });
+  };
+
+  const handleBasketballDateChange = (value: string) => {
+    setRequestedBasketballDate(value);
+    setExpandedBasketballMatchupId('');
+    trackEvent('basketball_date_selector_change', { date: value });
   };
 
   const renderGenericUpcomingBoard = () => {
@@ -464,7 +494,7 @@ function SportsDashboard() {
                       <div className="mlb-matchup-meta">
                         <span className="spotlight-tour-pill">MLB</span>
                         <span>{board.course}</span>
-                        <span>{board.predictionSource === 'heuristic_fallback' ? 'Fallback scorer' : 'Baseline model'}</span>
+                        <span>{board.predictionSource?.includes('heuristic_fallback') ? 'Fallback scorer' : 'Baseline model'}</span>
                       </div>
                       <h2>{board.name}</h2>
                       <p className="mlb-matchup-subtitle">
@@ -627,12 +657,14 @@ function SportsDashboard() {
                           teamDetails={board.awayTeamDetails}
                           lineup={board.awayLineup}
                           emptyLabel="Projected away lineup is still populating."
+                          summaryLabel="projected bats"
                         />
                         <MlbLineupCard
                           teamName={board.homeTeam}
                           teamDetails={board.homeTeamDetails}
                           lineup={board.homeLineup}
                           emptyLabel="Projected home lineup is still populating."
+                          summaryLabel="projected bats"
                         />
                       </div>
 
@@ -661,6 +693,207 @@ function SportsDashboard() {
     );
   };
 
+  const renderBasketballUpcomingBoard = () => {
+    const availableDates = sportsBoards.basketball.availableDates || [];
+
+    return (
+      <div className="upcoming-events-container">
+        <div className="event-selector event-selector-mlb">
+          <div className="selector-group selector-group-primary">
+            <label>Select Basketball slate:</label>
+            <select
+              value={basketballSelectedDate}
+              onChange={(event) => handleBasketballDateChange(event.target.value)}
+              className="tournament-dropdown"
+            >
+              {availableDates.map((dateOption) => (
+                <option key={dateOption.dateKey} value={dateOption.dateKey}>
+                  {dateOption.label} | {dateOption.gameCount} games
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mlb-slate-summary">
+            <span className="mlb-slate-badge">Single-day board</span>
+            <p>Showing every Basketball matchup for {basketballSelectedLabel}.</p>
+          </div>
+        </div>
+
+        {!currentUpcoming.length ? (
+          <div className="tournament-card no-live-board-card">
+            <div className="tournament-header">
+              <div className="header-left">
+                <h2>No Basketball games found for this slate</h2>
+                <span className="market-status staged">Live schedule filtered</span>
+              </div>
+            </div>
+            <div className="tournament-details">
+              <p>We only show boards for the selected date. If there are no games today, pick the next active slate from the selector above.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mlb-board-list">
+            {currentUpcoming.map((board) => {
+              const awayProb = probabilityForSide(board, 'away');
+              const homeProb = probabilityForSide(board, 'home');
+              const predictedSide = awayProb > homeProb ? 'away' : 'home';
+              const predictedTeam = predictedSide === 'away' ? board.awayTeam : board.homeTeam;
+              const expanded = expandedBasketballMatchupId === board.id;
+
+              return (
+                <article key={board.id} className={`mlb-matchup-card ${expanded ? 'expanded' : ''}`}>
+                  <div className="mlb-matchup-top">
+                    <div className="mlb-matchup-copy">
+                      <div className="mlb-matchup-meta">
+                        <span className="spotlight-tour-pill">{board.tour}</span>
+                        <span>{board.course}</span>
+                        <span>{board.predictionSource?.includes('heuristic_fallback') ? 'Fallback scorer' : 'Baseline model'}</span>
+                      </div>
+                      <h2>{board.name}</h2>
+                      <p className="mlb-matchup-subtitle">
+                        Expected rotation strength and availability heading into tip-off.
+                      </p>
+                    </div>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setExpandedBasketballMatchupId(expanded ? '' : board.id)}
+                    >
+                      {expanded ? 'Hide details' : 'Show details'}
+                    </button>
+                  </div>
+
+                  <div className="mlb-matchup-body">
+                    <div className="mlb-team-column">
+                      <div className="mlb-team-header">
+                        <TeamLogo
+                          logoUrl={board.awayTeamDetails?.logoUrl}
+                          label={board.awayTeam || 'Away'}
+                          abbreviation={board.awayTeamDetails?.abbreviation}
+                          primaryColor={board.awayTeamDetails?.primaryColor}
+                          size="md"
+                        />
+                        <div>
+                          <div className="mlb-team-name">{board.awayTeam}</div>
+                          <div className="mlb-team-subtext">{board.awayTeamDetails?.recordPrior || 'Record pending'}</div>
+                        </div>
+                      </div>
+                      <div className="mlb-probability-stack">
+                        <strong>{awayProb.toFixed(1)}%</strong>
+                        <span>away win probability</span>
+                      </div>
+                      <div className="mlb-context-chip-grid">
+                        <span className="mlb-context-chip">{board.awayTeamDetails?.recentForm || 'Form pending'}</span>
+                        <span className="mlb-context-chip">{board.awayTeamDetails?.availabilitySummary || 'Rotation stable'}</span>
+                      </div>
+                    </div>
+
+                    <div className="mlb-matchup-middle">
+                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-vs-marker">vs</div>
+                      <div className="mlb-middle-notes">
+                        <span>{board.homeTeamDetails?.venue || board.course}</span>
+                        <span>{board.homeTeamDetails?.lineupContinuity || 'Continuity pending'}</span>
+                      </div>
+                    </div>
+
+                    <div className="mlb-team-column align-right">
+                      <div className="mlb-team-header team-header-right">
+                        <div>
+                          <div className="mlb-team-name">{board.homeTeam}</div>
+                          <div className="mlb-team-subtext">{board.homeTeamDetails?.recordPrior || 'Record pending'}</div>
+                        </div>
+                        <TeamLogo
+                          logoUrl={board.homeTeamDetails?.logoUrl}
+                          label={board.homeTeam || 'Home'}
+                          abbreviation={board.homeTeamDetails?.abbreviation}
+                          primaryColor={board.homeTeamDetails?.primaryColor}
+                          size="md"
+                        />
+                      </div>
+                      <div className="mlb-probability-stack">
+                        <strong>{homeProb.toFixed(1)}%</strong>
+                        <span>home win probability</span>
+                      </div>
+                      <div className="mlb-context-chip-grid">
+                        <span className="mlb-context-chip">{board.homeTeamDetails?.recentForm || 'Form pending'}</span>
+                        <span className="mlb-context-chip">{board.homeTeamDetails?.availabilitySummary || 'Rotation stable'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {expanded && (
+                    <div className="mlb-expanded-panel">
+                      <div className="mlb-team-details-grid">
+                        <div className="mlb-team-detail-card">
+                          <div className="mlb-team-detail-heading">
+                            <TeamLogo
+                              logoUrl={board.awayTeamDetails?.logoUrl}
+                              label={board.awayTeam || 'Away'}
+                              abbreviation={board.awayTeamDetails?.abbreviation}
+                              primaryColor={board.awayTeamDetails?.primaryColor}
+                              size="sm"
+                            />
+                            <div>
+                              <h3>{board.awayTeam}</h3>
+                              <p>{board.awayTeamDetails?.recordPrior || 'Record pending'}</p>
+                            </div>
+                          </div>
+                          <ul className="mlb-detail-list">
+                            <li><span>Recent form</span><strong>{board.awayTeamDetails?.recentForm || 'Pending'}</strong></li>
+                            <li><span>Availability</span><strong>{board.awayTeamDetails?.availabilitySummary || 'Pending'}</strong></li>
+                            <li><span>Lineup continuity</span><strong>{board.awayTeamDetails?.lineupContinuity || 'Pending'}</strong></li>
+                          </ul>
+                        </div>
+
+                        <div className="mlb-team-detail-card">
+                          <div className="mlb-team-detail-heading">
+                            <TeamLogo
+                              logoUrl={board.homeTeamDetails?.logoUrl}
+                              label={board.homeTeam || 'Home'}
+                              abbreviation={board.homeTeamDetails?.abbreviation}
+                              primaryColor={board.homeTeamDetails?.primaryColor}
+                              size="sm"
+                            />
+                            <div>
+                              <h3>{board.homeTeam}</h3>
+                              <p>{board.homeTeamDetails?.recordPrior || 'Record pending'}</p>
+                            </div>
+                          </div>
+                          <ul className="mlb-detail-list">
+                            <li><span>Recent form</span><strong>{board.homeTeamDetails?.recentForm || 'Pending'}</strong></li>
+                            <li><span>Availability</span><strong>{board.homeTeamDetails?.availabilitySummary || 'Pending'}</strong></li>
+                            <li><span>Lineup continuity</span><strong>{board.homeTeamDetails?.lineupContinuity || 'Pending'}</strong></li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="mlb-lineup-grid">
+                        <MlbLineupCard
+                          teamName={board.awayTeam}
+                          teamDetails={board.awayTeamDetails}
+                          lineup={board.awayLineup}
+                          emptyLabel="Projected away rotation is still populating."
+                          summaryLabel="projected rotation"
+                        />
+                        <MlbLineupCard
+                          teamName={board.homeTeam}
+                          teamDetails={board.homeTeamDetails}
+                          lineup={board.homeLineup}
+                          emptyLabel="Projected home rotation is still populating."
+                          summaryLabel="projected rotation"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard-page sports-dashboard">
       <DashboardHeader activePage="sports" />
@@ -670,7 +903,7 @@ function SportsDashboard() {
           <div>
             <h1>Sports Prediction Boards</h1>
             <p className="subtitle">
-              Scan live-looking probability boards and model replays across golf, tennis, and baseball without any betting or trading layer.
+              Scan live boards and past results across golf, tennis, Basketball, and baseball without any betting or trading layer.
             </p>
           </div>
           {sportUpdatedAt && (
@@ -689,8 +922,8 @@ function SportsDashboard() {
             <button className={`sport-tab ${activeSport === 'Tennis' ? 'active' : ''}`} onClick={() => handleSportChange('Tennis')}>
               Tennis
             </button>
-            <button className={`sport-tab ${activeSport === 'NBA' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NBA')}>
-              NBA <span className="badge-tbd">TBD</span>
+            <button className={`sport-tab ${activeSport === 'Basketball' ? 'active' : ''}`} onClick={() => handleSportChange('Basketball')}>
+              Basketball
             </button>
             <button className={`sport-tab ${activeSport === 'MLB' ? 'active' : ''}`} onClick={() => handleSportChange('MLB')}>
               MLB
@@ -705,7 +938,7 @@ function SportsDashboard() {
         </div>
 
         <div className="sports-content">
-          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'MLB') ? (
+          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'MLB') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
                 <button className={`toggle-btn ${activeTab === 'upcoming' ? 'active' : ''}`} onClick={() => setActiveTab('upcoming')}>
@@ -737,7 +970,7 @@ function SportsDashboard() {
                   </div>
                 </div>
               ) : activeTab === 'upcoming' ? (
-                activeSport === 'MLB' ? renderMlbUpcomingBoard() : renderGenericUpcomingBoard()
+                activeSport === 'MLB' ? renderMlbUpcomingBoard() : activeSport === 'Basketball' ? renderBasketballUpcomingBoard() : renderGenericUpcomingBoard()
               ) : (
                 <div className="backtest-container">
                   <div className="backtest-header-area">
@@ -746,7 +979,9 @@ function SportsDashboard() {
                       <p className="backtest-desc">
                         {activeSport === 'MLB'
                           ? "Review historical MLB game boards and compare the model's top side against the actual winner."
-                          : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
+                          : activeSport === 'Basketball'
+                            ? "Review historical Basketball game boards and compare the model's top side against the actual winner."
+                            : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
                       </p>
                     </div>
                     <div className="backtest-filters">
@@ -774,7 +1009,7 @@ function SportsDashboard() {
                       )}
                       <input
                         type="text"
-                        placeholder={activeSport === 'MLB' ? 'Search matchup or winner...' : 'Search tournament or winner...'}
+                        placeholder={isTeamSport ? 'Search matchup or winner...' : 'Search tournament or winner...'}
                         value={backtestSearchQuery}
                         onChange={(event) => setBacktestSearchQuery(event.target.value)}
                         className="sports-search-input"
@@ -799,8 +1034,8 @@ function SportsDashboard() {
                     <div className="backtest-table">
                       <div className="backtest-header">
                         <span>Year</span>
-                        <span>{activeSport === 'MLB' ? 'Matchup' : 'Tournament'}</span>
-                        <span>{activeSport === 'MLB' ? 'Predicted Side' : 'Top Predicted Picks'}</span>
+                        <span>{isTeamSport ? 'Matchup' : 'Tournament'}</span>
+                        <span>{isTeamSport ? 'Predicted Side' : 'Top Predicted Picks'}</span>
                         <span>Actual Winner</span>
                         <span>Result</span>
                         <span>Details</span>
@@ -811,10 +1046,10 @@ function SportsDashboard() {
                             <span>{backtest.year}</span>
                             <div className="tournament-info-col">
                               <strong>{backtest.tournament}</strong>
-                              <div className="tour-label">{activeSport === 'MLB' ? backtest.venue : backtest.tour}</div>
+                              <div className="tour-label">{isTeamSport ? backtest.venue : backtest.tour}</div>
                             </div>
                             <div className="top-picks-col">
-                              {activeSport === 'MLB' ? (
+                              {isTeamSport ? (
                                 <>
                                   <strong>{backtest.predictedWinner}</strong> <small>({((backtest.prob || 0) * 100).toFixed(1)}%)</small><br />
                                   <small>{backtest.awayTeam} at {backtest.homeTeam}</small>
@@ -838,9 +1073,9 @@ function SportsDashboard() {
 
                           {expandedBacktest === idx && (
                             <div className="backtest-details-panel">
-                              {activeSport === 'MLB' ? (
+                              {isTeamSport ? (
                                 <>
-                                  <h4>Game Details</h4>
+                                  <h4>{activeSport} Game Details</h4>
                                   <div className="mlb-backtest-summary">
                                     <div className="mlb-backtest-summary-column">
                                       <span className="mlb-summary-label">Predicted side</span>
@@ -854,34 +1089,38 @@ function SportsDashboard() {
                                     </div>
                                   </div>
 
-                                  <div className="mlb-starter-profile-grid">
-                                    <div className="mlb-starter-profile-card">
-                                      <PlayerProfileCard
-                                        name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
-                                        profile={backtest.awayStarterProfile}
-                                      />
+                                  {activeSport === 'MLB' ? (
+                                    <div className="mlb-starter-profile-grid">
+                                      <div className="mlb-starter-profile-card">
+                                        <PlayerProfileCard
+                                          name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
+                                          profile={backtest.awayStarterProfile}
+                                        />
+                                      </div>
+                                      <div className="mlb-starter-profile-card">
+                                        <PlayerProfileCard
+                                          name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
+                                          profile={backtest.homeStarterProfile}
+                                          align="right"
+                                        />
+                                      </div>
                                     </div>
-                                    <div className="mlb-starter-profile-card">
-                                      <PlayerProfileCard
-                                        name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
-                                        profile={backtest.homeStarterProfile}
-                                        align="right"
-                                      />
-                                    </div>
-                                  </div>
+                                  ) : null}
 
                                   <div className="mlb-lineup-grid">
                                     <MlbLineupCard
                                       teamName={backtest.awayTeam}
                                       teamDetails={backtest.awayTeamDetails}
                                       lineup={backtest.awayLineup}
-                                      emptyLabel="Historical away lineup details were not available."
+                                      emptyLabel={activeSport === 'MLB' ? 'Historical away lineup details were not available.' : 'Historical away rotation details were not available.'}
+                                      summaryLabel={activeSport === 'MLB' ? 'recorded bats' : 'rotation players'}
                                     />
                                     <MlbLineupCard
                                       teamName={backtest.homeTeam}
                                       teamDetails={backtest.homeTeamDetails}
                                       lineup={backtest.homeLineup}
-                                      emptyLabel="Historical home lineup details were not available."
+                                      emptyLabel={activeSport === 'MLB' ? 'Historical home lineup details were not available.' : 'Historical home rotation details were not available.'}
+                                      summaryLabel={activeSport === 'MLB' ? 'recorded bats' : 'rotation players'}
                                     />
                                   </div>
                                 </>

@@ -26,6 +26,12 @@ def test_imports():
     import sports.mlb.ingest_history
     import sports.mlb.train_baseline
     import sports.mlb.train_torch
+    import sports.basketball.client
+    import sports.basketball.feature_engineering
+    import sports.basketball.ingest_history
+    import sports.basketball.rotation_features
+    import sports.basketball.build_training_dataset
+    import sports.basketball.train_baseline
     import sports.wta.build_training_dataset
     import sports.wta.feature_engineering
     import sports.wta.ingest

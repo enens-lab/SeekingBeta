@@ -16,6 +16,7 @@ import './SportsLanding.css';
 const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
   tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
+  basketball: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
   mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
 };
 
@@ -49,6 +50,7 @@ function SportsLanding() {
   const [boardsLoading, setBoardsLoading] = useState(true);
   const [boardsError, setBoardsError] = useState<string | null>(null);
   const [requestedMlbDate, setRequestedMlbDate] = useState<string>('');
+  const [requestedBasketballDate, setRequestedBasketballDate] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +59,10 @@ function SportsLanding() {
       setBoardsLoading(true);
       setBoardsError(null);
       try {
-        const payload = await sports.getBoards(requestedMlbDate || undefined);
+        const payload = await sports.getBoards({
+          mlbDate: requestedMlbDate || undefined,
+          basketballDate: requestedBasketballDate || undefined,
+        });
         if (!cancelled) {
           setSportsBoards(payload);
         }
@@ -76,13 +81,15 @@ function SportsLanding() {
     return () => {
       cancelled = true;
     };
-  }, [requestedMlbDate]);
+  }, [requestedMlbDate, requestedBasketballDate]);
 
   const golfEvents = sportsBoards.golf.upcoming;
   const tennisEvents = sportsBoards.tennis.upcoming;
+  const basketballEvents = sportsBoards.basketball.upcoming;
   const mlbEvents = sportsBoards.mlb.upcoming;
   const golfHistory = sportsBoards.golf.backtests;
   const tennisHistory = sportsBoards.tennis.backtests;
+  const basketballHistory = sportsBoards.basketball.backtests;
   const mlbHistory = sportsBoards.mlb.backtests;
 
   const spotlightBoards: SpotlightBoard[] = useMemo(
@@ -102,14 +109,14 @@ function SportsLanding() {
         accent: 'blue',
       },
       {
-        label: 'MLB Board',
-        eyebrow: 'MLB',
-        description: "Today's MLB games with starters, teams, and simple win numbers.",
-        event: mlbEvents[0] || fallbackReplayEvent(mlbHistory[0]),
+        label: 'Basketball Board',
+        eyebrow: 'Men + Women',
+        description: 'Same-day Basketball games with team form, lineup strength, and a clear top side.',
+        event: basketballEvents[0] || fallbackReplayEvent(basketballHistory[0]),
         accent: 'orange',
       },
     ],
-    [golfEvents, tennisEvents, mlbEvents, mlbHistory]
+    [golfEvents, tennisEvents, basketballEvents, basketballHistory]
   );
 
   const sportsCoverage = [
@@ -134,6 +141,11 @@ function SportsLanding() {
       summary: "Women's tennis events with clear favorites and past results beside them.",
     },
     {
+      title: 'Basketball',
+      status: 'Live now',
+      summary: "Today's men and women's Basketball games with team notes, projected rotation strength, and win numbers.",
+    },
+    {
       title: 'MLB',
       status: 'Live now',
       summary: "Today's MLB games with starter info, team notes, and win numbers.",
@@ -141,18 +153,22 @@ function SportsLanding() {
     {
       title: 'Other Team Sports',
       status: 'Coming next',
-      summary: 'NBA, NFL, and NHL are next.',
+      summary: 'NFL and NHL are next.',
     },
   ];
 
-  const totalBoards = golfEvents.length + tennisEvents.length + mlbEvents.length;
-  const totalBacktests = golfHistory.length + tennisHistory.length + mlbHistory.length;
+  const totalBoards = golfEvents.length + tennisEvents.length + basketballEvents.length + mlbEvents.length;
+  const totalBacktests = golfHistory.length + tennisHistory.length + basketballHistory.length + mlbHistory.length;
   const totalTours = new Set(
-    [...golfEvents, ...tennisEvents, ...mlbEvents, ...golfHistory, ...tennisHistory, ...mlbHistory].map((item) => item.tour),
+    [...golfEvents, ...tennisEvents, ...basketballEvents, ...mlbEvents, ...golfHistory, ...tennisHistory, ...basketballHistory, ...mlbHistory].map((item) => item.tour),
   ).size;
   const totalTrackedEntrants = spotlightBoards.reduce((sum, board) => sum + (board.event?.predictions.length ?? 0), 0);
   const mlbSelectedDate = sportsBoards.mlb.selectedDate || requestedMlbDate || '';
   const mlbSelectedLabel = (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label || 'Next active MLB slate';
+  const basketballSelectedDate = sportsBoards.basketball.selectedDate || requestedBasketballDate || '';
+  const basketballSelectedLabel =
+    (sportsBoards.basketball.availableDates || []).find((option) => option.dateKey === basketballSelectedDate)?.label ||
+    'Next active Basketball slate';
 
   return (
     <>
@@ -165,7 +181,7 @@ function SportsLanding() {
               <span className="sports-badge">Sports</span>
               <h1 className="sports-title">See today&apos;s sports picks in one place.</h1>
               <p className="sports-subtitle">
-                Check golf, tennis, and MLB on one page. See the top picks, the live matchups, and the past results.
+                Check golf, tennis, Basketball, and MLB on one page. See the top picks, the live matchups, and the past results.
               </p>
 
               <div className="sports-hero-tags">
@@ -173,6 +189,7 @@ function SportsLanding() {
                 <span>LPGA</span>
                 <span>ATP</span>
                 <span>WTA</span>
+                <span>Basketball</span>
                 <span>MLB</span>
               </div>
 
@@ -301,6 +318,110 @@ function SportsLanding() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="mlb-slate-section">
+          <div className="section-heading">
+            <span className="section-kicker">Basketball Today</span>
+            <h2>All Basketball games for the same day.</h2>
+            <p>
+              Pick a date, see every game, and open the full dashboard when you want lineup-level detail.
+            </p>
+          </div>
+
+          <div className="mlb-slate-shell">
+            <div className="mlb-slate-toolbar">
+              <div className="mlb-date-pill-row">
+                {(sportsBoards.basketball.availableDates || []).map((dateOption) => (
+                  <button
+                    key={dateOption.dateKey}
+                    className={`mlb-date-pill ${dateOption.dateKey === basketballSelectedDate ? 'active' : ''}`}
+                    onClick={() => {
+                      setRequestedBasketballDate(dateOption.dateKey);
+                      trackEvent('sports_landing_basketball_date_click', { date: dateOption.dateKey });
+                    }}
+                  >
+                    <span>{dateOption.label}</span>
+                    <strong>{dateOption.gameCount} games</strong>
+                  </button>
+                ))}
+              </div>
+              <div className="mlb-slate-copy">
+                <span className="sports-runtime-pill">Selected day</span>
+                <p>{basketballSelectedLabel}</p>
+              </div>
+            </div>
+
+            {boardsLoading ? (
+              <div className="spotlight-empty-state">Loading today&apos;s Basketball games...</div>
+            ) : basketballEvents.length === 0 ? (
+              <div className="spotlight-empty-state">No Basketball games are available for that date right now.</div>
+            ) : (
+              <div className="mlb-slate-grid">
+                {basketballEvents.map((board) => {
+                  const awayProb = probabilityForSide(board, 'away');
+                  const homeProb = probabilityForSide(board, 'home');
+                  return (
+                    <article key={board.id} className="mlb-slate-card">
+                      <div className="mlb-slate-card-top">
+                        <span className="spotlight-tour-pill">{board.tour}</span>
+                        <span>{board.course}</span>
+                      </div>
+
+                      <div className="mlb-slate-team-row">
+                        <div className="mlb-slate-team">
+                          <TeamLogo
+                            logoUrl={board.awayTeamDetails?.logoUrl}
+                            label={board.awayTeam || 'Away'}
+                            abbreviation={board.awayTeamDetails?.abbreviation}
+                            primaryColor={board.awayTeamDetails?.primaryColor}
+                            size="sm"
+                          />
+                          <div>
+                            <strong>{board.awayTeam}</strong>
+                            <span>{board.awayTeamDetails?.recordPrior || 'Record pending'}</span>
+                          </div>
+                        </div>
+                        <div className="mlb-slate-prob">{awayProb.toFixed(1)}%</div>
+                      </div>
+
+                      <div className="mlb-slate-team-row">
+                        <div className="mlb-slate-team">
+                          <TeamLogo
+                            logoUrl={board.homeTeamDetails?.logoUrl}
+                            label={board.homeTeam || 'Home'}
+                            abbreviation={board.homeTeamDetails?.abbreviation}
+                            primaryColor={board.homeTeamDetails?.primaryColor}
+                            size="sm"
+                          />
+                          <div>
+                            <strong>{board.homeTeam}</strong>
+                            <span>{board.homeTeamDetails?.recordPrior || 'Record pending'}</span>
+                          </div>
+                        </div>
+                        <div className="mlb-slate-prob">{homeProb.toFixed(1)}%</div>
+                      </div>
+
+                      <div className="mlb-slate-foot">
+                        <span>{board.homeTeamDetails?.recentForm || 'Form pending'}</span>
+                        <span>{board.homeTeamDetails?.availabilitySummary || 'Rotation mostly intact'}</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="mlb-slate-cta">
+              <Link
+                to="/sports-dashboard"
+                className="btn btn-primary"
+                onClick={() => trackEvent('sports_landing_cta_click', { destination: 'sports_dashboard', sport: 'basketball' })}
+              >
+                Open Basketball Dashboard
+              </Link>
+            </div>
+          </div>
         </section>
 
         <section className="mlb-slate-section">

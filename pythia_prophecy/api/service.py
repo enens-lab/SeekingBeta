@@ -1280,6 +1280,43 @@ async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[Sp
         return None
 
 
+async def _live_basketball_board_collection(basketball_date: str | None = None) -> Optional[SportsBoardCollection]:
+    backtests_filename = "basketball_historical_backtests.json"
+    backtests = _load_sports_json(backtests_filename)
+    fallback_updated_at = _sports_data_updated_at([backtests_filename])
+
+    try:
+        async with httpx.AsyncClient(timeout=SPORTS_MLB_BOARDS_TIMEOUT_SECONDS) as client:
+            params = {"basketball_date": basketball_date} if basketball_date else None
+            response = await client.get(f"{DIVINATION_API_URL}/api/sports/basketball/boards", params=params)
+            response.raise_for_status()
+            payload = response.json()
+            upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            if isinstance(upcoming, list) and not upcoming:
+                refresh_response = await client.get(
+                    f"{DIVINATION_API_URL}/api/sports/basketball/boards",
+                    params={"force_refresh": "true", **({"basketball_date": basketball_date} if basketball_date else {})},
+                )
+                refresh_response.raise_for_status()
+                payload = refresh_response.json()
+                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
+        if not isinstance(upcoming, list):
+            return None
+        updated_at = _to_utc_datetime(updated_at_raw) or fallback_updated_at
+        return SportsBoardCollection(
+            upcoming=upcoming,
+            backtests=backtests,
+            updated_at=updated_at,
+            source=str(payload.get("source") or "divination_live_basketball_feed"),
+            selectedDate=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
+            availableDates=payload.get("availableDates") or [],
+        )
+    except Exception as exc:
+        logger.warning("Falling back to cached Basketball board feed: %s", exc)
+        return None
+
+
 def _extract_client_ip(request: Request) -> Optional[str]:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -3791,7 +3828,7 @@ def performance_curve(model: str = Query("lstm_5d")):
 
 
 @app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
-async def sports_boards(mlb_date: str | None = Query(None)):
+async def sports_boards(mlb_date: str | None = Query(None), basketball_date: str | None = Query(None)):
     """Runtime-filtered sports boards for public marketing and dashboard surfaces."""
     golf = _sports_board_collection(
         upcoming_filename="upcoming_tournaments.json",
@@ -3803,6 +3840,14 @@ async def sports_boards(mlb_date: str | None = Query(None)):
         backtests_filename="wta_historical_backtests.json",
         sport="tennis",
     )
+    basketball = await _live_basketball_board_collection(basketball_date=basketball_date)
+    if basketball is None:
+        basketball = _sports_board_collection(
+            upcoming_filename="basketball_upcoming_tournaments.json",
+            backtests_filename="basketball_historical_backtests.json",
+            sport="basketball",
+            selected_date=basketball_date,
+        )
     mlb = await _live_mlb_board_collection(mlb_date=mlb_date)
     if mlb is None:
         mlb = _sports_board_collection(
@@ -3812,7 +3857,7 @@ async def sports_boards(mlb_date: str | None = Query(None)):
             selected_date=mlb_date,
         )
 
-    return SportsBoardsResponse(golf=golf, tennis=tennis, mlb=mlb)
+    return SportsBoardsResponse(golf=golf, tennis=tennis, basketball=basketball, mlb=mlb)
 
 
 # ============================================================

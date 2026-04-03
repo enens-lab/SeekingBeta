@@ -13,15 +13,16 @@ import { trackEvent } from '../lib/analytics';
 const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
   tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
+  basketball: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
   mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
 };
 
 type SpotlightBoard = {
-  key: 'golf' | 'tennis';
+  key: 'golf' | 'tennis' | 'basketball';
   eyebrow: string;
   description: string;
   event?: SportsUpcomingBoard;
-  accent: 'teal' | 'blue';
+  accent: 'teal' | 'blue' | 'orange';
   cta: string;
 };
 
@@ -105,6 +106,14 @@ function SportsPreview() {
         accent: 'blue',
         cta: 'Open tennis page',
       },
+      {
+        key: 'basketball',
+        eyebrow: 'Men + Women',
+        description: 'A quick look at the next Basketball slate and the side the model likes.',
+        event: sportsBoards.basketball.upcoming[0] || fallbackReplayEvent(sportsBoards.basketball.backtests[0]),
+        accent: 'orange',
+        cta: 'Open Basketball page',
+      },
     ],
     [sportsBoards]
   );
@@ -115,7 +124,7 @@ function SportsPreview() {
     (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label ||
     'Next active MLB slate';
   const runtimeStamp = updatedLabel(
-    sportsBoards.golf.updated_at || sportsBoards.tennis.updated_at || sportsBoards.mlb.updated_at
+    sportsBoards.golf.updated_at || sportsBoards.tennis.updated_at || sportsBoards.basketball.updated_at || sportsBoards.mlb.updated_at
   );
 
   return (
@@ -125,7 +134,7 @@ function SportsPreview() {
           <span className="section-kicker">Sports</span>
           <h2 className="section-title">See today&apos;s sports boards at a glance.</h2>
           <p className="section-subtitle">
-            A quick look at golf, tennis, and MLB.
+            A quick look at golf, tennis, Basketball, and MLB.
           </p>
         </div>
         <div className="sports-home-actions">

@@ -1,0 +1,4745 @@
+[
+  {
+    "id": "basketball-nba-0022501120",
+    "name": "Pacers at Hornets",
+    "tour": "Basketball",
+    "course": "Spectrum Center",
+    "venue": "Spectrum Center",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Pacers",
+    "awayTeam": "Pacers",
+    "homeTeam": "Hornets",
+    "awayTeamDetails": {
+      "teamId": 1610612754,
+      "abbreviation": "IND",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612754/global/L/logo.svg",
+      "recordPrior": "49-32",
+      "recentForm": "4-1 last 5 | +7.5 net | 119.6 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Spectrum Center"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612766,
+      "abbreviation": "CHA",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612766/global/L/logo.svg",
+      "recordPrior": "19-62",
+      "recentForm": "0-5 last 5 | -15.7 net | 101.8 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Spectrum Center"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1629614,
+        "playerName": "Andrew Nembhard",
+        "lineupSlot": 1,
+        "position": null,
+        "performanceSummary": "32.9 min | 16.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "32.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "16.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627783,
+        "playerName": "Pascal Siakam",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "31.4 min | 22.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "31.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "22.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630174,
+        "playerName": "Aaron Nesmith",
+        "lineupSlot": 3,
+        "position": null,
+        "performanceSummary": "25.5 min | 12.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1626167,
+        "playerName": "Myles Turner",
+        "lineupSlot": 4,
+        "position": "C",
+        "performanceSummary": "25.0 min | 15.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641716,
+        "playerName": "Jarace Walker",
+        "lineupSlot": 5,
+        "position": null,
+        "performanceSummary": "20.4 min | 12.2 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.2"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630643,
+        "playerName": "Jay Huff",
+        "lineupSlot": 6,
+        "position": "C",
+        "performanceSummary": "22.8 min | 8.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.0"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631245,
+        "playerName": "Quenton Jackson",
+        "lineupSlot": 7,
+        "position": "PG",
+        "performanceSummary": "11.2 min | 4.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "11.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "4.6"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628418,
+        "playerName": "Thomas Bryant",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "10.7 min | 4.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "10.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "4.2"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630164,
+        "playerName": "James Wiseman",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "9.4 min | 2.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "9.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "2.0"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1641706,
+        "playerName": "Brandon Miller",
+        "lineupSlot": 1,
+        "position": "SG",
+        "performanceSummary": "31.0 min | 20.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "31.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "20.2"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642851,
+        "playerName": "Kon Knueppel",
+        "lineupSlot": 2,
+        "position": "SF",
+        "performanceSummary": "30.1 min | 14.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630163,
+        "playerName": "LaMelo Ball",
+        "lineupSlot": 3,
+        "position": "PG",
+        "performanceSummary": "30.0 min | 19.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628970,
+        "playerName": "Miles Bridges",
+        "lineupSlot": 4,
+        "position": "PF",
+        "performanceSummary": "27.7 min | 14.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631217,
+        "playerName": "Moussa Diabat\u00e9",
+        "lineupSlot": 5,
+        "position": "C",
+        "performanceSummary": "26.2 min | 8.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629610,
+        "playerName": "DaQuan Jeffries",
+        "lineupSlot": 6,
+        "position": "SG",
+        "performanceSummary": "28.1 min | 6.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "28.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203995,
+        "playerName": "Vasilije Mici\u0107",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "27.0 min | 11.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629006,
+        "playerName": "Josh Okogie",
+        "lineupSlot": 8,
+        "position": "SF",
+        "performanceSummary": "13.7 min | 7.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "13.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.0"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641733,
+        "playerName": "Nick Smith Jr.",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "18.1 min | 10.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "18.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.6"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Pacers",
+        "winProbability": 99.20138863133295,
+        "side": "away",
+        "profile": {
+          "subtitle": "4-1 last 5 | +7.5 net | 119.6 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "60%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+7.5"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Hornets",
+        "winProbability": 0.7986113686670601,
+        "side": "home",
+        "profile": {
+          "subtitle": "0-5 last 5 | -15.7 net | 101.8 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "23%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-15.7"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501121",
+    "name": "Timberwolves at 76ers",
+    "tour": "Basketball",
+    "course": "Xfinity Mobile Arena",
+    "venue": "Xfinity Mobile Arena",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Timberwolves",
+    "awayTeam": "Timberwolves",
+    "homeTeam": "76ers",
+    "awayTeamDetails": {
+      "teamId": 1610612750,
+      "abbreviation": "MIN",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612750/global/L/logo.svg",
+      "recordPrior": "48-33",
+      "recentForm": "4-1 last 5 | +11.7 net | 116.0 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Xfinity Mobile Arena"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612755,
+      "abbreviation": "PHI",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612755/global/L/logo.svg",
+      "recordPrior": "24-57",
+      "recentForm": "1-4 last 5 | -10.1 net | 111.8 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Xfinity Mobile Arena"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 203944,
+        "playerName": "Julius Randle",
+        "lineupSlot": 1,
+        "position": "SF",
+        "performanceSummary": "34.0 min | 17.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "34.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628978,
+        "playerName": "Donte DiVincenzo",
+        "lineupSlot": 2,
+        "position": "SG",
+        "performanceSummary": "33.0 min | 15.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203497,
+        "playerName": "Rudy Gobert",
+        "lineupSlot": 3,
+        "position": "C",
+        "performanceSummary": "30.6 min | 13.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630245,
+        "playerName": "Ayo Dosunmu",
+        "lineupSlot": 4,
+        "position": "PF",
+        "performanceSummary": "20.8 min | 10.4 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.4"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 201144,
+        "playerName": "Mike Conley",
+        "lineupSlot": 5,
+        "position": "PG",
+        "performanceSummary": "12.9 min | 1.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "12.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "1.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630545,
+        "playerName": "Terrence Shannon Jr.",
+        "lineupSlot": 6,
+        "position": null,
+        "performanceSummary": "9.0 min | 2.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "9.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "2.4"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630538,
+        "playerName": "Bones Hyland",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "26.1 min | 13.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.2"
+            },
+            {
+              "label": "Start %",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629638,
+        "playerName": "Nickeil Alexander-Walker",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "23.4 min | 8.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.8"
+            },
+            {
+              "label": "Start %",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629675,
+        "playerName": "Naz Reid",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "21.2 min | 9.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "21.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.0"
+            },
+            {
+              "label": "Start %",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1642845,
+        "playerName": "VJ Edgecombe",
+        "lineupSlot": 1,
+        "position": "SG",
+        "performanceSummary": "33.8 min | 21.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "21.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630215,
+        "playerName": "Jared Butler",
+        "lineupSlot": 2,
+        "position": "PG",
+        "performanceSummary": "29.4 min | 15.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.2"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631230,
+        "playerName": "Dominick Barlow",
+        "lineupSlot": 3,
+        "position": "SF",
+        "performanceSummary": "16.7 min | 3.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "16.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "3.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629022,
+        "playerName": "Lonnie Walker IV",
+        "lineupSlot": 4,
+        "position": "SF",
+        "performanceSummary": "29.3 min | 17.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630542,
+        "playerName": "Marcus Bagley",
+        "lineupSlot": 5,
+        "position": "PF",
+        "performanceSummary": "25.8 min | 9.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.0"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203954,
+        "playerName": "Joel Embiid",
+        "lineupSlot": 6,
+        "position": null,
+        "performanceSummary": "19.6 min | 18.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "18.0"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 202331,
+        "playerName": "Paul George",
+        "lineupSlot": 7,
+        "position": "PF",
+        "performanceSummary": "19.5 min | 14.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629643,
+        "playerName": "Chuma Okeke",
+        "lineupSlot": 8,
+        "position": "PF",
+        "performanceSummary": "27.3 min | 7.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.2"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629052,
+        "playerName": "Oshae Brissett",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "25.5 min | 9.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.4"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Timberwolves",
+        "winProbability": 96.01550308409918,
+        "side": "away",
+        "profile": {
+          "subtitle": "4-1 last 5 | +11.7 net | 116.0 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "59%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+11.7"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "76ers",
+        "winProbability": 3.984496915900828,
+        "side": "home",
+        "profile": {
+          "subtitle": "1-4 last 5 | -10.1 net | 111.8 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "30%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-10.1"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501122",
+    "name": "Hawks at Nets",
+    "tour": "Basketball",
+    "course": "Barclays Center",
+    "venue": "Barclays Center",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Hawks",
+    "awayTeam": "Hawks",
+    "homeTeam": "Nets",
+    "awayTeamDetails": {
+      "teamId": 1610612737,
+      "abbreviation": "ATL",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612737/global/L/logo.svg",
+      "recordPrior": "39-42",
+      "recentForm": "3-2 last 5 | +1.5 net | 124.2 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Barclays Center"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612751,
+      "abbreviation": "BKN",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612751/global/L/logo.svg",
+      "recordPrior": "26-55",
+      "recentForm": "1-4 last 5 | -14.5 net | 103.6 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Barclays Center"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1629638,
+        "playerName": "Nickeil Alexander-Walker",
+        "lineupSlot": 1,
+        "position": "SG",
+        "performanceSummary": "35.1 min | 22.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "35.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "22.2"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203468,
+        "playerName": "CJ McCollum",
+        "lineupSlot": 2,
+        "position": "PG",
+        "performanceSummary": "30.2 min | 19.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630552,
+        "playerName": "Jalen Johnson",
+        "lineupSlot": 3,
+        "position": "PF",
+        "performanceSummary": "30.3 min | 20.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "20.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630700,
+        "playerName": "Dyson Daniels",
+        "lineupSlot": 4,
+        "position": "SF",
+        "performanceSummary": "27.4 min | 10.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630168,
+        "playerName": "Onyeka Okongwu",
+        "lineupSlot": 5,
+        "position": "C",
+        "performanceSummary": "23.6 min | 11.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631243,
+        "playerName": "Mouhamed Gueye",
+        "lineupSlot": 6,
+        "position": null,
+        "performanceSummary": "15.4 min | 3.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "15.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "3.6"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629631,
+        "playerName": "De'Andre Hunter",
+        "lineupSlot": 7,
+        "position": "PF",
+        "performanceSummary": "30.2 min | 20.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "20.0"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627777,
+        "playerName": "Georges Niang",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "20.0 min | 11.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.0"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629111,
+        "playerName": "Jock Landale",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "16.6 min | 7.0 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "16.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.0"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1630570,
+        "playerName": "Trendon Watford",
+        "lineupSlot": 1,
+        "position": "PF",
+        "performanceSummary": "24.8 min | 13.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "24.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630165,
+        "playerName": "Killian Hayes",
+        "lineupSlot": 2,
+        "position": "PG",
+        "performanceSummary": "27.4 min | 10.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203471,
+        "playerName": "Dennis Schr\u00f6der",
+        "lineupSlot": 3,
+        "position": "PG",
+        "performanceSummary": "26.2 min | 14.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641736,
+        "playerName": "Reece Beekman",
+        "lineupSlot": 4,
+        "position": null,
+        "performanceSummary": "25.9 min | 5.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642962,
+        "playerName": "Drake Powell",
+        "lineupSlot": 5,
+        "position": "SG",
+        "performanceSummary": "22.4 min | 8.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.2"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642849,
+        "playerName": "Nolan Traore",
+        "lineupSlot": 6,
+        "position": "PG",
+        "performanceSummary": "19.6 min | 8.6 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630533,
+        "playerName": "Ziaire Williams",
+        "lineupSlot": 7,
+        "position": "SF",
+        "performanceSummary": "18.9 min | 13.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "18.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629651,
+        "playerName": "Nic Claxton",
+        "lineupSlot": 8,
+        "position": "C",
+        "performanceSummary": "17.6 min | 8.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "17.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630553,
+        "playerName": "Keon Johnson",
+        "lineupSlot": 9,
+        "position": "SG",
+        "performanceSummary": "17.4 min | 10.2 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.2"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Hawks",
+        "winProbability": 95.965305002974,
+        "side": "away",
+        "profile": {
+          "subtitle": "3-2 last 5 | +1.5 net | 124.2 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "48%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+1.5"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Nets",
+        "winProbability": 4.034694997025997,
+        "side": "home",
+        "profile": {
+          "subtitle": "1-4 last 5 | -14.5 net | 103.6 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "32%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-14.5"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501123",
+    "name": "Bulls at Knicks",
+    "tour": "Basketball",
+    "course": "Madison Square Garden",
+    "venue": "Madison Square Garden",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Knicks",
+    "awayTeam": "Bulls",
+    "homeTeam": "Knicks",
+    "awayTeamDetails": {
+      "teamId": 1610612741,
+      "abbreviation": "CHI",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612741/global/L/logo.svg",
+      "recordPrior": "38-43",
+      "recentForm": "4-1 last 5 | +3.9 net | 120.0 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Madison Square Garden"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612752,
+      "abbreviation": "NYK",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612752/global/L/logo.svg",
+      "recordPrior": "50-31",
+      "recentForm": "2-3 last 5 | +2.2 net | 111.6 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Madison Square Garden"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1630581,
+        "playerName": "Josh Giddey",
+        "lineupSlot": 1,
+        "position": null,
+        "performanceSummary": "34.5 min | 14.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "34.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641824,
+        "playerName": "Matas Buzelis",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "33.1 min | 19.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630200,
+        "playerName": "Tre Jones",
+        "lineupSlot": 3,
+        "position": "PG",
+        "performanceSummary": "27.4 min | 18.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "18.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629632,
+        "playerName": "Coby White",
+        "lineupSlot": 4,
+        "position": "PG",
+        "performanceSummary": "24.7 min | 13.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "24.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630245,
+        "playerName": "Ayo Dosunmu",
+        "lineupSlot": 5,
+        "position": null,
+        "performanceSummary": "30.1 min | 19.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630171,
+        "playerName": "Isaac Okoro",
+        "lineupSlot": 6,
+        "position": "SF",
+        "performanceSummary": "21.9 min | 9.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "21.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627824,
+        "playerName": "Guerschon Yabusele",
+        "lineupSlot": 7,
+        "position": "C",
+        "performanceSummary": "15.0 min | 6.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "15.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.4"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631159,
+        "playerName": "Leonard Miller",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "22.2 min | 14.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.6"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628989,
+        "playerName": "Kevin Huerter",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "17.5 min | 5.6 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "17.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.6"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1628973,
+        "playerName": "Jalen Brunson",
+        "lineupSlot": 1,
+        "position": null,
+        "performanceSummary": "36.1 min | 25.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "36.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "25.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628384,
+        "playerName": "OG Anunoby",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "35.8 min | 13.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "35.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628404,
+        "playerName": "Josh Hart",
+        "lineupSlot": 3,
+        "position": "SF",
+        "performanceSummary": "33.4 min | 14.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628969,
+        "playerName": "Mikal Bridges",
+        "lineupSlot": 4,
+        "position": "SG",
+        "performanceSummary": "33.4 min | 12.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1626157,
+        "playerName": "Karl-Anthony Towns",
+        "lineupSlot": 5,
+        "position": "C",
+        "performanceSummary": "28.1 min | 19.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "28.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630173,
+        "playerName": "Precious Achiuwa",
+        "lineupSlot": 6,
+        "position": "C",
+        "performanceSummary": "16.0 min | 4.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "16.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "4.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1626153,
+        "playerName": "Delon Wright",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "8.4 min | 2.0 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "8.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "2.0"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203903,
+        "playerName": "Jordan Clarkson",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "20.4 min | 7.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.6"
+            },
+            {
+              "label": "Start %",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629011,
+        "playerName": "Mitchell Robinson",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "19.4 min | 6.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.6"
+            },
+            {
+              "label": "Start %",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Knicks",
+        "winProbability": 57.330128760252464,
+        "side": "home",
+        "profile": {
+          "subtitle": "2-3 last 5 | +2.2 net | 111.6 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "62%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+2.2"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Bulls",
+        "winProbability": 42.669871239747536,
+        "side": "away",
+        "profile": {
+          "subtitle": "4-1 last 5 | +3.9 net | 120.0 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "47%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+3.9"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501124",
+    "name": "Jazz at Rockets",
+    "tour": "Basketball",
+    "course": "Toyota Center",
+    "venue": "Toyota Center",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Rockets",
+    "awayTeam": "Jazz",
+    "homeTeam": "Rockets",
+    "awayTeamDetails": {
+      "teamId": 1610612762,
+      "abbreviation": "UTA",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612762/global/L/logo.svg",
+      "recordPrior": "17-64",
+      "recentForm": "1-4 last 5 | -21.7 net | 119.0 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Toyota Center"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612745,
+      "abbreviation": "HOU",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612745/global/L/logo.svg",
+      "recordPrior": "52-29",
+      "recentForm": "3-2 last 5 | +5.7 net | 120.0 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Toyota Center"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1642846,
+        "playerName": "Ace Bailey",
+        "lineupSlot": 1,
+        "position": "SF",
+        "performanceSummary": "32.1 min | 19.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "32.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630548,
+        "playerName": "Johnny Juzang",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "31.7 min | 13.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "31.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642262,
+        "playerName": "Cody Williams",
+        "lineupSlot": 3,
+        "position": "SG",
+        "performanceSummary": "26.6 min | 14.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641989,
+        "playerName": "Elijah Harkless",
+        "lineupSlot": 4,
+        "position": null,
+        "performanceSummary": "25.9 min | 6.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629012,
+        "playerName": "Collin Sexton",
+        "lineupSlot": 5,
+        "position": null,
+        "performanceSummary": "22.7 min | 17.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642271,
+        "playerName": "Kyle Filipowski",
+        "lineupSlot": 6,
+        "position": "C",
+        "performanceSummary": "21.5 min | 15.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "21.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641729,
+        "playerName": "Brice Sensabaugh",
+        "lineupSlot": 7,
+        "position": "PG",
+        "performanceSummary": "23.3 min | 16.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "16.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629723,
+        "playerName": "John Konchar",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "28.7 min | 10.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "28.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.4"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1643016,
+        "playerName": "Bez Mbeng",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "27.8 min | 4.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "4.8"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1641708,
+        "playerName": "Amen Thompson",
+        "lineupSlot": 1,
+        "position": "SG",
+        "performanceSummary": "39.5 min | 16.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "39.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "16.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631095,
+        "playerName": "Jabari Smith Jr.",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "38.3 min | 15.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "38.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 201142,
+        "playerName": "Kevin Durant",
+        "lineupSlot": 3,
+        "position": "SF",
+        "performanceSummary": "36.1 min | 28.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "36.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "28.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630578,
+        "playerName": "Alperen Sengun",
+        "lineupSlot": 4,
+        "position": "C",
+        "performanceSummary": "35.0 min | 25.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "35.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "25.2"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630224,
+        "playerName": "Jalen Green",
+        "lineupSlot": 5,
+        "position": "SG",
+        "performanceSummary": "26.1 min | 17.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642263,
+        "playerName": "Reed Sheppard",
+        "lineupSlot": 6,
+        "position": "PG",
+        "performanceSummary": "28.2 min | 12.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "28.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641715,
+        "playerName": "Cam Whitmore",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "16.6 min | 11.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "16.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.8"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629111,
+        "playerName": "Jock Landale",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "15.7 min | 5.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "15.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.0"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628415,
+        "playerName": "Dillon Brooks",
+        "lineupSlot": 9,
+        "position": "SF",
+        "performanceSummary": "11.4 min | 9.0 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "11.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.0"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Rockets",
+        "winProbability": 99.02562116754433,
+        "side": "home",
+        "profile": {
+          "subtitle": "3-2 last 5 | +5.7 net | 120.0 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "64%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+5.7"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Jazz",
+        "winProbability": 0.974378832455669,
+        "side": "away",
+        "profile": {
+          "subtitle": "1-4 last 5 | -21.7 net | 119.0 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "21%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-21.7"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501125",
+    "name": "Raptors at Grizzlies",
+    "tour": "Basketball",
+    "course": "FedExForum",
+    "venue": "FedExForum",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Raptors",
+    "awayTeam": "Raptors",
+    "homeTeam": "Grizzlies",
+    "awayTeamDetails": {
+      "teamId": 1610612761,
+      "abbreviation": "TOR",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612761/global/L/logo.svg",
+      "recordPrior": "30-51",
+      "recentForm": "2-3 last 5 | +4.3 net | 111.2 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "FedExForum"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612763,
+      "abbreviation": "MEM",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612763/global/L/logo.svg",
+      "recordPrior": "47-34",
+      "recentForm": "3-2 last 5 | -0.3 net | 115.4 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "FedExForum"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1630567,
+        "playerName": "Scottie Barnes",
+        "lineupSlot": 1,
+        "position": "PF",
+        "performanceSummary": "30.1 min | 16.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "16.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629628,
+        "playerName": "RJ Barrett",
+        "lineupSlot": 2,
+        "position": "SF",
+        "performanceSummary": "29.0 min | 21.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "21.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642266,
+        "playerName": "Ja'Kobe Walter",
+        "lineupSlot": 3,
+        "position": "SG",
+        "performanceSummary": "26.4 min | 11.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627751,
+        "playerName": "Jakob Poeltl",
+        "lineupSlot": 4,
+        "position": "C",
+        "performanceSummary": "19.9 min | 10.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642347,
+        "playerName": "Jamal Shead",
+        "lineupSlot": 5,
+        "position": "PG",
+        "performanceSummary": "27.5 min | 6.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627742,
+        "playerName": "Brandon Ingram",
+        "lineupSlot": 6,
+        "position": null,
+        "performanceSummary": "19.4 min | 10.6 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631115,
+        "playerName": "Orlando Robinson",
+        "lineupSlot": 7,
+        "position": "C",
+        "performanceSummary": "21.7 min | 11.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "21.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.2"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630558,
+        "playerName": "Davion Mitchell",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "14.9 min | 5.2 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "14.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.2"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630572,
+        "playerName": "Sandro Mamukelashvili",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "22.4 min | 17.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1630217,
+        "playerName": "Desmond Bane",
+        "lineupSlot": 1,
+        "position": null,
+        "performanceSummary": "34.6 min | 25.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "34.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "25.2"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641713,
+        "playerName": "GG Jackson",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "25.7 min | 16.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "16.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628991,
+        "playerName": "Jaren Jackson Jr.",
+        "lineupSlot": 3,
+        "position": "PF",
+        "performanceSummary": "26.2 min | 17.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629111,
+        "playerName": "Jock Landale",
+        "lineupSlot": 4,
+        "position": "C",
+        "performanceSummary": "23.0 min | 10.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642907,
+        "playerName": "Cedric Coward",
+        "lineupSlot": 5,
+        "position": "SF",
+        "performanceSummary": "20.0 min | 10.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641765,
+        "playerName": "Olivier-Maxence Prosper",
+        "lineupSlot": 6,
+        "position": "C",
+        "performanceSummary": "18.9 min | 13.6 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "18.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641707,
+        "playerName": "Taylor Hendricks",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "20.3 min | 4.2 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "4.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642914,
+        "playerName": "Javon Small",
+        "lineupSlot": 8,
+        "position": "PG",
+        "performanceSummary": "14.2 min | 5.6 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "14.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203937,
+        "playerName": "Kyle Anderson",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "12.5 min | 5.2 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "12.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.2"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Raptors",
+        "winProbability": 92.33954394643021,
+        "side": "away",
+        "profile": {
+          "subtitle": "2-3 last 5 | +4.3 net | 111.2 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "37%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+4.3"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Grizzlies",
+        "winProbability": 7.660456053569782,
+        "side": "home",
+        "profile": {
+          "subtitle": "3-2 last 5 | -0.3 net | 115.4 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "58%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-0.3"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501126",
+    "name": "Celtics at Bucks",
+    "tour": "Basketball",
+    "course": "Fiserv Forum",
+    "venue": "Fiserv Forum",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Bucks",
+    "awayTeam": "Celtics",
+    "homeTeam": "Bucks",
+    "awayTeamDetails": {
+      "teamId": 1610612738,
+      "abbreviation": "BOS",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612738/global/L/logo.svg",
+      "recordPrior": "60-21",
+      "recentForm": "4-1 last 5 | +12.4 net | 114.4 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Fiserv Forum"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612749,
+      "abbreviation": "MIL",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612749/global/L/logo.svg",
+      "recordPrior": "47-34",
+      "recentForm": "5-0 last 5 | +3.1 net | 120.6 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Fiserv Forum"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1628401,
+        "playerName": "Derrick White",
+        "lineupSlot": 1,
+        "position": "PG",
+        "performanceSummary": "27.7 min | 8.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628369,
+        "playerName": "Jayson Tatum",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "26.7 min | 18.6 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "18.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630573,
+        "playerName": "Sam Hauser",
+        "lineupSlot": 3,
+        "position": "SF",
+        "performanceSummary": "26.2 min | 7.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 201950,
+        "playerName": "Jrue Holiday",
+        "lineupSlot": 4,
+        "position": null,
+        "performanceSummary": "24.2 min | 7.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "24.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629674,
+        "playerName": "Neemias Queta",
+        "lineupSlot": 5,
+        "position": "C",
+        "performanceSummary": "22.6 min | 7.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.8"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627759,
+        "playerName": "Jaylen Brown",
+        "lineupSlot": 6,
+        "position": "SG",
+        "performanceSummary": "22.9 min | 17.8 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.8"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631248,
+        "playerName": "Baylor Scheierman",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "26.1 min | 7.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.2"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628436,
+        "playerName": "Luke Kornet",
+        "lineupSlot": 8,
+        "position": "C",
+        "performanceSummary": "20.7 min | 9.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.8"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641775,
+        "playerName": "Jordan Walsh",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "18.5 min | 3.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "18.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "3.2"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 201572,
+        "playerName": "Brook Lopez",
+        "lineupSlot": 1,
+        "position": null,
+        "performanceSummary": "28.1 min | 13.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "28.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "13.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631172,
+        "playerName": "Ousmane Dieng",
+        "lineupSlot": 2,
+        "position": "SF",
+        "performanceSummary": "29.2 min | 10.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.6"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630579,
+        "playerName": "Jericho Sims",
+        "lineupSlot": 3,
+        "position": "C",
+        "performanceSummary": "24.4 min | 8.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "24.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631157,
+        "playerName": "Ryan Rollins",
+        "lineupSlot": 4,
+        "position": null,
+        "performanceSummary": "23.8 min | 17.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631250,
+        "playerName": "Pete Nance",
+        "lineupSlot": 5,
+        "position": "PF",
+        "performanceSummary": "29.5 min | 7.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629018,
+        "playerName": "Gary Trent Jr.",
+        "lineupSlot": 6,
+        "position": "SG",
+        "performanceSummary": "27.2 min | 17.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1626167,
+        "playerName": "Myles Turner",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "15.1 min | 6.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "15.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.4"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631260,
+        "playerName": "AJ Green",
+        "lineupSlot": 8,
+        "position": "PG",
+        "performanceSummary": "27.4 min | 11.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "27.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "11.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627752,
+        "playerName": "Taurean Prince",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "26.9 min | 9.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.4"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Bucks",
+        "winProbability": 66.05166549412466,
+        "side": "home",
+        "profile": {
+          "subtitle": "5-0 last 5 | +3.1 net | 120.6 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "58%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+3.1"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Celtics",
+        "winProbability": 33.948334505875344,
+        "side": "away",
+        "profile": {
+          "subtitle": "4-1 last 5 | +12.4 net | 114.4 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "74%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+12.4"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501127",
+    "name": "Magic at Mavericks",
+    "tour": "Basketball",
+    "course": "American Airlines Center",
+    "venue": "American Airlines Center",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Magic",
+    "awayTeam": "Magic",
+    "homeTeam": "Mavericks",
+    "awayTeamDetails": {
+      "teamId": 1610612753,
+      "abbreviation": "ORL",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612753/global/L/logo.svg",
+      "recordPrior": "41-40",
+      "recentForm": "5-0 last 5 | +9.9 net | 113.8 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "American Airlines Center"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612742,
+      "abbreviation": "DAL",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612742/global/L/logo.svg",
+      "recordPrior": "39-42",
+      "recentForm": "2-3 last 5 | -3.5 net | 107.2 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "American Airlines Center"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1631094,
+        "playerName": "Paolo Banchero",
+        "lineupSlot": 1,
+        "position": "PF",
+        "performanceSummary": "36.3 min | 26.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "36.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "26.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630217,
+        "playerName": "Desmond Bane",
+        "lineupSlot": 2,
+        "position": "SG",
+        "performanceSummary": "33.5 min | 19.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "19.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641783,
+        "playerName": "Tristan da Silva",
+        "lineupSlot": 3,
+        "position": null,
+        "performanceSummary": "30.4 min | 15.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628976,
+        "playerName": "Wendell Carter Jr.",
+        "lineupSlot": 4,
+        "position": "C",
+        "performanceSummary": "29.4 min | 12.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.2"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 202709,
+        "playerName": "Cory Joseph",
+        "lineupSlot": 5,
+        "position": null,
+        "performanceSummary": "18.9 min | 5.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "18.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203484,
+        "playerName": "Kentavious Caldwell-Pope",
+        "lineupSlot": 6,
+        "position": "SG",
+        "performanceSummary": "20.7 min | 10.2 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "20.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.2"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630591,
+        "playerName": "Jalen Suggs",
+        "lineupSlot": 7,
+        "position": "PG",
+        "performanceSummary": "19.5 min | 8.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "19.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "8.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628975,
+        "playerName": "Jevon Carter",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "22.4 min | 6.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "22.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.2"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631216,
+        "playerName": "Caleb Houstan",
+        "lineupSlot": 9,
+        "position": null,
+        "performanceSummary": "21.6 min | 6.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "21.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1642843,
+        "playerName": "Cooper Flagg",
+        "lineupSlot": 1,
+        "position": "SF",
+        "performanceSummary": "37.2 min | 22.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "37.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "22.4"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631108,
+        "playerName": "Max Christie",
+        "lineupSlot": 2,
+        "position": "SG",
+        "performanceSummary": "28.4 min | 7.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "28.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "7.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203915,
+        "playerName": "Spencer Dinwiddie",
+        "lineupSlot": 3,
+        "position": null,
+        "performanceSummary": "25.0 min | 9.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.0"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.0"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629655,
+        "playerName": "Daniel Gafford",
+        "lineupSlot": 4,
+        "position": "C",
+        "performanceSummary": "16.2 min | 9.6 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "16.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.6"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203939,
+        "playerName": "Dwight Powell",
+        "lineupSlot": 5,
+        "position": null,
+        "performanceSummary": "12.1 min | 4.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "12.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "4.0"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642948,
+        "playerName": "Ryan Nembhard",
+        "lineupSlot": 6,
+        "position": "PG",
+        "performanceSummary": "18.6 min | 5.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "18.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1626145,
+        "playerName": "Tyus Jones",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "15.9 min | 3.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "15.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "3.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203114,
+        "playerName": "Khris Middleton",
+        "lineupSlot": 8,
+        "position": "PF",
+        "performanceSummary": "13.4 min | 6.0 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "13.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.0"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629650,
+        "playerName": "Moses Brown",
+        "lineupSlot": 9,
+        "position": "C",
+        "performanceSummary": "10.2 min | 5.8 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "10.2"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.8"
+            },
+            {
+              "label": "Start %",
+              "value": "20%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Magic",
+        "winProbability": 92.45313930489789,
+        "side": "away",
+        "profile": {
+          "subtitle": "5-0 last 5 | +9.9 net | 113.8 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "51%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+9.9"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Mavericks",
+        "winProbability": 7.546860695102109,
+        "side": "home",
+        "profile": {
+          "subtitle": "2-3 last 5 | -3.5 net | 107.2 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "48%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-3.5"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "basketball-nba-0022501128",
+    "name": "Pelicans at Kings",
+    "tour": "Basketball",
+    "course": "Golden 1 Center",
+    "venue": "Golden 1 Center",
+    "scheduledDate": 20260403,
+    "latestDate": 20260403,
+    "predictedWinner": "Kings",
+    "awayTeam": "Pelicans",
+    "homeTeam": "Kings",
+    "awayTeamDetails": {
+      "teamId": 1610612740,
+      "abbreviation": "NOP",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612740/global/L/logo.svg",
+      "recordPrior": "21-60",
+      "recentForm": "0-5 last 5 | -11.8 net | 108.8 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Golden 1 Center"
+    },
+    "homeTeamDetails": {
+      "teamId": 1610612758,
+      "abbreviation": "SAC",
+      "logoUrl": "https://cdn.nba.com/logos/nba/1610612758/global/L/logo.svg",
+      "recordPrior": "39-42",
+      "recentForm": "3-2 last 5 | +0.0 net | 117.6 pts",
+      "availabilitySummary": "Rotation mostly intact",
+      "lineupContinuity": null,
+      "venue": "Golden 1 Center"
+    },
+    "awayAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "homeAvailability": {
+      "ilAdds14": 0,
+      "ilActivations14": 0,
+      "rosterMoves14": 0
+    },
+    "predictionSource": "nba_baseline_model",
+    "awayLineup": [
+      {
+        "playerId": 1630180,
+        "playerName": "Saddiq Bey",
+        "lineupSlot": 1,
+        "position": "SF",
+        "performanceSummary": "32.1 min | 18.6 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "32.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "18.6"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629627,
+        "playerName": "Zion Williamson",
+        "lineupSlot": 2,
+        "position": "PF",
+        "performanceSummary": "32.1 min | 21.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "32.1"
+            },
+            {
+              "label": "Pts L5",
+              "value": "21.0"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630529,
+        "playerName": "Herbert Jones",
+        "lineupSlot": 3,
+        "position": "SG",
+        "performanceSummary": "30.7 min | 9.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "30.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1631232,
+        "playerName": "Keion Brooks Jr.",
+        "lineupSlot": 4,
+        "position": "PF",
+        "performanceSummary": "29.8 min | 14.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "29.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1641810,
+        "playerName": "Antonio Reeves",
+        "lineupSlot": 5,
+        "position": "SF",
+        "performanceSummary": "32.3 min | 17.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "32.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "17.0"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 203901,
+        "playerName": "Elfrid Payton",
+        "lineupSlot": 6,
+        "position": "SG",
+        "performanceSummary": "25.3 min | 2.2 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "2.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1627749,
+        "playerName": "Dejounte Murray",
+        "lineupSlot": 7,
+        "position": "PG",
+        "performanceSummary": "17.4 min | 6.2 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "6.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628971,
+        "playerName": "Bruce Brown",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "15.7 min | 5.2 pts | 33% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "15.7"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.2"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630526,
+        "playerName": "Jeremiah Robinson-Earl",
+        "lineupSlot": 9,
+        "position": "C",
+        "performanceSummary": "23.9 min | 9.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.0"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "homeLineup": [
+      {
+        "playerId": 1628368,
+        "playerName": "De'Aaron Fox",
+        "lineupSlot": 1,
+        "position": "PG",
+        "performanceSummary": "36.5 min | 18.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "36.5"
+            },
+            {
+              "label": "Pts L5",
+              "value": "18.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642875,
+        "playerName": "Maxime Raynaud",
+        "lineupSlot": 2,
+        "position": "C",
+        "performanceSummary": "33.3 min | 15.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "15.8"
+            },
+            {
+              "label": "Start %",
+              "value": "100%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642269,
+        "playerName": "Devin Carter",
+        "lineupSlot": 3,
+        "position": "PG",
+        "performanceSummary": "26.6 min | 14.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "26.6"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 201942,
+        "playerName": "DeMar DeRozan",
+        "lineupSlot": 4,
+        "position": "SF",
+        "performanceSummary": "25.8 min | 14.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "25.8"
+            },
+            {
+              "label": "Pts L5",
+              "value": "14.4"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1630173,
+        "playerName": "Precious Achiuwa",
+        "lineupSlot": 5,
+        "position": "PF",
+        "performanceSummary": "23.3 min | 12.0 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.0"
+            },
+            {
+              "label": "Start %",
+              "value": "80%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1626168,
+        "playerName": "Trey Lyles",
+        "lineupSlot": 6,
+        "position": null,
+        "performanceSummary": "33.3 min | 10.4 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "33.3"
+            },
+            {
+              "label": "Pts L5",
+              "value": "10.4"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1628370,
+        "playerName": "Malik Monk",
+        "lineupSlot": 7,
+        "position": null,
+        "performanceSummary": "23.9 min | 12.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected starter",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "12.4"
+            },
+            {
+              "label": "Start %",
+              "value": "60%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1629610,
+        "playerName": "DaQuan Jeffries",
+        "lineupSlot": 8,
+        "position": null,
+        "performanceSummary": "23.9 min | 9.8 pts | 100% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "23.9"
+            },
+            {
+              "label": "Pts L5",
+              "value": "9.8"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      },
+      {
+        "playerId": 1642363,
+        "playerName": "Nique Clifford",
+        "lineupSlot": 9,
+        "position": "SG",
+        "performanceSummary": "17.4 min | 5.4 pts | 67% recent availability",
+        "profile": {
+          "subtitle": "Projected rotation",
+          "stats": [
+            {
+              "label": "Min L5",
+              "value": "17.4"
+            },
+            {
+              "label": "Pts L5",
+              "value": "5.4"
+            },
+            {
+              "label": "Start %",
+              "value": "40%"
+            }
+          ]
+        }
+      }
+    ],
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Kings",
+        "winProbability": 95.56870181286749,
+        "side": "home",
+        "profile": {
+          "subtitle": "3-2 last 5 | +0.0 net | 117.6 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "48%"
+            },
+            {
+              "label": "Net L10",
+              "value": "+0.0"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Pelicans",
+        "winProbability": 4.431298187132516,
+        "side": "away",
+        "profile": {
+          "subtitle": "0-5 last 5 | -11.8 net | 108.8 pts",
+          "stats": [
+            {
+              "label": "Win %",
+              "value": "26%"
+            },
+            {
+              "label": "Net L10",
+              "value": "-11.8"
+            },
+            {
+              "label": "Core Ready",
+              "value": "0%"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

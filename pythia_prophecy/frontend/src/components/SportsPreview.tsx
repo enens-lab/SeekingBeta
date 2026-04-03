@@ -37,10 +37,10 @@ function fallbackReplayEvent(backtest?: SportsHistoricalBoard): SportsUpcomingBo
   };
 }
 
-function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number {
+function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number | null {
   const label = side === 'away' ? board.awayTeam : board.homeTeam;
   const match = board.predictions.find((prediction) => prediction.side === side || prediction.playerName === label);
-  return match?.winProbability ?? 50;
+  return typeof match?.winProbability === 'number' ? match.winProbability : null;
 }
 
 function updatedLabel(value?: string): string | null {
@@ -163,6 +163,9 @@ function SportsPreview() {
         <div className="sports-home-grid">
           {spotlightBoards.map((board) => {
             const topPredictions = (board.event?.predictions || []).slice(0, 3);
+            const isTeamPreview = board.key === 'basketball' && board.event?.awayTeam && board.event?.homeTeam;
+            const awayProb = board.event && isTeamPreview ? probabilityForSide(board.event, 'away') : null;
+            const homeProb = board.event && isTeamPreview ? probabilityForSide(board.event, 'home') : null;
             return (
               <article key={board.key} className={`sports-home-card accent-${board.accent}`}>
                 <div className="sports-home-card-header">
@@ -180,7 +183,42 @@ function SportsPreview() {
                   <span>{board.event?.predictions?.length || 0} names</span>
                 </div>
 
-                {topPredictions.length > 0 ? (
+                {isTeamPreview && board.event ? (
+                  <div className="sports-home-mlb-list">
+                    <div className="sports-home-mlb-row">
+                      <div className="sports-home-mlb-team">
+                        <TeamLogo
+                          logoUrl={board.event.awayTeamDetails?.logoUrl}
+                          label={board.event.awayTeam || 'Away'}
+                          abbreviation={board.event.awayTeamDetails?.abbreviation}
+                          primaryColor={board.event.awayTeamDetails?.primaryColor}
+                          size="sm"
+                        />
+                        <div>
+                          <strong>{board.event.awayTeam}</strong>
+                          <span>{board.event.awayTeamDetails?.recordPrior || board.event.awayTeamDetails?.recentForm || 'Team detail pending'}</span>
+                        </div>
+                      </div>
+                      <span className="sports-home-prob">{awayProb !== null ? `${awayProb.toFixed(1)}%` : 'Pending'}</span>
+                    </div>
+                    <div className="sports-home-mlb-row">
+                      <div className="sports-home-mlb-team">
+                        <TeamLogo
+                          logoUrl={board.event.homeTeamDetails?.logoUrl}
+                          label={board.event.homeTeam || 'Home'}
+                          abbreviation={board.event.homeTeamDetails?.abbreviation}
+                          primaryColor={board.event.homeTeamDetails?.primaryColor}
+                          size="sm"
+                        />
+                        <div>
+                          <strong>{board.event.homeTeam}</strong>
+                          <span>{board.event.homeTeamDetails?.recordPrior || board.event.homeTeamDetails?.recentForm || 'Team detail pending'}</span>
+                        </div>
+                      </div>
+                      <span className="sports-home-prob">{homeProb !== null ? `${homeProb.toFixed(1)}%` : 'Pending'}</span>
+                    </div>
+                  </div>
+                ) : topPredictions.length > 0 ? (
                   <div className="sports-home-player-list">
                     {topPredictions.map((prediction) => (
                       <div key={`${board.key}-${prediction.rank}-${prediction.playerName}`} className="sports-home-player-row">
@@ -252,7 +290,7 @@ function SportsPreview() {
                         />
                         <div>
                           <strong>{board.awayTeam}</strong>
-                          <span>{awayProb.toFixed(1)}%</span>
+                          <span>{awayProb !== null ? `${awayProb.toFixed(1)}%` : 'Pending'}</span>
                         </div>
                       </div>
                       <span className="sports-home-mlb-vs">at</span>
@@ -266,7 +304,7 @@ function SportsPreview() {
                         />
                         <div>
                           <strong>{board.homeTeam}</strong>
-                          <span>{homeProb.toFixed(1)}%</span>
+                          <span>{homeProb !== null ? `${homeProb.toFixed(1)}%` : 'Pending'}</span>
                         </div>
                       </div>
                     </div>

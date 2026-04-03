@@ -39,10 +39,10 @@ function fallbackReplayEvent(backtest?: SportsHistoricalBoard): SportsUpcomingBo
   };
 }
 
-function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number {
+function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number | null {
   const label = side === 'away' ? board.awayTeam : board.homeTeam;
   const match = board.predictions.find((prediction) => prediction.side === side || prediction.playerName === label);
-  return match?.winProbability ?? 50;
+  return typeof match?.winProbability === 'number' ? match.winProbability : null;
 }
 
 function SportsLanding() {
@@ -368,7 +368,7 @@ function SportsLanding() {
                         <span>{board.course}</span>
                       </div>
 
-                      <div className="mlb-slate-team-row">
+                  <div className="mlb-slate-team-row">
                         <div className="mlb-slate-team">
                           <TeamLogo
                             logoUrl={board.awayTeamDetails?.logoUrl}
@@ -382,7 +382,7 @@ function SportsLanding() {
                             <span>{board.awayTeamDetails?.recordPrior || 'Record pending'}</span>
                           </div>
                         </div>
-                        <div className="mlb-slate-prob">{awayProb.toFixed(1)}%</div>
+                        <div className="mlb-slate-prob">{awayProb !== null ? `${awayProb.toFixed(1)}%` : 'Pending'}</div>
                       </div>
 
                       <div className="mlb-slate-team-row">
@@ -399,7 +399,7 @@ function SportsLanding() {
                             <span>{board.homeTeamDetails?.recordPrior || 'Record pending'}</span>
                           </div>
                         </div>
-                        <div className="mlb-slate-prob">{homeProb.toFixed(1)}%</div>
+                        <div className="mlb-slate-prob">{homeProb !== null ? `${homeProb.toFixed(1)}%` : 'Pending'}</div>
                       </div>
 
                       <div className="mlb-slate-foot">
@@ -472,7 +472,7 @@ function SportsLanding() {
                         <span>{board.course}</span>
                       </div>
 
-                      <div className="mlb-slate-team-row">
+                  <div className="mlb-slate-team-row">
                         <div className="mlb-slate-team">
                           <TeamLogo
                             logoUrl={board.awayTeamDetails?.logoUrl}
@@ -486,7 +486,7 @@ function SportsLanding() {
                             <span>{board.awayStarter || 'Starter pending'}</span>
                           </div>
                         </div>
-                        <div className="mlb-slate-prob">{awayProb.toFixed(1)}%</div>
+                        <div className="mlb-slate-prob">{awayProb !== null ? `${awayProb.toFixed(1)}%` : 'Pending'}</div>
                       </div>
                       {board.awayStarter ? (
                         <div className="mlb-slate-starter">
@@ -512,7 +512,7 @@ function SportsLanding() {
                             <span>{board.homeStarter || 'Starter pending'}</span>
                           </div>
                         </div>
-                        <div className="mlb-slate-prob">{homeProb.toFixed(1)}%</div>
+                        <div className="mlb-slate-prob">{homeProb !== null ? `${homeProb.toFixed(1)}%` : 'Pending'}</div>
                       </div>
                       {board.homeStarter ? (
                         <div className="mlb-slate-starter">

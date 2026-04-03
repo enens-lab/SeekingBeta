@@ -485,6 +485,7 @@ class SportsBoardPrediction(BaseModel):
     actualWinner: Optional[bool] = None
     side: Optional[str] = None
     profile: Optional[SportsPlayerProfile] = None
+    radarMetrics: List[SportsRadarMetric] = []
 
 
 class SportsUpcomingBoard(BaseModel):
@@ -540,6 +541,8 @@ class SportsHistoricalBoard(BaseModel):
     homeStarter: Optional[str] = None
     awayStarterProfile: Optional[SportsPlayerProfile] = None
     homeStarterProfile: Optional[SportsPlayerProfile] = None
+    awayStarterRadar: Optional[List[SportsRadarMetric]] = None
+    homeStarterRadar: Optional[List[SportsRadarMetric]] = None
     awayTeamDetails: Optional[SportsTeamDetails] = None
     homeTeamDetails: Optional[SportsTeamDetails] = None
     awayLineup: List[SportsLineupPlayer] = []

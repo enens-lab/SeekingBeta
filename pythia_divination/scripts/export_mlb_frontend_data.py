@@ -126,6 +126,16 @@ def _safe_value(row: Any, field: str) -> float | None:
         return None
 
 
+def _clamp_score(value: float | None, low: float, high: float, *, inverse: bool = False) -> float | None:
+    if value is None or high <= low:
+        return None
+    clipped = min(max(value, low), high)
+    ratio = (clipped - low) / (high - low)
+    if inverse:
+        ratio = 1.0 - ratio
+    return round(ratio * 100.0, 1)
+
+
 def _normalize_metric(value: float | None, low: float, high: float, *, inverse: bool = False) -> float | None:
     if value is None or high <= low:
         return None
@@ -251,6 +261,7 @@ def _build_mlb_lineup_entry(record: dict[str, Any], *, historical: bool) -> dict
 
     stats: list[dict[str, str]] = []
     performance_summary: str | None = None
+    radar_metrics: list[dict[str, float]] | None = None
 
     if historical:
         at_bats = _safe_int_value(record.get("at_bats")) or 0
@@ -268,6 +279,24 @@ def _build_mlb_lineup_entry(record: dict[str, Any], *, historical: bool) -> dict
             {"label": "HR", "value": str(home_runs)},
         ]
         performance_summary = f"BB {walks} | K {strikeouts}"
+        on_base_rate = ((hits + walks) / max(at_bats + walks, 1)) if (at_bats + walks) > 0 else 0.0
+        discipline = _combine_metric(
+            (0.45, _clamp_score(float(walks), 0.0, 3.0)),
+            (0.55, _clamp_score(float(strikeouts), 0.0, 4.0, inverse=True)),
+        )
+        game_impact = _combine_metric(
+            (0.35, _clamp_score(float(hits), 0.0, 4.0)),
+            (0.35, _clamp_score(float(rbi), 0.0, 4.0)),
+            (0.30, _clamp_score(float(home_runs), 0.0, 2.0)),
+        )
+        radar_metrics = [
+            {"label": "Contact", "value": _clamp_score(float(hits), 0.0, 4.0) or 0.0},
+            {"label": "Power", "value": _clamp_score(float(home_runs), 0.0, 2.0) or 0.0},
+            {"label": "On-Base", "value": _clamp_score(on_base_rate, 0.20, 0.70) or 0.0},
+            {"label": "Discipline", "value": discipline or 0.0},
+            {"label": "Run Production", "value": _clamp_score(float(rbi + runs), 0.0, 6.0) or 0.0},
+            {"label": "Game Impact", "value": game_impact or 0.0},
+        ]
     else:
         ops_last_10 = _safe_value(type("Row", (), record), "ops_like_avg_last_10")
         hits_last_5 = _safe_value(type("Row", (), record), "hits_avg_last_5")
@@ -289,6 +318,23 @@ def _build_mlb_lineup_entry(record: dict[str, Any], *, historical: bool) -> dict
         if len(stats) < 4 and walks_last_5 is not None:
             stats.append({"label": "BB L5", "value": f"{walks_last_5:.1f}"})
 
+        discipline = _combine_metric(
+            (0.45, _clamp_score(walks_last_5, 0.0, 2.0)),
+            (0.55, _clamp_score(_safe_value(type("Row", (), record), "strikeouts_avg_last_10"), 0.0, 2.5, inverse=True)),
+        )
+        run_production = _combine_metric(
+            (0.55, _clamp_score(rbi_last_5, 0.0, 2.5)),
+            (0.45, _clamp_score(hits_last_5, 0.0, 2.2)),
+        )
+        radar_metrics = [
+            {"label": "Contact", "value": _clamp_score(hits_last_5, 0.0, 2.2) or 0.0},
+            {"label": "Power", "value": _clamp_score(home_runs_last_10, 0.0, 0.8) or 0.0},
+            {"label": "On-Base", "value": _clamp_score(obp_last_10, 0.24, 0.45) or 0.0},
+            {"label": "Discipline", "value": discipline or 0.0},
+            {"label": "Run Production", "value": run_production or 0.0},
+            {"label": "Recent Form", "value": _clamp_score(ops_last_10, 0.50, 1.10) or 0.0},
+        ]
+
     return {
         "playerId": player_id,
         "playerName": player_name,
@@ -296,6 +342,7 @@ def _build_mlb_lineup_entry(record: dict[str, Any], *, historical: bool) -> dict
         "position": position,
         "batSide": bat_side,
         "performanceSummary": performance_summary,
+        "radarMetrics": radar_metrics or [],
         "profile": {
             "imageUrl": _mlb_headshot_url(player_id),
             "subtitle": " | ".join(part for part in subtitle_parts if part) or "Projected lineup",
@@ -418,7 +465,7 @@ def _build_team_details(row: Any, side: str) -> dict[str, Any]:
         "bullpenSummary": _format_bullpen_summary(row, side),
         "availabilitySummary": _format_availability_summary(row, side),
         "lineupContinuity": _format_lineup_continuity(row, side),
-        "venue": _optional_text(getattr(row, "venue_name", None)) or "MLB Venue",
+        "venue": _optional_text(getattr(row, "venue_name", None)) or "Ballpark",
         "weather": _format_weather_summary(row),
     }
 
@@ -621,8 +668,8 @@ def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
             {
                 "year": int(row.season) if pd.notna(row.season) else int(row.official_date.year),
                 "tournament": f"{row.away_team_name} at {row.home_team_name}",
-                "tour": "MLB",
-                "venue": row.venue_name or "MLB Venue",
+                "tour": "Baseball",
+                "venue": row.venue_name or "Ballpark",
                 "awayTeam": row.away_team_name,
                 "homeTeam": row.home_team_name,
                 "predictedWinner": ranked[0]["playerName"],
@@ -635,12 +682,14 @@ def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "latestDate": date_key,
                 "tournamentId": f"mlb-{row.game_pk}",
                 "scheduledDate": date_key,
-                "course": _optional_text(row.venue_name) or "MLB Venue",
+                "course": _optional_text(row.venue_name) or "Ballpark",
                 "predictions": ranked,
                 "homeStarter": _optional_text(row.home_probable_pitcher_name),
                 "awayStarter": _optional_text(row.away_probable_pitcher_name),
                 "awayStarterProfile": _build_starter_profile(row, "away"),
                 "homeStarterProfile": _build_starter_profile(row, "home"),
+                "awayStarterRadar": _build_starter_radar(row, "away"),
+                "homeStarterRadar": _build_starter_radar(row, "home"),
                 "awayTeamDetails": _build_team_details(row, "away"),
                 "homeTeamDetails": _build_team_details(row, "home"),
                 "awayLineup": historical_lineups.get(int(row.game_pk), {}).get("away", []),
@@ -967,9 +1016,9 @@ def _build_upcoming_boards(
             {
                 "id": f"mlb-{row.game_pk}",
                 "name": f"{row.away_team_name} at {row.home_team_name}",
-                "tour": "MLB",
-                "course": _optional_text(row.venue_name) or "MLB Venue",
-                "venue": _optional_text(row.venue_name) or "MLB Venue",
+                "tour": "Baseball",
+                "course": _optional_text(row.venue_name) or "Ballpark",
+                "venue": _optional_text(row.venue_name) or "Ballpark",
                 "scheduledDate": date_key,
                 "latestDate": date_key,
                 "predictedWinner": ranked[0]["playerName"],

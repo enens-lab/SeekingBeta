@@ -398,6 +398,7 @@ def build_projected_rotation_map(
             for index, row in enumerate(projected.itertuples(index=False), start=1):
                 assists_recent = _safe_float(getattr(row, "assists_avg_last_5", np.nan))
                 rebounds_recent = _safe_float(getattr(row, "rebounds_total_avg_last_5", np.nan))
+                field_goal_pct_recent = _safe_float(getattr(row, "field_goal_pct_avg_last_5", np.nan))
                 entries.append(
                     {
                         "playerId": int(row.player_id) if pd.notna(row.player_id) else None,
@@ -431,12 +432,15 @@ def build_projected_rotation_map(
                                 {"label": "Pts L5", "value": f"{float(row.points_avg_last_5):.1f}"}
                                 if pd.notna(row.points_avg_last_5)
                                 else {"label": "Pts", "value": f"{float(row.points_recent):.1f}"},
+                                {"label": "FG% L5", "value": f"{field_goal_pct_recent * 100:.1f}%"}
+                                if field_goal_pct_recent is not None
+                                else {"label": "Avail", "value": f"{float(row.available_recent) * 100:.0f}%"},
                                 {"label": "Ast L5", "value": f"{assists_recent:.1f}"}
                                 if assists_recent is not None
                                 else {"label": "Start %", "value": f"{float(row.starter_recent) * 100:.0f}%"},
                                 {"label": "Reb L5", "value": f"{rebounds_recent:.1f}"}
                                 if rebounds_recent is not None
-                                else {"label": "Avail", "value": f"{float(row.available_recent) * 100:.0f}%"},
+                                else {"label": "Avail+", "value": f"{float(row.available_recent) * 100:.0f}%"},
                             ],
                         },
                         "radarMetrics": _player_radar_metrics_from_row(row),

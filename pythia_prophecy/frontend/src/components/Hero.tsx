@@ -15,7 +15,7 @@ function Hero() {
       <div className="hero-content">
         <h1 className="hero-title">Stock and sports picks in one place.</h1>
         <p className="hero-subtitle">
-          See what our models like in stocks, golf, tennis, and MLB. Check the live picks, then look at past results before you trust them.
+          See what our models like in stocks, golf, tennis, Basketball, and Baseball. Check the live picks, then look at past results before you trust them.
         </p>
         <div className="hero-cta">
           <Link

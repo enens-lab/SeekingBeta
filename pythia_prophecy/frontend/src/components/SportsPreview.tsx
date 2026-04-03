@@ -122,7 +122,7 @@ function SportsPreview() {
   const mlbSelectedDate = sportsBoards.mlb.selectedDate;
   const mlbSelectedLabel =
     (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label ||
-    'Next active MLB slate';
+    'Next active Baseball slate';
   const runtimeStamp = updatedLabel(
     sportsBoards.golf.updated_at || sportsBoards.tennis.updated_at || sportsBoards.basketball.updated_at || sportsBoards.mlb.updated_at
   );
@@ -134,7 +134,7 @@ function SportsPreview() {
           <span className="section-kicker">Sports</span>
           <h2 className="section-title">See today&apos;s sports boards at a glance.</h2>
           <p className="section-subtitle">
-            A quick look at golf, tennis, Basketball, and MLB.
+            A quick look at golf, tennis, Basketball, and Baseball.
           </p>
         </div>
         <div className="sports-home-actions">
@@ -218,14 +218,14 @@ function SportsPreview() {
           <article className="sports-home-card sports-home-card-mlb accent-orange">
             <div className="sports-home-card-header">
               <div>
-                <span className="sports-home-eyebrow">MLB Same-Day Slate</span>
+                <span className="sports-home-eyebrow">Baseball Same-Day Slate</span>
                 <h3>{mlbSelectedLabel}</h3>
               </div>
-              <span className="sports-home-pill">MLB</span>
+              <span className="sports-home-pill">Baseball</span>
             </div>
 
             <p className="sports-home-description">
-              Today&apos;s MLB games with starters and team notes.
+              Today&apos;s Baseball games with starters and team notes.
             </p>
 
             <div className="sports-home-meta">
@@ -234,7 +234,7 @@ function SportsPreview() {
             </div>
 
             {mlbEvents.length === 0 ? (
-              <div className="sports-home-empty-inline">No MLB games in the current window.</div>
+              <div className="sports-home-empty-inline">No Baseball games in the current window.</div>
             ) : (
               <div className="sports-home-mlb-list">
                 {mlbEvents.map((board) => {

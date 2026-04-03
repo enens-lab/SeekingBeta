@@ -146,9 +146,9 @@ function SportsLanding() {
       summary: "Today's men and women's Basketball games with team notes, projected rotation strength, and win numbers.",
     },
     {
-      title: 'MLB',
+      title: 'Baseball',
       status: 'Live now',
-      summary: "Today's MLB games with starter info, team notes, and win numbers.",
+      summary: "Today's Baseball games with starter info, team notes, and win numbers.",
     },
     {
       title: 'Other Team Sports',
@@ -164,7 +164,7 @@ function SportsLanding() {
   ).size;
   const totalTrackedEntrants = spotlightBoards.reduce((sum, board) => sum + (board.event?.predictions.length ?? 0), 0);
   const mlbSelectedDate = sportsBoards.mlb.selectedDate || requestedMlbDate || '';
-  const mlbSelectedLabel = (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label || 'Next active MLB slate';
+  const mlbSelectedLabel = (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label || 'Next active Baseball slate';
   const basketballSelectedDate = sportsBoards.basketball.selectedDate || requestedBasketballDate || '';
   const basketballSelectedLabel =
     (sportsBoards.basketball.availableDates || []).find((option) => option.dateKey === basketballSelectedDate)?.label ||
@@ -181,7 +181,7 @@ function SportsLanding() {
               <span className="sports-badge">Sports</span>
               <h1 className="sports-title">See today&apos;s sports picks in one place.</h1>
               <p className="sports-subtitle">
-                Check golf, tennis, Basketball, and MLB on one page. See the top picks, the live matchups, and the past results.
+                Check golf, tennis, Basketball, and Baseball on one page. See the top picks, the live matchups, and the past results.
               </p>
 
               <div className="sports-hero-tags">
@@ -190,7 +190,7 @@ function SportsLanding() {
                 <span>ATP</span>
                 <span>WTA</span>
                 <span>Basketball</span>
-                <span>MLB</span>
+                <span>Baseball</span>
               </div>
 
               <div className="sports-cta">
@@ -426,8 +426,8 @@ function SportsLanding() {
 
         <section className="mlb-slate-section">
           <div className="section-heading">
-            <span className="section-kicker">MLB Today</span>
-            <h2>All MLB games for the same day.</h2>
+            <span className="section-kicker">Baseball Today</span>
+            <h2>All Baseball games for the same day.</h2>
             <p>
               Pick a date, see every game, and open the full dashboard when you want more detail.
             </p>
@@ -457,9 +457,9 @@ function SportsLanding() {
             </div>
 
             {boardsLoading ? (
-              <div className="spotlight-empty-state">Loading today&apos;s MLB games...</div>
+              <div className="spotlight-empty-state">Loading today&apos;s Baseball games...</div>
             ) : mlbEvents.length === 0 ? (
-              <div className="spotlight-empty-state">No MLB games are available for that date right now.</div>
+              <div className="spotlight-empty-state">No Baseball games are available for that date right now.</div>
             ) : (
               <div className="mlb-slate-grid">
                 {mlbEvents.map((board) => {
@@ -468,7 +468,7 @@ function SportsLanding() {
                   return (
                     <article key={board.id} className="mlb-slate-card">
                       <div className="mlb-slate-card-top">
-                        <span className="spotlight-tour-pill">MLB</span>
+                        <span className="spotlight-tour-pill">Baseball</span>
                         <span>{board.course}</span>
                       </div>
 
@@ -540,7 +540,7 @@ function SportsLanding() {
                 className="btn btn-primary"
                 onClick={() => trackEvent('sports_landing_cta_click', { destination: 'sports_dashboard' })}
               >
-                Open MLB Dashboard
+                Open Baseball Dashboard
               </Link>
             </div>
           </div>

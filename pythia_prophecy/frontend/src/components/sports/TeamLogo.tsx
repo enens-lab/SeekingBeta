@@ -26,7 +26,7 @@ function TeamLogo({
       .slice(0, 3)
       .map((token) => token[0]?.toUpperCase() || '')
       .join('');
-    return initials || 'MLB';
+    return initials || 'TM';
   }, [abbreviation, label]);
 
   const style = useMemo(

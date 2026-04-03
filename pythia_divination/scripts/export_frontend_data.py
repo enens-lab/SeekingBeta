@@ -64,6 +64,28 @@ def _append_stat(stats: list[dict[str, str]], label: str, value: str | None) -> 
         stats.append({"label": label, "value": value})
 
 
+def _clamp_score(value: float | None, low: float, high: float, *, inverse: bool = False) -> float | None:
+    if value is None or high <= low:
+        return None
+    clipped = min(max(value, low), high)
+    ratio = (clipped - low) / (high - low)
+    if inverse:
+        ratio = 1.0 - ratio
+    return round(ratio * 100.0, 1)
+
+
+def _build_golf_radar(row) -> list[dict[str, float]]:
+    metrics = [
+        ("World Rank", _clamp_score(_safe_float(getattr(row, "owgr__rank", None)), 1.0, 200.0, inverse=True)),
+        ("SG Total", _clamp_score(_safe_float(getattr(row, "sg_total__avg", None)), -1.5, 3.5)),
+        ("Tee to Green", _clamp_score(_safe_float(getattr(row, "sg_tee_to_green__avg", None)), -1.2, 2.8)),
+        ("Approach", _clamp_score(_safe_float(getattr(row, "sg_approach__avg", None)), -1.2, 2.4)),
+        ("Putting", _clamp_score(_safe_float(getattr(row, "sg_putting__avg", None)), -1.8, 2.0)),
+        ("Birdie Rate", _clamp_score(_safe_float(getattr(row, "birdie_or_better_pct__value", None)), 10.0, 30.0)),
+    ]
+    return [{"label": label, "value": value or 0.0} for label, value in metrics if value is not None]
+
+
 def _build_golf_profile(row) -> dict:
     country = row.feature_country_name if pd.notna(getattr(row, "feature_country_name", None)) else getattr(row, "country", None)
     stats: list[dict[str, str]] = []
@@ -132,6 +154,8 @@ def _load_meta() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
                 "sg_total__avg",
                 "sg_approach__avg",
                 "sg_putting__avg",
+                "sg_tee_to_green__avg",
+                "birdie_or_better_pct__value",
             ]
         ]
         .dropna(subset=["tournament_id", "player_name"])
@@ -224,6 +248,8 @@ def _load_predictions(tournament_meta: pd.DataFrame, player_outcomes: pd.DataFra
                     "sg_total__avg",
                     "sg_approach__avg",
                     "sg_putting__avg",
+                    "sg_tee_to_green__avg",
+                    "birdie_or_better_pct__value",
                     "source_priority",
                 ]
             ]
@@ -306,6 +332,7 @@ def _build_backtests(df: pd.DataFrame, winners: dict[str, str]) -> list[dict]:
                     "winProbability": float(row.winner_probability * 100),
                     "actualWinner": bool(row.player_name == actual_winner),
                     "profile": _build_golf_profile(row),
+                    "radarMetrics": _build_golf_radar(row),
                 }
             )
 
@@ -370,6 +397,7 @@ def _build_upcoming(df: pd.DataFrame) -> list[dict]:
                 "playerName": row.player_name,
                 "winProbability": float(row.winner_probability * 100),
                 "profile": _build_golf_profile(row),
+                "radarMetrics": _build_golf_radar(row),
             }
             for rank, row in enumerate(latest_event.itertuples(index=False), start=1)
         ]

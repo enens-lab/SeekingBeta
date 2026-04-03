@@ -12,11 +12,12 @@ import {
   type SportsTeamDetails,
   type SportsUpcomingBoard,
   type SportsBoardPrediction,
+  type SportsRadarMetric,
 } from '../../api/client';
 import { trackEvent } from '../../lib/analytics';
 import './SportsDashboard.css';
 
-type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'MLB' | 'NFL' | 'NHL';
+type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'NFL' | 'NHL';
 
 const EMPTY_COLLECTION: SportsBoardCollection = {
   upcoming: [],
@@ -65,6 +66,54 @@ type MlbLineupCardProps = {
   summaryLabel?: string;
 };
 
+type ExpandableLineupPlayerCardProps = {
+  teamName?: string;
+  player: SportsLineupPlayer;
+  accentColor?: string | null;
+};
+
+function ExpandableLineupPlayerCard({ teamName, player, accentColor }: ExpandableLineupPlayerCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const hasRadar = (player.radarMetrics?.length || 0) > 0;
+
+  return (
+    <div className={`mlb-lineup-player-shell ${expanded ? 'expanded' : ''}`}>
+      <div className="mlb-lineup-row">
+        <span className="mlb-lineup-slot">{player.lineupSlot || '-'}</span>
+        <div className="mlb-lineup-player">
+          <PlayerProfileCard
+            name={player.playerName}
+            profile={player.profile}
+            compact
+          />
+          {player.performanceSummary ? (
+            <div className="mlb-lineup-summary">{player.performanceSummary}</div>
+          ) : null}
+        </div>
+        {hasRadar ? (
+          <button
+            type="button"
+            className="lineup-details-toggle"
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? 'Hide detail' : 'Show detail'}
+          </button>
+        ) : null}
+      </div>
+      {expanded && hasRadar ? (
+        <div className="mlb-lineup-player-detail">
+          <StarterRadarChart
+            title={player.playerName}
+            subtitle={player.performanceSummary || player.profile?.subtitle || `${teamName || 'Team'} player`}
+            metrics={player.radarMetrics}
+            accentColor={accentColor}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel, summaryLabel = 'projected players' }: MlbLineupCardProps) {
   const players = lineup || [];
 
@@ -90,19 +139,12 @@ function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel, summaryLabel
       ) : (
         <div className="mlb-lineup-rows">
           {players.map((player) => (
-            <div key={`${teamName}-${player.lineupSlot || 'x'}-${player.playerId || player.playerName}`} className="mlb-lineup-row">
-              <span className="mlb-lineup-slot">{player.lineupSlot || '-'}</span>
-              <div className="mlb-lineup-player">
-                <PlayerProfileCard
-                  name={player.playerName}
-                  profile={player.profile}
-                  compact
-                />
-                {player.performanceSummary ? (
-                  <div className="mlb-lineup-summary">{player.performanceSummary}</div>
-                ) : null}
-              </div>
-            </div>
+            <ExpandableLineupPlayerCard
+              key={`${teamName}-${player.lineupSlot || 'x'}-${player.playerId || player.playerName}`}
+              teamName={teamName}
+              player={player}
+              accentColor={teamDetails?.primaryColor}
+            />
           ))}
         </div>
       )}
@@ -141,6 +183,80 @@ function BasketballFeaturedPlayerCard({ teamName, player, accentColor }: Basketb
       ) : (
         <div className="mlb-lineup-empty">Featured player detail will appear once the projected rotation is ready.</div>
       )}
+    </div>
+  );
+}
+
+type ExpandablePredictionCardProps = {
+  player: SportsBoardPrediction;
+  accentColor?: string | null;
+};
+
+function ExpandablePredictionCard({ player, accentColor }: ExpandablePredictionCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const hasRadar = (player.radarMetrics?.length || 0) > 0;
+
+  return (
+    <div className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''} ${expanded ? 'expanded' : ''}`}>
+      <div className="detail-player-topline">
+        <span className="dp-rank">#{player.rank}</span>
+        <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
+        {player.actualWinner && <span className="dp-badge">Winner</span>}
+      </div>
+      <PlayerProfileCard
+        name={player.playerName}
+        profile={player.profile}
+        compact
+      />
+      {hasRadar ? (
+        <button
+          type="button"
+          className="detail-player-toggle"
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? 'Hide detail' : 'Show detail'}
+        </button>
+      ) : null}
+      {expanded && hasRadar ? (
+        <StarterRadarChart
+          title={player.playerName}
+          subtitle={player.profile?.subtitle || 'Player profile'}
+          metrics={player.radarMetrics as SportsRadarMetric[]}
+          accentColor={accentColor}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+type PredictionSpotlightCardProps = {
+  player?: SportsBoardPrediction;
+  accentColor?: string | null;
+};
+
+function PredictionSpotlightCard({ player, accentColor }: PredictionSpotlightCardProps) {
+  if (!player) {
+    return null;
+  }
+
+  return (
+    <div className="basketball-featured-player-card">
+      <div className="basketball-featured-player-header">
+        <div>
+          <span className="basketball-featured-player-eyebrow">Model favorite</span>
+          <h3>{player.playerName}</h3>
+        </div>
+      </div>
+      <PlayerProfileCard
+        name={player.playerName}
+        profile={player.profile}
+      />
+      <StarterRadarChart
+        title={player.playerName}
+        subtitle={player.profile?.subtitle || 'Player profile'}
+        metrics={player.radarMetrics}
+        accentColor={accentColor}
+      />
     </div>
   );
 }
@@ -200,12 +316,12 @@ function SportsDashboard() {
       Golf: sportsBoards.golf,
       Tennis: sportsBoards.tennis,
       Basketball: sportsBoards.basketball,
-      MLB: sportsBoards.mlb,
+      Baseball: sportsBoards.mlb,
     }),
     [sportsBoards]
   );
 
-  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'MLB'
+  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball'
     ? sportDataMap[activeSport]
     : EMPTY_COLLECTION;
 
@@ -223,7 +339,7 @@ function SportsDashboard() {
   }, [activeSport, currentUpcoming, tennisTourFilter, golfTourFilter]);
 
   useEffect(() => {
-    if (activeSport === 'MLB' || activeSport === 'Basketball') return;
+    if (activeSport === 'Baseball' || activeSport === 'Basketball') return;
     if (!filteredUpcoming.length) {
       if (activeEventId !== '') {
         setActiveEventId('');
@@ -236,7 +352,7 @@ function SportsDashboard() {
   }, [activeSport, filteredUpcoming, activeEventId]);
 
   useEffect(() => {
-    if (activeSport !== 'MLB') return;
+    if (activeSport !== 'Baseball') return;
     if (!currentUpcoming.length) {
       setExpandedMlbMatchupId('');
       return;
@@ -270,10 +386,10 @@ function SportsDashboard() {
   const basketballSelectedLabel =
     (sportsBoards.basketball.availableDates || []).find((option) => option.dateKey === basketballSelectedDate)?.label ||
     'Next active slate';
-  const isTeamSport = activeSport === 'MLB' || activeSport === 'Basketball';
+  const isTeamSport = activeSport === 'Baseball' || activeSport === 'Basketball';
 
   const displayedPredictions = useMemo(() => {
-    if (activeSport === 'MLB') return [];
+    if (activeSport === 'Baseball') return [];
     let filtered = activeEvent?.predictions || [];
 
     if (playerSearchQuery.trim() !== '') {
@@ -303,7 +419,7 @@ function SportsDashboard() {
   }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, activeSport]);
 
   const handleSportChange = (sport: SportCategory) => {
-    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'MLB') return;
+    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'Baseball') return;
 
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
@@ -358,6 +474,8 @@ function SportsDashboard() {
     }
 
     if (!activeEvent) return null;
+    const topPrediction = activeEvent.predictions[0];
+    const genericAccent = activeSport === 'Golf' ? '#2ad7c4' : '#4d99ff';
 
     return (
       <div className="upcoming-events-container">
@@ -433,6 +551,15 @@ function SportsDashboard() {
             <p><strong>Model:</strong> Tournament-aware probability ranker</p>
           </div>
 
+          {topPrediction?.radarMetrics?.length ? (
+            <div className="basketball-featured-grid generic-featured-grid">
+              <PredictionSpotlightCard
+                player={topPrediction}
+                accentColor={genericAccent}
+              />
+            </div>
+          ) : null}
+
           {displayedPredictions.length === 0 ? (
             <div className="no-results-message">No contenders found matching &quot;{playerSearchQuery}&quot;</div>
           ) : (
@@ -482,7 +609,7 @@ function SportsDashboard() {
       <div className="upcoming-events-container">
         <div className="event-selector event-selector-mlb">
           <div className="selector-group selector-group-primary">
-            <label>Select MLB slate:</label>
+            <label>Select Baseball slate:</label>
             <select
               value={mlbSelectedDate}
               onChange={(event) => handleMlbDateChange(event.target.value)}
@@ -505,12 +632,12 @@ function SportsDashboard() {
           <div className="tournament-card no-live-board-card">
             <div className="tournament-header">
               <div className="header-left">
-                <h2>No MLB games found for this slate</h2>
+                <h2>No Baseball games found for this slate</h2>
                 <span className="market-status staged">Live schedule filtered</span>
               </div>
             </div>
             <div className="tournament-details">
-              <p>We only show boards for the selected regular-season date. If MLB is off today, pick the next active slate from the selector above.</p>
+              <p>We only show boards for the selected regular-season date. If Baseball is off today, pick the next active slate from the selector above.</p>
             </div>
           </div>
         ) : (
@@ -527,7 +654,7 @@ function SportsDashboard() {
                   <div className="mlb-matchup-top">
                     <div className="mlb-matchup-copy">
                       <div className="mlb-matchup-meta">
-                        <span className="spotlight-tour-pill">MLB</span>
+                        <span className="spotlight-tour-pill">Baseball</span>
                         <span>{board.course}</span>
                         <span>{board.predictionSource?.includes('heuristic_fallback') ? 'Fallback scorer' : 'Baseline model'}</span>
                       </div>
@@ -992,8 +1119,8 @@ function SportsDashboard() {
             <button className={`sport-tab ${activeSport === 'Basketball' ? 'active' : ''}`} onClick={() => handleSportChange('Basketball')}>
               Basketball
             </button>
-            <button className={`sport-tab ${activeSport === 'MLB' ? 'active' : ''}`} onClick={() => handleSportChange('MLB')}>
-              MLB
+            <button className={`sport-tab ${activeSport === 'Baseball' ? 'active' : ''}`} onClick={() => handleSportChange('Baseball')}>
+              Baseball
             </button>
             <button className={`sport-tab ${activeSport === 'NFL' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NFL')}>
               NFL <span className="badge-tbd">TBD</span>
@@ -1005,7 +1132,7 @@ function SportsDashboard() {
         </div>
 
         <div className="sports-content">
-          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'MLB') ? (
+          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
                 <button className={`toggle-btn ${activeTab === 'upcoming' ? 'active' : ''}`} onClick={() => setActiveTab('upcoming')}>
@@ -1037,15 +1164,15 @@ function SportsDashboard() {
                   </div>
                 </div>
               ) : activeTab === 'upcoming' ? (
-                activeSport === 'MLB' ? renderMlbUpcomingBoard() : activeSport === 'Basketball' ? renderBasketballUpcomingBoard() : renderGenericUpcomingBoard()
+                activeSport === 'Baseball' ? renderMlbUpcomingBoard() : activeSport === 'Basketball' ? renderBasketballUpcomingBoard() : renderGenericUpcomingBoard()
               ) : (
                 <div className="backtest-container">
                   <div className="backtest-header-area">
                     <div>
                       <h2>Track Record (2024 - 2026)</h2>
                       <p className="backtest-desc">
-                        {activeSport === 'MLB'
-                          ? "Review historical MLB game boards and compare the model's top side against the actual winner."
+                        {activeSport === 'Baseball'
+                          ? "Review historical Baseball game boards and compare the model's top side against the actual winner."
                           : activeSport === 'Basketball'
                             ? "Review historical Basketball game boards and compare the model's top side against the actual winner."
                             : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
@@ -1152,26 +1279,43 @@ function SportsDashboard() {
                                     <div className="mlb-backtest-summary-column">
                                       <span className="mlb-summary-label">Actual winner</span>
                                       <strong>{backtest.actualWinner || 'Unknown'}</strong>
-                                      <span>{backtest.venue || 'MLB Venue'}</span>
+                                      <span>{backtest.venue || 'Ballpark'}</span>
                                     </div>
                                   </div>
 
-                                  {activeSport === 'MLB' ? (
-                                    <div className="mlb-starter-profile-grid">
-                                      <div className="mlb-starter-profile-card">
-                                        <PlayerProfileCard
-                                          name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
-                                          profile={backtest.awayStarterProfile}
+                                  {activeSport === 'Baseball' ? (
+                                    <>
+                                      <div className="mlb-starter-profile-grid">
+                                        <div className="mlb-starter-profile-card">
+                                          <PlayerProfileCard
+                                            name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
+                                            profile={backtest.awayStarterProfile}
+                                          />
+                                        </div>
+                                        <div className="mlb-starter-profile-card">
+                                          <PlayerProfileCard
+                                            name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
+                                            profile={backtest.homeStarterProfile}
+                                            align="right"
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="mlb-radar-grid">
+                                        <StarterRadarChart
+                                          title={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
+                                          subtitle={`${backtest.awayTeamDetails?.abbreviation || 'AWY'} game profile`}
+                                          metrics={backtest.awayStarterRadar}
+                                          accentColor={backtest.awayTeamDetails?.primaryColor || '#4d99ff'}
+                                        />
+                                        <StarterRadarChart
+                                          title={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
+                                          subtitle={`${backtest.homeTeamDetails?.abbreviation || 'HME'} game profile`}
+                                          metrics={backtest.homeStarterRadar}
+                                          accentColor={backtest.homeTeamDetails?.primaryColor || '#24d3b9'}
                                         />
                                       </div>
-                                      <div className="mlb-starter-profile-card">
-                                        <PlayerProfileCard
-                                          name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
-                                          profile={backtest.homeStarterProfile}
-                                          align="right"
-                                        />
-                                      </div>
-                                    </div>
+                                    </>
                                   ) : activeSport === 'Basketball' ? (
                                     <div className="basketball-featured-grid">
                                       <BasketballFeaturedPlayerCard
@@ -1192,15 +1336,15 @@ function SportsDashboard() {
                                       teamName={backtest.awayTeam}
                                       teamDetails={backtest.awayTeamDetails}
                                       lineup={backtest.awayLineup}
-                                      emptyLabel={activeSport === 'MLB' ? 'Historical away lineup details were not available.' : 'Historical away rotation details were not available.'}
-                                      summaryLabel={activeSport === 'MLB' ? 'recorded bats' : 'rotation players'}
+                                      emptyLabel={activeSport === 'Baseball' ? 'Historical away lineup details were not available.' : 'Historical away rotation details were not available.'}
+                                      summaryLabel={activeSport === 'Baseball' ? 'recorded bats' : 'rotation players'}
                                     />
                                     <MlbLineupCard
                                       teamName={backtest.homeTeam}
                                       teamDetails={backtest.homeTeamDetails}
                                       lineup={backtest.homeLineup}
-                                      emptyLabel={activeSport === 'MLB' ? 'Historical home lineup details were not available.' : 'Historical home rotation details were not available.'}
-                                      summaryLabel={activeSport === 'MLB' ? 'recorded bats' : 'rotation players'}
+                                      emptyLabel={activeSport === 'Baseball' ? 'Historical home lineup details were not available.' : 'Historical home rotation details were not available.'}
+                                      summaryLabel={activeSport === 'Baseball' ? 'recorded bats' : 'rotation players'}
                                     />
                                   </div>
                                 </>
@@ -1209,18 +1353,11 @@ function SportsDashboard() {
                                   <h4>Full Field Ranking</h4>
                                   <div className="details-grid">
                                     {(backtest.fullField || []).map((player) => (
-                                      <div key={`${player.rank}-${player.playerName}`} className={`detail-player ${player.actualWinner ? 'actual-winner-highlight' : ''}`}>
-                                        <div className="detail-player-topline">
-                                          <span className="dp-rank">#{player.rank}</span>
-                                          <span className="dp-prob">{player.winProbability.toFixed(2)}%</span>
-                                          {player.actualWinner && <span className="dp-badge">Winner</span>}
-                                        </div>
-                                        <PlayerProfileCard
-                                          name={player.playerName}
-                                          profile={player.profile}
-                                          compact
-                                        />
-                                      </div>
+                                      <ExpandablePredictionCard
+                                        key={`${player.rank}-${player.playerName}`}
+                                        player={player}
+                                        accentColor={activeSport === 'Golf' ? '#2ad7c4' : '#4d99ff'}
+                                      />
                                     ))}
                                   </div>
                                 </>

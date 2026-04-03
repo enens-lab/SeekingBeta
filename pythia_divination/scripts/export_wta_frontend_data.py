@@ -39,6 +39,28 @@ def _safe_float(value) -> float | None:
         return None
 
 
+def _clamp_score(value: float | None, low: float, high: float, *, inverse: bool = False) -> float | None:
+    if value is None or high <= low:
+        return None
+    clipped = min(max(value, low), high)
+    ratio = (clipped - low) / (high - low)
+    if inverse:
+        ratio = 1.0 - ratio
+    return round(ratio * 100.0, 1)
+
+
+def _build_tennis_radar(row) -> list[dict[str, float]]:
+    metrics = [
+        ("Overall Level", _clamp_score(_safe_float(getattr(row, "elo", None)), 1400.0, 2350.0)),
+        ("Surface Fit", _clamp_score(_safe_float(getattr(row, "surf_elo", None)), 1400.0, 2350.0)),
+        ("Serve", _clamp_score(_safe_float(getattr(row, "serve_won", None)), 0.48, 0.74)),
+        ("Return", _clamp_score(_safe_float(getattr(row, "return_won", None)), 0.28, 0.46)),
+        ("Field Edge", _clamp_score(_safe_float(getattr(row, "elo_field_percentile", None)), 0.05, 0.98)),
+        ("Recent Form", _clamp_score(_safe_float(getattr(row, "player_elo_diff_5", None)), -120.0, 120.0)),
+    ]
+    return [{"label": label, "value": value or 0.0} for label, value in metrics if value is not None]
+
+
 def _build_tennis_profile(row) -> dict:
     stats: list[dict[str, str]] = []
     elo = _safe_float(getattr(row, "elo", None))
@@ -151,6 +173,7 @@ def _build_backtests(df: pd.DataFrame) -> list[dict]:
                     "winProbability": float(probs[idx] * 100),
                     "actualWinner": bool(row["won_tournament"] == 1),
                     "profile": _build_tennis_profile(row),
+                    "radarMetrics": _build_tennis_radar(row),
                 }
             )
 

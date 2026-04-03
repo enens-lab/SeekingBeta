@@ -529,6 +529,7 @@ def _historical_lineups(player_boxscores: pd.DataFrame, game_id: str) -> dict[st
         side_frame = side_frame.sort_values(["starter_numeric", "minutes_numeric", "points"], ascending=[False, False, False]).head(9)
         entries: list[dict[str, Any]] = []
         for index, row in enumerate(side_frame.itertuples(index=False), start=1):
+            field_goal_pct = _safe_float(getattr(row, "field_goal_pct", None))
             entries.append(
                 {
                     "playerId": _safe_int(getattr(row, "player_id", None)),
@@ -541,6 +542,7 @@ def _historical_lineups(player_boxscores: pd.DataFrame, game_id: str) -> dict[st
                         "subtitle": "Starter" if bool(getattr(row, "starter", False)) else "Rotation",
                         "stats": [
                             {"label": "Pts", "value": str(int(getattr(row, "points", 0) or 0))},
+                            {"label": "FG%", "value": f"{field_goal_pct * 100:.1f}%" if field_goal_pct is not None else "--"},
                             {"label": "Ast", "value": str(int(getattr(row, "assists", 0) or 0))},
                             {"label": "Reb", "value": str(int(getattr(row, "rebounds_total", 0) or 0))},
                         ],

@@ -374,6 +374,7 @@ export interface SportsLineupPlayer {
   batSide?: string | null;
   performanceSummary?: string | null;
   profile?: SportsPlayerProfile | null;
+  radarMetrics?: SportsRadarMetric[];
 }
 
 export interface SportsUpcomingBoard {
@@ -402,6 +403,8 @@ export interface SportsUpcomingBoard {
   predictionSource?: string;
   awayLineup?: SportsLineupPlayer[];
   homeLineup?: SportsLineupPlayer[];
+  awayFeaturedPlayer?: SportsLineupPlayer;
+  homeFeaturedPlayer?: SportsLineupPlayer;
   predictions: SportsBoardPrediction[];
 }
 
@@ -431,6 +434,8 @@ export interface SportsHistoricalBoard {
   homeTeamDetails?: SportsTeamDetails;
   awayLineup?: SportsLineupPlayer[];
   homeLineup?: SportsLineupPlayer[];
+  awayFeaturedPlayer?: SportsLineupPlayer;
+  homeFeaturedPlayer?: SportsLineupPlayer;
 }
 
 export interface SportsBoardCollection {

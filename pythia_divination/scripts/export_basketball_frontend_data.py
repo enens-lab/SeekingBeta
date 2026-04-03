@@ -255,6 +255,29 @@ def _build_prediction_team_profile(row: Any, side: str) -> dict[str, Any]:
     }
 
 
+def _featured_player(lineup: list[dict[str, Any]]) -> dict[str, Any] | None:
+    return lineup[0] if lineup else None
+
+
+def _historical_player_radar(row: Any) -> list[dict[str, float]]:
+    points = _safe_float(getattr(row, "points", None))
+    assists = _safe_float(getattr(row, "assists", None))
+    rebounds = _safe_float(getattr(row, "rebounds_total", None))
+    steals = _safe_float(getattr(row, "steals", None))
+    blocks = _safe_float(getattr(row, "blocks", None))
+    minutes = _safe_float(getattr(row, "minutes", None))
+    fg_pct = _safe_float(getattr(row, "field_goal_pct", None))
+    defense = (steals or 0.0) + 1.35 * (blocks or 0.0)
+    return [
+        {"label": "Scoring", "value": float(max(0.0, min(100.0, ((points or 0.0) / 30.0) * 100.0)))},
+        {"label": "Playmaking", "value": float(max(0.0, min(100.0, ((assists or 0.0) / 10.0) * 100.0)))},
+        {"label": "Rebounding", "value": float(max(0.0, min(100.0, ((rebounds or 0.0) / 14.0) * 100.0)))},
+        {"label": "Defense", "value": float(max(0.0, min(100.0, (defense / 4.0) * 100.0)))},
+        {"label": "Shooting", "value": float(max(0.0, min(100.0, ((fg_pct or 0.0) * 100.0))))},
+        {"label": "Minutes", "value": float(max(0.0, min(100.0, ((minutes or 0.0) / 38.0) * 100.0)))},
+    ]
+
+
 def _load_live_schedule(client: BasketballStatsClient) -> pd.DataFrame:
     def _cached_schedule_payload(league: str) -> dict[str, Any] | None:
         pattern = f"schedule_{league}_{LEAGUE_CONFIGS[league].current_season}.json"
@@ -390,6 +413,11 @@ def _build_upcoming_boards(frame: pd.DataFrame, rotation_map: dict[str, dict[str
             "rosterMoves14": _safe_int(getattr(row, "home_availability_expected_rotation_players", np.nan)) or 0,
         }
 
+        away_lineup = rotation_map.get(game_id, {}).get("away", [])
+        home_lineup = rotation_map.get(game_id, {}).get("home", [])
+        away_featured_player = _featured_player(away_lineup)
+        home_featured_player = _featured_player(home_lineup)
+
         boards.append(
             {
                 "id": f"basketball-{getattr(row, 'league')}-{game_id}",
@@ -407,8 +435,10 @@ def _build_upcoming_boards(frame: pd.DataFrame, rotation_map: dict[str, dict[str
                 "awayAvailability": away_availability,
                 "homeAvailability": home_availability,
                 "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
-                "awayLineup": rotation_map.get(game_id, {}).get("away", []),
-                "homeLineup": rotation_map.get(game_id, {}).get("home", []),
+                "awayLineup": away_lineup,
+                "homeLineup": home_lineup,
+                "awayFeaturedPlayer": away_featured_player,
+                "homeFeaturedPlayer": home_featured_player,
                 "predictions": predictions,
             }
         )
@@ -515,6 +545,7 @@ def _historical_lineups(player_boxscores: pd.DataFrame, game_id: str) -> dict[st
                             {"label": "Reb", "value": str(int(getattr(row, "rebounds_total", 0) or 0))},
                         ],
                     },
+                    "radarMetrics": _historical_player_radar(row),
                 }
             )
         result[side] = entries
@@ -570,6 +601,8 @@ def _build_backtests() -> list[dict[str, Any]]:
                     "homeTeamDetails": _build_team_details(row, "home"),
                     "awayLineup": lineups["away"],
                     "homeLineup": lineups["home"],
+                    "awayFeaturedPlayer": _featured_player(lineups["away"]),
+                    "homeFeaturedPlayer": _featured_player(lineups["home"]),
                 }
             )
     return sorted(boards, key=lambda item: (item.get("latestDate") or 0, item.get("tournament") or ""), reverse=True)

@@ -110,6 +110,41 @@ function MlbLineupCard({ teamName, teamDetails, lineup, emptyLabel, summaryLabel
   );
 }
 
+type BasketballFeaturedPlayerCardProps = {
+  teamName?: string;
+  player?: SportsLineupPlayer;
+  accentColor?: string | null;
+};
+
+function BasketballFeaturedPlayerCard({ teamName, player, accentColor }: BasketballFeaturedPlayerCardProps) {
+  return (
+    <div className="basketball-featured-player-card">
+      <div className="basketball-featured-player-header">
+        <div>
+          <span className="basketball-featured-player-eyebrow">{teamName || 'Team'} spotlight</span>
+          <h3>{player?.playerName || 'Featured player pending'}</h3>
+        </div>
+      </div>
+      {player ? (
+        <>
+          <PlayerProfileCard
+            name={player.playerName}
+            profile={player.profile}
+          />
+          <StarterRadarChart
+            title={player.playerName}
+            subtitle={player.performanceSummary || player.profile?.subtitle || 'Projected contributor'}
+            metrics={player.radarMetrics}
+            accentColor={accentColor}
+          />
+        </>
+      ) : (
+        <div className="mlb-lineup-empty">Featured player detail will appear once the projected rotation is ready.</div>
+      )}
+    </div>
+  );
+}
+
 function SportsDashboard() {
   const [sportsBoards, setSportsBoards] = useState<SportsBoardsResponse>(EMPTY_SPORTS_BOARDS);
   const [boardsLoading, setBoardsLoading] = useState(true);
@@ -268,7 +303,7 @@ function SportsDashboard() {
   }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, activeSport]);
 
   const handleSportChange = (sport: SportCategory) => {
-    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'MLB') return;
+    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'MLB') return;
 
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
@@ -785,6 +820,15 @@ function SportsDashboard() {
                         <span className="mlb-context-chip">{board.awayTeamDetails?.recentForm || 'Form pending'}</span>
                         <span className="mlb-context-chip">{board.awayTeamDetails?.availabilitySummary || 'Rotation stable'}</span>
                       </div>
+                      {board.awayFeaturedPlayer ? (
+                        <div className="basketball-featured-inline">
+                          <PlayerProfileCard
+                            name={board.awayFeaturedPlayer.playerName}
+                            profile={board.awayFeaturedPlayer.profile}
+                            compact
+                          />
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="mlb-matchup-middle">
@@ -818,11 +862,34 @@ function SportsDashboard() {
                         <span className="mlb-context-chip">{board.homeTeamDetails?.recentForm || 'Form pending'}</span>
                         <span className="mlb-context-chip">{board.homeTeamDetails?.availabilitySummary || 'Rotation stable'}</span>
                       </div>
+                      {board.homeFeaturedPlayer ? (
+                        <div className="basketball-featured-inline">
+                          <PlayerProfileCard
+                            name={board.homeFeaturedPlayer.playerName}
+                            profile={board.homeFeaturedPlayer.profile}
+                            compact
+                            align="right"
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
                   {expanded && (
                     <div className="mlb-expanded-panel">
+                      <div className="basketball-featured-grid">
+                        <BasketballFeaturedPlayerCard
+                          teamName={board.awayTeam}
+                          player={board.awayFeaturedPlayer}
+                          accentColor={board.awayTeamDetails?.primaryColor || '#4d99ff'}
+                        />
+                        <BasketballFeaturedPlayerCard
+                          teamName={board.homeTeam}
+                          player={board.homeFeaturedPlayer}
+                          accentColor={board.homeTeamDetails?.primaryColor || '#24d3b9'}
+                        />
+                      </div>
+
                       <div className="mlb-team-details-grid">
                         <div className="mlb-team-detail-card">
                           <div className="mlb-team-detail-heading">
@@ -1104,6 +1171,19 @@ function SportsDashboard() {
                                           align="right"
                                         />
                                       </div>
+                                    </div>
+                                  ) : activeSport === 'Basketball' ? (
+                                    <div className="basketball-featured-grid">
+                                      <BasketballFeaturedPlayerCard
+                                        teamName={backtest.awayTeam}
+                                        player={backtest.awayFeaturedPlayer}
+                                        accentColor={backtest.awayTeamDetails?.primaryColor || '#4d99ff'}
+                                      />
+                                      <BasketballFeaturedPlayerCard
+                                        teamName={backtest.homeTeam}
+                                        player={backtest.homeFeaturedPlayer}
+                                        accentColor={backtest.homeTeamDetails?.primaryColor || '#24d3b9'}
+                                      />
                                     </div>
                                   ) : null}
 

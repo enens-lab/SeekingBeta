@@ -9,6 +9,56 @@ import numpy as np
 import pandas as pd
 
 
+def _safe_float(value: Any) -> float | None:
+    if value is None or pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clamp_score(value: float | None, *, scale: float) -> float:
+    if value is None or scale <= 0:
+        return 0.0
+    return float(max(0.0, min(100.0, (value / scale) * 100.0)))
+
+
+def _shooting_score(row: Any) -> float:
+    components = []
+    for attr, weight in (
+        ("field_goal_pct_avg_last_5", 0.45),
+        ("three_point_pct_avg_last_5", 0.35),
+        ("free_throw_pct_avg_last_5", 0.20),
+    ):
+        value = _safe_float(getattr(row, attr, np.nan))
+        if value is not None:
+            components.append((value, weight))
+    if not components:
+        return 0.0
+    weighted = sum(value * weight for value, weight in components) / sum(weight for _, weight in components)
+    return float(max(0.0, min(100.0, weighted * 100.0)))
+
+
+def _player_radar_metrics_from_row(row: Any) -> list[dict[str, float]]:
+    assists = _safe_float(getattr(row, "assists_avg_last_5", np.nan))
+    rebounds = _safe_float(getattr(row, "rebounds_total_avg_last_5", np.nan))
+    steals = _safe_float(getattr(row, "steals_avg_last_5", np.nan))
+    blocks = _safe_float(getattr(row, "blocks_avg_last_5", np.nan))
+    points = _safe_float(getattr(row, "points_recent", np.nan))
+    minutes = _safe_float(getattr(row, "minutes_recent", np.nan))
+    availability = _safe_float(getattr(row, "available_recent", np.nan))
+    defense_value = (steals or 0.0) + 1.35 * (blocks or 0.0)
+    return [
+        {"label": "Scoring", "value": _clamp_score(points, scale=30.0)},
+        {"label": "Playmaking", "value": _clamp_score(assists, scale=9.0)},
+        {"label": "Rebounding", "value": _clamp_score(rebounds, scale=14.0)},
+        {"label": "Defense", "value": _clamp_score(defense_value, scale=4.0)},
+        {"label": "Shooting", "value": _shooting_score(row)},
+        {"label": "Availability", "value": float(max(0.0, min(100.0, (availability or 0.0) * 100.0)))},
+    ]
+
+
 def build_player_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
     """Convert raw player boxscore rows into rolling player history."""
     frame = player_games.copy()
@@ -346,6 +396,8 @@ def build_projected_rotation_map(
 
             entries: list[dict[str, Any]] = []
             for index, row in enumerate(projected.itertuples(index=False), start=1):
+                assists_recent = _safe_float(getattr(row, "assists_avg_last_5", np.nan))
+                rebounds_recent = _safe_float(getattr(row, "rebounds_total_avg_last_5", np.nan))
                 entries.append(
                     {
                         "playerId": int(row.player_id) if pd.notna(row.player_id) else None,
@@ -358,6 +410,15 @@ def build_projected_rotation_map(
                             f"{float(row.played_recent) * 100:.0f}% recent availability"
                         ),
                         "profile": {
+                            "imageUrl": (
+                                f"https://cdn.wnba.com/headshots/wnba/latest/1040x760/{int(row.player_id)}.png"
+                                if str(row.league) == "wnba" and pd.notna(row.player_id)
+                                else (
+                                    f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(row.player_id)}.png"
+                                    if pd.notna(row.player_id)
+                                    else None
+                                )
+                            ),
                             "subtitle": (
                                 "Projected starter"
                                 if float(row.starter_recent) >= 0.5
@@ -370,9 +431,15 @@ def build_projected_rotation_map(
                                 {"label": "Pts L5", "value": f"{float(row.points_avg_last_5):.1f}"}
                                 if pd.notna(row.points_avg_last_5)
                                 else {"label": "Pts", "value": f"{float(row.points_recent):.1f}"},
-                                {"label": "Start %", "value": f"{float(row.starter_recent) * 100:.0f}%"},
+                                {"label": "Ast L5", "value": f"{assists_recent:.1f}"}
+                                if assists_recent is not None
+                                else {"label": "Start %", "value": f"{float(row.starter_recent) * 100:.0f}%"},
+                                {"label": "Reb L5", "value": f"{rebounds_recent:.1f}"}
+                                if rebounds_recent is not None
+                                else {"label": "Avail", "value": f"{float(row.available_recent) * 100:.0f}%"},
                             ],
                         },
+                        "radarMetrics": _player_radar_metrics_from_row(row),
                     }
                 )
             rotation_map[game_id][side] = entries

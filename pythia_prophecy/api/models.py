@@ -475,6 +475,7 @@ class SportsLineupPlayer(BaseModel):
     batSide: Optional[str] = None
     performanceSummary: Optional[str] = None
     profile: Optional[SportsPlayerProfile] = None
+    radarMetrics: List[SportsRadarMetric] = []
 
 
 class SportsBoardPrediction(BaseModel):
@@ -512,6 +513,8 @@ class SportsUpcomingBoard(BaseModel):
     predictionSource: Optional[str] = None
     awayLineup: List[SportsLineupPlayer] = []
     homeLineup: List[SportsLineupPlayer] = []
+    awayFeaturedPlayer: Optional[SportsLineupPlayer] = None
+    homeFeaturedPlayer: Optional[SportsLineupPlayer] = None
     predictions: List[SportsBoardPrediction] = []
 
 
@@ -541,6 +544,8 @@ class SportsHistoricalBoard(BaseModel):
     homeTeamDetails: Optional[SportsTeamDetails] = None
     awayLineup: List[SportsLineupPlayer] = []
     homeLineup: List[SportsLineupPlayer] = []
+    awayFeaturedPlayer: Optional[SportsLineupPlayer] = None
+    homeFeaturedPlayer: Optional[SportsLineupPlayer] = None
 
 
 class SportsBoardCollection(BaseModel):

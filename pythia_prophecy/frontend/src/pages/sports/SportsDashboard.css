@@ -683,6 +683,12 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.basketball-featured-inline {
+  margin-top: 0.1rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .mlb-matchup-middle {
   display: flex;
   flex-direction: column;
@@ -731,6 +737,45 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
   gap: 1rem;
+}
+
+.basketball-featured-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.basketball-featured-player-card {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 0.9rem;
+}
+
+.basketball-featured-player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.basketball-featured-player-header h3 {
+  margin: 0.2rem 0 0;
+  color: var(--text-main);
+  font-size: 1.04rem;
+}
+
+.basketball-featured-player-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .mlb-starter-profile-grid,
@@ -907,7 +952,8 @@
   .mlb-starter-profile-grid,
   .mlb-radar-grid,
   .mlb-lineup-grid,
-  .mlb-backtest-summary {
+  .mlb-backtest-summary,
+  .basketball-featured-grid {
     grid-template-columns: 1fr;
   }
 
@@ -952,6 +998,10 @@
 
   .mlb-context-chip {
     width: 100%;
+  }
+
+  .basketball-featured-player-card {
+    padding: 0.9rem;
   }
 }
 
@@ -1140,6 +1190,10 @@
 
   .details-grid {
     grid-template-columns: 1fr;
+  }
+
+  .basketball-featured-player-header h3 {
+    font-size: 0.98rem;
   }
 }
 

@@ -32,6 +32,8 @@ def test_imports():
     import sports.basketball.rotation_features
     import sports.basketball.build_training_dataset
     import sports.basketball.train_baseline
+    import sports.basketball.torch_model
+    import sports.basketball.train_torch
     import sports.wta.build_training_dataset
     import sports.wta.feature_engineering
     import sports.wta.ingest

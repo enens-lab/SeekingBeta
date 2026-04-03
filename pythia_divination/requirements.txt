@@ -18,6 +18,7 @@ asyncpg==0.29.0
 # TensorFlow is required for .keras LSTM artifacts.
 # Torch is optional and only needed for legacy .pt artifacts/training.
 tensorflow>=2.10.0
+torch==2.8.0
 
 # Technical indicators (fallback in code, not required)
 # pandas_ta>=0.3.14b0

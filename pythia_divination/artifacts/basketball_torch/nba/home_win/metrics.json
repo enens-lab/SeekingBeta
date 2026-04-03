@@ -1,0 +1,14 @@
+{
+  "league": "nba",
+  "train_rows": 1900,
+  "validation_rows": 475,
+  "feature_count": 430,
+  "device": "mps",
+  "best_epoch": 8,
+  "roc_auc": 0.7907400135651306,
+  "log_loss": 0.5568169125326238,
+  "brier_score": 0.1876356992306427,
+  "accuracy": 0.7157894736842105,
+  "validation_start_date": "2026-01-23",
+  "validation_end_date": "2026-04-02"
+}

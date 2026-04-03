@@ -47,10 +47,28 @@ function runtimeUpdatedLabel(value?: string): string | null {
   });
 }
 
-function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number {
+function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): number | null {
   const label = side === 'away' ? board.awayTeam : board.homeTeam;
   const match = board.predictions.find((prediction) => prediction.side === side || prediction.playerName === label);
-  return match?.winProbability ?? 50;
+  return typeof match?.winProbability === 'number' ? match.winProbability : null;
+}
+
+function formatProbability(value: number | null): string {
+  return value !== null ? `${value.toFixed(1)}%` : 'Pending';
+}
+
+function predictedTeamFromProbabilities(board: SportsUpcomingBoard, awayProb: number | null, homeProb: number | null): string | undefined {
+  if (awayProb === null && homeProb === null) return undefined;
+  if (awayProb === null) return board.homeTeam;
+  if (homeProb === null) return board.awayTeam;
+  return awayProb > homeProb ? board.awayTeam : board.homeTeam;
+}
+
+function predictionSourceLabel(source?: string): string {
+  if (!source) return 'Live model';
+  if (source.includes('heuristic_fallback')) return 'Fallback scorer';
+  if (source.includes('torch_model')) return 'Torch model';
+  return 'Baseline model';
 }
 
 function predictionBarWidth(prediction: SportsBoardPrediction, maxProb: number): string {
@@ -645,8 +663,7 @@ function SportsDashboard() {
             {currentUpcoming.map((board) => {
               const awayProb = probabilityForSide(board, 'away');
               const homeProb = probabilityForSide(board, 'home');
-              const predictedSide = awayProb > homeProb ? 'away' : 'home';
-              const predictedTeam = predictedSide === 'away' ? board.awayTeam : board.homeTeam;
+              const predictedTeam = predictedTeamFromProbabilities(board, awayProb, homeProb);
               const expanded = expandedMlbMatchupId === board.id;
 
               return (
@@ -656,7 +673,7 @@ function SportsDashboard() {
                       <div className="mlb-matchup-meta">
                         <span className="spotlight-tour-pill">Baseball</span>
                         <span>{board.course}</span>
-                        <span>{board.predictionSource?.includes('heuristic_fallback') ? 'Fallback scorer' : 'Baseline model'}</span>
+                        <span>{predictionSourceLabel(board.predictionSource)}</span>
                       </div>
                       <h2>{board.name}</h2>
                       <p className="mlb-matchup-subtitle">
@@ -687,7 +704,7 @@ function SportsDashboard() {
                         </div>
                       </div>
                       <div className="mlb-probability-stack">
-                        <strong>{awayProb.toFixed(1)}%</strong>
+                        <strong>{formatProbability(awayProb)}</strong>
                         <span>away win probability</span>
                       </div>
                       <div className="mlb-context-chip-grid">
@@ -729,7 +746,7 @@ function SportsDashboard() {
                         />
                       </div>
                       <div className="mlb-probability-stack">
-                        <strong>{homeProb.toFixed(1)}%</strong>
+                        <strong>{formatProbability(homeProb)}</strong>
                         <span>home win probability</span>
                       </div>
                       <div className="mlb-context-chip-grid">
@@ -898,8 +915,7 @@ function SportsDashboard() {
             {currentUpcoming.map((board) => {
               const awayProb = probabilityForSide(board, 'away');
               const homeProb = probabilityForSide(board, 'home');
-              const predictedSide = awayProb > homeProb ? 'away' : 'home';
-              const predictedTeam = predictedSide === 'away' ? board.awayTeam : board.homeTeam;
+              const predictedTeam = predictedTeamFromProbabilities(board, awayProb, homeProb);
               const expanded = expandedBasketballMatchupId === board.id;
 
               return (
@@ -909,7 +925,7 @@ function SportsDashboard() {
                       <div className="mlb-matchup-meta">
                         <span className="spotlight-tour-pill">{board.tour}</span>
                         <span>{board.course}</span>
-                        <span>{board.predictionSource?.includes('heuristic_fallback') ? 'Fallback scorer' : 'Baseline model'}</span>
+                        <span>{predictionSourceLabel(board.predictionSource)}</span>
                       </div>
                       <h2>{board.name}</h2>
                       <p className="mlb-matchup-subtitle">
@@ -940,7 +956,7 @@ function SportsDashboard() {
                         </div>
                       </div>
                       <div className="mlb-probability-stack">
-                        <strong>{awayProb.toFixed(1)}%</strong>
+                        <strong>{formatProbability(awayProb)}</strong>
                         <span>away win probability</span>
                       </div>
                       <div className="mlb-context-chip-grid">
@@ -982,7 +998,7 @@ function SportsDashboard() {
                         />
                       </div>
                       <div className="mlb-probability-stack">
-                        <strong>{homeProb.toFixed(1)}%</strong>
+                        <strong>{formatProbability(homeProb)}</strong>
                         <span>home win probability</span>
                       </div>
                       <div className="mlb-context-chip-grid">

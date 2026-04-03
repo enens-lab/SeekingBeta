@@ -44,3 +44,11 @@ Train a first baseline:
 cd /Users/huyngo/Downloads/pythia/pythia_divination
 python3 -m sports.basketball.train_baseline --league nba --model hist_gradient_boosting -v
 ```
+
+Train the PyTorch model:
+
+```bash
+cd /Users/huyngo/Downloads/pythia/pythia_divination
+python3 -m sports.basketball.train_torch --league nba --device auto -v
+python3 -m sports.basketball.train_torch --league wnba --device auto -v
+```

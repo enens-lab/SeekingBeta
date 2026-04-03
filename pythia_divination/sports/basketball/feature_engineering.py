@@ -259,6 +259,7 @@ def attach_pregame_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -
 def add_matchup_differentials(dataset: pd.DataFrame) -> pd.DataFrame:
     frame = dataset.copy()
     diff_count = 0
+    differential_columns: dict[str, pd.Series] = {}
     prefix_pairs = (
         ("home_team_", "away_team_", "matchup_diff_"),
         ("home_rotation_", "away_rotation_", "rotation_diff_"),
@@ -275,9 +276,16 @@ def add_matchup_differentials(dataset: pd.DataFrame) -> pd.DataFrame:
             if frame[column].dtype.kind not in {"i", "u", "f", "b"} and frame[away_column].dtype.kind not in {"i", "u", "f", "b"}:
                 continue
             target_column = f"{output_prefix}{suffix}"
-            frame[target_column] = pd.to_numeric(frame[column], errors="coerce") - pd.to_numeric(frame[away_column], errors="coerce")
+            differential_columns[target_column] = (
+                pd.to_numeric(frame[column], errors="coerce") - pd.to_numeric(frame[away_column], errors="coerce")
+            )
             diff_count += 1
     if "home_team_days_rest" in frame.columns and "away_team_days_rest" in frame.columns:
-        frame["home_rest_advantage"] = pd.to_numeric(frame["home_team_days_rest"], errors="coerce") - pd.to_numeric(frame["away_team_days_rest"], errors="coerce")
-    frame["matchup_diff_count"] = diff_count
+        differential_columns["home_rest_advantage"] = (
+            pd.to_numeric(frame["home_team_days_rest"], errors="coerce")
+            - pd.to_numeric(frame["away_team_days_rest"], errors="coerce")
+        )
+    differential_columns["matchup_diff_count"] = pd.Series(diff_count, index=frame.index, dtype="int64")
+    if differential_columns:
+        frame = pd.concat([frame, pd.DataFrame(differential_columns, index=frame.index)], axis=1)
     return frame

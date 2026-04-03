@@ -1,0 +1,14 @@
+{
+  "league": "wnba",
+  "train_rows": 228,
+  "validation_rows": 58,
+  "feature_count": 424,
+  "device": "mps",
+  "best_epoch": 10,
+  "roc_auc": 0.8443627450980392,
+  "log_loss": 0.5915968733008978,
+  "brier_score": 0.20100703795359748,
+  "accuracy": 0.7931034482758621,
+  "validation_start_date": "2025-08-21",
+  "validation_end_date": "2025-09-12"
+}

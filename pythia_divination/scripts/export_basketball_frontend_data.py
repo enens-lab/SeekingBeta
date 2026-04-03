@@ -11,6 +11,11 @@ import joblib
 import numpy as np
 import pandas as pd
 
+try:
+    import torch
+except Exception:  # pragma: no cover - torch is optional at runtime
+    torch = None  # type: ignore[assignment]
+
 DIV_ROOT = Path(__file__).resolve().parents[1]
 if str(DIV_ROOT) not in sys.path:
     sys.path.insert(0, str(DIV_ROOT))
@@ -27,6 +32,8 @@ from sports.basketball.rotation_features import (
     attach_expected_rotation_features,
     build_projected_rotation_map,
 )
+if torch is not None:
+    from sports.basketball.torch_model import BasketballTorchModel
 from sports.pga.storage import read_preferred_table
 
 PROJ_ROOT = Path(__file__).resolve().parents[2]
@@ -34,9 +41,12 @@ BASKETBALL_DATA_ROOT = DEFAULT_BASKETBALL_DATA_ROOT
 NORMALIZED_DIR = BASKETBALL_DATA_ROOT / "normalized"
 FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
 ARTIFACTS_ROOT = DIV_ROOT / "artifacts" / "basketball_baseline"
+TORCH_ARTIFACTS_ROOT = DIV_ROOT / "artifacts" / "basketball_torch"
 UPCOMING_LOOKAHEAD_DAYS = 7
 MAX_AVAILABLE_DATES = 7
 logger = logging.getLogger(__name__)
+_TABLE_CACHE: dict[tuple[str, tuple[str, ...]], tuple[tuple[tuple[str, float], ...], pd.DataFrame]] = {}
+_PREDICTOR_CACHE: dict[tuple[str, str], tuple[tuple[tuple[str, float], ...], dict[str, Any]]] = {}
 
 
 def _to_datetime_mixed(values: object) -> pd.Series | pd.Timestamp:
@@ -52,6 +62,10 @@ def _optional_text(value: object) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _paths_signature(paths: list[Path]) -> tuple[tuple[str, float], ...]:
+    return tuple((str(path), path.stat().st_mtime if path.exists() else -1.0) for path in paths)
 
 
 def _load_table_optional(*candidates: Path) -> pd.DataFrame:
@@ -75,6 +89,20 @@ def _load_table_optional(*candidates: Path) -> pd.DataFrame:
 
 
 def _load_league_table(stem: str, leagues: list[str]) -> pd.DataFrame:
+    candidates = [
+        candidate
+        for league in leagues
+        for candidate in (
+            NORMALIZED_DIR / f"{stem}_{league}_latest.parquet",
+            NORMALIZED_DIR / f"{stem}_{league}_latest.csv",
+        )
+    ]
+    cache_key = (stem, tuple(leagues))
+    signature = _paths_signature(candidates)
+    cached = _TABLE_CACHE.get(cache_key)
+    if cached and cached[0] == signature:
+        return cached[1].copy(deep=False)
+
     frames: list[pd.DataFrame] = []
     for league in leagues:
         frame = _load_table_optional(
@@ -90,7 +118,8 @@ def _load_league_table(stem: str, leagues: list[str]) -> pd.DataFrame:
         combined["game_id"] = combined["game_id"].astype(str)
     if "official_date" in combined.columns:
         combined["official_date"] = _to_datetime_mixed(combined["official_date"])
-    return combined
+    _TABLE_CACHE[cache_key] = (signature, combined)
+    return combined.copy(deep=False)
 
 
 def _safe_float(value: object) -> float | None:
@@ -114,6 +143,64 @@ def _safe_int(value: object) -> int | None:
 def _sigmoid(values: pd.Series) -> pd.Series:
     clipped = values.clip(-6.0, 6.0)
     return 1.0 / (1.0 + np.exp(-clipped))
+
+
+def _load_torch_predictor(league: str) -> dict[str, Any] | None:
+    if torch is None:
+        return None
+
+    model_dir = TORCH_ARTIFACTS_ROOT / league / "home_win"
+    model_path = model_dir / "model.pt"
+    imputer_path = model_dir / "imputer.joblib"
+    scaler_path = model_dir / "scaler.joblib"
+    required = [model_path, imputer_path, scaler_path]
+    if not all(path.exists() for path in required):
+        return None
+
+    cache_key = ("torch", league)
+    signature = _paths_signature(required)
+    cached = _PREDICTOR_CACHE.get(cache_key)
+    if cached and cached[0] == signature:
+        return cached[1]
+
+    checkpoint = torch.load(model_path, map_location="cpu")
+    model = BasketballTorchModel(
+        input_dim=int(checkpoint["input_dim"]),
+        hidden_width=int(checkpoint["hidden_width"]),
+        dropout=float(checkpoint["dropout"]),
+    )
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    predictor = {
+        "model": model,
+        "feature_columns": list(checkpoint["feature_columns"]),
+        "imputer": joblib.load(imputer_path),
+        "scaler": joblib.load(scaler_path),
+    }
+    _PREDICTOR_CACHE[cache_key] = (signature, predictor)
+    return predictor
+
+
+def _load_baseline_predictor(league: str) -> dict[str, Any] | None:
+    model_dir = ARTIFACTS_ROOT / league / "hist_gradient_boosting" / "home_win"
+    model_path = model_dir / "model.joblib"
+    feature_columns_path = model_dir / "feature_columns.csv"
+    required = [model_path, feature_columns_path]
+    if not all(path.exists() for path in required):
+        return None
+
+    cache_key = ("baseline", league)
+    signature = _paths_signature(required)
+    cached = _PREDICTOR_CACHE.get(cache_key)
+    if cached and cached[0] == signature:
+        return cached[1]
+
+    predictor = {
+        "model": joblib.load(model_path),
+        "feature_columns": pd.read_csv(feature_columns_path)["feature"].tolist(),
+    }
+    _PREDICTOR_CACHE[cache_key] = (signature, predictor)
+    return predictor
 
 
 def _date_key(value: object) -> str | None:
@@ -334,25 +421,43 @@ def _predict_games(frame: pd.DataFrame) -> pd.DataFrame:
     scored_frames: list[pd.DataFrame] = []
     for league, group in frame.groupby("league", sort=False):
         inference = group.copy()
-        model_dir = ARTIFACTS_ROOT / league / "hist_gradient_boosting" / "home_win"
-        model_path = model_dir / "model.joblib"
-        feature_columns_path = model_dir / "feature_columns.csv"
-        if model_path.exists() and feature_columns_path.exists():
+        torch_predictor = _load_torch_predictor(league)
+        if torch_predictor is not None:
             try:
-                estimator = joblib.load(model_path)
-                feature_columns = pd.read_csv(feature_columns_path)["feature"].tolist()
-                for column in feature_columns:
-                    if column not in inference.columns:
-                        inference[column] = np.nan
-                x = inference[feature_columns].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
-                probabilities = estimator.predict_proba(x)[:, 1]
+                x = (
+                    inference.reindex(columns=torch_predictor["feature_columns"])
+                    .apply(pd.to_numeric, errors="coerce")
+                    .replace([np.inf, -np.inf], np.nan)
+                )
+                imputed = torch_predictor["imputer"].transform(x)
+                scaled = torch_predictor["scaler"].transform(imputed).astype(np.float32, copy=False)
+                tensor = torch.from_numpy(scaled)
+                with torch.no_grad():
+                    probabilities = torch.sigmoid(torch_predictor["model"](tensor)).cpu().numpy()
+                inference["home_win_probability"] = probabilities
+                inference["away_win_probability"] = 1.0 - probabilities
+                inference["prediction_source"] = f"{league}_torch_model"
+                scored_frames.append(inference)
+                continue
+            except Exception:
+                logger.exception("Basketball torch inference failed for %s; falling back to baseline model.", league.upper())
+
+        baseline_predictor = _load_baseline_predictor(league)
+        if baseline_predictor is not None:
+            try:
+                x = (
+                    inference.reindex(columns=baseline_predictor["feature_columns"])
+                    .apply(pd.to_numeric, errors="coerce")
+                    .replace([np.inf, -np.inf], np.nan)
+                )
+                probabilities = baseline_predictor["model"].predict_proba(x)[:, 1]
                 inference["home_win_probability"] = probabilities
                 inference["away_win_probability"] = 1.0 - probabilities
                 inference["prediction_source"] = f"{league}_baseline_model"
                 scored_frames.append(inference)
                 continue
             except Exception:
-                pass
+                logger.exception("Basketball baseline inference failed for %s; falling back to heuristic scorer.", league.upper())
 
         score = pd.Series(0.0, index=inference.index, dtype=float)
         weighted_columns = [

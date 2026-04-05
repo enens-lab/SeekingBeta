@@ -329,16 +329,32 @@ def fetch_ohlcv(
 
     if src == "alpaca":
         alp = settings.alpaca
-        df = provider_alpaca.fetch_ohlcv(
-            ticker,
-            base_url=alp.base_url,
-            key_id=alp.key_id,
-            secret_key=alp.secret_key,
-            start=start,
-            period=period,
-            feed=alp.feed,
-            timeframe=base_tf,
-        )
+        try:
+            df = provider_alpaca.fetch_ohlcv(
+                ticker,
+                base_url=alp.base_url,
+                key_id=alp.key_id,
+                secret_key=alp.secret_key,
+                start=start,
+                period=period,
+                feed=alp.feed,
+                timeframe=base_tf,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Alpaca fetch failed for %s (%s); falling back to auto provider: %s",
+                ticker,
+                base_tf,
+                exc,
+            )
+            df = fetch_ohlcv(
+                ticker=ticker,
+                start=start,
+                period=period,
+                retries=retries,
+                data_source="auto",
+                timeframe=base_tf,
+            )
         if needs_aggregation:
             df = _aggregate_ohlcv(df, n_bars)
         return df
@@ -524,15 +540,30 @@ def fetch_panel(
 
     if src == "alpaca":
         alp = settings.alpaca
-        return provider_alpaca.fetch_panel(
-            tickers,
-            base_url=alp.base_url,
-            key_id=alp.key_id,
-            secret_key=alp.secret_key,
-            start=start,
-            feed=alp.get("feed", "iex"),
-            timeframe=tf,  # implemented below in provider
-        )
+        try:
+            return provider_alpaca.fetch_panel(
+                tickers,
+                base_url=alp.base_url,
+                key_id=alp.key_id,
+                secret_key=alp.secret_key,
+                start=start,
+                feed=alp.get("feed", "iex"),
+                timeframe=tf,  # implemented below in provider
+            )
+        except Exception as exc:
+            logger.warning(
+                "Alpaca panel fetch failed for %s (%s); falling back to auto provider: %s",
+                ",".join(tickers),
+                tf,
+                exc,
+            )
+            return fetch_panel(
+                tickers=tickers,
+                start=start,
+                retries=retries,
+                data_source="auto",
+                timeframe=tf,
+            )
 
     if src == "stooq":
         frames = {}

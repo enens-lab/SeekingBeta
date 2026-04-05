@@ -239,6 +239,11 @@ class LSTMModel(BaseModel):
                 # Load model
                 self.tf_model = tf.keras.models.load_model(str(keras_path), compile=False)
                 self.model = self.tf_model
+                input_shape = getattr(self.tf_model, "input_shape", None)
+                if isinstance(input_shape, (list, tuple)) and len(input_shape) >= 3:
+                    loaded_sequence_length = input_shape[1]
+                    if isinstance(loaded_sequence_length, int) and loaded_sequence_length > 0:
+                        self.config.sequence_length = loaded_sequence_length
                 logger.info("Successfully loaded Keras model from %s", keras_path)
 
             except Exception as exc:  # pragma: no cover - runtime safety

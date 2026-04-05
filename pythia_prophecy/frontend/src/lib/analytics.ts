@@ -3,10 +3,21 @@ type AnalyticsParamValue = AnalyticsPrimitive | null | undefined;
 
 export type AnalyticsParams = Record<string, AnalyticsParamValue>;
 
-const GA4_MEASUREMENT_ID = (import.meta.env.VITE_GA4_MEASUREMENT_ID || '').trim();
-const IS_GA4_ENABLED = Boolean(GA4_MEASUREMENT_ID);
+const FIREBASE_APP_SCRIPT = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js';
+const FIREBASE_ANALYTICS_SCRIPT = 'https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js';
 const MAX_EVENT_NAME_LENGTH = 40;
-const CONSENT_STORAGE_KEY = 'sb_ga4_consent_v1';
+const CONSENT_STORAGE_KEY = 'sb_firebase_analytics_consent_v1';
+
+const FIREBASE_CONFIG = {
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY || '').trim(),
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '').trim(),
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim(),
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID || '').trim(),
+  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '').trim(),
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '').trim(),
+};
+
+const IS_FIREBASE_CONFIGURED = Object.values(FIREBASE_CONFIG).every(Boolean);
 
 type ConsentValue = 'granted' | 'denied';
 
@@ -19,6 +30,40 @@ export interface AnalyticsConsent {
   updated_at?: string;
 }
 
+type AnalyticsStatusReason =
+  | 'idle'
+  | 'non_browser'
+  | 'non_production'
+  | 'do_not_track'
+  | 'missing_config'
+  | 'script_load_failed'
+  | 'firebase_global_missing'
+  | 'analytics_init_failed'
+  | 'ready';
+
+interface FirebaseAnalyticsCompat {
+  logEvent: (name: string, params?: Record<string, unknown>) => void;
+  setUserId?: (id: string | null) => void;
+  setUserProperties?: (properties: Record<string, unknown>) => void;
+}
+
+declare global {
+  interface Window {
+    doNotTrack?: string;
+    __sbAnalyticsStatus?: {
+      ready: boolean;
+      reason: AnalyticsStatusReason;
+      details?: Record<string, unknown>;
+      updatedAt: string;
+    };
+    firebase?: {
+      apps?: Array<unknown>;
+      initializeApp: (config: Record<string, string>) => unknown;
+      analytics: () => FirebaseAnalyticsCompat;
+    };
+  }
+}
+
 const DEFAULT_DENIED_CONSENT: AnalyticsConsent = {
   analytics_storage: 'denied',
   ad_storage: 'denied',
@@ -26,16 +71,47 @@ const DEFAULT_DENIED_CONSENT: AnalyticsConsent = {
   ad_personalization: 'denied',
 };
 
-declare global {
-  interface Window {
-    dataLayer: unknown[];
-    gtag?: (...args: unknown[]) => void;
+let initialized = false;
+let ready = false;
+let bootPromise: Promise<boolean> | null = null;
+let currentConsent: AnalyticsConsent = { ...DEFAULT_DENIED_CONSENT };
+let pendingUserId: string | null = null;
+let pendingUserProperties: Record<string, AnalyticsPrimitive> = {};
+let pendingOperations: Array<(analytics: FirebaseAnalyticsCompat) => void> = [];
+
+function debugEnabled(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('analytics_debug') === '1' || window.localStorage.getItem('sb_analytics_debug') === '1';
+  } catch {
+    return false;
   }
 }
 
-let initialized = false;
-let scriptScheduled = false;
-let currentConsent: AnalyticsConsent = { ...DEFAULT_DENIED_CONSENT };
+function setStatus(
+  reason: AnalyticsStatusReason,
+  isReady: boolean,
+  details?: Record<string, unknown>,
+): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.__sbAnalyticsStatus = {
+    ready: isReady,
+    reason,
+    details,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (!debugEnabled()) {
+    return;
+  }
+  const logger = isReady ? console.info : console.warn;
+  logger('[firebase-analytics]', reason, details ?? {});
+}
 
 function normalizeEventName(eventName: string): string {
   const normalized = eventName
@@ -77,19 +153,6 @@ function normalizeParams(params?: AnalyticsParams): Record<string, AnalyticsPrim
   return result;
 }
 
-function ensureGtagStub(): void {
-  window.dataLayer = window.dataLayer || [];
-  if (!window.gtag) {
-    window.gtag = (...args: unknown[]) => {
-      window.dataLayer.push(args);
-    };
-  }
-}
-
-function gtagCall(...args: unknown[]): void {
-  window.gtag?.(...args);
-}
-
 function normalizeConsentValue(value: unknown): ConsentValue {
   return value === 'granted' ? 'granted' : 'denied';
 }
@@ -114,8 +177,7 @@ function readStoredConsent(): AnalyticsConsent | null {
     if (!raw) {
       return null;
     }
-    const parsed = JSON.parse(raw) as Partial<AnalyticsConsent>;
-    return normalizeConsent(parsed);
+    return normalizeConsent(JSON.parse(raw) as Partial<AnalyticsConsent>);
   } catch {
     return null;
   }
@@ -128,66 +190,214 @@ function writeStoredConsent(consent: AnalyticsConsent): void {
   try {
     window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(consent));
   } catch {
-    // Ignore storage failures (private mode / quota).
+    // Ignore storage failures.
   }
 }
 
-function scheduleScriptLoad(): void {
-  if (scriptScheduled) {
-    return;
-  }
-  scriptScheduled = true;
+function hasConfig(): boolean {
+  return IS_FIREBASE_CONFIGURED;
+}
 
-  const loadScript = () => {
-    if (document.querySelector(`script[data-ga4-id="${GA4_MEASUREMENT_ID}"]`)) {
+function missingConfigKeys(): string[] {
+  return Object.entries(FIREBASE_CONFIG)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+}
+
+function doNotTrackEnabled(): boolean {
+  if (typeof window === 'undefined') {
+    return true;
+  }
+  const value =
+    navigator.doNotTrack
+    ?? window.doNotTrack
+    ?? (navigator as Navigator & { msDoNotTrack?: string }).msDoNotTrack
+    ?? '0';
+  return value === '1' || value.toLowerCase() === 'yes';
+}
+
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+    if (existing?.dataset.ready === 'true') {
+      resolve();
       return;
     }
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+      return;
+    }
+
     const script = document.createElement('script');
     script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA4_MEASUREMENT_ID)}`;
-    script.dataset.ga4Id = GA4_MEASUREMENT_ID;
+    script.src = src;
+    script.addEventListener(
+      'load',
+      () => {
+        script.dataset.ready = 'true';
+        resolve();
+      },
+      { once: true },
+    );
+    script.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
     document.head.appendChild(script);
-  };
+  });
+}
 
-  const idleWindow = window as Window & {
-    requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
-  };
-  if (typeof idleWindow.requestIdleCallback === 'function') {
-    idleWindow.requestIdleCallback(() => loadScript(), { timeout: 2000 });
+function resolvedConfig(): Record<string, string> {
+  return { ...FIREBASE_CONFIG };
+}
+
+async function bootFirebaseAnalytics(): Promise<boolean> {
+  if (typeof window === 'undefined') {
+    setStatus('non_browser', false);
+    return false;
+  }
+
+  if (!import.meta.env.PROD) {
+    setStatus('non_production', false);
+    return false;
+  }
+
+  if (!hasConfig()) {
+    setStatus('missing_config', false, { missingKeys: missingConfigKeys() });
+    return false;
+  }
+
+  if (doNotTrackEnabled()) {
+    setStatus('do_not_track', false, {
+      navigatorDoNotTrack: navigator.doNotTrack ?? null,
+      windowDoNotTrack: window.doNotTrack ?? null,
+    });
+    return false;
+  }
+
+  if (bootPromise) {
+    return bootPromise;
+  }
+
+  bootPromise = (async () => {
+    try {
+      await loadScript(FIREBASE_APP_SCRIPT);
+      await loadScript(FIREBASE_ANALYTICS_SCRIPT);
+    } catch (error) {
+      setStatus('script_load_failed', false, {
+        error: error instanceof Error ? error.message : 'Script load failed.',
+      });
+      return false;
+    }
+
+    if (!window.firebase) {
+      setStatus('firebase_global_missing', false);
+      return false;
+    }
+
+    try {
+      if (!window.firebase.apps || window.firebase.apps.length === 0) {
+        window.firebase.initializeApp(resolvedConfig());
+      }
+      window.firebase.analytics();
+    } catch (error) {
+      setStatus('analytics_init_failed', false, {
+        error: error instanceof Error ? error.message : 'Analytics initialization failed.',
+      });
+      return false;
+    }
+
+    ready = true;
+    setStatus('ready', true, { measurementId: FIREBASE_CONFIG.measurementId });
+    flushPendingOperations();
+    return true;
+  })().catch((error) => {
+    setStatus('analytics_init_failed', false, {
+      error: error instanceof Error ? error.message : 'Analytics initialization failed.',
+    });
+    return false;
+  });
+
+  return bootPromise;
+}
+
+function analyticsAllowed(): boolean {
+  return currentConsent.analytics_storage === 'granted';
+}
+
+function getAnalyticsInstance(): FirebaseAnalyticsCompat | null {
+  if (!ready || typeof window === 'undefined' || !window.firebase) {
+    return null;
+  }
+  try {
+    return window.firebase.analytics();
+  } catch {
+    return null;
+  }
+}
+
+function flushPendingOperations(): void {
+  const analytics = getAnalyticsInstance();
+  if (!analytics || !analyticsAllowed()) {
     return;
   }
-  window.setTimeout(loadScript, 1);
+
+  if (pendingUserId !== null || Object.keys(pendingUserProperties).length > 0) {
+    analytics.setUserId?.(pendingUserId);
+    if (Object.keys(pendingUserProperties).length > 0) {
+      analytics.setUserProperties?.(pendingUserProperties);
+    }
+  }
+
+  const operations = pendingOperations;
+  pendingOperations = [];
+  for (const operation of operations) {
+    try {
+      operation(analytics);
+    } catch {
+      // Keep analytics failures isolated from product flows.
+    }
+  }
+}
+
+function enqueueOperation(operation: (analytics: FirebaseAnalyticsCompat) => void): void {
+  if (!analyticsAllowed()) {
+    return;
+  }
+
+  const analytics = getAnalyticsInstance();
+  if (analytics) {
+    try {
+      operation(analytics);
+    } catch {
+      // Ignore analytics failures.
+    }
+    return;
+  }
+
+  pendingOperations.push(operation);
+  void bootFirebaseAnalytics();
 }
 
 export function isAnalyticsEnabled(): boolean {
-  return IS_GA4_ENABLED;
+  return hasConfig();
 }
 
 export function initAnalytics(): boolean {
-  if (!IS_GA4_ENABLED || typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !hasConfig()) {
     return false;
   }
+
   if (initialized) {
     return true;
   }
 
-  ensureGtagStub();
   const storedConsent = readStoredConsent();
   currentConsent = storedConsent ?? { ...DEFAULT_DENIED_CONSENT };
-  gtagCall('consent', 'default', {
-    analytics_storage: currentConsent.analytics_storage,
-    ad_storage: currentConsent.ad_storage,
-    ad_user_data: currentConsent.ad_user_data,
-    ad_personalization: currentConsent.ad_personalization,
-  });
-  gtagCall('js', new Date());
-  gtagCall('config', GA4_MEASUREMENT_ID, {
-    send_page_view: false,
-    anonymize_ip: true,
-    transport_type: 'beacon',
-  });
-  scheduleScriptLoad();
   initialized = true;
+
+  if (analyticsAllowed()) {
+    void bootFirebaseAnalytics();
+  }
+
   return true;
 }
 
@@ -202,7 +412,7 @@ export function hasStoredAnalyticsConsent(): boolean {
 
 export function updateAnalyticsConsent(
   consent: Partial<AnalyticsConsent>,
-  source = 'ui'
+  source = 'ui',
 ): AnalyticsConsent {
   const normalized = normalizeConsent({
     ...currentConsent,
@@ -210,16 +420,22 @@ export function updateAnalyticsConsent(
     source,
     updated_at: new Date().toISOString(),
   });
+
   currentConsent = normalized;
   writeStoredConsent(normalized);
-  if (initAnalytics()) {
-    gtagCall('consent', 'update', {
-      analytics_storage: normalized.analytics_storage,
-      ad_storage: normalized.ad_storage,
-      ad_user_data: normalized.ad_user_data,
-      ad_personalization: normalized.ad_personalization,
-    });
+
+  if (!initialized) {
+    initAnalytics();
   }
+
+  if (!analyticsAllowed()) {
+    pendingOperations = [];
+    pendingUserId = null;
+    pendingUserProperties = {};
+    return normalized;
+  }
+
+  void bootFirebaseAnalytics();
   return normalized;
 }
 
@@ -227,10 +443,13 @@ export function trackPageView(pagePath: string): void {
   if (!initAnalytics()) {
     return;
   }
-  gtagCall('event', 'page_view', {
-    page_path: pagePath,
-    page_title: document.title,
-    page_location: window.location.href,
+
+  enqueueOperation((analytics) => {
+    analytics.logEvent('page_view', {
+      page_path: pagePath,
+      page_title: document.title,
+      page_location: window.location.href,
+    });
   });
 }
 
@@ -238,27 +457,41 @@ export function trackEvent(eventName: string, params?: AnalyticsParams): void {
   if (!initAnalytics()) {
     return;
   }
-  gtagCall('event', normalizeEventName(eventName), normalizeParams(params));
+
+  const normalizedName = normalizeEventName(eventName);
+  const normalizedParams = normalizeParams(params);
+  enqueueOperation((analytics) => {
+    analytics.logEvent(normalizedName, normalizedParams);
+  });
 }
 
 export function setAnalyticsUser(
   userId: string | number,
-  userProperties?: AnalyticsParams
+  userProperties?: AnalyticsParams,
 ): void {
   if (!initAnalytics()) {
     return;
   }
 
-  gtagCall('set', { user_id: String(userId) });
-  if (userProperties && Object.keys(userProperties).length > 0) {
-    gtagCall('set', 'user_properties', normalizeParams(userProperties));
-  }
+  pendingUserId = String(userId);
+  pendingUserProperties = normalizeParams(userProperties);
+  enqueueOperation((analytics) => {
+    analytics.setUserId?.(pendingUserId);
+    if (Object.keys(pendingUserProperties).length > 0) {
+      analytics.setUserProperties?.(pendingUserProperties);
+    }
+  });
 }
 
 export function clearAnalyticsUser(): void {
   if (!initAnalytics()) {
     return;
   }
-  gtagCall('set', { user_id: undefined });
-  gtagCall('set', 'user_properties', {});
+
+  pendingUserId = null;
+  pendingUserProperties = {};
+  enqueueOperation((analytics) => {
+    analytics.setUserId?.(null);
+    analytics.setUserProperties?.({});
+  });
 }

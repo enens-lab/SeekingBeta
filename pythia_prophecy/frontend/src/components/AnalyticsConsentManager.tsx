@@ -6,7 +6,7 @@ import {
   updateAnalyticsConsent,
 } from '../lib/analytics';
 
-type ConsentToggleKey = Exclude<keyof AnalyticsConsent, 'source' | 'updated_at'>;
+type ConsentToggleKey = 'analytics_storage';
 
 type ConsentOption = {
   key: ConsentToggleKey;
@@ -18,22 +18,7 @@ const CONSENT_OPTIONS: ConsentOption[] = [
   {
     key: 'analytics_storage',
     label: 'Usage analytics',
-    description: 'Helps us understand traffic and product usage.',
-  },
-  {
-    key: 'ad_storage',
-    label: 'Ads cookies',
-    description: 'Enables cookies used for campaign measurement.',
-  },
-  {
-    key: 'ad_user_data',
-    label: 'Ads measurement data',
-    description: 'Enables ad performance and conversion reporting.',
-  },
-  {
-    key: 'ad_personalization',
-    label: 'Ads personalization',
-    description: 'Allows personalized ads and remarketing.',
+    description: 'Helps us understand which pages and features people actually use.',
   },
 ];
 
@@ -49,9 +34,9 @@ function buildDeniedConsent(): AnalyticsConsent {
 function buildGrantedConsent(): AnalyticsConsent {
   return {
     analytics_storage: 'granted',
-    ad_storage: 'granted',
-    ad_user_data: 'granted',
-    ad_personalization: 'granted',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
   };
 }
 
@@ -100,12 +85,11 @@ function AnalyticsConsentManager() {
         <div className="consent-banner" role="dialog" aria-live="polite" aria-label="Cookie consent">
           <div className="consent-banner-content">
             <p>
-              We use optional analytics and advertising signals to improve measurement. Required site
-              features always stay on.
+              We use optional analytics to understand traffic and product usage. Core site features always stay on.
             </p>
             <div className="consent-banner-actions">
               <button type="button" className="btn btn-outline" onClick={rejectAll}>
-                Reject Non-Essential
+                Reject Analytics
               </button>
               <button
                 type="button"
@@ -141,8 +125,7 @@ function AnalyticsConsentManager() {
           <div className="consent-modal" onClick={(event) => event.stopPropagation()}>
             <h3>Privacy Controls</h3>
             <p>
-              Choose which optional analytics and advertising features are on. Core site
-              functionality is always on.
+              Choose whether optional analytics are on. Core site functionality is always on.
             </p>
 
             <div className="consent-required-row">

@@ -1122,7 +1122,7 @@ def _build_mlb_available_dates(upcoming: list[dict[str, Any]]) -> list[dict[str,
     return available
 
 
-def _build_mlb_collection_from_upcoming(
+def _build_dated_collection_from_upcoming(
     upcoming: list[dict[str, Any]],
     backtests: list[dict[str, Any]],
     *,
@@ -1238,8 +1238,8 @@ def _sports_board_collection(
         upcoming = _filter_upcoming_golf(upcoming, backtests)
 
     updated_at = _sports_data_updated_at([upcoming_filename, backtests_filename])
-    if sport == "mlb":
-        return _build_mlb_collection_from_upcoming(
+    if sport in {"mlb", "football"}:
+        return _build_dated_collection_from_upcoming(
             upcoming,
             backtests,
             selected_date=selected_date,
@@ -1327,6 +1327,42 @@ async def _live_basketball_board_collection(basketball_date: str | None = None) 
         logger.warning("Falling back to cached Basketball board feed: %s", exc)
         return None
 
+
+async def _live_football_board_collection(football_date: str | None = None) -> Optional[SportsBoardCollection]:
+    backtests_filename = "football_historical_backtests.json"
+    backtests = _load_sports_json(backtests_filename)
+    fallback_updated_at = _sports_data_updated_at([backtests_filename])
+
+    try:
+        async with httpx.AsyncClient(timeout=SPORTS_MLB_BOARDS_TIMEOUT_SECONDS) as client:
+            params = {"football_date": football_date} if football_date else None
+            response = await client.get(f"{DIVINATION_API_URL}/api/sports/football/boards", params=params)
+            response.raise_for_status()
+            payload = response.json()
+            upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            if isinstance(upcoming, list) and not upcoming:
+                refresh_response = await client.get(
+                    f"{DIVINATION_API_URL}/api/sports/football/boards",
+                    params={"force_refresh": "true", **({"football_date": football_date} if football_date else {})},
+                )
+                refresh_response.raise_for_status()
+                payload = refresh_response.json()
+                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
+        if not isinstance(upcoming, list):
+            return None
+        updated_at = _to_utc_datetime(updated_at_raw) or fallback_updated_at
+        return SportsBoardCollection(
+            upcoming=upcoming,
+            backtests=backtests,
+            updated_at=updated_at,
+            source=str(payload.get("source") or "divination_live_football_feed"),
+            selectedDate=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
+            availableDates=payload.get("availableDates") or [],
+        )
+    except Exception as exc:
+        logger.warning("Falling back to cached Football board feed: %s", exc)
+        return None
 
 def _extract_client_ip(request: Request) -> Optional[str]:
     forwarded = request.headers.get("x-forwarded-for", "")
@@ -4111,7 +4147,11 @@ def performance_curve(model: str = Query("lstm_5d")):
 
 
 @app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
-async def sports_boards(mlb_date: str | None = Query(None), basketball_date: str | None = Query(None)):
+async def sports_boards(
+    mlb_date: str | None = Query(None),
+    basketball_date: str | None = Query(None),
+    football_date: str | None = Query(None),
+):
     """Runtime-filtered sports boards for public marketing and dashboard surfaces."""
     golf = _sports_board_collection(
         upcoming_filename="upcoming_tournaments.json",
@@ -4139,8 +4179,16 @@ async def sports_boards(mlb_date: str | None = Query(None), basketball_date: str
             sport="mlb",
             selected_date=mlb_date,
         )
+    football = await _live_football_board_collection(football_date=football_date)
+    if football is None:
+        football = _sports_board_collection(
+            upcoming_filename="football_upcoming_tournaments.json",
+            backtests_filename="football_historical_backtests.json",
+            sport="football",
+            selected_date=football_date,
+        )
 
-    return SportsBoardsResponse(golf=golf, tennis=tennis, basketball=basketball, mlb=mlb)
+    return SportsBoardsResponse(golf=golf, tennis=tennis, basketball=basketball, mlb=mlb, football=football)
 
 
 # ============================================================

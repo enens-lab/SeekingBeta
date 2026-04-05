@@ -18,6 +18,7 @@ const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
   basketball: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
   mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
+  football: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
 };
 
 type SpotlightBoard = {
@@ -87,10 +88,12 @@ function SportsLanding() {
   const tennisEvents = sportsBoards.tennis.upcoming;
   const basketballEvents = sportsBoards.basketball.upcoming;
   const mlbEvents = sportsBoards.mlb.upcoming;
+  const footballEvents = sportsBoards.football.upcoming;
   const golfHistory = sportsBoards.golf.backtests;
   const tennisHistory = sportsBoards.tennis.backtests;
   const basketballHistory = sportsBoards.basketball.backtests;
   const mlbHistory = sportsBoards.mlb.backtests;
+  const footballHistory = sportsBoards.football.backtests;
 
   const spotlightBoards: SpotlightBoard[] = useMemo(
     () => [
@@ -151,16 +154,23 @@ function SportsLanding() {
       summary: "Today's Baseball games with starter info, team notes, and win numbers.",
     },
     {
-      title: 'Other Team Sports',
+      title: 'Football',
+      status: footballEvents.length > 0 ? 'Live now' : 'Track record live',
+      summary: footballEvents.length > 0
+        ? "Today's Football games with quarterback form, roster availability, and win numbers."
+        : 'Past Football boards are live now. Same-day game boards will return when the next regular-season slate is active.',
+    },
+    {
+      title: 'Hockey',
       status: 'Coming next',
-      summary: 'NFL and NHL are next.',
+      summary: 'Hockey is next.',
     },
   ];
 
-  const totalBoards = golfEvents.length + tennisEvents.length + basketballEvents.length + mlbEvents.length;
-  const totalBacktests = golfHistory.length + tennisHistory.length + basketballHistory.length + mlbHistory.length;
+  const totalBoards = golfEvents.length + tennisEvents.length + basketballEvents.length + mlbEvents.length + footballEvents.length;
+  const totalBacktests = golfHistory.length + tennisHistory.length + basketballHistory.length + mlbHistory.length + footballHistory.length;
   const totalTours = new Set(
-    [...golfEvents, ...tennisEvents, ...basketballEvents, ...mlbEvents, ...golfHistory, ...tennisHistory, ...basketballHistory, ...mlbHistory].map((item) => item.tour),
+    [...golfEvents, ...tennisEvents, ...basketballEvents, ...mlbEvents, ...footballEvents, ...golfHistory, ...tennisHistory, ...basketballHistory, ...mlbHistory, ...footballHistory].map((item) => item.tour),
   ).size;
   const totalTrackedEntrants = spotlightBoards.reduce((sum, board) => sum + (board.event?.predictions.length ?? 0), 0);
   const mlbSelectedDate = sportsBoards.mlb.selectedDate || requestedMlbDate || '';
@@ -181,7 +191,7 @@ function SportsLanding() {
               <span className="sports-badge">Sports</span>
               <h1 className="sports-title">See today&apos;s sports picks in one place.</h1>
               <p className="sports-subtitle">
-                Check golf, tennis, Basketball, and Baseball on one page. See the top picks, the live matchups, and the past results.
+                Check golf, tennis, Basketball, Baseball, and Football on one page. See the top picks, the live matchups, and the past results.
               </p>
 
               <div className="sports-hero-tags">
@@ -191,6 +201,7 @@ function SportsLanding() {
                 <span>WTA</span>
                 <span>Basketball</span>
                 <span>Baseball</span>
+                <span>Football</span>
               </div>
 
               <div className="sports-cta">

@@ -17,7 +17,7 @@ import {
 import { trackEvent } from '../../lib/analytics';
 import './SportsDashboard.css';
 
-type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'NFL' | 'NHL';
+type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'Football' | 'NHL';
 
 const EMPTY_COLLECTION: SportsBoardCollection = {
   upcoming: [],
@@ -33,6 +33,7 @@ const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   tennis: EMPTY_COLLECTION,
   basketball: EMPTY_COLLECTION,
   mlb: EMPTY_COLLECTION,
+  football: EMPTY_COLLECTION,
 };
 
 function runtimeUpdatedLabel(value?: string): string | null {
@@ -295,8 +296,10 @@ function SportsDashboard() {
   const [golfTourFilter, setGolfTourFilter] = useState<'All' | 'PGA' | 'LPGA'>('All');
   const [requestedMlbDate, setRequestedMlbDate] = useState<string>('');
   const [requestedBasketballDate, setRequestedBasketballDate] = useState<string>('');
+  const [requestedFootballDate, setRequestedFootballDate] = useState<string>('');
   const [expandedMlbMatchupId, setExpandedMlbMatchupId] = useState<string>('');
   const [expandedBasketballMatchupId, setExpandedBasketballMatchupId] = useState<string>('');
+  const [expandedFootballMatchupId, setExpandedFootballMatchupId] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
@@ -308,6 +311,7 @@ function SportsDashboard() {
         const payload = await sports.getBoards({
           mlbDate: requestedMlbDate || undefined,
           basketballDate: requestedBasketballDate || undefined,
+          footballDate: requestedFootballDate || undefined,
         });
         if (!cancelled) {
           setSportsBoards(payload);
@@ -327,7 +331,7 @@ function SportsDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [requestedMlbDate, requestedBasketballDate]);
+  }, [requestedMlbDate, requestedBasketballDate, requestedFootballDate]);
 
   const sportDataMap = useMemo(
     () => ({
@@ -335,11 +339,12 @@ function SportsDashboard() {
       Tennis: sportsBoards.tennis,
       Basketball: sportsBoards.basketball,
       Baseball: sportsBoards.mlb,
+      Football: sportsBoards.football,
     }),
     [sportsBoards]
   );
 
-  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball'
+  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball' || activeSport === 'Football'
     ? sportDataMap[activeSport]
     : EMPTY_COLLECTION;
 
@@ -357,7 +362,7 @@ function SportsDashboard() {
   }, [activeSport, currentUpcoming, tennisTourFilter, golfTourFilter]);
 
   useEffect(() => {
-    if (activeSport === 'Baseball' || activeSport === 'Basketball') return;
+    if (activeSport === 'Baseball' || activeSport === 'Basketball' || activeSport === 'Football') return;
     if (!filteredUpcoming.length) {
       if (activeEventId !== '') {
         setActiveEventId('');
@@ -391,6 +396,17 @@ function SportsDashboard() {
     }
   }, [activeSport, currentUpcoming, expandedBasketballMatchupId]);
 
+  useEffect(() => {
+    if (activeSport !== 'Football') return;
+    if (!currentUpcoming.length) {
+      setExpandedFootballMatchupId('');
+      return;
+    }
+    if (!currentUpcoming.some((event) => event.id === expandedFootballMatchupId)) {
+      setExpandedFootballMatchupId(currentUpcoming[0].id);
+    }
+  }, [activeSport, currentUpcoming, expandedFootballMatchupId]);
+
   const activeEvent = useMemo(
     () => filteredUpcoming.find((event) => event.id === activeEventId) || filteredUpcoming[0],
     [filteredUpcoming, activeEventId]
@@ -404,7 +420,11 @@ function SportsDashboard() {
   const basketballSelectedLabel =
     (sportsBoards.basketball.availableDates || []).find((option) => option.dateKey === basketballSelectedDate)?.label ||
     'Next active slate';
-  const isTeamSport = activeSport === 'Baseball' || activeSport === 'Basketball';
+  const footballSelectedDate = sportsBoards.football.selectedDate || requestedFootballDate || '';
+  const footballSelectedLabel =
+    (sportsBoards.football.availableDates || []).find((option) => option.dateKey === footballSelectedDate)?.label ||
+    'Next active slate';
+  const isTeamSport = activeSport === 'Baseball' || activeSport === 'Basketball' || activeSport === 'Football';
 
   const displayedPredictions = useMemo(() => {
     if (activeSport === 'Baseball') return [];
@@ -437,7 +457,7 @@ function SportsDashboard() {
   }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, activeSport]);
 
   const handleSportChange = (sport: SportCategory) => {
-    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'Baseball') return;
+    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'Baseball' && sport !== 'Football') return;
 
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
@@ -445,6 +465,8 @@ function SportsDashboard() {
     setShowAllPredictions(false);
     setExpandedBacktest(null);
     setExpandedMlbMatchupId('');
+    setExpandedBasketballMatchupId('');
+    setExpandedFootballMatchupId('');
     setPlayerSearchQuery('');
     setBacktestSearchQuery('');
     setBacktestFilter('All');
@@ -471,6 +493,12 @@ function SportsDashboard() {
     setRequestedBasketballDate(value);
     setExpandedBasketballMatchupId('');
     trackEvent('basketball_date_selector_change', { date: value });
+  };
+
+  const handleFootballDateChange = (value: string) => {
+    setRequestedFootballDate(value);
+    setExpandedFootballMatchupId('');
+    trackEvent('football_date_selector_change', { date: value });
   };
 
   const renderGenericUpcomingBoard = () => {
@@ -1104,6 +1132,258 @@ function SportsDashboard() {
     );
   };
 
+  const renderFootballUpcomingBoard = () => {
+    const availableDates = sportsBoards.football.availableDates || [];
+
+    return (
+      <div className="upcoming-events-container">
+        <div className="event-selector event-selector-mlb">
+          <div className="selector-group selector-group-primary">
+            <label>Select Football slate:</label>
+            <select
+              value={footballSelectedDate}
+              onChange={(event) => handleFootballDateChange(event.target.value)}
+              className="tournament-dropdown"
+            >
+              {availableDates.map((dateOption) => (
+                <option key={dateOption.dateKey} value={dateOption.dateKey}>
+                  {dateOption.label} | {dateOption.gameCount} games
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mlb-slate-summary">
+            <span className="mlb-slate-badge">Single-day board</span>
+            <p>Showing every Football matchup for {footballSelectedLabel}.</p>
+          </div>
+        </div>
+
+        {!currentUpcoming.length ? (
+          <div className="tournament-card no-live-board-card">
+            <div className="tournament-header">
+              <div className="header-left">
+                <h2>No Football games found for this slate</h2>
+                <span className="market-status staged">Seasonal schedule filtered</span>
+              </div>
+            </div>
+            <div className="tournament-details">
+              <p>Football boards are date-based. In the offseason this view will be empty, and it will repopulate as soon as the next regular-season slate is available.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mlb-board-list">
+            {currentUpcoming.map((board) => {
+              const awayProb = probabilityForSide(board, 'away');
+              const homeProb = probabilityForSide(board, 'home');
+              const predictedTeam = predictedTeamFromProbabilities(board, awayProb, homeProb);
+              const expanded = expandedFootballMatchupId === board.id;
+
+              return (
+                <article key={board.id} className={`mlb-matchup-card ${expanded ? 'expanded' : ''}`}>
+                  <div className="mlb-matchup-top">
+                    <div className="mlb-matchup-copy">
+                      <div className="mlb-matchup-meta">
+                        <span className="spotlight-tour-pill">Football</span>
+                        <span>{board.course}</span>
+                        <span>{predictionSourceLabel(board.predictionSource)}</span>
+                      </div>
+                      <h2>{board.name}</h2>
+                      <p className="mlb-matchup-subtitle">
+                        Probable quarterbacks: {board.awayStarter || 'QB pending'} vs {board.homeStarter || 'QB pending'}
+                      </p>
+                    </div>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => setExpandedFootballMatchupId(expanded ? '' : board.id)}
+                    >
+                      {expanded ? 'Hide details' : 'Show details'}
+                    </button>
+                  </div>
+
+                  <div className="mlb-matchup-body">
+                    <div className="mlb-team-column">
+                      <div className="mlb-team-header">
+                        <TeamLogo
+                          logoUrl={board.awayTeamDetails?.logoUrl}
+                          label={board.awayTeam || 'Away'}
+                          abbreviation={board.awayTeamDetails?.abbreviation}
+                          primaryColor={board.awayTeamDetails?.primaryColor}
+                          size="md"
+                        />
+                        <div>
+                          <div className="mlb-team-name">{board.awayTeam}</div>
+                          <div className="mlb-team-subtext">{board.awayStarter || 'QB pending'}</div>
+                        </div>
+                      </div>
+                      <div className="mlb-probability-stack">
+                        <strong>{formatProbability(awayProb)}</strong>
+                        <span>away win probability</span>
+                      </div>
+                      <div className="mlb-context-chip-grid">
+                        <span className="mlb-context-chip">{board.awayTeamDetails?.recentForm || 'Form pending'}</span>
+                        <span className="mlb-context-chip">{board.awayTeamDetails?.availabilitySummary || 'Roster stable'}</span>
+                      </div>
+                      {board.awayStarter ? (
+                        <div className="mlb-starter-inline">
+                          <PlayerProfileCard
+                            name={board.awayStarter}
+                            profile={board.awayStarterProfile}
+                            compact
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="mlb-matchup-middle">
+                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-vs-marker">vs</div>
+                      <div className="mlb-middle-notes">
+                        <span>{board.homeTeamDetails?.venue || board.course}</span>
+                        <span>{board.homeTeamDetails?.weather || 'Weather pending'}</span>
+                      </div>
+                    </div>
+
+                    <div className="mlb-team-column align-right">
+                      <div className="mlb-team-header team-header-right">
+                        <div>
+                          <div className="mlb-team-name">{board.homeTeam}</div>
+                          <div className="mlb-team-subtext">{board.homeStarter || 'QB pending'}</div>
+                        </div>
+                        <TeamLogo
+                          logoUrl={board.homeTeamDetails?.logoUrl}
+                          label={board.homeTeam || 'Home'}
+                          abbreviation={board.homeTeamDetails?.abbreviation}
+                          primaryColor={board.homeTeamDetails?.primaryColor}
+                          size="md"
+                        />
+                      </div>
+                      <div className="mlb-probability-stack">
+                        <strong>{formatProbability(homeProb)}</strong>
+                        <span>home win probability</span>
+                      </div>
+                      <div className="mlb-context-chip-grid">
+                        <span className="mlb-context-chip">{board.homeTeamDetails?.recentForm || 'Form pending'}</span>
+                        <span className="mlb-context-chip">{board.homeTeamDetails?.availabilitySummary || 'Roster stable'}</span>
+                      </div>
+                      {board.homeStarter ? (
+                        <div className="mlb-starter-inline">
+                          <PlayerProfileCard
+                            name={board.homeStarter}
+                            profile={board.homeStarterProfile}
+                            compact
+                            align="right"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {expanded && (
+                    <div className="mlb-expanded-panel">
+                      <div className="mlb-starter-profile-grid">
+                        <div className="mlb-starter-profile-card">
+                          <PlayerProfileCard
+                            name={board.awayStarter || `${board.awayTeam || 'Away'} QB`}
+                            profile={board.awayStarterProfile}
+                          />
+                        </div>
+                        <div className="mlb-starter-profile-card">
+                          <PlayerProfileCard
+                            name={board.homeStarter || `${board.homeTeam || 'Home'} QB`}
+                            profile={board.homeStarterProfile}
+                            align="right"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mlb-team-details-grid">
+                        <div className="mlb-team-detail-card">
+                          <div className="mlb-team-detail-heading">
+                            <TeamLogo
+                              logoUrl={board.awayTeamDetails?.logoUrl}
+                              label={board.awayTeam || 'Away'}
+                              abbreviation={board.awayTeamDetails?.abbreviation}
+                              primaryColor={board.awayTeamDetails?.primaryColor}
+                              size="sm"
+                            />
+                            <div>
+                              <h3>{board.awayTeam}</h3>
+                              <p>{board.awayTeamDetails?.recordPrior || 'Record pending'}</p>
+                            </div>
+                          </div>
+                          <ul className="mlb-detail-list">
+                            <li><span>Recent form</span><strong>{board.awayTeamDetails?.recentForm || 'Pending'}</strong></li>
+                            <li><span>Offense</span><strong>{board.awayTeamDetails?.bullpenSummary || 'Pending'}</strong></li>
+                            <li><span>Availability</span><strong>{board.awayTeamDetails?.availabilitySummary || 'Pending'}</strong></li>
+                            <li><span>Depth</span><strong>{board.awayTeamDetails?.lineupContinuity || 'Pending'}</strong></li>
+                          </ul>
+                        </div>
+
+                        <div className="mlb-team-detail-card">
+                          <div className="mlb-team-detail-heading">
+                            <TeamLogo
+                              logoUrl={board.homeTeamDetails?.logoUrl}
+                              label={board.homeTeam || 'Home'}
+                              abbreviation={board.homeTeamDetails?.abbreviation}
+                              primaryColor={board.homeTeamDetails?.primaryColor}
+                              size="sm"
+                            />
+                            <div>
+                              <h3>{board.homeTeam}</h3>
+                              <p>{board.homeTeamDetails?.recordPrior || 'Record pending'}</p>
+                            </div>
+                          </div>
+                          <ul className="mlb-detail-list">
+                            <li><span>Recent form</span><strong>{board.homeTeamDetails?.recentForm || 'Pending'}</strong></li>
+                            <li><span>Offense</span><strong>{board.homeTeamDetails?.bullpenSummary || 'Pending'}</strong></li>
+                            <li><span>Availability</span><strong>{board.homeTeamDetails?.availabilitySummary || 'Pending'}</strong></li>
+                            <li><span>Depth</span><strong>{board.homeTeamDetails?.lineupContinuity || 'Pending'}</strong></li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="mlb-lineup-grid">
+                        <MlbLineupCard
+                          teamName={board.awayTeam}
+                          teamDetails={board.awayTeamDetails}
+                          lineup={board.awayLineup}
+                          emptyLabel="Projected away skill players are still populating."
+                          summaryLabel="featured players"
+                        />
+                        <MlbLineupCard
+                          teamName={board.homeTeam}
+                          teamDetails={board.homeTeamDetails}
+                          lineup={board.homeLineup}
+                          emptyLabel="Projected home skill players are still populating."
+                          summaryLabel="featured players"
+                        />
+                      </div>
+
+                      <div className="mlb-radar-grid">
+                        <StarterRadarChart
+                          title={board.awayStarter || `${board.awayTeam || 'Away'} QB`}
+                          subtitle={`${board.awayTeamDetails?.abbreviation || 'AWY'} quarterback form`}
+                          metrics={board.awayStarterRadar}
+                          accentColor={board.awayTeamDetails?.primaryColor || '#4d99ff'}
+                        />
+                        <StarterRadarChart
+                          title={board.homeStarter || `${board.homeTeam || 'Home'} QB`}
+                          subtitle={`${board.homeTeamDetails?.abbreviation || 'HME'} quarterback form`}
+                          metrics={board.homeStarterRadar}
+                          accentColor={board.homeTeamDetails?.primaryColor || '#24d3b9'}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="dashboard-page sports-dashboard">
       <DashboardHeader activePage="sports" />
@@ -1113,7 +1393,7 @@ function SportsDashboard() {
           <div>
             <h1>Sports Prediction Boards</h1>
             <p className="subtitle">
-              Scan live boards and past results across golf, tennis, Basketball, and baseball without any betting or trading layer.
+              Scan live boards and past results across golf, tennis, Basketball, Baseball, and Football without any betting or trading layer.
             </p>
           </div>
           {sportUpdatedAt && (
@@ -1138,8 +1418,8 @@ function SportsDashboard() {
             <button className={`sport-tab ${activeSport === 'Baseball' ? 'active' : ''}`} onClick={() => handleSportChange('Baseball')}>
               Baseball
             </button>
-            <button className={`sport-tab ${activeSport === 'NFL' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NFL')}>
-              NFL <span className="badge-tbd">TBD</span>
+            <button className={`sport-tab ${activeSport === 'Football' ? 'active' : ''}`} onClick={() => handleSportChange('Football')}>
+              Football
             </button>
             <button className={`sport-tab ${activeSport === 'NHL' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NHL')}>
               NHL <span className="badge-tbd">TBD</span>
@@ -1148,7 +1428,7 @@ function SportsDashboard() {
         </div>
 
         <div className="sports-content">
-          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball') ? (
+          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball' || activeSport === 'Football') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
                 <button className={`toggle-btn ${activeTab === 'upcoming' ? 'active' : ''}`} onClick={() => setActiveTab('upcoming')}>
@@ -1180,7 +1460,13 @@ function SportsDashboard() {
                   </div>
                 </div>
               ) : activeTab === 'upcoming' ? (
-                activeSport === 'Baseball' ? renderMlbUpcomingBoard() : activeSport === 'Basketball' ? renderBasketballUpcomingBoard() : renderGenericUpcomingBoard()
+                activeSport === 'Baseball'
+                  ? renderMlbUpcomingBoard()
+                  : activeSport === 'Basketball'
+                    ? renderBasketballUpcomingBoard()
+                    : activeSport === 'Football'
+                      ? renderFootballUpcomingBoard()
+                      : renderGenericUpcomingBoard()
               ) : (
                 <div className="backtest-container">
                   <div className="backtest-header-area">
@@ -1191,6 +1477,8 @@ function SportsDashboard() {
                           ? "Review historical Baseball game boards and compare the model's top side against the actual winner."
                           : activeSport === 'Basketball'
                             ? "Review historical Basketball game boards and compare the model's top side against the actual winner."
+                            : activeSport === 'Football'
+                              ? "Review historical Football game boards and compare the model's top side against the actual winner."
                             : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
                       </p>
                     </div>
@@ -1299,18 +1587,18 @@ function SportsDashboard() {
                                     </div>
                                   </div>
 
-                                  {activeSport === 'Baseball' ? (
+                                  {activeSport === 'Baseball' || activeSport === 'Football' ? (
                                     <>
                                       <div className="mlb-starter-profile-grid">
                                         <div className="mlb-starter-profile-card">
                                           <PlayerProfileCard
-                                            name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
+                                            name={backtest.awayStarter || `${backtest.awayTeam || 'Away'} ${activeSport === 'Football' ? 'QB' : 'starter'}`}
                                             profile={backtest.awayStarterProfile}
                                           />
                                         </div>
                                         <div className="mlb-starter-profile-card">
                                           <PlayerProfileCard
-                                            name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
+                                            name={backtest.homeStarter || `${backtest.homeTeam || 'Home'} ${activeSport === 'Football' ? 'QB' : 'starter'}`}
                                             profile={backtest.homeStarterProfile}
                                             align="right"
                                           />
@@ -1319,14 +1607,14 @@ function SportsDashboard() {
 
                                       <div className="mlb-radar-grid">
                                         <StarterRadarChart
-                                          title={backtest.awayStarter || `${backtest.awayTeam || 'Away'} starter`}
-                                          subtitle={`${backtest.awayTeamDetails?.abbreviation || 'AWY'} game profile`}
+                                          title={backtest.awayStarter || `${backtest.awayTeam || 'Away'} ${activeSport === 'Football' ? 'QB' : 'starter'}`}
+                                          subtitle={`${backtest.awayTeamDetails?.abbreviation || 'AWY'} ${activeSport === 'Football' ? 'quarterback profile' : 'game profile'}`}
                                           metrics={backtest.awayStarterRadar}
                                           accentColor={backtest.awayTeamDetails?.primaryColor || '#4d99ff'}
                                         />
                                         <StarterRadarChart
-                                          title={backtest.homeStarter || `${backtest.homeTeam || 'Home'} starter`}
-                                          subtitle={`${backtest.homeTeamDetails?.abbreviation || 'HME'} game profile`}
+                                          title={backtest.homeStarter || `${backtest.homeTeam || 'Home'} ${activeSport === 'Football' ? 'QB' : 'starter'}`}
+                                          subtitle={`${backtest.homeTeamDetails?.abbreviation || 'HME'} ${activeSport === 'Football' ? 'quarterback profile' : 'game profile'}`}
                                           metrics={backtest.homeStarterRadar}
                                           accentColor={backtest.homeTeamDetails?.primaryColor || '#24d3b9'}
                                         />
@@ -1352,15 +1640,39 @@ function SportsDashboard() {
                                       teamName={backtest.awayTeam}
                                       teamDetails={backtest.awayTeamDetails}
                                       lineup={backtest.awayLineup}
-                                      emptyLabel={activeSport === 'Baseball' ? 'Historical away lineup details were not available.' : 'Historical away rotation details were not available.'}
-                                      summaryLabel={activeSport === 'Baseball' ? 'recorded bats' : 'rotation players'}
+                                      emptyLabel={
+                                        activeSport === 'Baseball'
+                                          ? 'Historical away lineup details were not available.'
+                                          : activeSport === 'Football'
+                                            ? 'Historical away skill-player details were not available.'
+                                            : 'Historical away rotation details were not available.'
+                                      }
+                                      summaryLabel={
+                                        activeSport === 'Baseball'
+                                          ? 'recorded bats'
+                                          : activeSport === 'Football'
+                                            ? 'featured players'
+                                            : 'rotation players'
+                                      }
                                     />
                                     <MlbLineupCard
                                       teamName={backtest.homeTeam}
                                       teamDetails={backtest.homeTeamDetails}
                                       lineup={backtest.homeLineup}
-                                      emptyLabel={activeSport === 'Baseball' ? 'Historical home lineup details were not available.' : 'Historical home rotation details were not available.'}
-                                      summaryLabel={activeSport === 'Baseball' ? 'recorded bats' : 'rotation players'}
+                                      emptyLabel={
+                                        activeSport === 'Baseball'
+                                          ? 'Historical home lineup details were not available.'
+                                          : activeSport === 'Football'
+                                            ? 'Historical home skill-player details were not available.'
+                                            : 'Historical home rotation details were not available.'
+                                      }
+                                      summaryLabel={
+                                        activeSport === 'Baseball'
+                                          ? 'recorded bats'
+                                          : activeSport === 'Football'
+                                            ? 'featured players'
+                                            : 'rotation players'
+                                      }
                                     />
                                   </div>
                                 </>

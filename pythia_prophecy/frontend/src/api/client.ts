@@ -455,6 +455,7 @@ export interface SportsBoardsResponse {
   tennis: SportsBoardCollection;
   basketball: SportsBoardCollection;
   mlb: SportsBoardCollection;
+  football: SportsBoardCollection;
 }
 
 type AuthErrorCallback = (() => void) | null;
@@ -768,13 +769,16 @@ export const billing = {
 };
 
 export const sports = {
-  getBoards: (options?: { mlbDate?: string; basketballDate?: string }): Promise<SportsBoardsResponse> => {
+  getBoards: (options?: { mlbDate?: string; basketballDate?: string; footballDate?: string }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
     if (options?.mlbDate) {
       params.set('mlb_date', options.mlbDate);
     }
     if (options?.basketballDate) {
       params.set('basketball_date', options.basketballDate);
+    }
+    if (options?.footballDate) {
+      params.set('football_date', options.footballDate);
     }
     const query = params.toString();
     return request(query ? `/api/sports/boards?${query}` : '/api/sports/boards');

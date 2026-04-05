@@ -987,11 +987,51 @@ def _predict_lstm_cached(model_name: str, ticker: str, force_refresh: bool = Fal
         lock.release()
 
 
+def _lookback_days_from_period(period: Optional[str]) -> Optional[int]:
+    if not period:
+        return None
+
+    normalized = str(period).strip().upper()
+    if not normalized:
+        return None
+
+    explicit = {
+        "1M": 30,
+        "3M": 90,
+        "6M": 180,
+        "1Y": 365,
+        "5Y": 1825,
+    }
+    if normalized in explicit:
+        return explicit[normalized]
+
+    digits = "".join(ch for ch in normalized if ch.isdigit())
+    if not digits:
+        return None
+
+    value = int(digits)
+    if normalized.endswith("Y"):
+        return value * 365
+    if normalized.endswith("M"):
+        return value * 30
+    if normalized.endswith("W"):
+        return value * 7
+    return value
+
+
+def _prediction_lookback_period(requested_period: Optional[str]) -> str:
+    configured_days = _lookback_days_from_period(CFG_LOOKBACK) or 120
+    requested_days = _lookback_days_from_period(requested_period) or configured_days
+    lookback_days = max(configured_days, requested_days)
+    return f"{lookback_days}d"
+
+
 def predict_for_ticker(
     ticker: str,
     horizon: str = "1d",
     model_type: str = DEFAULT_MODEL,
-    task: str = DEFAULT_TASK
+    task: str = DEFAULT_TASK,
+    period: Optional[str] = None,
 ):
     """
     Generate prediction for a ticker using specified model.
@@ -1012,7 +1052,7 @@ def predict_for_ticker(
     # Fetch data
     raw = fetch_ohlcv(
         ticker,
-        period=CFG_LOOKBACK,
+        period=_prediction_lookback_period(period),
         data_source=DATA_SOURCE,
         timeframe=tf,
     )
@@ -1169,7 +1209,8 @@ def predict(
     ticker: str,
     horizon: str = "1d",
     model: str = DEFAULT_MODEL,
-    task: str = DEFAULT_TASK
+    task: str = DEFAULT_TASK,
+    period: Optional[str] = None,
 ):
     """
     Get prediction from a specific model.
@@ -1185,7 +1226,8 @@ def predict(
             ticker.upper(),
             horizon=horizon,
             model_type=model,
-            task=task
+            task=task,
+            period=period,
         )
         return PredictResponse(
             ticker=ticker.upper(),
@@ -1712,7 +1754,8 @@ async def run_analysis(
                 ticker.upper(),
                 horizon=req.horizon,
                 model_type=req.model,
-                task=req.task
+                task=req.task,
+                period=req.period,
             )
             results.append(AnalyzeResultItem(
                 ticker=ticker.upper(),

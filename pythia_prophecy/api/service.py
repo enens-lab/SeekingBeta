@@ -4311,46 +4311,13 @@ async def run_analysis(
     async with httpx.AsyncClient(timeout=30.0) as client:
         for ticker in data.tickers:
             try:
-                if data.model == "lstm_5d":
-                    response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_5d/{ticker.upper()}")
-                    response.raise_for_status()
-                    payload = response.json()
-                    results.append(AnalyzeResultItem(
-                        ticker=ticker.upper(),
-                        last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
-                        prob_up=_sanitize_probability(
-                            payload.get("prob_up", payload.get("probability")),
-                            default=0.5,
-                        ),
-                        signal=payload.get("signal"),
-                        predicted_return=None,
-                        error=None,
-                    ))
-                    continue
-
-                if data.model == "lstm_jackpot":
-                    response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_jackpot/{ticker.upper()}")
-                    response.raise_for_status()
-                    payload = response.json()
-                    results.append(AnalyzeResultItem(
-                        ticker=ticker.upper(),
-                        last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
-                        prob_up=_sanitize_probability(
-                            payload.get("prob_up", payload.get("probability")),
-                            default=0.5,
-                        ),
-                        signal=payload.get("signal"),
-                        predicted_return=None,
-                        error=None,
-                    ))
-                    continue
-
                 response = await client.get(
                     f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
                     params={
                         "horizon": canonical_horizon,
                         "model": data.model,
                         "task": data.task,
+                        "period": data.period,
                     },
                 )
                 response.raise_for_status()
@@ -4359,7 +4326,10 @@ async def run_analysis(
                 results.append(AnalyzeResultItem(
                     ticker=ticker.upper(),
                     last_close=_sanitize_last_close(payload.get("last_close"), default=0.0),
-                    prob_up=_sanitize_probability(payload.get("prob_up"), default=0.5),
+                    prob_up=_sanitize_probability(
+                        payload.get("prob_up", payload.get("probability")),
+                        default=0.5,
+                    ),
                     signal=payload.get("signal"),
                     predicted_return=payload.get("predicted_return"),
                     error=None,

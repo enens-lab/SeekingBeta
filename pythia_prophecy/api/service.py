@@ -13,6 +13,7 @@ import math
 import re
 import logging
 import json
+import base64
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
@@ -62,6 +63,7 @@ from .models import (
     TIER_CONFIG,
     MODEL_HORIZONS,
     PredictResponse,
+    MarketHistoryResponse,
     OracleResponse,
     WatchlistInsightsResponse,
     UpdateWatchlistRequest,
@@ -88,6 +90,7 @@ from .models import (
     BillingChangeSubscriptionRequest,
     BillingChangeSubscriptionResponse,
     BillingStatusResponse,
+    AppleVerifyRequest,
 )
 from .database import (
     create_user,
@@ -863,6 +866,14 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "").strip()
 STRIPE_PRICE_BASIC_MONTHLY = os.getenv("STRIPE_PRICE_BASIC_MONTHLY", "").strip()
 STRIPE_PRICE_PRO_MONTHLY = os.getenv("STRIPE_PRICE_PRO_MONTHLY", "").strip()
+APPLE_IAP_PRODUCT_BASIC_MONTHLY = os.getenv(
+    "APPLE_IAP_PRODUCT_BASIC_MONTHLY",
+    "ai.seekingbeta.basic.monthly",
+).strip()
+APPLE_IAP_PRODUCT_PRO_MONTHLY = os.getenv(
+    "APPLE_IAP_PRODUCT_PRO_MONTHLY",
+    "ai.seekingbeta.pro.monthly",
+).strip()
 STRIPE_LEGACY_GRACE_DAYS = int(os.getenv("STRIPE_LEGACY_GRACE_DAYS", "30"))
 STRIPE_BILLING_PORTAL_RETURN_URL = os.getenv("STRIPE_BILLING_PORTAL_RETURN_URL", "").strip()
 ALPACA_KEY_ID = os.getenv("ALPACA_KEY_ID", "").strip()
@@ -1347,7 +1358,7 @@ def _enforce_rate_limit(identifier: str, max_requests: int, window_seconds: int)
 
 
 def _billing_runtime_enabled() -> bool:
-    return STRIPE_ENABLED and billing_store_enabled()
+    return billing_store_enabled()
 
 
 def _stripe_price_for_tier(tier: SubscriptionTier) -> Optional[str]:
@@ -1364,6 +1375,21 @@ def _tier_from_price_id(price_id: Optional[str]) -> Optional[SubscriptionTier]:
     if price_id == STRIPE_PRICE_BASIC_MONTHLY:
         return SubscriptionTier.BASIC
     if price_id == STRIPE_PRICE_PRO_MONTHLY:
+        return SubscriptionTier.PRO
+    return None
+
+
+def _tier_from_apple_product_id(product_id: Optional[str]) -> Optional[SubscriptionTier]:
+    normalized = str(product_id or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized == APPLE_IAP_PRODUCT_BASIC_MONTHLY.lower():
+        return SubscriptionTier.BASIC
+    if normalized == APPLE_IAP_PRODUCT_PRO_MONTHLY.lower():
+        return SubscriptionTier.PRO
+    if "basic" in normalized:
+        return SubscriptionTier.BASIC
+    if "pro" in normalized:
         return SubscriptionTier.PRO
     return None
 
@@ -1386,6 +1412,132 @@ def _to_utc_datetime(value: Optional[object]) -> Optional[datetime]:
         return value.astimezone(timezone.utc)
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(float(value), tz=timezone.utc)
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+        if candidate.isdigit():
+            numeric = int(candidate)
+            if numeric > 10_000_000_000:
+                return datetime.fromtimestamp(numeric / 1000.0, tz=timezone.utc)
+            return datetime.fromtimestamp(float(numeric), tz=timezone.utc)
+        try:
+            return datetime.fromisoformat(candidate.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+def _subscription_tier_rank(tier: SubscriptionTier) -> int:
+    if tier == SubscriptionTier.PRO:
+        return 2
+    if tier == SubscriptionTier.BASIC:
+        return 1
+    return 0
+
+
+def _max_tier(*tiers: Optional[SubscriptionTier]) -> SubscriptionTier:
+    resolved = SubscriptionTier.FREE
+    for tier in tiers:
+        if tier and _subscription_tier_rank(tier) > _subscription_tier_rank(resolved):
+            resolved = tier
+    return resolved
+
+
+def _stripe_tier_from_state(state: Optional[dict]) -> Optional[SubscriptionTier]:
+    if not state:
+        return None
+    status = str(state.get("subscription_status") or "none").lower()
+    plan_tier = _coerce_subscription_tier(state.get("plan_tier"), SubscriptionTier.FREE)
+    if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
+        return plan_tier
+    if status == "legacy_grace" and _is_grace_active(state):
+        return plan_tier
+    return None
+
+
+def _apple_subscription_active(state: Optional[dict]) -> bool:
+    if not state:
+        return False
+    status = str(state.get("apple_subscription_status") or "").strip().lower()
+    if status not in {"active", "trialing", "verified"}:
+        return False
+    expires_at = _to_utc_datetime(state.get("apple_expires_at"))
+    if expires_at is None:
+        return True
+    return expires_at > datetime.now(timezone.utc)
+
+
+def _apple_tier_from_state(state: Optional[dict]) -> Optional[SubscriptionTier]:
+    if not _apple_subscription_active(state):
+        return None
+    stored = _coerce_subscription_tier(state.get("apple_tier"), SubscriptionTier.FREE) if state and state.get("apple_tier") else None
+    if stored and stored != SubscriptionTier.FREE:
+        return stored
+    return _tier_from_apple_product_id(state.get("apple_product_id") if state else None)
+
+
+def _billing_provider_from_tiers(
+    stripe_tier: Optional[SubscriptionTier],
+    apple_tier: Optional[SubscriptionTier],
+) -> str:
+    has_stripe = stripe_tier is not None and stripe_tier != SubscriptionTier.FREE
+    has_apple = apple_tier is not None and apple_tier != SubscriptionTier.FREE
+    if has_stripe and has_apple:
+        return "hybrid"
+    if has_stripe:
+        return "stripe"
+    if has_apple:
+        return "apple"
+    return "none"
+
+
+def _entitlement_source_from_tiers(
+    stripe_tier: Optional[SubscriptionTier],
+    apple_tier: Optional[SubscriptionTier],
+    user_tier: SubscriptionTier,
+) -> Optional[str]:
+    provider = _billing_provider_from_tiers(stripe_tier, apple_tier)
+    if provider == "hybrid":
+        return "hybrid"
+    if provider == "stripe":
+        return "stripe"
+    if provider == "apple":
+        return "apple"
+    if user_tier != SubscriptionTier.FREE:
+        return "manual"
+    return None
+
+
+def _decode_unverified_jws_payload(jws: str) -> dict[str, Any]:
+    parts = jws.split(".")
+    if len(parts) != 3:
+        return {}
+    payload = parts[1]
+    padding = "=" * (-len(payload) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(payload + padding)
+        loaded = json.loads(decoded.decode("utf-8"))
+        return loaded if isinstance(loaded, dict) else {}
+    except Exception:
+        return {}
+
+
+def _parse_apple_transaction_blob(blob: str) -> dict[str, Any]:
+    candidate = (blob or "").strip()
+    if not candidate:
+        return {}
+    try:
+        loaded = json.loads(candidate)
+        return loaded if isinstance(loaded, dict) else {}
+    except Exception:
+        return _decode_unverified_jws_payload(candidate)
+
+
+def _value_for_keys(payload: dict[str, Any], keys: list[str]) -> Any:
+    for key in keys:
+        if key in payload and payload[key] is not None:
+            return payload[key]
     return None
 
 
@@ -1430,18 +1582,7 @@ def _effective_tier_from_state(state: Optional[dict], fallback_tier: Subscriptio
     if not state:
         return fallback_tier
 
-    status = str(state.get("subscription_status") or "none").lower()
-    plan_tier = _coerce_subscription_tier(state.get("plan_tier"), SubscriptionTier.FREE)
-    if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES and plan_tier in {
-        SubscriptionTier.BASIC,
-        SubscriptionTier.PRO,
-    }:
-        return plan_tier
-
-    if status == "legacy_grace" and _is_grace_active(state):
-        return plan_tier
-
-    return SubscriptionTier.FREE
+    return _max_tier(_stripe_tier_from_state(state), _apple_tier_from_state(state))
 
 
 def _sync_user_tier_with_billing(user: UserInDB) -> UserInDB:
@@ -1480,19 +1621,34 @@ def _sync_user_tier_with_billing(user: UserInDB) -> UserInDB:
 
 
 def _billing_status_payload(user: UserInDB, state: Optional[dict]) -> BillingStatusResponse:
+    stripe_tier = _stripe_tier_from_state(state)
+    apple_tier = _apple_tier_from_state(state)
     effective_tier = _effective_tier_from_state(state, user.tier)
-    plan_tier = _coerce_subscription_tier(
-        state.get("plan_tier") if state else user.tier.value,
-        user.tier,
-    )
+    plan_tier = _max_tier(stripe_tier, apple_tier, user.tier if not state else None)
+    stripe_status = str(state.get("subscription_status") if state else "none")
+    apple_status = str(state.get("apple_subscription_status")) if state and state.get("apple_subscription_status") else None
+    stripe_expires_at = _to_utc_datetime(state.get("current_period_end")) if state else None
+    apple_expires_at = _to_utc_datetime(state.get("apple_expires_at")) if state else None
+    billing_provider = _billing_provider_from_tiers(stripe_tier, apple_tier)
+    entitlement_source = _entitlement_source_from_tiers(stripe_tier, apple_tier, user.tier)
     return BillingStatusResponse(
         billing_enabled=_billing_runtime_enabled(),
         user_tier=user.tier,
         effective_tier=effective_tier,
         plan_tier=plan_tier,
-        subscription_status=str(state.get("subscription_status") if state else "none"),
+        subscription_status=stripe_status,
+        tier_stripe=stripe_tier,
+        tier_apple=apple_tier,
+        billing_provider=billing_provider,
+        entitlement_source=entitlement_source,
+        stripe_status=stripe_status,
+        stripe_expires_at=stripe_expires_at,
+        apple_product_id=str(state.get("apple_product_id")) if state and state.get("apple_product_id") else None,
+        apple_subscription_status=apple_status,
+        apple_expires_at=apple_expires_at,
+        is_active=effective_tier != SubscriptionTier.FREE or _is_grace_active(state),
         cancel_at_period_end=bool(state.get("cancel_at_period_end")) if state else False,
-        current_period_end=_to_utc_datetime(state.get("current_period_end")) if state else None,
+        current_period_end=stripe_expires_at,
         legacy_grace_expires_at=_to_utc_datetime(state.get("legacy_grace_expires_at")) if state else None,
         stripe_customer_id=str(state.get("stripe_customer_id")) if state and state.get("stripe_customer_id") else None,
         stripe_subscription_id=str(state.get("stripe_subscription_id")) if state and state.get("stripe_subscription_id") else None,
@@ -1502,7 +1658,7 @@ def _billing_status_payload(user: UserInDB, state: Optional[dict]) -> BillingSta
 
 
 def _seed_legacy_grace_state_for_existing_paid_users() -> None:
-    if not _billing_runtime_enabled():
+    if not (STRIPE_ENABLED and billing_store_enabled()):
         return
 
     paid_users = list_users_by_tiers([SubscriptionTier.BASIC, SubscriptionTier.PRO])
@@ -2823,6 +2979,82 @@ def _is_stripe_resource_missing_error(exc: Exception) -> bool:
     )
 
 
+def _apple_verify_runtime_enabled() -> bool:
+    return billing_store_enabled()
+
+
+def _normalized_text(value: Optional[object]) -> str:
+    return str(value or "").strip()
+
+
+def _validate_apple_purchase_payload(data: AppleVerifyRequest) -> dict[str, Any]:
+    parsed = _parse_apple_transaction_blob(data.signed_transaction_info)
+    if not parsed:
+        return {}
+
+    parsed_transaction_id = _normalized_text(
+        _value_for_keys(parsed, ["transactionId", "transaction_id", "id"])
+    )
+    parsed_original_transaction_id = _normalized_text(
+        _value_for_keys(parsed, ["originalTransactionId", "original_transaction_id", "originalID"])
+    )
+    parsed_product_id = _normalized_text(
+        _value_for_keys(parsed, ["productId", "product_id", "productID"])
+    )
+    parsed_account_token = _normalized_text(
+        _value_for_keys(parsed, ["appAccountToken", "app_account_token"])
+    )
+
+    if parsed_transaction_id and parsed_transaction_id != data.transaction_id:
+        raise HTTPException(400, detail="Apple transaction payload mismatch")
+    if parsed_product_id and parsed_product_id != data.product_id:
+        raise HTTPException(400, detail="Apple product payload mismatch")
+    if (
+        parsed_original_transaction_id
+        and data.original_transaction_id
+        and parsed_original_transaction_id != data.original_transaction_id
+    ):
+        raise HTTPException(400, detail="Apple original transaction mismatch")
+    if parsed_account_token and data.app_account_token and parsed_account_token != data.app_account_token:
+        raise HTTPException(400, detail="Apple app account token mismatch")
+
+    return parsed
+
+
+def _apple_state_updates_from_purchase(
+    data: AppleVerifyRequest,
+    parsed: dict[str, Any],
+) -> dict[str, Any]:
+    tier = _tier_from_apple_product_id(data.product_id)
+    if not tier:
+        raise HTTPException(400, detail="Unsupported Apple product id")
+
+    expires_at = _to_utc_datetime(
+        _value_for_keys(parsed, ["expiresDate", "expires_date", "expirationDate", "expiration_date"])
+    )
+    revocation_date = _to_utc_datetime(
+        _value_for_keys(parsed, ["revocationDate", "revocation_date"])
+    )
+    environment = _normalized_text(_value_for_keys(parsed, ["environment"]))
+    subscription_status = "active"
+    if revocation_date is not None:
+        subscription_status = "revoked"
+    elif expires_at is not None and expires_at <= datetime.now(timezone.utc):
+        subscription_status = "expired"
+
+    return {
+        "apple_tier": tier.value,
+        "apple_product_id": data.product_id,
+        "apple_transaction_id": data.transaction_id,
+        "apple_original_transaction_id": data.original_transaction_id,
+        "apple_app_account_token": data.app_account_token,
+        "apple_subscription_status": subscription_status,
+        "apple_expires_at": expires_at,
+        "apple_environment": environment or None,
+        "apple_last_verified_at": datetime.now(timezone.utc),
+    }
+
+
 def _reset_stripe_linked_state_for_mode_switch(user: UserInDB, source: str) -> Optional[dict]:
     """Clear Stripe-linked ids so checkout can re-provision customer/subscription cleanly."""
     if not billing_store_enabled():
@@ -2935,6 +3167,30 @@ async def get_billing_status(user: UserInDB = Depends(require_auth)):
     refreshed = _sync_user_tier_with_billing(user)
     state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
     return _billing_status_payload(refreshed, state)
+
+
+@app.post("/api/billing/apple/verify", response_model=BillingStatusResponse, tags=["Billing"])
+async def verify_apple_billing_purchase(
+    data: AppleVerifyRequest,
+    user: UserInDB = Depends(require_verified_user),
+):
+    if not _apple_verify_runtime_enabled():
+        raise HTTPException(503, detail="Apple billing verification is unavailable")
+
+    parsed = _validate_apple_purchase_payload(data)
+    state = _ensure_billing_state_for_user(user)
+    if not state:
+        raise HTTPException(503, detail="Billing store is unavailable")
+
+    upsert_customer_state(
+        user.id,
+        user.email,
+        updates=_apple_state_updates_from_purchase(data, parsed),
+        source="apple_purchase_verify",
+    )
+    refreshed = _sync_user_tier_with_billing(user)
+    latest_state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
+    return _billing_status_payload(refreshed, latest_state)
 
 
 @app.post(
@@ -3756,6 +4012,33 @@ async def predict_lstm_jackpot(ticker: str):
         if fallback:
             return fallback
         raise HTTPException(503, detail=f"LSTM Jackpot unavailable: {e}")
+
+
+@app.get("/api/market/history/{ticker}", response_model=MarketHistoryResponse, tags=["Market"])
+async def market_history(
+    ticker: str,
+    interval: str = Query(default="1d"),
+    limit: int = Query(default=252, ge=60, le=1000),
+):
+    """Proxy mobile-ready daily OHLCV history from divination while preserving one public base URL."""
+    try:
+        async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
+            response = await client.get(
+                f"{DIVINATION_API_URL}/api/market/history/{ticker.upper()}",
+                params={"interval": interval, "limit": limit},
+            )
+            if response.status_code == 200:
+                return MarketHistoryResponse.model_validate(response.json())
+            try:
+                detail = response.json().get("detail") or response.text.strip()
+            except Exception:
+                detail = response.text.strip() or "no error body"
+            raise HTTPException(response.status_code, detail=detail)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Market history proxy error for %s: %s", ticker, exc)
+        raise HTTPException(503, detail=f"Market history unavailable: {exc}") from exc
 
 
 

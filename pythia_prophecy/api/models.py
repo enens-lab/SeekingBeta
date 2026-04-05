@@ -200,6 +200,27 @@ class PredictResponse(BaseModel):
     last_close: float
 
 
+class MarketHistorySupplementalContext(BaseModel):
+    sentiment_score: Optional[float] = None
+    sentiment_articles: Optional[int] = None
+    sentiment_source: Optional[str] = None
+
+
+class MarketHistoryBar(BaseModel):
+    date: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+class MarketHistoryResponse(BaseModel):
+    ticker: str
+    bars: List[MarketHistoryBar]
+    supplemental_context: Optional[MarketHistorySupplementalContext] = None
+
+
 # ============================================================
 # User Oracle (Watchlist) Models
 # ============================================================
@@ -335,6 +356,15 @@ class BillingChangeSubscriptionResponse(BaseModel):
     checkout_url: Optional[str] = None
 
 
+class AppleVerifyRequest(BaseModel):
+    """Payload from the iOS app after a StoreKit-verified purchase."""
+    transaction_id: str
+    original_transaction_id: Optional[str] = None
+    product_id: str
+    app_account_token: Optional[str] = None
+    signed_transaction_info: str
+
+
 class BillingStatusResponse(BaseModel):
     """Current billing/subscription state for authenticated user."""
     billing_enabled: bool
@@ -342,6 +372,16 @@ class BillingStatusResponse(BaseModel):
     effective_tier: SubscriptionTier
     plan_tier: SubscriptionTier
     subscription_status: str
+    tier_stripe: Optional[SubscriptionTier] = None
+    tier_apple: Optional[SubscriptionTier] = None
+    billing_provider: str = "none"
+    entitlement_source: Optional[str] = None
+    stripe_status: Optional[str] = None
+    stripe_expires_at: Optional[datetime] = None
+    apple_product_id: Optional[str] = None
+    apple_subscription_status: Optional[str] = None
+    apple_expires_at: Optional[datetime] = None
+    is_active: bool = False
     cancel_at_period_end: bool
     current_period_end: Optional[datetime] = None
     legacy_grace_expires_at: Optional[datetime] = None

@@ -29,6 +29,15 @@ DEFAULT_STATE = {
     "current_period_end": None,
     "cancel_at_period_end": False,
     "legacy_grace_expires_at": None,
+    "apple_tier": None,
+    "apple_product_id": None,
+    "apple_transaction_id": None,
+    "apple_original_transaction_id": None,
+    "apple_app_account_token": None,
+    "apple_subscription_status": None,
+    "apple_expires_at": None,
+    "apple_environment": None,
+    "apple_last_verified_at": None,
     "source": "system",
 }
 
@@ -77,6 +86,15 @@ def ensure_tables() -> bool:
             current_period_end TIMESTAMPTZ NULL,
             cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,
             legacy_grace_expires_at TIMESTAMPTZ NULL,
+            apple_tier TEXT NULL,
+            apple_product_id TEXT NULL,
+            apple_transaction_id TEXT NULL,
+            apple_original_transaction_id TEXT NULL,
+            apple_app_account_token TEXT NULL,
+            apple_subscription_status TEXT NULL,
+            apple_expires_at TIMESTAMPTZ NULL,
+            apple_environment TEXT NULL,
+            apple_last_verified_at TIMESTAMPTZ NULL,
             source TEXT NOT NULL DEFAULT 'system',
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -117,6 +135,19 @@ def ensure_tables() -> bool:
         with conn.cursor() as cur:
             cur.execute(sql_state)
             cur.execute(sql_webhook)
+            alter_statements = [
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_tier TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_product_id TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_transaction_id TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_original_transaction_id TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_app_account_token TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_subscription_status TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_expires_at TIMESTAMPTZ NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_environment TEXT NULL",
+                f"ALTER TABLE {BILLING_STATE_TABLE} ADD COLUMN IF NOT EXISTS apple_last_verified_at TIMESTAMPTZ NULL",
+            ]
+            for statement in alter_statements:
+                cur.execute(statement)
             for statement in sql_indexes:
                 cur.execute(statement)
         conn.commit()
@@ -134,7 +165,11 @@ def get_state_by_user_id(user_id: str) -> Optional[dict[str, Any]]:
                 f"""
                 SELECT user_id, email, stripe_customer_id, plan_tier, subscription_status,
                        price_id, stripe_subscription_id, current_period_end,
-                       cancel_at_period_end, legacy_grace_expires_at, source,
+                       cancel_at_period_end, legacy_grace_expires_at,
+                       apple_tier, apple_product_id, apple_transaction_id,
+                       apple_original_transaction_id, apple_app_account_token,
+                       apple_subscription_status, apple_expires_at,
+                       apple_environment, apple_last_verified_at, source,
                        created_at, updated_at
                 FROM {BILLING_STATE_TABLE}
                 WHERE user_id = %s
@@ -154,7 +189,11 @@ def get_state_by_customer_id(stripe_customer_id: str) -> Optional[dict[str, Any]
                 f"""
                 SELECT user_id, email, stripe_customer_id, plan_tier, subscription_status,
                        price_id, stripe_subscription_id, current_period_end,
-                       cancel_at_period_end, legacy_grace_expires_at, source,
+                       cancel_at_period_end, legacy_grace_expires_at,
+                       apple_tier, apple_product_id, apple_transaction_id,
+                       apple_original_transaction_id, apple_app_account_token,
+                       apple_subscription_status, apple_expires_at,
+                       apple_environment, apple_last_verified_at, source,
                        created_at, updated_at
                 FROM {BILLING_STATE_TABLE}
                 WHERE stripe_customer_id = %s
@@ -203,6 +242,8 @@ def upsert_customer_state(
 
     merged["current_period_end"] = _as_utc(merged.get("current_period_end"))
     merged["legacy_grace_expires_at"] = _as_utc(merged.get("legacy_grace_expires_at"))
+    merged["apple_expires_at"] = _as_utc(merged.get("apple_expires_at"))
+    merged["apple_last_verified_at"] = _as_utc(merged.get("apple_last_verified_at"))
     merged["cancel_at_period_end"] = bool(merged.get("cancel_at_period_end", False))
 
     with _get_connection() as conn:
@@ -220,11 +261,20 @@ def upsert_customer_state(
                     current_period_end,
                     cancel_at_period_end,
                     legacy_grace_expires_at,
+                    apple_tier,
+                    apple_product_id,
+                    apple_transaction_id,
+                    apple_original_transaction_id,
+                    apple_app_account_token,
+                    apple_subscription_status,
+                    apple_expires_at,
+                    apple_environment,
+                    apple_last_verified_at,
                     source,
                     created_at,
                     updated_at
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
                 )
                 ON CONFLICT (user_id) DO UPDATE SET
                     email = EXCLUDED.email,
@@ -236,11 +286,24 @@ def upsert_customer_state(
                     current_period_end = EXCLUDED.current_period_end,
                     cancel_at_period_end = EXCLUDED.cancel_at_period_end,
                     legacy_grace_expires_at = EXCLUDED.legacy_grace_expires_at,
+                    apple_tier = EXCLUDED.apple_tier,
+                    apple_product_id = EXCLUDED.apple_product_id,
+                    apple_transaction_id = EXCLUDED.apple_transaction_id,
+                    apple_original_transaction_id = EXCLUDED.apple_original_transaction_id,
+                    apple_app_account_token = EXCLUDED.apple_app_account_token,
+                    apple_subscription_status = EXCLUDED.apple_subscription_status,
+                    apple_expires_at = EXCLUDED.apple_expires_at,
+                    apple_environment = EXCLUDED.apple_environment,
+                    apple_last_verified_at = EXCLUDED.apple_last_verified_at,
                     source = EXCLUDED.source,
                     updated_at = NOW()
                 RETURNING user_id, email, stripe_customer_id, plan_tier, subscription_status,
                           price_id, stripe_subscription_id, current_period_end,
-                          cancel_at_period_end, legacy_grace_expires_at, source,
+                          cancel_at_period_end, legacy_grace_expires_at,
+                          apple_tier, apple_product_id, apple_transaction_id,
+                          apple_original_transaction_id, apple_app_account_token,
+                          apple_subscription_status, apple_expires_at,
+                          apple_environment, apple_last_verified_at, source,
                           created_at, updated_at
                 """,
                 (
@@ -254,6 +317,15 @@ def upsert_customer_state(
                     merged.get("current_period_end"),
                     merged.get("cancel_at_period_end", False),
                     merged.get("legacy_grace_expires_at"),
+                    merged.get("apple_tier"),
+                    merged.get("apple_product_id"),
+                    merged.get("apple_transaction_id"),
+                    merged.get("apple_original_transaction_id"),
+                    merged.get("apple_app_account_token"),
+                    merged.get("apple_subscription_status"),
+                    merged.get("apple_expires_at"),
+                    merged.get("apple_environment"),
+                    merged.get("apple_last_verified_at"),
                     merged.get("source", "system"),
                 ),
             )
@@ -296,7 +368,11 @@ def list_states_with_expired_legacy_grace(
                 f"""
                 SELECT user_id, email, stripe_customer_id, plan_tier, subscription_status,
                        price_id, stripe_subscription_id, current_period_end,
-                       cancel_at_period_end, legacy_grace_expires_at, source,
+                       cancel_at_period_end, legacy_grace_expires_at,
+                       apple_tier, apple_product_id, apple_transaction_id,
+                       apple_original_transaction_id, apple_app_account_token,
+                       apple_subscription_status, apple_expires_at,
+                       apple_environment, apple_last_verified_at, source,
                        created_at, updated_at
                 FROM {BILLING_STATE_TABLE}
                 WHERE legacy_grace_expires_at IS NOT NULL

@@ -1049,24 +1049,20 @@ def predict_for_ticker(
     if DATA_SOURCE.lower() == "stooq" and tf != "1Day":
         raise HTTPException(400, detail=f"Horizon '{horizon}' not supported for provider 'stooq' (daily only).")
 
-    # Fetch data
+    task_enum = ModelTask.CLASSIFICATION if task == "classifier" else ModelTask.REGRESSION
+    include_regression = task_enum == ModelTask.REGRESSION
+
     raw = fetch_ohlcv(
         ticker,
         period=_prediction_lookback_period(period),
         data_source=DATA_SOURCE,
         timeframe=tf,
     )
-
-    task_enum = ModelTask.CLASSIFICATION if task == "classifier" else ModelTask.REGRESSION
-    include_regression = task_enum == ModelTask.REGRESSION
     feat = make_features(raw, include_regression_target=include_regression)
-
-    # Merge in extra features
     for (dt, tkr), extra in list(EXTRA_FEATS.items()):
         if tkr == ticker and dt in feat.index.strftime("%Y-%m-%d").tolist():
             for k, v in extra.items():
                 feat.loc[feat.index.strftime("%Y-%m-%d") == dt, k] = v
-
     feat_cols = get_feature_columns()
     last_close = float(raw["Close"].iloc[-1])
 
@@ -1086,18 +1082,38 @@ def predict_for_ticker(
         logger.warning("Model load failed for %s/%s; using feature-based fallback", model_type, task)
         return _fallback_prediction_from_features(feat, last_close, task, model_type)
 
-    # Prepare features for the model
-    # If the model provides its own feature computation (LSTM wrappers), use it.
-    if hasattr(model, "compute_features"):
-        try:
-            try:
-                feat = model.compute_features(raw, ticker=ticker.upper())
-            except TypeError:
-                feat = model.compute_features(raw)
-            feat_cols = list(feat.columns)
-        except Exception as exc:
-            raise HTTPException(400, detail=f"Model feature computation failed: {exc}")
+    def build_feature_frame(raw_frame: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+        feat_frame = make_features(raw_frame, include_regression_target=include_regression)
 
+        for (dt, tkr), extra in list(EXTRA_FEATS.items()):
+            if tkr == ticker and dt in feat_frame.index.strftime("%Y-%m-%d").tolist():
+                for k, v in extra.items():
+                    feat_frame.loc[feat_frame.index.strftime("%Y-%m-%d") == dt, k] = v
+
+        feat_columns = get_feature_columns()
+        if hasattr(model, "compute_features"):
+            try:
+                try:
+                    feat_frame = model.compute_features(raw_frame, ticker=ticker.upper())
+                except TypeError:
+                    feat_frame = model.compute_features(raw_frame)
+                feat_columns = list(feat_frame.columns)
+            except Exception as exc:
+                raise HTTPException(400, detail=f"Model feature computation failed: {exc}")
+
+        return feat_frame, feat_columns
+
+    feat, feat_cols = build_feature_frame(raw)
+    last_close = float(raw["Close"].iloc[-1])
+
+    # LSTM models need a longer warmup/history window than short analysis periods provide.
+    # Reuse the same cached long-history fetch path as the dedicated LSTM endpoints.
+    if model.requires_sequences and len(feat) < model.config.sequence_length:
+        raw = _get_cached_lstm_raw_data(ticker.upper())
+        feat, feat_cols = build_feature_frame(raw)
+        last_close = float(raw["Close"].iloc[-1])
+
+    # Prepare features for the model
     X = feat[feat_cols].values
     scaler = None
     if hasattr(model, "get_scaler"):

@@ -8,17 +8,18 @@ import {
   sports,
   type SportsBoardsResponse,
   type SportsHistoricalBoard,
+  type SportsBoardSeasonSummary,
   type SportsUpcomingBoard,
 } from '../../api/client';
 import { trackEvent } from '../../lib/analytics';
 import './SportsLanding.css';
 
 const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
-  golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
-  tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
-  basketball: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
-  mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
-  football: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [] },
+  golf: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
+  tennis: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
+  basketball: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
+  mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
+  football: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
 };
 
 type SpotlightBoard = {
@@ -45,6 +46,17 @@ function probabilityForSide(board: SportsUpcomingBoard, side: 'away' | 'home'): 
   const match = board.predictions.find((prediction) => prediction.side === side || prediction.playerName === label);
   return typeof match?.winProbability === 'number' ? match.winProbability : null;
 }
+
+function formatAccuracy(value?: number | null): string {
+  return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'Pending';
+}
+
+type LandingSummaryCard = {
+  key: string;
+  title: string;
+  summary?: SportsBoardSeasonSummary | null;
+  detail?: string;
+};
 
 function SportsLanding() {
   const [sportsBoards, setSportsBoards] = useState<SportsBoardsResponse>(EMPTY_SPORTS_BOARDS);
@@ -179,6 +191,44 @@ function SportsLanding() {
   const basketballSelectedLabel =
     (sportsBoards.basketball.availableDates || []).find((option) => option.dateKey === basketballSelectedDate)?.label ||
     'Next active Basketball slate';
+  const seasonSummaryCards: LandingSummaryCard[] = [
+    {
+      key: 'golf',
+      title: 'Golf',
+      summary: sportsBoards.golf.seasonSummary,
+      detail:
+        sportsBoards.golf.seasonSummary?.top5Accuracy != null
+          ? `${formatAccuracy(sportsBoards.golf.seasonSummary.top5Accuracy)} top 5`
+          : 'Waiting on 2026 finishes',
+    },
+    {
+      key: 'tennis',
+      title: 'Tennis',
+      summary: sportsBoards.tennis.seasonSummary,
+      detail:
+        sportsBoards.tennis.seasonSummary?.top3Accuracy != null
+          ? `${formatAccuracy(sportsBoards.tennis.seasonSummary.top3Accuracy)} top 3`
+          : 'No top 3 data yet',
+    },
+    {
+      key: 'basketball',
+      title: 'Basketball',
+      summary: sportsBoards.basketball.seasonSummary,
+      detail: 'Game boards scored live',
+    },
+    {
+      key: 'baseball',
+      title: 'Baseball',
+      summary: sportsBoards.mlb.seasonSummary,
+      detail: 'Game boards scored live',
+    },
+    {
+      key: 'football',
+      title: 'Football',
+      summary: sportsBoards.football.seasonSummary,
+      detail: footballEvents.length > 0 ? 'Current slate live' : 'Offseason, track record stays live',
+    },
+  ];
 
   return (
     <>
@@ -254,6 +304,34 @@ function SportsLanding() {
               </div>
               <div className="market-shell-footer">Easy to scan. Easy to compare. Backed by past results.</div>
             </div>
+          </div>
+        </section>
+
+        <section className="sports-summary-section">
+          <div className="section-heading">
+            <span className="section-kicker">2026 So Far</span>
+            <h2>See how each sports model is doing this year.</h2>
+            <p>
+              These numbers update from the same Track Record feed, so finished 2026 boards keep showing up instead of disappearing from the live view.
+            </p>
+          </div>
+
+          <div className="sports-summary-grid">
+            {seasonSummaryCards.map((card) => (
+              <article key={card.key} className="sports-summary-card">
+                <div className="sports-summary-top">
+                  <span className="sports-summary-title">{card.title}</span>
+                  <span className="sports-summary-year">{card.summary?.year ?? 2026}</span>
+                </div>
+                <strong>{formatAccuracy(card.summary?.topPickAccuracy)}</strong>
+                <p>Top pick accuracy</p>
+                <div className="sports-summary-meta">
+                  <span>{card.summary?.sampleSize ?? 0} finished boards</span>
+                  <span>{card.summary?.topPickHits ?? 0} top-pick wins</span>
+                </div>
+                <div className="sports-summary-foot">{card.detail}</div>
+              </article>
+            ))}
           </div>
         </section>
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,7 @@ FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
 BASELINE_ARTIFACTS_DIR = DIV_ROOT / "artifacts" / "football_baseline" / "nfl" / "hist_gradient_boosting" / "home_win"
 TORCH_ARTIFACTS_DIR = DIV_ROOT / "artifacts" / "football_torch" / "nfl" / "home_win"
 MAX_AVAILABLE_DATES = 7
+logger = logging.getLogger(__name__)
 
 
 def _to_datetime_mixed(values: object) -> pd.Series | pd.Timestamp:
@@ -146,11 +148,15 @@ def _load_baseline_predictor() -> dict[str, Any] | None:
     feature_columns_path = BASELINE_ARTIFACTS_DIR / "feature_columns.csv"
     if not model_path.exists() or not feature_columns_path.exists():
         return None
-    return {
-        "model": joblib.load(model_path),
-        "feature_columns": pd.read_csv(feature_columns_path)["feature"].tolist(),
-        "source": "nfl_baseline_model",
-    }
+    try:
+        return {
+            "model": joblib.load(model_path),
+            "feature_columns": pd.read_csv(feature_columns_path)["feature"].tolist(),
+            "source": "nfl_baseline_model",
+        }
+    except Exception as exc:
+        logger.warning("Unable to load Football baseline predictor: %s", exc)
+        return None
 
 
 def _load_torch_predictor() -> dict[str, Any] | None:
@@ -161,21 +167,25 @@ def _load_torch_predictor() -> dict[str, Any] | None:
     scaler_path = TORCH_ARTIFACTS_DIR / "scaler.joblib"
     if not all(path.exists() for path in (model_path, imputer_path, scaler_path)):
         return None
-    checkpoint = torch.load(model_path, map_location="cpu")
-    model = FootballTorchModel(
-        input_dim=int(checkpoint["input_dim"]),
-        hidden_width=int(checkpoint["hidden_width"]),
-        dropout=float(checkpoint["dropout"]),
-    )
-    model.load_state_dict(checkpoint["state_dict"])
-    model.eval()
-    return {
-        "model": model,
-        "feature_columns": list(checkpoint["feature_columns"]),
-        "imputer": joblib.load(imputer_path),
-        "scaler": joblib.load(scaler_path),
-        "source": "nfl_torch_model",
-    }
+    try:
+        checkpoint = torch.load(model_path, map_location="cpu")
+        model = FootballTorchModel(
+            input_dim=int(checkpoint["input_dim"]),
+            hidden_width=int(checkpoint["hidden_width"]),
+            dropout=float(checkpoint["dropout"]),
+        )
+        model.load_state_dict(checkpoint["state_dict"])
+        model.eval()
+        return {
+            "model": model,
+            "feature_columns": list(checkpoint["feature_columns"]),
+            "imputer": joblib.load(imputer_path),
+            "scaler": joblib.load(scaler_path),
+            "source": "nfl_torch_model",
+        }
+    except Exception as exc:
+        logger.warning("Unable to load Football torch predictor: %s", exc)
+        return None
 
 
 def _load_metrics(path: Path) -> dict[str, Any]:
@@ -643,6 +653,7 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
             "selectedDate": resolved_selected_date,
             "availableDates": available_dates,
             "upcoming": [],
+            "completed": _build_live_completed_boards(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source": "divination_live_football_feed",
         }
@@ -655,7 +666,11 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
     scored_games = _predict_games(games)
 
     player_trends = _build_player_trends(player_week)
-    roster_history_map = _build_roster_history_map(weekly_rosters, player_trends)
+    try:
+        roster_history_map = _build_roster_history_map(weekly_rosters, player_trends)
+    except Exception as exc:
+        logger.warning("Unable to build Football roster history map for completed boards: %s", exc)
+        roster_history_map = {}
 
     boards: list[dict[str, Any]] = []
     for row in scored_games.itertuples(index=False):
@@ -712,9 +727,100 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
         "selectedDate": resolved_selected_date,
         "availableDates": available_dates,
         "upcoming": boards,
+        "completed": _build_live_completed_boards(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "source": "divination_live_football_feed",
     }
+
+
+def _build_live_completed_boards(calendar_year: int | None = None) -> list[dict[str, Any]]:
+    current_year = calendar_year or datetime.now(timezone.utc).year
+    games_df = _load_table_optional("football_games_latest")
+    team_logs = _load_table_optional("football_team_game_logs_latest")
+    qb_logs = _load_table_optional("football_qb_week_logs_latest")
+    roster_summaries = _load_table_optional("football_roster_week_summaries_latest")
+    player_week = _load_table_optional("football_player_week_stats_latest")
+    weekly_rosters = _load_table_optional("football_weekly_rosters_latest")
+
+    games = prepare_games(games_df, require_completed=True)
+    if games.empty:
+        return []
+    games = games.loc[pd.to_datetime(games["official_date"], errors="coerce").dt.year == current_year].copy()
+    if games.empty:
+        return []
+
+    games = attach_pregame_team_features(games, team_logs)
+    games = attach_pregame_qb_features(games, qb_logs)
+    games = attach_pregame_roster_features(games, roster_summaries)
+    games = add_matchup_differentials(games)
+    scored_games = _predict_games(games)
+
+    if not player_week.empty:
+        player_week["game_id"] = player_week["game_id"].astype(str)
+    player_trends = _build_player_trends(player_week)
+    try:
+        roster_history_map = _build_roster_history_map(weekly_rosters, player_trends)
+    except Exception as exc:
+        logger.warning("Unable to build Football roster history map for completed boards: %s", exc)
+        roster_history_map = {}
+
+    boards: list[dict[str, Any]] = []
+    for row in scored_games.itertuples(index=False):
+        game_id = str(getattr(row, "game_id"))
+        away_lineup, away_featured, away_starter_profile, away_starter_radar = _historical_featured_players(
+            player_week,
+            game_id,
+            str(getattr(row, "away_team")),
+            _optional_text(getattr(row, "away_qb_id", None)),
+        )
+        home_lineup, home_featured, home_starter_profile, home_starter_radar = _historical_featured_players(
+            player_week,
+            game_id,
+            str(getattr(row, "home_team")),
+            _optional_text(getattr(row, "home_qb_id", None)),
+        )
+        if not away_lineup:
+            away_lineup = roster_history_map.get((int(getattr(row, "season")), int(getattr(row, "week")), str(getattr(row, "away_team"))), [])
+            away_featured = next((entry for entry in away_lineup if entry.get("position") == "QB"), away_lineup[0] if away_lineup else None)
+        if not home_lineup:
+            home_lineup = roster_history_map.get((int(getattr(row, "season")), int(getattr(row, "week")), str(getattr(row, "home_team"))), [])
+            home_featured = next((entry for entry in home_lineup if entry.get("position") == "QB"), home_lineup[0] if home_lineup else None)
+
+        home_prob = (_safe_float(getattr(row, "home_win_probability", None)) or 0.5)
+        away_prob = 1.0 - home_prob
+        predicted_winner = getattr(row, "home_team") if home_prob >= away_prob else getattr(row, "away_team")
+        actual_winner = getattr(row, "home_team") if int(getattr(row, "home_win", 0) or 0) == 1 else getattr(row, "away_team")
+        boards.append(
+            {
+                "year": int(_to_datetime_mixed(getattr(row, "official_date")).year),
+                "tournament": f"{getattr(row, 'away_team')} at {getattr(row, 'home_team')}",
+                "tour": "Football",
+                "hitStatus": "Top Pick" if predicted_winner == actual_winner else "Miss",
+                "predictedWinner": predicted_winner,
+                "actualWinner": actual_winner,
+                "prob": max(home_prob, away_prob),
+                "venue": _optional_text(getattr(row, "stadium", None)) or "Stadium",
+                "course": _optional_text(getattr(row, "stadium", None)) or "Stadium",
+                "latestDate": _date_key_int(getattr(row, "official_date", None)),
+                "scheduledDate": _date_key_int(getattr(row, "official_date", None)),
+                "awayTeam": getattr(row, "away_team"),
+                "homeTeam": getattr(row, "home_team"),
+                "awayStarter": _optional_text(getattr(row, "away_qb_name", None)),
+                "homeStarter": _optional_text(getattr(row, "home_qb_name", None)),
+                "awayStarterProfile": away_starter_profile or _build_live_qb_profile(row, "away"),
+                "homeStarterProfile": home_starter_profile or _build_live_qb_profile(row, "home"),
+                "awayStarterRadar": away_starter_radar or _build_live_qb_radar(row, "away"),
+                "homeStarterRadar": home_starter_radar or _build_live_qb_radar(row, "home"),
+                "awayTeamDetails": _build_live_team_details(row, "away"),
+                "homeTeamDetails": _build_live_team_details(row, "home"),
+                "awayLineup": away_lineup,
+                "homeLineup": home_lineup,
+                "awayFeaturedPlayer": away_featured,
+                "homeFeaturedPlayer": home_featured,
+                "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
+            }
+        )
+    return sorted(boards, key=lambda item: (item.get("latestDate") or 0, item.get("tournament") or ""), reverse=True)
 
 
 def _historical_boards() -> list[dict[str, Any]]:

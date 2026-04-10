@@ -365,7 +365,12 @@ def _historical_player_radar(row: Any) -> list[dict[str, float]]:
     ]
 
 
-def _load_live_schedule(client: BasketballStatsClient) -> pd.DataFrame:
+def _load_live_schedule(
+    client: BasketballStatsClient,
+    *,
+    include_completed: bool = False,
+    calendar_year: int | None = None,
+) -> pd.DataFrame:
     def _cached_schedule_payload(league: str) -> dict[str, Any] | None:
         pattern = f"schedule_{league}_{LEAGUE_CONFIGS[league].current_season}.json"
         raw_root = BASKETBALL_DATA_ROOT / "raw"
@@ -382,6 +387,7 @@ def _load_live_schedule(client: BasketballStatsClient) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
     today = datetime.now(timezone.utc).date()
     max_date = today + timedelta(days=UPCOMING_LOOKAHEAD_DAYS)
+    target_year = calendar_year or today.year
     for league in ("nba", "wnba"):
         try:
             payload = client.get_schedule(league)
@@ -401,12 +407,20 @@ def _load_live_schedule(client: BasketballStatsClient) -> pd.DataFrame:
         if schedule.empty:
             continue
         schedule["official_date"] = _to_datetime_mixed(schedule["official_date"])
-        schedule = schedule.loc[
-            (schedule["is_regular_season"] == True)  # noqa: E712
-            & (schedule["status_code"] != 3)
-            & (schedule["official_date"].dt.date >= today)
-            & (schedule["official_date"].dt.date <= max_date)
-        ].copy()
+        schedule = schedule.loc[(schedule["is_regular_season"] == True)].copy()  # noqa: E712
+        if include_completed:
+            schedule = schedule.loc[
+                (schedule["status_code"] == 3)
+                & schedule["official_date"].notna()
+                & (schedule["official_date"].dt.year == target_year)
+                & (schedule["official_date"].dt.date <= today)
+            ].copy()
+        else:
+            schedule = schedule.loc[
+                (schedule["status_code"] != 3)
+                & (schedule["official_date"].dt.date >= today)
+                & (schedule["official_date"].dt.date <= max_date)
+            ].copy()
         if not schedule.empty:
             frames.append(schedule)
     if not frames:
@@ -560,6 +574,7 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
             "selectedDate": resolved_selected_date,
             "availableDates": available_dates,
             "upcoming": [],
+            "completed": _build_live_completed_boards(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source": "divination_live_basketball_feed",
         }
@@ -581,9 +596,74 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
         "selectedDate": resolved_selected_date,
         "availableDates": available_dates,
         "upcoming": _build_upcoming_boards(scored_games, rotation_map),
+        "completed": _build_live_completed_boards(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "source": "divination_live_basketball_feed",
     }
+
+
+def _build_live_completed_boards(calendar_year: int | None = None) -> list[dict[str, Any]]:
+    client = BasketballStatsClient()
+    schedule = _load_live_schedule(client, include_completed=True, calendar_year=calendar_year)
+    if schedule.empty:
+        return []
+
+    team_logs = _load_league_table("team_game_logs", ["nba", "wnba"])
+    expected_logs = _load_league_table("expected_rotation_game_logs", ["nba", "wnba"])
+    player_boxscores = _load_league_table("player_boxscores", ["nba", "wnba"])
+
+    games = prepare_games(schedule, pd.DataFrame(columns=["league", "game_id"]), require_completed=True)
+    if games.empty:
+        return []
+    games = attach_pregame_team_features(games, team_logs)
+    games = attach_expected_rotation_features(games, expected_logs)
+    games = add_matchup_differentials(games)
+    scored_games = _predict_games(games)
+
+    boards: list[dict[str, Any]] = []
+    for row in scored_games.itertuples(index=False):
+        home_prob = _safe_float(getattr(row, "home_win_probability", np.nan)) or 0.5
+        away_prob = 1.0 - home_prob
+        predicted_winner = getattr(row, "home_team_name") if home_prob >= away_prob else getattr(row, "away_team_name")
+        actual_winner = getattr(row, "home_team_name") if int(getattr(row, "home_win", 0) or 0) == 1 else getattr(row, "away_team_name")
+        lineups = _historical_lineups(player_boxscores, str(getattr(row, "game_id")))
+        away_availability = {
+            "ilAdds14": _safe_int(getattr(row, "away_availability_likely_inactive_core_players", np.nan)),
+            "ilActivations14": _safe_int(getattr(row, "away_availability_expected_available_players", np.nan)),
+            "rosterMoves14": _safe_int(getattr(row, "away_availability_likely_absent_rotation_players", np.nan)),
+        }
+        home_availability = {
+            "ilAdds14": _safe_int(getattr(row, "home_availability_likely_inactive_core_players", np.nan)),
+            "ilActivations14": _safe_int(getattr(row, "home_availability_expected_available_players", np.nan)),
+            "rosterMoves14": _safe_int(getattr(row, "home_availability_likely_absent_rotation_players", np.nan)),
+        }
+        boards.append(
+            {
+                "year": int(_to_datetime_mixed(getattr(row, "official_date")).year),
+                "tournament": f"{getattr(row, 'away_team_name')} at {getattr(row, 'home_team_name')}",
+                "tour": _display_tour(str(getattr(row, "league"))),
+                "hitStatus": "Top Pick" if predicted_winner == actual_winner else "Miss",
+                "predictedWinner": predicted_winner,
+                "actualWinner": actual_winner,
+                "prob": max(home_prob, away_prob),
+                "venue": _optional_text(getattr(row, "arena_name", None)) or "Arena",
+                "course": _optional_text(getattr(row, "arena_name", None)) or "Arena",
+                "latestDate": _date_key_int(getattr(row, "official_date", None)),
+                "scheduledDate": _date_key_int(getattr(row, "official_date", None)),
+                "awayTeam": getattr(row, "away_team_name"),
+                "homeTeam": getattr(row, "home_team_name"),
+                "awayTeamDetails": _build_team_details(row, "away"),
+                "homeTeamDetails": _build_team_details(row, "home"),
+                "awayAvailability": away_availability,
+                "homeAvailability": home_availability,
+                "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
+                "awayLineup": lineups["away"],
+                "homeLineup": lineups["home"],
+                "awayFeaturedPlayer": _featured_player(lineups["away"]),
+                "homeFeaturedPlayer": _featured_player(lineups["home"]),
+            }
+        )
+    return sorted(boards, key=lambda item: (item.get("latestDate") or 0, item.get("tournament") or ""), reverse=True)
 
 
 def _load_historical_sources() -> list[pd.DataFrame]:

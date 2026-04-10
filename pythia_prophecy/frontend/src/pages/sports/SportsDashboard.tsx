@@ -8,6 +8,7 @@ import {
   type SportsBoardCollection,
   type SportsBoardsResponse,
   type SportsHistoricalBoard,
+  type SportsBoardSeasonSummary,
   type SportsLineupPlayer,
   type SportsTeamDetails,
   type SportsUpcomingBoard,
@@ -26,6 +27,7 @@ const EMPTY_COLLECTION: SportsBoardCollection = {
   source: 'runtime_filtered_sports_feed',
   selectedDate: undefined,
   availableDates: [],
+  seasonSummary: null,
 };
 
 const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
@@ -58,11 +60,80 @@ function formatProbability(value: number | null): string {
   return value !== null ? `${value.toFixed(1)}%` : 'Pending';
 }
 
+function formatAccuracy(value?: number | null): string {
+  return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'Pending';
+}
+
+function trackRecordTitle(backtests: SportsHistoricalBoard[]): string {
+  const years = Array.from(
+    new Set(
+      backtests
+        .map((backtest) => Number(backtest.year))
+        .filter((year) => Number.isFinite(year) && year > 0)
+    )
+  ).sort((a, b) => a - b);
+  if (!years.length) return 'Track Record';
+  if (years.length === 1) return `Track Record (${years[0]})`;
+  return `Track Record (${years[0]} - ${years[years.length - 1]})`;
+}
+
 function predictedTeamFromProbabilities(board: SportsUpcomingBoard, awayProb: number | null, homeProb: number | null): string | undefined {
   if (awayProb === null && homeProb === null) return undefined;
   if (awayProb === null) return board.homeTeam;
   if (homeProb === null) return board.awayTeam;
   return awayProb > homeProb ? board.awayTeam : board.homeTeam;
+}
+
+type SeasonSummaryCardsProps = {
+  summary?: SportsBoardSeasonSummary | null;
+  isTeamSport: boolean;
+};
+
+function SeasonSummaryCards({ summary, isTeamSport }: SeasonSummaryCardsProps) {
+  if (!summary) return null;
+
+  if (summary.sampleSize === 0) {
+    return (
+      <div className="season-summary-empty">
+        <strong>{summary.year} so far</strong>
+        <span>No finished boards have been logged yet this year.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="season-summary-grid">
+      <div className="season-summary-card highlight">
+        <span className="season-summary-label">{summary.year} so far</span>
+        <strong>{formatAccuracy(summary.topPickAccuracy)}</strong>
+        <p>Top pick accuracy</p>
+      </div>
+      <div className="season-summary-card">
+        <span className="season-summary-label">Finished boards</span>
+        <strong>{summary.sampleSize}</strong>
+        <p>Counted in the current year</p>
+      </div>
+      <div className="season-summary-card">
+        <span className="season-summary-label">Top pick hits</span>
+        <strong>{summary.topPickHits}</strong>
+        <p>Wins from the highest-ranked side</p>
+      </div>
+      {!isTeamSport && summary.top3Accuracy !== null && summary.top3Accuracy !== undefined ? (
+        <div className="season-summary-card">
+          <span className="season-summary-label">Top 3 hit rate</span>
+          <strong>{formatAccuracy(summary.top3Accuracy)}</strong>
+          <p>{summary.top3Hits ?? 0} boards finished inside the top 3</p>
+        </div>
+      ) : null}
+      {!isTeamSport && summary.top5Accuracy !== null && summary.top5Accuracy !== undefined ? (
+        <div className="season-summary-card">
+          <span className="season-summary-label">Top 5 hit rate</span>
+          <strong>{formatAccuracy(summary.top5Accuracy)}</strong>
+          <p>{summary.top5Hits ?? 0} boards finished inside the top 5</p>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function predictionSourceLabel(source?: string): string {
@@ -350,6 +421,8 @@ function SportsDashboard() {
 
   const currentUpcoming = sportData.upcoming ?? [];
   const currentBacktests = sportData.backtests ?? [];
+  const currentSeasonSummary = sportData.seasonSummary ?? null;
+  const currentTrackRecordTitle = useMemo(() => trackRecordTitle(currentBacktests), [currentBacktests]);
 
   const filteredUpcoming = useMemo(() => {
     if (activeSport === 'Tennis' && tennisTourFilter !== 'All') {
@@ -1471,7 +1544,7 @@ function SportsDashboard() {
                 <div className="backtest-container">
                   <div className="backtest-header-area">
                     <div>
-                      <h2>Track Record (2024 - 2026)</h2>
+                      <h2>{currentTrackRecordTitle}</h2>
                       <p className="backtest-desc">
                         {activeSport === 'Baseball'
                           ? "Review historical Baseball game boards and compare the model's top side against the actual winner."
@@ -1481,6 +1554,7 @@ function SportsDashboard() {
                               ? "Review historical Football game boards and compare the model's top side against the actual winner."
                             : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
                       </p>
+                      <SeasonSummaryCards summary={currentSeasonSummary} isTeamSport={isTeamSport} />
                     </div>
                     <div className="backtest-filters">
                       {activeSport === 'Tennis' && (

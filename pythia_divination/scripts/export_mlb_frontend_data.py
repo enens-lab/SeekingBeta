@@ -633,8 +633,12 @@ def _load_historical_source() -> pd.DataFrame:
     return merged.sort_values(["official_date", "game_pk"], ascending=[False, False]).reset_index(drop=True)
 
 
-def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    historical_lineups = _load_historical_lineup_map(set(pd.to_numeric(frame["game_pk"], errors="coerce").dropna().astype(int).tolist()))
+def _build_backtests_from_frame(
+    frame: pd.DataFrame,
+    *,
+    historical_lineups: dict[int, dict[str, list[dict[str, Any]]]] | None = None,
+) -> list[dict[str, Any]]:
+    historical_lineups = historical_lineups or {}
     backtests: list[dict[str, Any]] = []
     for row in frame.itertuples(index=False):
         home_prob = float(row.home_win_probability)
@@ -694,9 +698,15 @@ def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "homeTeamDetails": _build_team_details(row, "home"),
                 "awayLineup": historical_lineups.get(int(row.game_pk), {}).get("away", []),
                 "homeLineup": historical_lineups.get(int(row.game_pk), {}).get("home", []),
+                "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
             }
         )
     return backtests
+
+
+def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    historical_lineups = _load_historical_lineup_map(set(pd.to_numeric(frame["game_pk"], errors="coerce").dropna().astype(int).tolist()))
+    return _build_backtests_from_frame(frame, historical_lineups=historical_lineups)
 
 
 def _load_upcoming_schedule(client: MLBStatsClient) -> pd.DataFrame:
@@ -717,6 +727,25 @@ def _load_upcoming_schedule(client: MLBStatsClient) -> pd.DataFrame:
     probable_mask = schedule["away_team_name"].notna() & schedule["home_team_name"].notna()
     upcoming = schedule.loc[preview_mask & probable_mask].copy()
     return upcoming.sort_values(["official_date", "game_date", "game_pk"]).reset_index(drop=True)
+
+
+def _load_completed_schedule(client: MLBStatsClient, *, calendar_year: int | None = None) -> pd.DataFrame:
+    today = pd.Timestamp.utcnow().normalize()
+    target_year = calendar_year or today.year
+    payload = client.get_schedule(
+        start_date=f"{target_year}-01-01",
+        end_date=today.date().isoformat(),
+        game_type="R",
+        hydrate="probablePitcher,team,linescore",
+    )
+    schedule = flatten_schedule(payload)
+    if schedule.empty:
+        return schedule
+    schedule["game_date"] = pd.to_datetime(schedule["game_date"], utc=True, errors="coerce")
+    schedule["official_date"] = pd.to_datetime(schedule["official_date"], errors="coerce")
+    completed_mask = schedule["status_abstract"].isin(["Final", "Completed Early"]) & schedule["winner_team_id"].notna()
+    completed = schedule.loc[completed_mask & (schedule["official_date"].dt.year == target_year)].copy()
+    return completed.sort_values(["official_date", "game_date", "game_pk"]).reset_index(drop=True)
 
 
 def _fetch_preview_bundles(client: MLBStatsClient, schedule: pd.DataFrame) -> tuple[pd.DataFrame, dict[int, Any], pd.DataFrame]:
@@ -1073,9 +1102,50 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
         "selectedDate": resolved_selected_date,
         "availableDates": available_dates,
         "upcoming": upcoming,
+        "completed": _build_live_completed_backtests(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "source": "divination_live_mlb_feed",
     }
+
+
+def _build_live_completed_backtests(calendar_year: int | None = None) -> list[dict[str, Any]]:
+    client = MLBStatsClient()
+    schedule = _load_completed_schedule(client, calendar_year=calendar_year)
+    if schedule.empty:
+        return []
+
+    details, _, preview_player_profiles = _fetch_preview_bundles(client, schedule)
+    season = int(pd.to_numeric(schedule["season"], errors="coerce").dropna().iloc[0]) if schedule["season"].notna().any() else None
+    team_meta = _load_table_optional("teams_latest")
+    if team_meta.empty:
+        team_meta = _load_live_teams_table(client, season=season)
+    pitcher_profiles = _load_table_optional("pitcher_profiles_latest")
+    pitcher_profiles = _augment_pitcher_profiles(pitcher_profiles, preview_player_profiles, schedule)
+
+    games = prepare_games(
+        schedule,
+        details,
+        team_meta_df=team_meta,
+        pitcher_profiles_df=pitcher_profiles,
+        require_completed=True,
+    )
+    if games.empty:
+        return []
+
+    team_logs = _load_table_optional("team_game_logs_latest")
+    starter_logs = _load_table_optional("starter_game_logs_latest")
+    games = attach_pregame_team_features(games, team_logs)
+    games = attach_pregame_starter_features(games, starter_logs)
+    games = add_matchup_differentials(games)
+    statcast_paths = _resolve_statcast_paths(
+        type("Args", (), {"statcast_path": [], "disable_statcast_cache": False})()
+    )
+    games = enrich_dataset_with_statcast(games, statcast_paths)
+    games = games.sort_values(["official_date", "game_pk"]).reset_index(drop=True)
+    games = _predict_upcoming(games)
+
+    historical_lineups = _load_historical_lineup_map(set(pd.to_numeric(games["game_pk"], errors="coerce").dropna().astype(int).tolist()))
+    return _build_backtests_from_frame(games, historical_lineups=historical_lineups)
 
 
 def export_mlb_frontend_data() -> None:

@@ -193,6 +193,7 @@
 }
 
 .sports-preview-section,
+.sports-summary-section,
 .mlb-slate-section,
 .sports-coverage,
 .sports-features {
@@ -203,6 +204,76 @@
 
 .sports-features {
   padding-bottom: 7rem;
+}
+
+.sports-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.sports-summary-card {
+  padding: 1.2rem;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(15, 23, 39, 0.92), rgba(10, 17, 29, 0.84));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+}
+
+.sports-summary-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.sports-summary-title,
+.sports-summary-year {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sports-summary-title {
+  color: #dffcf6;
+}
+
+.sports-summary-year {
+  color: var(--text-muted);
+}
+
+.sports-summary-card strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.sports-summary-card p,
+.sports-summary-foot {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.sports-summary-card p {
+  margin: 0.45rem 0 0.8rem;
+}
+
+.sports-summary-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #a9bdd7;
+  font-size: 0.9rem;
+}
+
+.sports-summary-foot {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
 }
 
 .section-heading {
@@ -466,6 +537,7 @@
 }
 
 @media (max-width: 1024px) {
+  .sports-summary-grid,
   .mlb-slate-grid {
     grid-template-columns: 1fr;
   }

@@ -1122,6 +1122,92 @@ def _build_mlb_available_dates(upcoming: list[dict[str, Any]]) -> list[dict[str,
     return available
 
 
+def _sports_backtest_key(item: dict[str, Any]) -> tuple[str, str, int]:
+    tour = str(item.get("tour") or "").upper()
+    tournament = _canonical_sports_name(str(item.get("tournament") or item.get("name") or ""))
+    date_key = _safe_int(item.get("scheduledDate")) or _safe_int(item.get("latestDate")) or 0
+    return tour, tournament, date_key
+
+
+def _sort_sports_backtests(backtests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
+        backtests,
+        key=lambda item: (
+            _safe_int(item.get("latestDate")) or _safe_int(item.get("scheduledDate")) or 0,
+            str(item.get("tournament") or item.get("name") or ""),
+        ),
+        reverse=True,
+    )
+
+
+def _merge_runtime_backtests(
+    base_backtests: list[dict[str, Any]],
+    runtime_backtests: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    merged: dict[tuple[str, str, int], dict[str, Any]] = {}
+    for item in base_backtests:
+        merged[_sports_backtest_key(item)] = item
+    for item in runtime_backtests or []:
+        merged[_sports_backtest_key(item)] = item
+    return _sort_sports_backtests(list(merged.values()))
+
+
+def _build_sports_season_summary(
+    backtests: list[dict[str, Any]],
+    *,
+    current_year: int | None = None,
+) -> dict[str, Any] | None:
+    target_year = current_year or datetime.now(timezone.utc).year
+    season_rows = [row for row in backtests if _safe_int(row.get("year")) == target_year]
+    if not season_rows:
+        return {
+            "year": target_year,
+            "sampleSize": 0,
+            "topPickHits": 0,
+            "topPickAccuracy": None,
+            "top3Hits": None,
+            "top3Accuracy": None,
+            "top5Hits": None,
+            "top5Accuracy": None,
+        }
+
+    sample_size = len(season_rows)
+    top_pick_hits = sum(1 for row in season_rows if str(row.get("hitStatus") or "").strip() == "Top Pick")
+    top3_hits = sum(1 for row in season_rows if str(row.get("hitStatus") or "").strip() in {"Top Pick", "Top 3"})
+    top5_hits = sum(1 for row in season_rows if str(row.get("hitStatus") or "").strip() in {"Top Pick", "Top 3", "Top 5"})
+    has_place_hits = any(str(row.get("hitStatus") or "").strip() in {"Top 3", "Top 5"} for row in season_rows)
+    return {
+        "year": target_year,
+        "sampleSize": sample_size,
+        "topPickHits": top_pick_hits,
+        "topPickAccuracy": top_pick_hits / sample_size if sample_size else None,
+        "top3Hits": top3_hits if has_place_hits else None,
+        "top3Accuracy": (top3_hits / sample_size) if has_place_hits and sample_size else None,
+        "top5Hits": top5_hits if has_place_hits else None,
+        "top5Accuracy": (top5_hits / sample_size) if has_place_hits and sample_size else None,
+    }
+
+
+def _build_sports_board_collection(
+    *,
+    upcoming: list[dict[str, Any]],
+    backtests: list[dict[str, Any]],
+    updated_at: datetime,
+    source: str,
+    selected_date: str | None = None,
+    available_dates: list[dict[str, Any]] | None = None,
+) -> SportsBoardCollection:
+    return SportsBoardCollection(
+        upcoming=upcoming,
+        backtests=_sort_sports_backtests(backtests),
+        updated_at=updated_at,
+        source=source,
+        selectedDate=selected_date,
+        availableDates=available_dates or [],
+        seasonSummary=_build_sports_season_summary(backtests),
+    )
+
+
 def _build_dated_collection_from_upcoming(
     upcoming: list[dict[str, Any]],
     backtests: list[dict[str, Any]],
@@ -1154,13 +1240,13 @@ def _build_dated_collection_from_upcoming(
     else:
         filtered = []
 
-    return SportsBoardCollection(
+    return _build_sports_board_collection(
         upcoming=filtered,
         backtests=backtests,
         updated_at=updated_at,
         source=source,
-        selectedDate=resolved_selected,
-        availableDates=available_dates,
+        selected_date=resolved_selected,
+        available_dates=available_dates,
     )
 
 
@@ -1246,7 +1332,7 @@ def _sports_board_collection(
             updated_at=updated_at,
             source="runtime_filtered_sports_feed",
         )
-    return SportsBoardCollection(
+    return _build_sports_board_collection(
         upcoming=upcoming,
         backtests=backtests,
         updated_at=updated_at,
@@ -1274,17 +1360,21 @@ async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[Sp
                 refresh_response.raise_for_status()
                 payload = refresh_response.json()
                 upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
+        if not isinstance(runtime_backtests, list):
+            runtime_backtests = []
+        merged_backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
         if not isinstance(upcoming, list):
             return None
         updated_at = _to_utc_datetime(updated_at_raw) or fallback_updated_at
-        return SportsBoardCollection(
+        return _build_sports_board_collection(
             upcoming=upcoming,
-            backtests=backtests,
+            backtests=merged_backtests,
             updated_at=updated_at,
             source=str(payload.get("source") or "divination_live_mlb_feed"),
-            selectedDate=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
-            availableDates=payload.get("availableDates") or [],
+            selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
+            available_dates=payload.get("availableDates") or [],
         )
     except Exception as exc:
         logger.warning("Falling back to cached MLB board feed: %s", exc)
@@ -1311,17 +1401,21 @@ async def _live_basketball_board_collection(basketball_date: str | None = None) 
                 refresh_response.raise_for_status()
                 payload = refresh_response.json()
                 upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
+        if not isinstance(runtime_backtests, list):
+            runtime_backtests = []
+        merged_backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
         if not isinstance(upcoming, list):
             return None
         updated_at = _to_utc_datetime(updated_at_raw) or fallback_updated_at
-        return SportsBoardCollection(
+        return _build_sports_board_collection(
             upcoming=upcoming,
-            backtests=backtests,
+            backtests=merged_backtests,
             updated_at=updated_at,
             source=str(payload.get("source") or "divination_live_basketball_feed"),
-            selectedDate=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
-            availableDates=payload.get("availableDates") or [],
+            selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
+            available_dates=payload.get("availableDates") or [],
         )
     except Exception as exc:
         logger.warning("Falling back to cached Basketball board feed: %s", exc)
@@ -1348,21 +1442,26 @@ async def _live_football_board_collection(football_date: str | None = None) -> O
                 refresh_response.raise_for_status()
                 payload = refresh_response.json()
                 upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
+        if not isinstance(runtime_backtests, list):
+            runtime_backtests = []
+        merged_backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         updated_at_raw = payload.get("updated_at") if isinstance(payload, dict) else None
         if not isinstance(upcoming, list):
             return None
         updated_at = _to_utc_datetime(updated_at_raw) or fallback_updated_at
-        return SportsBoardCollection(
+        return _build_sports_board_collection(
             upcoming=upcoming,
-            backtests=backtests,
+            backtests=merged_backtests,
             updated_at=updated_at,
             source=str(payload.get("source") or "divination_live_football_feed"),
-            selectedDate=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
-            availableDates=payload.get("availableDates") or [],
+            selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
+            available_dates=payload.get("availableDates") or [],
         )
     except Exception as exc:
         logger.warning("Falling back to cached Football board feed: %s", exc)
         return None
+
 
 def _extract_client_ip(request: Request) -> Optional[str]:
     forwarded = request.headers.get("x-forwarded-for", "")

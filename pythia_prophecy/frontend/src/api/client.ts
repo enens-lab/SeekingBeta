@@ -334,6 +334,17 @@ export interface SportsBoardDateOption {
   gameCount: number;
 }
 
+export interface SportsBoardSeasonSummary {
+  year: number;
+  sampleSize: number;
+  topPickHits: number;
+  topPickAccuracy?: number | null;
+  top3Hits?: number | null;
+  top3Accuracy?: number | null;
+  top5Hits?: number | null;
+  top5Accuracy?: number | null;
+}
+
 export interface SportsTeamDetails {
   teamId?: number | null;
   abbreviation?: string | null;
@@ -448,6 +459,7 @@ export interface SportsBoardCollection {
   source: string;
   selectedDate?: string;
   availableDates?: SportsBoardDateOption[];
+  seasonSummary?: SportsBoardSeasonSummary | null;
 }
 
 export interface SportsBoardsResponse {

@@ -474,6 +474,17 @@ class SportsBoardDateOption(BaseModel):
     gameCount: int
 
 
+class SportsBoardSeasonSummary(BaseModel):
+    year: int
+    sampleSize: int
+    topPickHits: int
+    topPickAccuracy: Optional[float] = None
+    top3Hits: Optional[int] = None
+    top3Accuracy: Optional[float] = None
+    top5Hits: Optional[int] = None
+    top5Accuracy: Optional[float] = None
+
+
 class SportsTeamDetails(BaseModel):
     teamId: Optional[int] = None
     abbreviation: Optional[str] = None
@@ -598,6 +609,7 @@ class SportsBoardCollection(BaseModel):
     source: str
     selectedDate: Optional[str] = None
     availableDates: List[SportsBoardDateOption] = []
+    seasonSummary: Optional[SportsBoardSeasonSummary] = None
 
 
 class SportsBoardsResponse(BaseModel):

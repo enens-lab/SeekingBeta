@@ -862,6 +862,7 @@ TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
 TENNIS_LIVE_RESULTS_CACHE_TTL_SECONDS = 60 * 60
 _TENNIS_ATP_RESULTS_CACHE: dict[int, tuple[float, list[dict[str, Any]]]] = {}
+PGA_NORMALIZED_DIR = Path(__file__).resolve().parents[2] / "pythia_divination" / "data" / "sports" / "pga" / "normalized"
 LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )
@@ -1248,6 +1249,130 @@ def _build_runtime_tennis_backtests(
     return runtime_backtests
 
 
+def _parse_golf_display_end_date(display_date: str, *, current_year: int) -> Optional[int]:
+    text = (display_date or "").strip()
+    if not text:
+        return None
+    match = re.match(
+        r"^(?P<start_month>[A-Za-z]{3})\s+\d{1,2}\s*-\s*(?:(?P<end_month>[A-Za-z]{3})\s+)?(?P<end_day>\d{1,2})$",
+        text,
+    )
+    if not match:
+        return None
+    month_token = (match.group("end_month") or match.group("start_month") or "").title()
+    month_map = {
+        "Jan": 1,
+        "Feb": 2,
+        "Mar": 3,
+        "Apr": 4,
+        "May": 5,
+        "Jun": 6,
+        "Jul": 7,
+        "Aug": 8,
+        "Sep": 9,
+        "Oct": 10,
+        "Nov": 11,
+        "Dec": 12,
+    }
+    month = month_map.get(month_token)
+    if month is None:
+        return None
+    try:
+        day = int(match.group("end_day"))
+        return int(datetime(current_year, month, day).strftime("%Y%m%d"))
+    except Exception:
+        return None
+
+
+def _build_runtime_golf_backtests(
+    upcoming: list[dict[str, Any]],
+    backtests: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    current_year = datetime.now(timezone.utc).year
+    schedule_path = PGA_NORMALIZED_DIR / f"schedule_{current_year}_latest.csv"
+    if not schedule_path.exists():
+        return []
+
+    existing_keys = {
+        (
+            str(row.get("tour") or "").upper(),
+            _canonical_sports_name(str(row.get("tournament") or "")),
+        )
+        for row in backtests
+        if _safe_int(row.get("year")) == current_year and row.get("tournament") and row.get("tour")
+    }
+    predictions_by_event: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in upcoming:
+        if _event_year(item) not in {None, current_year} and _event_year(item) != current_year:
+            continue
+        tour = str(item.get("tour") or "").upper()
+        if tour != "PGA":
+            continue
+        event_name = str(item.get("original_name") or item.get("name") or "").strip()
+        if not event_name:
+            continue
+        predictions_by_event[(tour, _canonical_sports_name(event_name))] = item
+
+    today_key = _runtime_today_key()
+    runtime_backtests: list[dict[str, Any]] = []
+    with schedule_path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            tournament = str(row.get("tournament_name") or "").strip()
+            champion = str(row.get("champion_name") or "").strip()
+            if not tournament or not champion:
+                continue
+            latest_date = _parse_golf_display_end_date(str(row.get("display_date") or ""), current_year=current_year)
+            if not latest_date or latest_date > today_key:
+                continue
+            key = ("PGA", _canonical_sports_name(tournament))
+            if key in existing_keys:
+                continue
+            item = predictions_by_event.get(key)
+            if not item:
+                continue
+            predictions = [dict(entry) for entry in (item.get("predictions") or []) if isinstance(entry, dict)]
+            if not predictions:
+                continue
+
+            predicted_names = [str(entry.get("playerName") or "").strip() for entry in predictions]
+            predicted_winner = predicted_names[0] if predicted_names else ""
+            if champion == predicted_winner:
+                hit_status = "Top Pick"
+            elif champion in predicted_names[:3]:
+                hit_status = "Top 3"
+            elif champion in predicted_names[:5]:
+                hit_status = "Top 5"
+            else:
+                hit_status = "Miss"
+
+            full_field: list[dict[str, Any]] = []
+            for index, entry in enumerate(predictions, start=1):
+                player_name = str(entry.get("playerName") or "").strip()
+                enriched = dict(entry)
+                enriched["rank"] = int(entry.get("rank") or index)
+                enriched["actualWinner"] = player_name == champion
+                full_field.append(enriched)
+
+            runtime_backtests.append(
+                {
+                    "year": current_year,
+                    "tournament": tournament,
+                    "tour": "PGA",
+                    "predictedWinner": predicted_winner,
+                    "predictedTop3": predicted_names[:3],
+                    "predictedTop5": predicted_names[:5],
+                    "actualWinner": champion,
+                    "hitStatus": hit_status,
+                    "prob": float((_safe_float((predictions[0] or {}).get("winProbability")) or 0.0) / 100.0),
+                    "fullField": full_field,
+                    "latestDate": latest_date,
+                }
+            )
+
+    return runtime_backtests
+
+
 def _build_mlb_available_dates(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
     per_day: dict[str, int] = {}
     for item in upcoming:
@@ -1465,6 +1590,8 @@ def _sports_board_collection(
         backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         upcoming = _filter_upcoming_tennis(upcoming, backtests)
     elif sport == "golf":
+        runtime_backtests = _build_runtime_golf_backtests(upcoming, backtests)
+        backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         upcoming = _filter_upcoming_golf(upcoming, backtests)
 
     updated_at = _sports_data_updated_at([upcoming_filename, backtests_filename])

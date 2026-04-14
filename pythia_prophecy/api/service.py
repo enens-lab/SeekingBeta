@@ -10,10 +10,12 @@ import time
 import uuid
 import os
 import math
+import csv
 import re
 import logging
 import json
 import base64
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
@@ -857,6 +859,9 @@ DIVINATION_LSTM_TIMEOUT_SECONDS = float(os.getenv("DIVINATION_LSTM_TIMEOUT_SECON
 SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "60"))
 TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
 TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
+TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
+TENNIS_LIVE_RESULTS_CACHE_TTL_SECONDS = 60 * 60
+_TENNIS_ATP_RESULTS_CACHE: dict[int, tuple[float, list[dict[str, Any]]]] = {}
 LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )
@@ -1106,6 +1111,143 @@ def _build_dynamic_tennis_upcoming(backtests: list[dict[str, Any]]) -> list[dict
     return upcoming
 
 
+def _canonical_tennis_event_name(value: Optional[str]) -> str:
+    text = _canonical_sports_name(value)
+    text = text.replace("monte-carlo", "monte carlo")
+    text = re.sub(r"\bmasters\b", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _canonical_player_name(value: Optional[str]) -> str:
+    text = unicodedata.normalize("NFKD", (value or "").strip())
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    text = text.replace(".", "")
+    text = re.sub(r"\s+", " ", text)
+    return text.casefold()
+
+
+def _fetch_live_atp_completed_tournaments(current_year: int) -> list[dict[str, Any]]:
+    cached = _TENNIS_ATP_RESULTS_CACHE.get(current_year)
+    if cached and (time.time() - cached[0]) < TENNIS_LIVE_RESULTS_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    url = TENNIS_ATP_LIVE_RESULTS_URL.format(year=current_year)
+    try:
+        response = httpx.get(url, timeout=15.0, follow_redirects=True)
+        response.raise_for_status()
+    except Exception as exc:
+        logger.warning("Unable to fetch live ATP results for %s: %s", current_year, exc)
+        return cached[1] if cached else []
+
+    today_key = _runtime_today_key()
+    events: dict[tuple[str, int], dict[str, Any]] = {}
+    reader = csv.DictReader(StringIO(response.text))
+    for row in reader:
+        if str(row.get("round") or "").strip().upper() != "F":
+            continue
+        tournament = str(row.get("tourney_name") or "").strip()
+        date_key = _safe_int(row.get("tourney_date"))
+        winner = str(row.get("winner_name") or "").strip()
+        if not tournament or not date_key or not winner or date_key > today_key:
+            continue
+        canonical = _canonical_tennis_event_name(tournament)
+        if not canonical:
+            continue
+        events[(canonical, date_key)] = {
+            "tournament": tournament,
+            "canonical": canonical,
+            "latestDate": date_key,
+            "actualWinner": winner,
+            "surface": str(row.get("surface") or "").strip() or None,
+        }
+
+    completed = sorted(events.values(), key=lambda item: item["latestDate"], reverse=True)
+    _TENNIS_ATP_RESULTS_CACHE[current_year] = (time.time(), completed)
+    return completed
+
+
+def _build_runtime_tennis_backtests(
+    upcoming: list[dict[str, Any]],
+    backtests: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    current_year = datetime.now(timezone.utc).year
+    existing_keys = {
+        (
+            str(row.get("tour") or "").upper(),
+            _canonical_tennis_event_name(str(row.get("tournament") or "")),
+            _safe_int(row.get("year")),
+        )
+        for row in backtests
+        if row.get("tournament") and row.get("tour") and row.get("year")
+    }
+
+    predictions_by_event: dict[tuple[str, str], dict[str, Any]] = {}
+    for item in upcoming:
+        if str(item.get("tour") or "").upper() != "ATP":
+            continue
+        if _event_year(item) != current_year:
+            continue
+        key = ("ATP", _canonical_tennis_event_name(str(item.get("name") or "")))
+        predictions_by_event[key] = item
+
+    runtime_backtests: list[dict[str, Any]] = []
+    for result in _fetch_live_atp_completed_tournaments(current_year):
+        key = ("ATP", str(result["canonical"]))
+        if (*key, current_year) in existing_keys:
+            continue
+        item = predictions_by_event.get(key)
+        if not item:
+            continue
+
+        predictions = [dict(entry) for entry in (item.get("predictions") or []) if isinstance(entry, dict)]
+        if not predictions:
+            continue
+
+        actual_winner = str(result["actualWinner"])
+        actual_winner_key = _canonical_player_name(actual_winner)
+        predicted_names = [str(entry.get("playerName") or "").strip() for entry in predictions]
+        predicted_keys = [_canonical_player_name(name) for name in predicted_names]
+        predicted_winner = predicted_names[0] if predicted_names else ""
+
+        if actual_winner_key and predicted_keys and actual_winner_key == predicted_keys[0]:
+            hit_status = "Top Pick"
+        elif actual_winner_key and actual_winner_key in predicted_keys[:3]:
+            hit_status = "Top 3"
+        elif actual_winner_key and actual_winner_key in predicted_keys[:5]:
+            hit_status = "Top 5"
+        else:
+            hit_status = "Miss"
+
+        full_field: list[dict[str, Any]] = []
+        for index, entry in enumerate(predictions, start=1):
+            player_name = str(entry.get("playerName") or "").strip()
+            enriched = dict(entry)
+            enriched["rank"] = int(entry.get("rank") or index)
+            enriched["actualWinner"] = _canonical_player_name(player_name) == actual_winner_key
+            full_field.append(enriched)
+
+        runtime_backtests.append(
+            {
+                "year": current_year,
+                "tournament": re.sub(r"^\d{4}\s+", "", str(item.get("name") or "")).strip() or str(result["tournament"]),
+                "tour": "ATP",
+                "surface": str(item.get("surface") or item.get("course") or result.get("surface") or "Unknown"),
+                "predictedWinner": predicted_winner,
+                "predictedTop3": predicted_names[:3],
+                "predictedTop5": predicted_names[:5],
+                "actualWinner": actual_winner,
+                "hitStatus": hit_status,
+                "prob": float((_safe_float((predictions[0] or {}).get("winProbability")) or 0.0) / 100.0),
+                "fullField": full_field,
+                "latestDate": int(result["latestDate"]),
+                "tournamentId": str(item.get("id") or f"ATP:{current_year}:{result['canonical']}"),
+            }
+        )
+
+    return runtime_backtests
+
+
 def _build_mlb_available_dates(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
     per_day: dict[str, int] = {}
     for item in upcoming:
@@ -1319,6 +1461,8 @@ def _sports_board_collection(
     backtests = _load_sports_json(backtests_filename)
 
     if sport == "tennis":
+        runtime_backtests = _build_runtime_tennis_backtests(upcoming, backtests)
+        backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         upcoming = _filter_upcoming_tennis(upcoming, backtests)
     elif sport == "golf":
         upcoming = _filter_upcoming_golf(upcoming, backtests)

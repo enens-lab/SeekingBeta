@@ -135,7 +135,10 @@ def _build_backtests(df: pd.DataFrame) -> list[dict]:
     df = df.sort_values(["date", "tour", "tournament_name"])
     tourneys = df["tournament_id"].unique()
     val_ids = set(tourneys[int(len(tourneys) * 0.8):])
-    val_df = df[df["tournament_id"].isin(val_ids)].copy()
+    current_year = datetime.now().year
+    current_year_ids = set(df.loc[(df["date"] // 10000) == current_year, "tournament_id"].unique())
+    candidate_ids = val_ids | current_year_ids
+    val_df = df[df["tournament_id"].isin(candidate_ids)].copy()
 
     backtests = []
     for _, group in val_df.groupby("tournament_id", sort=False):

@@ -6,6 +6,7 @@ import PlayerProfileCard from '../../components/sports/PlayerProfileCard';
 import {
   sports,
   type SportsBoardCollection,
+  type SportsBoardKey,
   type SportsBoardsResponse,
   type SportsHistoricalBoard,
   type SportsBoardSeasonSummary,
@@ -18,7 +19,15 @@ import {
 import { trackEvent } from '../../lib/analytics';
 import './SportsDashboard.css';
 
-type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'Football' | 'NHL';
+type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'Football' | 'Hockey';
+
+const SPORT_CATEGORY_TO_BACKEND_KEY: Partial<Record<SportCategory, SportsBoardKey>> = {
+  Golf: 'golf',
+  Tennis: 'tennis',
+  Basketball: 'basketball',
+  Baseball: 'mlb',
+  Football: 'football',
+};
 
 const EMPTY_COLLECTION: SportsBoardCollection = {
   upcoming: [],
@@ -373,6 +382,13 @@ function SportsDashboard() {
   const [expandedFootballMatchupId, setExpandedFootballMatchupId] = useState<string>('');
 
   useEffect(() => {
+    const backendKey = SPORT_CATEGORY_TO_BACKEND_KEY[activeSport];
+    if (!backendKey) {
+      setBoardsLoading(false);
+      setBoardsError(null);
+      return;
+    }
+
     let cancelled = false;
 
     const loadBoards = async () => {
@@ -380,12 +396,13 @@ function SportsDashboard() {
       setBoardsError(null);
       try {
         const payload = await sports.getBoards({
-          mlbDate: requestedMlbDate || undefined,
-          basketballDate: requestedBasketballDate || undefined,
-          footballDate: requestedFootballDate || undefined,
+          sports: backendKey,
+          mlbDate: backendKey === 'mlb' && requestedMlbDate ? requestedMlbDate : undefined,
+          basketballDate: backendKey === 'basketball' && requestedBasketballDate ? requestedBasketballDate : undefined,
+          footballDate: backendKey === 'football' && requestedFootballDate ? requestedFootballDate : undefined,
         });
         if (!cancelled) {
-          setSportsBoards(payload);
+          setSportsBoards((prev) => ({ ...prev, [backendKey]: payload[backendKey] }));
         }
       } catch (error) {
         if (!cancelled) {
@@ -402,7 +419,7 @@ function SportsDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [requestedMlbDate, requestedBasketballDate, requestedFootballDate]);
+  }, [activeSport, requestedMlbDate, requestedBasketballDate, requestedFootballDate]);
 
   const sportDataMap = useMemo(
     () => ({
@@ -1494,8 +1511,8 @@ function SportsDashboard() {
             <button className={`sport-tab ${activeSport === 'Football' ? 'active' : ''}`} onClick={() => handleSportChange('Football')}>
               Football
             </button>
-            <button className={`sport-tab ${activeSport === 'NHL' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('NHL')}>
-              NHL <span className="badge-tbd">TBD</span>
+            <button className={`sport-tab ${activeSport === 'Hockey' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('Hockey')}>
+              Hockey <span className="badge-tbd">TBD</span>
             </button>
           </div>
         </div>

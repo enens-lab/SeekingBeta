@@ -780,8 +780,15 @@ export const billing = {
     }),
 };
 
+export type SportsBoardKey = 'golf' | 'tennis' | 'basketball' | 'mlb' | 'football';
+
 export const sports = {
-  getBoards: (options?: { mlbDate?: string; basketballDate?: string; footballDate?: string }): Promise<SportsBoardsResponse> => {
+  getBoards: (options?: {
+    mlbDate?: string;
+    basketballDate?: string;
+    footballDate?: string;
+    sports?: SportsBoardKey | SportsBoardKey[];
+  }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
     if (options?.mlbDate) {
       params.set('mlb_date', options.mlbDate);
@@ -791,6 +798,12 @@ export const sports = {
     }
     if (options?.footballDate) {
       params.set('football_date', options.footballDate);
+    }
+    if (options?.sports) {
+      const list = Array.isArray(options.sports) ? options.sports : [options.sports];
+      if (list.length) {
+        params.set('sports', list.join(','));
+      }
     }
     const query = params.toString();
     return request(query ? `/api/sports/boards?${query}` : '/api/sports/boards');

@@ -42,6 +42,14 @@ def test_imports():
     import sports.football.train_baseline
     import sports.football.torch_model
     import sports.football.train_torch
+    import sports.hockey.branding
+    import sports.hockey.client
+    import sports.hockey.feature_engineering
+    import sports.hockey.ingest_history
+    import sports.hockey.build_training_dataset
+    import sports.hockey.train_baseline
+    import sports.hockey.torch_model
+    import sports.hockey.train_torch
     import sports.wta.build_training_dataset
     import sports.wta.feature_engineering
     import sports.wta.ingest

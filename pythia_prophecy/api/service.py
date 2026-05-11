@@ -1253,7 +1253,7 @@ def _build_runtime_tennis_backtests(
                 "predictedTop5": predicted_names[:5],
                 "actualWinner": actual_winner,
                 "hitStatus": hit_status,
-                "prob": float((_safe_float((predictions[0] or {}).get("winProbability")) or 0.0) / 100.0),
+                "prob": float((_parse_float((predictions[0] or {}).get("winProbability")) or 0.0) / 100.0),
                 "fullField": full_field,
                 "latestDate": int(result["latestDate"]),
                 "tournamentId": str(item.get("id") or f"ATP:{current_year}:{result['canonical']}"),
@@ -1378,7 +1378,7 @@ def _build_runtime_golf_backtests(
                     "predictedTop5": predicted_names[:5],
                     "actualWinner": champion,
                     "hitStatus": hit_status,
-                    "prob": float((_safe_float((predictions[0] or {}).get("winProbability")) or 0.0) / 100.0),
+                    "prob": float((_parse_float((predictions[0] or {}).get("winProbability")) or 0.0) / 100.0),
                     "fullField": full_field,
                     "latestDate": latest_date,
                 }

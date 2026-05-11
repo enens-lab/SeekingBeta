@@ -862,7 +862,21 @@ TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
 TENNIS_LIVE_RESULTS_CACHE_TTL_SECONDS = 60 * 60
 _TENNIS_ATP_RESULTS_CACHE: dict[int, tuple[float, list[dict[str, Any]]]] = {}
-PGA_NORMALIZED_DIR = Path(__file__).resolve().parents[2] / "pythia_divination" / "data" / "sports" / "pga" / "normalized"
+def _resolve_pga_normalized_dir() -> Path:
+    """Locate the PGA schedule data directory.
+
+    Prefer the prophecy-local copy at ``pythia_prophecy/data/sports/pga/normalized``
+    (populated by ``make sync-sports-data`` and shipped via the Dockerfile's
+    ``COPY data/`` step). Fall back to the cross-repo path for local dev where
+    both repos sit side-by-side and the file has not been synced yet.
+    """
+    local = Path(__file__).resolve().parents[1] / "data" / "sports" / "pga" / "normalized"
+    if local.exists():
+        return local
+    return Path(__file__).resolve().parents[2] / "pythia_divination" / "data" / "sports" / "pga" / "normalized"
+
+
+PGA_NORMALIZED_DIR = _resolve_pga_normalized_dir()
 LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )

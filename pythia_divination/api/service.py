@@ -15,7 +15,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, HTTPException, Body, Depends, Form
+from fastapi import FastAPI, HTTPException, Body, Depends, Form, Query
 from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.concurrency import run_in_threadpool
@@ -48,6 +48,9 @@ from api.schemas import (
     UserFeaturesResponse,
     UniverseResponse,
     ModelsAvailableResponse,
+    MarketHistoryBar,
+    MarketHistoryResponse,
+    MarketHistorySupplementalContext,
 )
 from api.auth import (
     get_current_user,
@@ -1014,6 +1017,91 @@ def _predict_lstm_cached(model_name: str, ticker: str, force_refresh: bool = Fal
         raise HTTPException(400, detail=str(exc))
     finally:
         lock.release()
+
+
+def _market_history_frame(ticker: str, limit: int) -> pd.DataFrame:
+    normalized = ticker.strip().upper()
+    if not normalized:
+        raise HTTPException(400, detail="Ticker is required")
+
+    stale_df: Optional[pd.DataFrame] = None
+    if LSTM_DB_MARKET_DATA_ENABLED and market_data_store_enabled():
+        try:
+            db_df = get_ohlcv_dataframe_db(ticker=normalized, max_rows=max(limit, 120))
+            if len(db_df) >= limit:
+                return db_df.tail(limit)
+            if len(db_df) > 0:
+                stale_df = db_df
+        except Exception as exc:
+            logger.debug("DB OHLCV history read failed for %s: %s", normalized, exc)
+
+    if not LSTM_ALLOW_LIVE_DATA_FETCH:
+        if stale_df is not None and len(stale_df) >= limit:
+            return stale_df.tail(limit)
+        raise HTTPException(503, detail=f"Live OHLCV fetch disabled and no usable history is cached for {normalized}")
+
+    try:
+        raw = fetch_ohlcv_for_lstm(normalized, sequence_length=60, data_source=DATA_SOURCE)
+    except Exception as exc:
+        if stale_df is not None and len(stale_df) >= limit:
+            logger.warning("Falling back to stale OHLCV history for %s after live fetch failure: %s", normalized, exc)
+            return stale_df.tail(limit)
+        raise HTTPException(503, detail=f"Unable to fetch OHLCV history for {normalized}: {exc}") from exc
+
+    if LSTM_DB_MARKET_DATA_ENABLED and market_data_store_enabled():
+        try:
+            upsert_ohlcv_dataframe_db(
+                ticker=normalized,
+                frame=raw.tail(max(limit, 120)),
+                source=f"history:{DATA_SOURCE}",
+            )
+        except Exception as exc:
+            logger.debug("DB OHLCV history write failed for %s: %s", normalized, exc)
+
+    return raw.tail(limit)
+
+
+@app.get("/api/market/history/{ticker}", response_model=MarketHistoryResponse, tags=["Market"])
+def market_history(
+    ticker: str,
+    interval: str = Query(default="1d"),
+    limit: int = Query(default=252, ge=1, le=1000),
+):
+    """Serve oldest->newest daily OHLCV bars for mobile on-device inference."""
+    if interval != "1d":
+        raise HTTPException(400, detail="Only 1d interval is supported for mobile LSTM inference")
+
+    frame = _market_history_frame(ticker=ticker, limit=limit)
+    bars = [
+        MarketHistoryBar(
+            date=index.to_pydatetime().replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z"),
+            open=float(row["Open"]),
+            high=float(row["High"]),
+            low=float(row["Low"]),
+            close=float(row["Close"]),
+            volume=float(row.get("Volume", 0.0) or 0.0),
+        )
+        for index, row in frame.iterrows()
+    ]
+
+    supplemental_context: Optional[MarketHistorySupplementalContext] = None
+    try:
+        from features.sentiment import get_sentiment_snapshot
+
+        snapshot = get_sentiment_snapshot(ticker.strip().upper())
+        supplemental_context = MarketHistorySupplementalContext(
+            sentiment_score=float(snapshot.score),
+            sentiment_articles=int(snapshot.num_articles),
+            sentiment_source=str(snapshot.source),
+        )
+    except Exception as exc:
+        logger.debug("Sentiment snapshot unavailable for market history %s: %s", ticker, exc)
+
+    return MarketHistoryResponse(
+        ticker=ticker.strip().upper(),
+        bars=bars,
+        supplemental_context=supplemental_context,
+    )
 
 
 def _lookback_days_from_period(period: Optional[str]) -> Optional[int]:

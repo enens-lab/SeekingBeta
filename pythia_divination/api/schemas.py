@@ -178,3 +178,27 @@ class ModelsAvailableResponse(BaseModel):
     models: List[str]
     tasks: List[str]
     can_use_custom: bool
+
+
+class MarketHistorySupplementalContext(BaseModel):
+    """Optional supplemental context for mobile on-device inference."""
+    sentiment_score: Optional[float] = None
+    sentiment_articles: Optional[int] = None
+    sentiment_source: Optional[str] = None
+
+
+class MarketHistoryBar(BaseModel):
+    """Normalized OHLCV bar payload for mobile clients."""
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
+
+
+class MarketHistoryResponse(BaseModel):
+    """Mobile-ready OHLCV history payload."""
+    ticker: str
+    bars: List[MarketHistoryBar]
+    supplemental_context: Optional[MarketHistorySupplementalContext] = None

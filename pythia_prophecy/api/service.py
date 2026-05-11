@@ -4516,41 +4516,127 @@ def performance_curve(model: str = Query("lstm_5d")):
     return get_track_record_curve(model=model)
 
 
+_SPORTS_BOARDS_ALL = ("golf", "tennis", "basketball", "mlb", "football")
+
+
+def _empty_sports_board_collection() -> SportsBoardCollection:
+    return SportsBoardCollection(
+        upcoming=[],
+        backtests=[],
+        updated_at=datetime.now(timezone.utc),
+        source="not_requested",
+        selectedDate=None,
+        availableDates=[],
+        seasonSummary=None,
+    )
+
+
+def _parse_sports_filter(raw: str | None) -> set[str] | None:
+    if raw is None:
+        return None
+    requested: set[str] = set()
+    for token in raw.split(","):
+        normalized = token.strip().lower()
+        if not normalized:
+            continue
+        if normalized in _SPORTS_BOARDS_ALL:
+            requested.add(normalized)
+    return requested or None
+
+
 @app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
 async def sports_boards(
     mlb_date: str | None = Query(None),
     basketball_date: str | None = Query(None),
     football_date: str | None = Query(None),
+    sports: str | None = Query(
+        None,
+        description=(
+            "Optional comma-separated list of sports to compute "
+            "(golf, tennis, basketball, mlb, football). "
+            "Omit to return all sports (legacy behavior). "
+            "Sports not requested are returned as empty placeholder collections "
+            "so the response shape is unchanged for older clients."
+        ),
+    ),
 ):
-    """Runtime-filtered sports boards for public marketing and dashboard surfaces."""
-    golf = _sports_board_collection(
-        upcoming_filename="upcoming_tournaments.json",
-        backtests_filename="historical_backtests.json",
-        sport="golf",
+    """Runtime-filtered sports boards for public marketing and dashboard surfaces.
+
+    Supports per-sport pagination via ``?sports=`` so clients (web tab, iOS sport
+    switcher) only pay for inference on the sport(s) they intend to render. When
+    ``sports`` is omitted the endpoint returns every sport for backward compat.
+    Live sport feeds (basketball, mlb, football) are fetched concurrently.
+    """
+    requested = _parse_sports_filter(sports)
+    wants = (lambda key: True) if requested is None else (lambda key: key in requested)
+
+    def _golf() -> SportsBoardCollection:
+        return _sports_board_collection(
+            upcoming_filename="upcoming_tournaments.json",
+            backtests_filename="historical_backtests.json",
+            sport="golf",
+        )
+
+    def _tennis() -> SportsBoardCollection:
+        return _sports_board_collection(
+            upcoming_filename="wta_upcoming_tournaments.json",
+            backtests_filename="wta_historical_backtests.json",
+            sport="tennis",
+        )
+
+    golf = _golf() if wants("golf") else _empty_sports_board_collection()
+    tennis = _tennis() if wants("tennis") else _empty_sports_board_collection()
+
+    async def _basketball_or_none() -> Optional[SportsBoardCollection]:
+        if not wants("basketball"):
+            return None
+        return await _live_basketball_board_collection(basketball_date=basketball_date)
+
+    async def _mlb_or_none() -> Optional[SportsBoardCollection]:
+        if not wants("mlb"):
+            return None
+        return await _live_mlb_board_collection(mlb_date=mlb_date)
+
+    async def _football_or_none() -> Optional[SportsBoardCollection]:
+        if not wants("football"):
+            return None
+        return await _live_football_board_collection(football_date=football_date)
+
+    basketball_live, mlb_live, football_live = await asyncio.gather(
+        _basketball_or_none(),
+        _mlb_or_none(),
+        _football_or_none(),
     )
-    tennis = _sports_board_collection(
-        upcoming_filename="wta_upcoming_tournaments.json",
-        backtests_filename="wta_historical_backtests.json",
-        sport="tennis",
-    )
-    basketball = await _live_basketball_board_collection(basketball_date=basketball_date)
-    if basketball is None:
+
+    if not wants("basketball"):
+        basketball = _empty_sports_board_collection()
+    elif basketball_live is not None:
+        basketball = basketball_live
+    else:
         basketball = _sports_board_collection(
             upcoming_filename="basketball_upcoming_tournaments.json",
             backtests_filename="basketball_historical_backtests.json",
             sport="basketball",
             selected_date=basketball_date,
         )
-    mlb = await _live_mlb_board_collection(mlb_date=mlb_date)
-    if mlb is None:
+
+    if not wants("mlb"):
+        mlb = _empty_sports_board_collection()
+    elif mlb_live is not None:
+        mlb = mlb_live
+    else:
         mlb = _sports_board_collection(
             upcoming_filename="mlb_upcoming_tournaments.json",
             backtests_filename="mlb_historical_backtests.json",
             sport="mlb",
             selected_date=mlb_date,
         )
-    football = await _live_football_board_collection(football_date=football_date)
-    if football is None:
+
+    if not wants("football"):
+        football = _empty_sports_board_collection()
+    elif football_live is not None:
+        football = football_live
+    else:
         football = _sports_board_collection(
             upcoming_filename="football_upcoming_tournaments.json",
             backtests_filename="football_historical_backtests.json",

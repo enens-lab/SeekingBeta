@@ -23,6 +23,9 @@ frontend/dist/
 *.swp
 *.swo
 
+# Claude Code local state (worktrees, session memory, etc.)
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

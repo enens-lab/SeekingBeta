@@ -1,0 +1,7 @@
+# Generated build output (Vite + TypeScript)
+dist/
+.vite/
+*.tsbuildinfo
+
+# Local dependencies
+node_modules/

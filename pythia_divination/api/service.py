@@ -163,6 +163,9 @@ BASKETBALL_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("BASKETBALL_UPCOMING_CACHE
 _FOOTBALL_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _FOOTBALL_UPCOMING_BOARDS_LOCK = Lock()
 FOOTBALL_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("FOOTBALL_UPCOMING_CACHE_TTL_SECONDS", "900"))
+_SOCCER_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
+_SOCCER_UPCOMING_BOARDS_LOCK = Lock()
+SOCCER_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("SOCCER_UPCOMING_CACHE_TTL_SECONDS", "900"))
 
 LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
     "lstm_5d": {
@@ -269,6 +272,32 @@ def _load_live_football_upcoming_payload(force_refresh: bool = False, football_d
             _FOOTBALL_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
         elif _FOOTBALL_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
             return dict(_FOOTBALL_UPCOMING_BOARDS_CACHE[cache_key][1])
+    return dict(payload)
+
+
+def _load_live_soccer_upcoming_payload(force_refresh: bool = False, soccer_date: Optional[str] = None) -> dict[str, Any]:
+    global _SOCCER_UPCOMING_BOARDS_CACHE
+
+    now_ts = time.time()
+    cache_key = soccer_date or "__default__"
+    with _SOCCER_UPCOMING_BOARDS_LOCK:
+        if (
+            not force_refresh
+            and cache_key in _SOCCER_UPCOMING_BOARDS_CACHE
+            and now_ts - _SOCCER_UPCOMING_BOARDS_CACHE[cache_key][0] <= SOCCER_UPCOMING_CACHE_TTL_SECONDS
+        ):
+            return dict(_SOCCER_UPCOMING_BOARDS_CACHE[cache_key][1])
+
+    from scripts.export_soccer_frontend_data import build_live_upcoming_payload
+
+    payload = build_live_upcoming_payload(selected_date=soccer_date)
+    boards = payload.get("upcoming", [])
+
+    with _SOCCER_UPCOMING_BOARDS_LOCK:
+        if boards or cache_key not in _SOCCER_UPCOMING_BOARDS_CACHE:
+            _SOCCER_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
+        elif _SOCCER_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
+            return dict(_SOCCER_UPCOMING_BOARDS_CACHE[cache_key][1])
     return dict(payload)
 
 
@@ -1743,6 +1772,15 @@ async def api_live_football_boards(force_refresh: bool = False, football_date: O
     except Exception as exc:
         logger.error("Live Football board generation failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=503, detail="Live Football boards are temporarily unavailable")
+
+
+@app.get("/api/sports/soccer/boards")
+async def api_live_soccer_boards(force_refresh: bool = False, soccer_date: Optional[str] = None):
+    try:
+        return await run_in_threadpool(_load_live_soccer_upcoming_payload, force_refresh, soccer_date)
+    except Exception as exc:
+        logger.error("Live Soccer board generation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="Live Soccer boards are temporarily unavailable")
 
 
 # ---------- Auth Endpoints ----------

@@ -399,6 +399,11 @@ export interface SportsUpcomingBoard {
   latestDate?: number;
   venue?: string;
   predictedWinner?: string;
+  // 1X2 outcome probabilities (0..1) for sports that can draw (soccer).
+  // Optional — binary/ranked sports leave them undefined.
+  homeWinProbability?: number;
+  drawProbability?: number;
+  awayWinProbability?: number;
   awayTeam?: string;
   homeTeam?: string;
   awayStarter?: string;
@@ -426,6 +431,9 @@ export interface SportsHistoricalBoard {
   tour: string;
   hitStatus: string;
   predictedWinner?: string;
+  homeWinProbability?: number;
+  drawProbability?: number;
+  awayWinProbability?: number;
   predictedTop3?: string[];
   predictedTop5?: string[];
   actualWinner?: string;
@@ -468,6 +476,7 @@ export interface SportsBoardsResponse {
   basketball: SportsBoardCollection;
   mlb: SportsBoardCollection;
   football: SportsBoardCollection;
+  soccer: SportsBoardCollection;
 }
 
 type AuthErrorCallback = (() => void) | null;
@@ -780,13 +789,14 @@ export const billing = {
     }),
 };
 
-export type SportsBoardKey = 'golf' | 'tennis' | 'basketball' | 'mlb' | 'football';
+export type SportsBoardKey = 'golf' | 'tennis' | 'basketball' | 'mlb' | 'football' | 'soccer';
 
 export const sports = {
   getBoards: (options?: {
     mlbDate?: string;
     basketballDate?: string;
     footballDate?: string;
+    soccerDate?: string;
     sports?: SportsBoardKey | SportsBoardKey[];
   }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
@@ -798,6 +808,9 @@ export const sports = {
     }
     if (options?.footballDate) {
       params.set('football_date', options.footballDate);
+    }
+    if (options?.soccerDate) {
+      params.set('soccer_date', options.soccerDate);
     }
     if (options?.sports) {
       const list = Array.isArray(options.sports) ? options.sports : [options.sports];

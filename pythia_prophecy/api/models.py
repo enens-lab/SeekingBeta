@@ -549,6 +549,12 @@ class SportsUpcomingBoard(BaseModel):
     latestDate: Optional[int] = None
     venue: Optional[str] = None
     predictedWinner: Optional[str] = None
+    # 1X2 outcome distribution for sports that can draw (soccer). Optional so
+    # binary home-win sports (NFL/NBA/MLB/NHL) and ranked sports (golf/tennis)
+    # leave them null and are unaffected.
+    homeWinProbability: Optional[float] = None
+    drawProbability: Optional[float] = None
+    awayWinProbability: Optional[float] = None
     awayTeam: Optional[str] = None
     homeTeam: Optional[str] = None
     awayStarter: Optional[str] = None
@@ -576,6 +582,9 @@ class SportsHistoricalBoard(BaseModel):
     tour: str
     hitStatus: str
     predictedWinner: Optional[str] = None
+    homeWinProbability: Optional[float] = None
+    drawProbability: Optional[float] = None
+    awayWinProbability: Optional[float] = None
     predictedTop3: List[str] = []
     predictedTop5: List[str] = []
     actualWinner: Optional[str] = None
@@ -618,6 +627,7 @@ class SportsBoardsResponse(BaseModel):
     basketball: SportsBoardCollection
     mlb: SportsBoardCollection
     football: SportsBoardCollection
+    soccer: SportsBoardCollection
 
 
 # ============================================================

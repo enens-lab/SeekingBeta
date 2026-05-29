@@ -19,7 +19,7 @@ import {
 import { trackEvent } from '../../lib/analytics';
 import './SportsDashboard.css';
 
-type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'Football' | 'Hockey';
+type SportCategory = 'Golf' | 'Tennis' | 'Basketball' | 'Baseball' | 'Football' | 'Soccer' | 'Hockey';
 
 const SPORT_CATEGORY_TO_BACKEND_KEY: Partial<Record<SportCategory, SportsBoardKey>> = {
   Golf: 'golf',
@@ -27,6 +27,7 @@ const SPORT_CATEGORY_TO_BACKEND_KEY: Partial<Record<SportCategory, SportsBoardKe
   Basketball: 'basketball',
   Baseball: 'mlb',
   Football: 'football',
+  Soccer: 'soccer',
 };
 
 const EMPTY_COLLECTION: SportsBoardCollection = {
@@ -45,6 +46,7 @@ const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   basketball: EMPTY_COLLECTION,
   mlb: EMPTY_COLLECTION,
   football: EMPTY_COLLECTION,
+  soccer: EMPTY_COLLECTION,
 };
 
 function runtimeUpdatedLabel(value?: string): string | null {
@@ -428,11 +430,12 @@ function SportsDashboard() {
       Basketball: sportsBoards.basketball,
       Baseball: sportsBoards.mlb,
       Football: sportsBoards.football,
+      Soccer: sportsBoards.soccer,
     }),
     [sportsBoards]
   );
 
-  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball' || activeSport === 'Football'
+  const sportData = activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball' || activeSport === 'Football' || activeSport === 'Soccer'
     ? sportDataMap[activeSport]
     : EMPTY_COLLECTION;
 
@@ -547,7 +550,7 @@ function SportsDashboard() {
   }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, activeSport]);
 
   const handleSportChange = (sport: SportCategory) => {
-    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'Baseball' && sport !== 'Football') return;
+    if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'Baseball' && sport !== 'Football' && sport !== 'Soccer') return;
 
     trackEvent('sports_category_change', { sport });
     setActiveSport(sport);
@@ -1511,6 +1514,9 @@ function SportsDashboard() {
             <button className={`sport-tab ${activeSport === 'Football' ? 'active' : ''}`} onClick={() => handleSportChange('Football')}>
               Football
             </button>
+            <button className={`sport-tab ${activeSport === 'Soccer' ? 'active' : ''}`} onClick={() => handleSportChange('Soccer')}>
+              Soccer
+            </button>
             <button className={`sport-tab ${activeSport === 'Hockey' ? 'active' : ''} disabled-tab`} onClick={() => handleSportChange('Hockey')}>
               Hockey <span className="badge-tbd">TBD</span>
             </button>
@@ -1518,7 +1524,7 @@ function SportsDashboard() {
         </div>
 
         <div className="sports-content">
-          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball' || activeSport === 'Football') ? (
+          {(activeSport === 'Golf' || activeSport === 'Tennis' || activeSport === 'Basketball' || activeSport === 'Baseball' || activeSport === 'Football' || activeSport === 'Soccer') ? (
             <div className="pga-market-container">
               <div className="pga-tabs">
                 <button className={`toggle-btn ${activeTab === 'upcoming' ? 'active' : ''}`} onClick={() => setActiveTab('upcoming')}>

@@ -16,6 +16,7 @@ const EMPTY_SPORTS_BOARDS: SportsBoardsResponse = {
   basketball: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
   mlb: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
   football: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
+  soccer: { upcoming: [], backtests: [], updated_at: '', source: 'runtime_filtered_sports_feed', selectedDate: undefined, availableDates: [], seasonSummary: null },
 };
 
 type SpotlightBoard = {

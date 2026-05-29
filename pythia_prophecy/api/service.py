@@ -1789,6 +1789,37 @@ async def _live_soccer_board_collection(soccer_date: str | None = None) -> Optio
         return None
 
 
+async def _live_olympics_board_collection() -> Optional[SportsBoardCollection]:
+    backtests_filename = "olympics_historical_backtests.json"
+    backtests = _load_sports_json(backtests_filename)
+    fallback_updated_at = _sports_data_updated_at([backtests_filename])
+
+    try:
+        async with httpx.AsyncClient(timeout=SPORTS_MLB_BOARDS_TIMEOUT_SECONDS) as client:
+            response = await client.get(f"{DIVINATION_API_URL}/api/sports/olympics/boards")
+            response.raise_for_status()
+            payload = response.json()
+            upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+        runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
+        if not isinstance(runtime_backtests, list):
+            runtime_backtests = []
+        merged_backtests = _merge_runtime_backtests(backtests, runtime_backtests)
+        if not isinstance(upcoming, list):
+            return None
+        updated_at = _to_utc_datetime(payload.get("updated_at")) or fallback_updated_at
+        return _build_sports_board_collection(
+            upcoming=upcoming,
+            backtests=merged_backtests,
+            updated_at=updated_at,
+            source=str(payload.get("source") or "divination_olympics_medal_model"),
+            selected_date=None,
+            available_dates=[],
+        )
+    except Exception as exc:
+        logger.warning("Falling back to cached Olympics board feed: %s", exc)
+        return None
+
+
 def _extract_client_ip(request: Request) -> Optional[str]:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -4571,7 +4602,7 @@ def performance_curve(model: str = Query("lstm_5d")):
     return get_track_record_curve(model=model)
 
 
-_SPORTS_BOARDS_ALL = ("golf", "tennis", "basketball", "mlb", "football", "soccer")
+_SPORTS_BOARDS_ALL = ("golf", "tennis", "basketball", "mlb", "football", "soccer", "olympics")
 
 
 def _empty_sports_board_collection() -> SportsBoardCollection:
@@ -4663,11 +4694,17 @@ async def sports_boards(
             return None
         return await _live_soccer_board_collection(soccer_date=soccer_date)
 
-    basketball_live, mlb_live, football_live, soccer_live = await asyncio.gather(
+    async def _olympics_or_none() -> Optional[SportsBoardCollection]:
+        if not wants("olympics"):
+            return None
+        return await _live_olympics_board_collection()
+
+    basketball_live, mlb_live, football_live, soccer_live, olympics_live = await asyncio.gather(
         _basketball_or_none(),
         _mlb_or_none(),
         _football_or_none(),
         _soccer_or_none(),
+        _olympics_or_none(),
     )
 
     if not wants("basketball"):
@@ -4718,6 +4755,17 @@ async def sports_boards(
             selected_date=soccer_date,
         )
 
+    if not wants("olympics"):
+        olympics = _empty_sports_board_collection()
+    elif olympics_live is not None:
+        olympics = olympics_live
+    else:
+        olympics = _sports_board_collection(
+            upcoming_filename="olympics_upcoming_tournaments.json",
+            backtests_filename="olympics_historical_backtests.json",
+            sport="olympics",
+        )
+
     return SportsBoardsResponse(
         golf=golf,
         tennis=tennis,
@@ -4725,6 +4773,7 @@ async def sports_boards(
         mlb=mlb,
         football=football,
         soccer=soccer,
+        olympics=olympics,
     )
 
 

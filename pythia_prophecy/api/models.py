@@ -628,6 +628,7 @@ class SportsBoardsResponse(BaseModel):
     mlb: SportsBoardCollection
     football: SportsBoardCollection
     soccer: SportsBoardCollection
+    olympics: SportsBoardCollection
 
 
 # ============================================================

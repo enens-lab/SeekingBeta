@@ -477,6 +477,7 @@ export interface SportsBoardsResponse {
   mlb: SportsBoardCollection;
   football: SportsBoardCollection;
   soccer: SportsBoardCollection;
+  olympics: SportsBoardCollection;
 }
 
 type AuthErrorCallback = (() => void) | null;
@@ -789,7 +790,7 @@ export const billing = {
     }),
 };
 
-export type SportsBoardKey = 'golf' | 'tennis' | 'basketball' | 'mlb' | 'football' | 'soccer';
+export type SportsBoardKey = 'golf' | 'tennis' | 'basketball' | 'mlb' | 'football' | 'soccer' | 'olympics';
 
 export const sports = {
   getBoards: (options?: {

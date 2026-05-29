@@ -166,6 +166,9 @@ FOOTBALL_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("FOOTBALL_UPCOMING_CACHE_TTL
 _SOCCER_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _SOCCER_UPCOMING_BOARDS_LOCK = Lock()
 SOCCER_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("SOCCER_UPCOMING_CACHE_TTL_SECONDS", "900"))
+_OLYMPICS_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
+_OLYMPICS_UPCOMING_BOARDS_LOCK = Lock()
+OLYMPICS_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("OLYMPICS_UPCOMING_CACHE_TTL_SECONDS", "3600"))
 
 LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
     "lstm_5d": {
@@ -298,6 +301,32 @@ def _load_live_soccer_upcoming_payload(force_refresh: bool = False, soccer_date:
             _SOCCER_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
         elif _SOCCER_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
             return dict(_SOCCER_UPCOMING_BOARDS_CACHE[cache_key][1])
+    return dict(payload)
+
+
+def _load_live_olympics_upcoming_payload(force_refresh: bool = False) -> dict[str, Any]:
+    global _OLYMPICS_UPCOMING_BOARDS_CACHE
+
+    now_ts = time.time()
+    cache_key = "__default__"
+    with _OLYMPICS_UPCOMING_BOARDS_LOCK:
+        if (
+            not force_refresh
+            and cache_key in _OLYMPICS_UPCOMING_BOARDS_CACHE
+            and now_ts - _OLYMPICS_UPCOMING_BOARDS_CACHE[cache_key][0] <= OLYMPICS_UPCOMING_CACHE_TTL_SECONDS
+        ):
+            return dict(_OLYMPICS_UPCOMING_BOARDS_CACHE[cache_key][1])
+
+    from scripts.export_olympics_frontend_data import build_live_upcoming_payload
+
+    payload = build_live_upcoming_payload()
+    boards = payload.get("upcoming", [])
+
+    with _OLYMPICS_UPCOMING_BOARDS_LOCK:
+        if boards or cache_key not in _OLYMPICS_UPCOMING_BOARDS_CACHE:
+            _OLYMPICS_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
+        elif _OLYMPICS_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
+            return dict(_OLYMPICS_UPCOMING_BOARDS_CACHE[cache_key][1])
     return dict(payload)
 
 
@@ -1781,6 +1810,15 @@ async def api_live_soccer_boards(force_refresh: bool = False, soccer_date: Optio
     except Exception as exc:
         logger.error("Live Soccer board generation failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=503, detail="Live Soccer boards are temporarily unavailable")
+
+
+@app.get("/api/sports/olympics/boards")
+async def api_live_olympics_boards(force_refresh: bool = False):
+    try:
+        return await run_in_threadpool(_load_live_olympics_upcoming_payload, force_refresh)
+    except Exception as exc:
+        logger.error("Live Olympics board generation failed: %s", exc, exc_info=True)
+        raise HTTPException(status_code=503, detail="Live Olympics boards are temporarily unavailable")
 
 
 # ---------- Auth Endpoints ----------

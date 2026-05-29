@@ -4,6 +4,7 @@ pydantic==2.8.2
 pandas==2.2.2
 pyarrow==18.1.0
 numpy==1.26.4
+scipy==1.13.1
 scikit-learn==1.5.1
 yfinance==0.2.43
 joblib==1.4.2

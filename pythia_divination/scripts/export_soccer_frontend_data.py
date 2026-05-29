@@ -1,55 +1,55 @@
 """Soccer (association football) frontend data export.
 
-Phase 0 scaffold: this module exposes the same ``build_live_upcoming_payload``
-contract that the divination soccer endpoint (``/api/sports/soccer/boards``)
-and the prophecy BFF expect, but returns an empty-but-valid payload until the
-Phase 1 ingestion + Dixon-Coles model lands.
+Builds the live soccer board payload consumed by the divination
+``/api/sports/soccer/boards`` endpoint and proxied by the prophecy BFF.
 
-Soccer is modelled as ONE sport key whose ``tour`` field carries the
-competition (e.g. "Premier League", "La Liga", "Serie A", "Bundesliga",
-"Ligue 1", "UEFA Champions League", "FIFA World Cup"). This mirrors how golf
-uses ``tour`` for PGA/LPGA and tennis for ATP/WTA, so every competition rides
-on a single set of API / web / iOS plumbing.
+Soccer is ONE sport key whose ``tour`` carries the competition (Premier
+League, La Liga, Serie A, Bundesliga, Ligue 1, ...), mirroring golf/tennis.
+Match outcomes are 1X2 (home / draw / away) from a Dixon-Coles model.
 
-DRAW / 1X2 CONTRACT
--------------------
-Unlike the binary (home-win) team sports already in the platform, soccer has
-three outcomes. Each board therefore carries an explicit 1X2 distribution:
+Pipeline per league:
+  1. load multi-season match history (football-data.co.uk)
+  2. OUT-OF-SAMPLE backtests: fit on matches before a cutoff, predict the
+     recent held-out matches -> Track Record (honest, not in-sample)
+  3. fit the full time-decayed model and predict upcoming ESPN fixtures -> 1X2
 
-    {
-        "id": "epl-2026-08-15-ARS-CHE",
-        "name": "Arsenal vs Chelsea",
-        "tour": "Premier League",
-        "course": "",                # unused for soccer; kept for schema parity
-        "venue": "Emirates Stadium",
-        "scheduledDate": 20260815,
-        "latestDate": 20260815,
-        "awayTeam": "Chelsea",
-        "homeTeam": "Arsenal",
-        "predictedWinner": "Arsenal",   # argmax label, or "Draw"
-        "homeWinProbability": 0.52,      # NEW (1X2)
-        "drawProbability": 0.26,         # NEW (1X2)
-        "awayWinProbability": 0.22,      # NEW (1X2)
-        "awayTeamDetails": {...},        # logo/colors via branding
-        "homeTeamDetails": {...},
-        "predictions": [                 # also emitted for backward-compat clients
-            {"rank": 1, "playerName": "Arsenal", "winProbability": 52.0, "side": "home"},
-            {"rank": 2, "playerName": "Draw",    "winProbability": 26.0, "side": "draw"},
-            {"rank": 3, "playerName": "Chelsea", "winProbability": 22.0, "side": "away"},
-        ],
-    }
-
-The ``homeWinProbability`` / ``drawProbability`` / ``awayWinProbability`` fields
-are Optional in the prophecy/iOS/web contracts, so existing binary sports that
-omit them are unaffected.
+DRAW / 1X2 CONTRACT: each board carries homeWinProbability / drawProbability /
+awayWinProbability (Optional in the shared contract) plus a ``predictions``
+mirror of [Home, Draw, Away] rows so older clients still render something.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import logging
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
+import numpy as np
+
+DIV_ROOT = Path(__file__).resolve().parents[1]
+if str(DIV_ROOT) not in sys.path:
+    sys.path.insert(0, str(DIV_ROOT))
+
+from sports.soccer import client
+from sports.soccer.branding import branding_from_espn_team
+from sports.soccer.constants import (
+    DEFAULT_HISTORY_SEASONS,
+    PREDICTABLE_LEAGUE_KEYS,
+    LEAGUE_CONFIGS,
+    canonical_team_name,
+    tour_for_league,
+)
+from sports.soccer.dixon_coles import DixonColesModel
+
+logger = logging.getLogger(__name__)
+
 LIVE_SOURCE = "divination_live_soccer_feed"
+UPCOMING_DAYS_AHEAD = 21
+BACKTEST_HOLDOUT_PER_LEAGUE = 40
+MAX_COMPLETED_BOARDS = 90
+TIME_DECAY_XI = 0.0018  # per day; ~1-year half life
 
 
 def build_soccer_board(
@@ -67,12 +67,11 @@ def build_soccer_board(
     home_team_details: dict[str, Any] | None = None,
     away_team_details: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Assemble a single draw-aware soccer board dict.
+    """Assemble a single draw-aware soccer upcoming board dict.
 
-    Probabilities are accepted as 0..1 floats; the ``predictions`` mirror uses
-    0..100 percentages to match the existing ranked-field convention.
+    Probabilities are 0..1; the ``predictions`` mirror uses 0..100 percentages
+    to match the existing ranked-field convention.
     """
-
     outcomes = [
         (home_team, home_win_probability, "home"),
         ("Draw", draw_probability, "draw"),
@@ -80,7 +79,6 @@ def build_soccer_board(
     ]
     ranked = sorted(outcomes, key=lambda item: item[1], reverse=True)
     predicted_winner = ranked[0][0]
-
     predictions = [
         {
             "rank": idx + 1,
@@ -114,6 +112,159 @@ def build_soccer_board(
     return board
 
 
+def build_soccer_backtest(
+    *,
+    tour: str,
+    home_team: str,
+    away_team: str,
+    home_goals: int,
+    away_goals: int,
+    prediction: dict[str, float],
+    match_date: int | None,
+    year: int,
+) -> dict[str, Any]:
+    """Assemble a completed (historical) soccer board with hit/miss vs actual."""
+    outcomes = [
+        (home_team, prediction["homeWin"], "home"),
+        ("Draw", prediction["draw"], "draw"),
+        (away_team, prediction["awayWin"], "away"),
+    ]
+    ranked = sorted(outcomes, key=lambda item: item[1], reverse=True)
+    predicted_label, predicted_prob, _ = ranked[0]
+
+    if home_goals > away_goals:
+        actual_label = home_team
+    elif away_goals > home_goals:
+        actual_label = away_team
+    else:
+        actual_label = "Draw"
+
+    hit_status = "Top Pick" if predicted_label == actual_label else "Miss"
+
+    return {
+        "year": int(year),
+        "tournament": f"{home_team} vs {away_team}",
+        "tour": tour,
+        "hitStatus": hit_status,
+        "predictedWinner": predicted_label,
+        "actualWinner": f"{actual_label} ({home_goals}-{away_goals})",
+        "prob": round(float(predicted_prob), 4),
+        "homeWinProbability": round(float(prediction["homeWin"]), 4),
+        "drawProbability": round(float(prediction["draw"]), 4),
+        "awayWinProbability": round(float(prediction["awayWin"]), 4),
+        "homeTeam": home_team,
+        "awayTeam": away_team,
+        "scheduledDate": match_date,
+        "latestDate": match_date,
+    }
+
+
+def _decay_weights(dates) -> np.ndarray:
+    valid = dates.dropna()
+    if valid.empty:
+        return np.ones(len(dates))
+    latest = valid.max()
+    days_ago = (latest - dates).dt.days.fillna(0).clip(lower=0).to_numpy(dtype=float)
+    return np.exp(-TIME_DECAY_XI * days_ago)
+
+
+def _fit_model(history) -> DixonColesModel:
+    weights = _decay_weights(history["date"])
+    return DixonColesModel().fit(
+        history["home"], history["away"],
+        history["home_goals"].astype(int), history["away_goals"].astype(int),
+        weights=weights,
+    )
+
+
+def _build_backtests_for_league(league_key: str, history) -> list[dict[str, Any]]:
+    tour = tour_for_league(league_key)
+    if len(history) < 80:
+        return []
+    history = history.sort_values("date").reset_index(drop=True)
+    # Train on the older portion, evaluate out-of-sample on the recent third
+    # (~one season) rather than only the noisy final gameweeks.
+    holdout = max(BACKTEST_HOLDOUT_PER_LEAGUE, len(history) // 3)
+    holdout = min(holdout, len(history) - 50)
+    if holdout <= 0:
+        return []
+    train = history.iloc[:-holdout]
+    test = history.iloc[-holdout:]
+    if len(train) < 50 or test.empty:
+        return []
+
+    model = _fit_model(train)
+    boards: list[dict[str, Any]] = []
+    for row in test.itertuples(index=False):
+        pred = model.predict_match(row.home, row.away)
+        match_date = int(row.date.strftime("%Y%m%d")) if row.date is not None and not _is_nat(row.date) else None
+        year = int(row.date.year) if match_date else datetime.now(timezone.utc).year
+        boards.append(
+            build_soccer_backtest(
+                tour=tour,
+                home_team=_title(row.home),
+                away_team=_title(row.away),
+                home_goals=int(row.home_goals),
+                away_goals=int(row.away_goals),
+                prediction=pred,
+                match_date=match_date,
+                year=year,
+            )
+        )
+    return boards
+
+
+def _build_upcoming_for_league(league_key: str, model: DixonColesModel) -> list[dict[str, Any]]:
+    cfg = LEAGUE_CONFIGS[league_key]
+    tour = str(cfg["tour"])
+    slug = str(cfg["espn_slug"])
+    today = datetime.now(timezone.utc).date()
+    window = f"{today:%Y%m%d}-{today + timedelta(days=UPCOMING_DAYS_AHEAD):%Y%m%d}"
+
+    try:
+        payload = client.fetch_espn_scoreboard(slug, dates=window)
+        fixtures = client.parse_espn_fixtures(payload)
+    except Exception as exc:  # pragma: no cover - network
+        logger.warning("soccer upcoming fetch failed for %s: %s", league_key, exc)
+        return []
+
+    boards: list[dict[str, Any]] = []
+    for fx in fixtures:
+        if fx.get("state") == "post":
+            continue  # already finished
+        home_name = fx.get("home_name") or ""
+        away_name = fx.get("away_name") or ""
+        pred = model.predict_match(canonical_team_name(home_name), canonical_team_name(away_name))
+        boards.append(
+            build_soccer_board(
+                board_id=f"{league_key}-{fx.get('id')}",
+                name=f"{home_name} vs {away_name}",
+                tour=tour,
+                home_team=home_name,
+                away_team=away_name,
+                home_win_probability=pred["homeWin"],
+                draw_probability=pred["draw"],
+                away_win_probability=pred["awayWin"],
+                scheduled_date=fx.get("date_int"),
+                venue=fx.get("venue"),
+                home_team_details=branding_from_espn_team(fx.get("home_team")),
+                away_team_details=branding_from_espn_team(fx.get("away_team")),
+            )
+        )
+    return boards
+
+
+def _is_nat(value: Any) -> bool:
+    try:
+        return value != value  # NaT != NaT
+    except Exception:  # pragma: no cover
+        return False
+
+
+def _title(name: str) -> str:
+    return name.title() if name and name.islower() else name
+
+
 def _empty_payload(selected_date: str | None) -> dict[str, Any]:
     return {
         "selectedDate": selected_date,
@@ -126,20 +277,50 @@ def _empty_payload(selected_date: str | None) -> dict[str, Any]:
 
 
 def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
-    """Return the live soccer board payload.
+    """Return the live soccer board payload across all predictable leagues."""
+    upcoming: list[dict[str, Any]] = []
+    completed: list[dict[str, Any]] = []
 
-    Phase 0: returns an empty-but-valid payload so the soccer endpoint and the
-    soccer tab work end-to-end before the model exists. Phase 1 will replace the
-    body with real fixture loading + Dixon-Coles 1X2 predictions, using
-    ``build_soccer_board(...)`` for each match and grouping by ``tour``.
-    """
+    for league_key in PREDICTABLE_LEAGUE_KEYS:
+        try:
+            history = client.load_history(league_key, seasons=DEFAULT_HISTORY_SEASONS)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("soccer history load failed for %s: %s", league_key, exc)
+            continue
+        if history.empty:
+            continue
 
-    # TODO(phase-1): load fixtures (ESPN hidden API / football-data.org), run the
-    # Dixon-Coles model per competition, and emit boards via build_soccer_board().
-    return _empty_payload(selected_date)
+        completed.extend(_build_backtests_for_league(league_key, history))
+        try:
+            model = _fit_model(history)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("Dixon-Coles fit failed for %s: %s", league_key, exc)
+            continue
+        upcoming.extend(_build_upcoming_for_league(league_key, model))
+
+    upcoming.sort(key=lambda b: (b.get("scheduledDate") or 99999999))
+    completed.sort(key=lambda b: (b.get("latestDate") or 0), reverse=True)
+    completed = completed[:MAX_COMPLETED_BOARDS]
+
+    return {
+        "selectedDate": selected_date,
+        "availableDates": [],
+        "upcoming": upcoming,
+        "completed": completed,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "source": LIVE_SOURCE,
+    }
 
 
 if __name__ == "__main__":
     import json
 
-    print(json.dumps(build_live_upcoming_payload(), indent=2))
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    payload = build_live_upcoming_payload()
+    print(json.dumps({
+        "upcoming": len(payload["upcoming"]),
+        "completed": len(payload["completed"]),
+        "source": payload["source"],
+        "sample_completed": payload["completed"][:2],
+        "sample_upcoming": payload["upcoming"][:2],
+    }, indent=2, default=str))

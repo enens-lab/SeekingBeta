@@ -42,6 +42,7 @@ from sports.soccer.constants import (
     tour_for_league,
 )
 from sports.soccer.dixon_coles import DixonColesModel
+from sports.soccer import world_cup as wc
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,11 @@ UPCOMING_DAYS_AHEAD = 21
 BACKTEST_HOLDOUT_PER_LEAGUE = 40
 MAX_COMPLETED_BOARDS = 90
 TIME_DECAY_XI = 0.0018  # per day; ~1-year half life
+
+WORLD_CUP_ENABLED = True
+WORLD_CUP_SIMS = 10000
+WORLD_CUP_MAX_FIXTURES = 32  # cap upcoming WC match boards in the feed
+WORLD_CUP_WINDOW = ("20260611", "20260719")  # tournament dates
 
 
 def build_soccer_board(
@@ -265,6 +271,88 @@ def _title(name: str) -> str:
     return name.title() if name and name.islower() else name
 
 
+def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Return (upcoming WC match boards, title-odds ranked board).
+
+    The World Cup is just another ``tour`` ("FIFA World Cup") under the soccer
+    key, so these boards flow through the existing pipeline unchanged.
+    """
+    try:
+        groups = wc.load_world_cup_groups()
+        results = client.fetch_international_results(since_year=2014)
+        model = wc.build_international_model(results)
+    except Exception as exc:  # pragma: no cover - network / data
+        logger.warning("World Cup model build failed: %s", exc)
+        return [], None
+
+    # --- title-odds ranked "field" board (renders like a golf field) ---
+    title_board: dict[str, Any] | None = None
+    try:
+        probs = wc.simulate_tournament(model, groups, n_sims=WORLD_CUP_SIMS)
+        ranked = sorted(probs.items(), key=lambda kv: kv[1]["win_title"], reverse=True)
+        predictions = [
+            {
+                "rank": i + 1,
+                "playerName": _title(team),
+                "winProbability": round(p["win_title"] * 100.0, 2),
+                "side": None,
+                "profile": {
+                    "subtitle": f"Reach final {p['reach_final'] * 100:.0f}% · Advance {p['advance'] * 100:.0f}%",
+                },
+            }
+            for i, (team, p) in enumerate(ranked)
+            if p["win_title"] > 0
+        ]
+        if predictions:
+            title_board = {
+                "id": "fifa-world-cup-2026-title-odds",
+                "name": "World Cup 2026 — Title Odds",
+                "tour": wc.TOUR_NAME,
+                "course": "Monte Carlo tournament simulation",
+                "scheduledDate": int(WORLD_CUP_WINDOW[0]),
+                "latestDate": int(WORLD_CUP_WINDOW[0]),
+                "predictedWinner": predictions[0]["playerName"],
+                "predictions": predictions,
+            }
+    except Exception as exc:  # pragma: no cover
+        logger.warning("World Cup simulation failed: %s", exc)
+
+    # --- upcoming WC fixtures as 1X2 boards (neutral) ---
+    match_boards: list[dict[str, Any]] = []
+    try:
+        payload = client.fetch_espn_scoreboard("fifa.world", dates=f"{WORLD_CUP_WINDOW[0]}-{WORLD_CUP_WINDOW[1]}")
+        fixtures = client.parse_espn_fixtures(payload)
+        fixtures = [f for f in fixtures if f.get("state") != "post"]
+        fixtures.sort(key=lambda f: f.get("date_int") or 99999999)
+        for fx in fixtures[:WORLD_CUP_MAX_FIXTURES]:
+            home_name = fx.get("home_name") or ""
+            away_name = fx.get("away_name") or ""
+            from sports.soccer.constants import canonical_national_name
+            pred = model.predict_match(
+                canonical_national_name(home_name), canonical_national_name(away_name), neutral=True
+            )
+            match_boards.append(
+                build_soccer_board(
+                    board_id=f"fifa.world-{fx.get('id')}",
+                    name=f"{home_name} vs {away_name}",
+                    tour=wc.TOUR_NAME,
+                    home_team=home_name,
+                    away_team=away_name,
+                    home_win_probability=pred["homeWin"],
+                    draw_probability=pred["draw"],
+                    away_win_probability=pred["awayWin"],
+                    scheduled_date=fx.get("date_int"),
+                    venue=fx.get("venue"),
+                    home_team_details=branding_from_espn_team(fx.get("home_team")),
+                    away_team_details=branding_from_espn_team(fx.get("away_team")),
+                )
+            )
+    except Exception as exc:  # pragma: no cover
+        logger.warning("World Cup fixtures fetch failed: %s", exc)
+
+    return match_boards, title_board
+
+
 def _empty_payload(selected_date: str | None) -> dict[str, Any]:
     return {
         "selectedDate": selected_date,
@@ -297,6 +385,16 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
             logger.warning("Dixon-Coles fit failed for %s: %s", league_key, exc)
             continue
         upcoming.extend(_build_upcoming_for_league(league_key, model))
+
+    # FIFA World Cup (international model + Monte Carlo) — just another tour.
+    if WORLD_CUP_ENABLED:
+        try:
+            wc_matches, title_board = _build_world_cup_boards()
+            if title_board:
+                upcoming.append(title_board)
+            upcoming.extend(wc_matches)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("World Cup board build failed: %s", exc)
 
     upcoming.sort(key=lambda b: (b.get("scheduledDate") or 99999999))
     completed.sort(key=lambda b: (b.get("latestDate") or 0), reverse=True)

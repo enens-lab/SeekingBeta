@@ -138,3 +138,35 @@ def canonical_team_name(name: str | None) -> str:
     tokens = [t for t in text.split(" ") if t and t not in _STRIP_TOKENS]
     stripped = " ".join(tokens)
     return _TEAM_ALIASES.get(stripped, stripped or text)
+
+
+# --- National-team normalization (World Cup / internationals) ---------------
+# Align names across martj42 (training), OpenFootball + ESPN (fixtures).
+_NATION_ALIASES: dict[str, str] = {
+    "czech republic": "czechia",
+    "usa": "united states",
+    "us": "united states",
+    "korea republic": "south korea",
+    "korea dpr": "north korea",
+    "ir iran": "iran",
+    "china pr": "china",
+    "cote d'ivoire": "ivory coast",
+    "cabo verde": "cape verde",
+    "the gambia": "gambia",
+    "republic of ireland": "ireland",
+    "bosnia and herzegovina": "bosnia herzegovina",
+    "north macedonia": "macedonia",
+    "turkiye": "turkey",
+    "curacao": "curacao",
+}
+
+
+def canonical_national_name(name: str | None) -> str:
+    """Normalize a national-team name to a comparable key across sources."""
+    if not name:
+        return ""
+    text = name.strip().lower()
+    text = text.replace("&", "and").replace(".", " ").replace("-", " ")
+    text = re.sub(r"[^a-z0-9' ]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return _NATION_ALIASES.get(text, text)

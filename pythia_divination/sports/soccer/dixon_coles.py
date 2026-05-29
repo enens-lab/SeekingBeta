@@ -111,20 +111,23 @@ class DixonColesModel:
         return self
 
     # --- prediction ----------------------------------------------------------
-    def _rates(self, home: str, away: str) -> tuple[float, float]:
+    def _rates(self, home: str, away: str, neutral: bool = False) -> tuple[float, float]:
         ah = self.attack[self._index[home]] if home in self._index else 0.0
         dh = self.defense[self._index[home]] if home in self._index else 0.0
         aa = self.attack[self._index[away]] if away in self._index else 0.0
         da = self.defense[self._index[away]] if away in self._index else 0.0
-        lam = float(np.exp(self.home_adv + ah - da))
+        # On neutral ground (e.g. a World Cup venue) neither side gets the home
+        # edge; split it so it cancels rather than favouring the nominal "home".
+        home_adv = 0.0 if neutral else self.home_adv
+        lam = float(np.exp(home_adv + ah - da))
         mu = float(np.exp(aa - dh))
         return lam, mu
 
-    def predict_match(self, home: str, away: str, max_goals: int = 10) -> dict[str, float]:
+    def predict_match(self, home: str, away: str, max_goals: int = 10, neutral: bool = False) -> dict[str, float]:
         """Return 1X2 probabilities + expected goals for a fixture."""
         if not self.fitted:
             raise RuntimeError("model is not fitted")
-        lam, mu = self._rates(home, away)
+        lam, mu = self._rates(home, away, neutral=neutral)
         goals = np.arange(0, max_goals + 1)
         home_pmf = poisson.pmf(goals, lam)
         away_pmf = poisson.pmf(goals, mu)

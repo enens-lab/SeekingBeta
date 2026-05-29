@@ -21,6 +21,7 @@ from .constants import (
     ESPN_BASE_URL,
     FOOTBALL_DATA_BASE_URL,
     LEAGUE_CONFIGS,
+    canonical_national_name,
     canonical_team_name,
     football_data_season_code,
 )
@@ -28,6 +29,10 @@ from .constants import (
 logger = logging.getLogger(__name__)
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "sports" / "soccer"
+
+INTERNATIONAL_RESULTS_URL = (
+    "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
+)
 
 
 def _session() -> requests.Session:
@@ -112,6 +117,49 @@ def load_history(league_key: str, seasons: int = 3, current_season_start: int | 
     out = out.dropna(subset=["home", "away", "home_goals", "away_goals"])
     out = out[(out["home"] != "") & (out["away"] != "")]
     return out.sort_values("date").reset_index(drop=True)
+
+
+# --- international results (national teams, for the World Cup model) ---------
+def fetch_international_results(since_year: int | None = None) -> pd.DataFrame:
+    """Men's international match results (martj42, 1872->present).
+
+    Returns columns: date, home, away (canonical national names), home_goals,
+    away_goals, neutral (bool). Cached to disk; refreshed when stale is fine
+    since the export endpoint caches its own payload.
+    """
+    cache_dir = DATA_ROOT / "raw"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = cache_dir / "international_results.csv"
+
+    raw: pd.DataFrame | None = None
+    try:
+        resp = _session().get(INTERNATIONAL_RESULTS_URL, timeout=DEFAULT_TIMEOUT_SECONDS)
+        resp.raise_for_status()
+        cache_path.write_bytes(resp.content)
+        raw = pd.read_csv(io.BytesIO(resp.content))
+    except Exception as exc:  # pragma: no cover - fall back to cache
+        logger.warning("international results fetch failed (%s); using cache", exc)
+        if cache_path.exists():
+            raw = pd.read_csv(cache_path)
+    if raw is None or raw.empty:
+        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "neutral"])
+
+    frame = pd.DataFrame(
+        {
+            "date": pd.to_datetime(raw["date"], errors="coerce"),
+            "home": raw["home_team"].map(canonical_national_name),
+            "away": raw["away_team"].map(canonical_national_name),
+            "home_goals": pd.to_numeric(raw["home_score"], errors="coerce"),
+            "away_goals": pd.to_numeric(raw["away_score"], errors="coerce"),
+            "neutral": raw.get("neutral", False).astype(str).str.upper().eq("TRUE")
+            if "neutral" in raw.columns
+            else False,
+        }
+    ).dropna(subset=["date", "home", "away", "home_goals", "away_goals"])
+
+    if since_year is not None:
+        frame = frame[frame["date"].dt.year >= since_year]
+    return frame.sort_values("date").reset_index(drop=True)
 
 
 # --- ESPN (live/upcoming fixtures) ------------------------------------------

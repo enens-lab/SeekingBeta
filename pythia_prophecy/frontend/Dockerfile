@@ -6,8 +6,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm. Pin to 9.x: it matches this repo's pnpm-lock.yaml
+# (lockfileVersion 9.0) and runs on the node:20 base. pnpm@latest floated to
+# v11, which requires Node 22 (uses node:sqlite) and breaks the build.
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 
 # Copy package files
 COPY package.json pnpm-lock.yaml ./

@@ -1554,6 +1554,7 @@
         ]
       }
     ],
+    "firstDate": 20260112,
     "latestDate": 20260114,
     "tournamentId": "ATP:2026-8998"
   },
@@ -3112,6 +3113,7 @@
         ]
       }
     ],
+    "firstDate": 20260112,
     "latestDate": 20260114,
     "tournamentId": "ATP:2026-301"
   },
@@ -4890,6 +4892,7 @@
         ]
       }
     ],
+    "firstDate": 20260104,
     "latestDate": 20260106,
     "tournamentId": "ATP:2026-339"
   },
@@ -6448,6 +6451,7 @@
         ]
       }
     ],
+    "firstDate": 20260105,
     "latestDate": 20260109,
     "tournamentId": "ATP:2026-336"
   },
@@ -7464,6 +7468,7 @@
         ]
       }
     ],
+    "firstDate": 20260102,
     "latestDate": 20260106,
     "tournamentId": "ATP:2026-9900"
   },
@@ -9018,6 +9023,7 @@
         ]
       }
     ],
+    "firstDate": 20250609,
     "latestDate": 20250609,
     "tournamentId": "ATP:2025-440"
   },
@@ -9484,6 +9490,7 @@
         ]
       }
     ],
+    "firstDate": 20251110,
     "latestDate": 20251110,
     "tournamentId": "ATP:2025-605"
   },
@@ -11198,6 +11205,7 @@
         ]
       }
     ],
+    "firstDate": 20250224,
     "latestDate": 20250224,
     "tournamentId": "ATP:2025-807"
   },
@@ -12652,6 +12660,7 @@
         ]
       }
     ],
+    "firstDate": 20250106,
     "latestDate": 20250106,
     "tournamentId": "ATP:2025-8998"
   },
@@ -14194,6 +14203,7 @@
         ]
       }
     ],
+    "firstDate": 20251013,
     "latestDate": 20251013,
     "tournamentId": "ATP:2025-9410"
   },
@@ -15748,6 +15758,7 @@
         ]
       }
     ],
+    "firstDate": 20251103,
     "latestDate": 20251103,
     "tournamentId": "ATP:2025-5100"
   },
@@ -17202,6 +17213,7 @@
         ]
       }
     ],
+    "firstDate": 20250106,
     "latestDate": 20250106,
     "tournamentId": "ATP:2025-301"
   },
@@ -23756,6 +23768,7 @@
         ]
       }
     ],
+    "firstDate": 20250113,
     "latestDate": 20250113,
     "tournamentId": "ATP:2025-580"
   },
@@ -25518,6 +25531,7 @@
         ]
       }
     ],
+    "firstDate": 20250414,
     "latestDate": 20250414,
     "tournamentId": "ATP:2025-425"
   },
@@ -27296,6 +27310,7 @@
         ]
       }
     ],
+    "firstDate": 20251020,
     "latestDate": 20251020,
     "tournamentId": "ATP:2025-328"
   },
@@ -28822,6 +28837,7 @@
         ]
       }
     ],
+    "firstDate": 20250714,
     "latestDate": 20250714,
     "tournamentId": "ATP:2025-316"
   },
@@ -30608,6 +30624,7 @@
         ]
       }
     ],
+    "firstDate": 20250924,
     "latestDate": 20250924,
     "tournamentId": "ATP:2025-747"
   },
@@ -32158,6 +32175,7 @@
         ]
       }
     ],
+    "firstDate": 20251013,
     "latestDate": 20251013,
     "tournamentId": "ATP:2025-7485"
   },
@@ -33680,6 +33698,7 @@
         ]
       }
     ],
+    "firstDate": 20250331,
     "latestDate": 20250331,
     "tournamentId": "ATP:2025-4462"
   },
@@ -35142,6 +35161,7 @@
         ]
       }
     ],
+    "firstDate": 20250210,
     "latestDate": 20250210,
     "tournamentId": "ATP:2025-506"
   },
@@ -40372,6 +40392,7 @@
         ]
       }
     ],
+    "firstDate": 20250727,
     "latestDate": 20250727,
     "tournamentId": "ATP:2025-421"
   },
@@ -41930,6 +41951,7 @@
         ]
       }
     ],
+    "firstDate": 20250917,
     "latestDate": 20250917,
     "tournamentId": "ATP:2025-7581"
   },
@@ -47196,6 +47218,7 @@
         ]
       }
     ],
+    "firstDate": 20250807,
     "latestDate": 20250807,
     "tournamentId": "ATP:2025-422"
   },
@@ -48854,6 +48877,7 @@
         ]
       }
     ],
+    "firstDate": 20250203,
     "latestDate": 20250203,
     "tournamentId": "ATP:2025-424"
   },
@@ -49099,6 +49123,7 @@
         ]
       }
     ],
+    "firstDate": 20251123,
     "latestDate": 20251123,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-ITA-ESP-01"
   },
@@ -49344,6 +49369,7 @@
         ]
       }
     ],
+    "firstDate": 20251120,
     "latestDate": 20251120,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-ARG-GER-01"
   },
@@ -49589,6 +49615,7 @@
         ]
       }
     ],
+    "firstDate": 20251120,
     "latestDate": 20251120,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-ESP-CZE-01"
   },
@@ -49834,6 +49861,7 @@
         ]
       }
     ],
+    "firstDate": 20251118,
     "latestDate": 20251118,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-FRA-BEL-01"
   },
@@ -50075,6 +50103,7 @@
         ]
       }
     ],
+    "firstDate": 20251119,
     "latestDate": 20251119,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-ITA-AUT-01"
   },
@@ -50320,6 +50349,7 @@
         ]
       }
     ],
+    "firstDate": 20251122,
     "latestDate": 20251122,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-ESP-GER-01"
   },
@@ -50565,6 +50595,7 @@
         ]
       }
     ],
+    "firstDate": 20251121,
     "latestDate": 20251121,
     "tournamentId": "ATP:2025-M-DC-2025-FLS-M-ITA-BEL-01"
   },
@@ -50846,6 +50877,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-AUT-FIN-01"
   },
@@ -51075,6 +51107,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-BEL-CHI-01"
   },
@@ -51304,6 +51337,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-CAN-HUN-01"
   },
@@ -51636,6 +51670,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-CRO-SVK-01"
   },
@@ -51968,6 +52003,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-CZE-KOR-01"
   },
@@ -52197,6 +52233,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-DEN-SRB-01"
   },
@@ -52529,6 +52566,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-ESP-SUI-01"
   },
@@ -52861,6 +52899,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-FRA-BRA-01"
   },
@@ -53193,6 +53232,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-ISR-GER-01"
   },
@@ -53422,6 +53462,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-JPN-GBR-01"
   },
@@ -53651,6 +53692,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-NOR-ARG-01"
   },
@@ -53932,6 +53974,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-SWE-ARG-01"
   },
@@ -54264,6 +54307,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-TPE-USA-01"
   },
@@ -54565,6 +54609,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-AUS-BEL-01"
   },
@@ -54806,6 +54851,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-CRO-FRA-01"
   },
@@ -55107,6 +55153,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-ESP-DEN-01"
   },
@@ -55396,6 +55443,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-HUN-AUT-01"
   },
@@ -55744,6 +55792,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-JPN-GER-01"
   },
@@ -56045,6 +56094,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-NED-ARG-01"
   },
@@ -56290,6 +56340,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-QLS-M-USA-CZE-01"
   },
@@ -56571,6 +56622,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-COL-BAR-01"
   },
@@ -56800,6 +56852,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-ECU-URU-01"
   },
@@ -57132,6 +57185,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-GEO-POL-01"
   },
@@ -57464,6 +57518,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-GRE-EGY-01"
   },
@@ -57796,6 +57851,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-IND-TOG-01"
   },
@@ -58128,6 +58184,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-KAZ-PAK-01"
   },
@@ -58460,6 +58517,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-LBN-PER-01"
   },
@@ -58689,6 +58747,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-LUX-LTU-01"
   },
@@ -59021,6 +59080,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-MON-POR-01"
   },
@@ -59302,6 +59362,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-ROU-BUL-01"
   },
@@ -59531,6 +59592,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-TUN-UKR-01"
   },
@@ -59965,6 +60027,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-TUR-MEX-01"
   },
@@ -60194,6 +60257,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-PO-UZB-BIH-01"
   },
@@ -60530,6 +60594,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-BUL-FIN-01"
   },
@@ -60870,6 +60935,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-CHI-LUX-01"
   },
@@ -61155,6 +61221,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-ECU-BIH-01"
   },
@@ -61396,6 +61463,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-GRE-BRA-01"
   },
@@ -61681,6 +61749,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-CAN-ISR-01"
   },
@@ -61970,6 +62039,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-KOR-KAZ-01"
   },
@@ -62211,6 +62281,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-PER-POR-01"
   },
@@ -62444,6 +62515,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-POL-GBR-01"
   },
@@ -62784,6 +62856,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-SRB-TUR-01"
   },
@@ -63065,6 +63138,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-SUI-IND-01"
   },
@@ -63346,6 +63420,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-SVK-COL-01"
   },
@@ -63575,6 +63650,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-SWE-TUN-01"
   },
@@ -63808,6 +63884,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG1-R1-TPE-NOR-01"
   },
@@ -63932,6 +64009,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-BEN-LAT-02"
   },
@@ -64056,6 +64134,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-BEN-LAT-03"
   },
@@ -64180,6 +64259,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-BEN-LAT-01"
   },
@@ -64304,6 +64384,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-BEN-LAT-04"
   },
@@ -64428,6 +64509,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-CHN-MNE-01"
   },
@@ -64552,6 +64634,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-CHN-MNE-03"
   },
@@ -64676,6 +64759,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-CHN-MNE-02"
   },
@@ -64800,6 +64884,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-CYP-THA-03"
   },
@@ -64924,6 +65009,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-CYP-THA-02"
   },
@@ -65048,6 +65134,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-CYP-THA-01"
   },
@@ -65172,6 +65259,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-DOM-BOL-01"
   },
@@ -65296,6 +65384,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-DOM-BOL-02"
   },
@@ -65420,6 +65509,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-DOM-BOL-03"
   },
@@ -65544,6 +65634,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-ESA-MDA-01"
   },
@@ -65668,6 +65759,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-ESA-MDA-04"
   },
@@ -65792,6 +65884,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-ESA-MDA-02"
   },
@@ -65916,6 +66009,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-ESA-MDA-03"
   },
@@ -66040,6 +66134,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-EST-VEN-02"
   },
@@ -66164,6 +66259,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-EST-VEN-03"
   },
@@ -66288,6 +66384,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-EST-VEN-01"
   },
@@ -66412,6 +66509,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-IRL-KSA-01"
   },
@@ -66536,6 +66634,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-IRL-KSA-02"
   },
@@ -66660,6 +66759,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-IRL-KSA-03"
   },
@@ -66784,6 +66884,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-IRL-KSA-04"
   },
@@ -66908,6 +67009,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-JAM-NZL-01"
   },
@@ -67032,6 +67134,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-JAM-NZL-03"
   },
@@ -67156,6 +67259,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-JAM-NZL-04"
   },
@@ -67280,6 +67384,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-JAM-NZL-02"
   },
@@ -67404,6 +67509,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-MAR-ZIM-01"
   },
@@ -67528,6 +67634,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-MAR-ZIM-03"
   },
@@ -67652,6 +67759,7 @@
         ]
       }
     ],
+    "firstDate": 20250131,
     "latestDate": 20250131,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-MAR-ZIM-02"
   },
@@ -67776,6 +67884,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-NAM-HKG-01"
   },
@@ -67900,6 +68009,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-NAM-HKG-03"
   },
@@ -68024,6 +68134,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-NAM-HKG-02"
   },
@@ -68148,6 +68259,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-NAM-HKG-04"
   },
@@ -68272,6 +68384,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-RSA-NGR-02"
   },
@@ -68396,6 +68509,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-RSA-NGR-03"
   },
@@ -68520,6 +68634,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-RSA-NGR-01"
   },
@@ -68644,6 +68759,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-SLO-INA-02"
   },
@@ -68768,6 +68884,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-SLO-INA-03"
   },
@@ -68892,6 +69009,7 @@
         ]
       }
     ],
+    "firstDate": 20250201,
     "latestDate": 20250201,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-PO-SLO-INA-01"
   },
@@ -69016,6 +69134,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-CYP-MON-02"
   },
@@ -69140,6 +69259,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-CYP-MON-01"
   },
@@ -69264,6 +69384,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-CYP-MON-04"
   },
@@ -69388,6 +69509,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-ESA-ROU-01"
   },
@@ -69512,6 +69634,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-ESA-ROU-02"
   },
@@ -69636,6 +69759,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-ESA-ROU-04"
   },
@@ -69760,6 +69884,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-EST-MEX-01"
   },
@@ -69884,6 +70009,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-EST-MEX-02"
   },
@@ -70008,6 +70134,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-EST-MEX-04"
   },
@@ -70136,6 +70263,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-HKG-UZB-01"
   },
@@ -70260,6 +70388,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-HKG-UZB-02"
   },
@@ -70388,6 +70517,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-HKG-UZB-04"
   },
@@ -70512,6 +70642,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-IRL-CHN-02"
   },
@@ -70636,6 +70767,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-IRL-CHN-04"
   },
@@ -70764,6 +70896,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-IRL-CHN-01"
   },
@@ -70888,6 +71021,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-LBN-BAR-04"
   },
@@ -71016,6 +71150,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-LBN-BAR-02"
   },
@@ -71140,6 +71275,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-LBN-BAR-01"
   },
@@ -71264,6 +71400,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-LTU-BEN-02"
   },
@@ -71388,6 +71525,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-LTU-BEN-04"
   },
@@ -71512,6 +71650,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-LTU-BEN-01"
   },
@@ -71636,6 +71775,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-NZL-GEO-02"
   },
@@ -71760,6 +71900,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-NZL-GEO-04"
   },
@@ -71884,6 +72025,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-NZL-GEO-01"
   },
@@ -72008,6 +72150,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-PAR-PAK-02"
   },
@@ -72132,6 +72275,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-PAR-PAK-01"
   },
@@ -72256,6 +72400,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-PAR-PAK-04"
   },
@@ -72380,6 +72525,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-RSA-MAR-02"
   },
@@ -72504,6 +72650,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-RSA-MAR-04"
   },
@@ -72628,6 +72775,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-RSA-MAR-01"
   },
@@ -72752,6 +72900,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-RSA-MAR-05"
   },
@@ -72876,6 +73025,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-SLO-URU-01"
   },
@@ -73000,6 +73150,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-SLO-URU-04"
   },
@@ -73124,6 +73275,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-SLO-URU-02"
   },
@@ -73248,6 +73400,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-TOG-EGY-01"
   },
@@ -73372,6 +73525,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-TOG-EGY-02"
   },
@@ -73496,6 +73650,7 @@
         ]
       }
     ],
+    "firstDate": 20250913,
     "latestDate": 20250913,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-TOG-EGY-04"
   },
@@ -73620,6 +73775,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-UKR-DOM-02"
   },
@@ -73744,6 +73900,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-UKR-DOM-01"
   },
@@ -73868,6 +74025,7 @@
         ]
       }
     ],
+    "firstDate": 20250912,
     "latestDate": 20250912,
     "tournamentId": "ATP:2025-M-DC-2025-WG2-R1-UKR-DOM-04"
   },
@@ -75346,6 +75504,7 @@
         ]
       }
     ],
+    "firstDate": 20250210,
     "latestDate": 20250210,
     "tournamentId": "ATP:2025-499"
   },
@@ -77024,6 +77183,7 @@
         ]
       }
     ],
+    "firstDate": 20250217,
     "latestDate": 20250217,
     "tournamentId": "ATP:2025-451"
   },
@@ -78726,6 +78886,7 @@
         ]
       }
     ],
+    "firstDate": 20250224,
     "latestDate": 20250224,
     "tournamentId": "ATP:2025-495"
   },
@@ -80280,6 +80441,7 @@
         ]
       }
     ],
+    "firstDate": 20250623,
     "latestDate": 20250623,
     "tournamentId": "ATP:2025-741"
   },
@@ -81822,6 +81984,7 @@
         ]
       }
     ],
+    "firstDate": 20250519,
     "latestDate": 20250519,
     "tournamentId": "ATP:2025-322"
   },
@@ -83336,6 +83499,7 @@
         ]
       }
     ],
+    "firstDate": 20250714,
     "latestDate": 20250714,
     "tournamentId": "ATP:2025-314"
   },
@@ -85114,6 +85278,7 @@
         ]
       }
     ],
+    "firstDate": 20250616,
     "latestDate": 20250616,
     "tournamentId": "ATP:2025-500"
   },
@@ -86876,6 +87041,7 @@
         ]
       }
     ],
+    "firstDate": 20250519,
     "latestDate": 20250519,
     "tournamentId": "ATP:2025-414"
   },
@@ -88426,6 +88592,7 @@
         ]
       }
     ],
+    "firstDate": 20250917,
     "latestDate": 20250917,
     "tournamentId": "ATP:2025-4713"
   },
@@ -89924,6 +90091,7 @@
         ]
       }
     ],
+    "firstDate": 20250331,
     "latestDate": 20250331,
     "tournamentId": "ATP:2025-717"
   },
@@ -95086,6 +95254,7 @@
         ]
       }
     ],
+    "firstDate": 20250303,
     "latestDate": 20250303,
     "tournamentId": "ATP:2025-404"
   },
@@ -96620,6 +96789,7 @@
         ]
       }
     ],
+    "firstDate": 20250721,
     "latestDate": 20250721,
     "tournamentId": "ATP:2025-319"
   },
@@ -97306,6 +97476,7 @@
         ]
       }
     ],
+    "firstDate": 20250919,
     "latestDate": 20250919,
     "tournamentId": "ATP:2025-9210"
   },
@@ -98808,6 +98979,7 @@
         ]
       }
     ],
+    "firstDate": 20250714,
     "latestDate": 20250714,
     "tournamentId": "ATP:2025-7480"
   },
@@ -104058,6 +104230,7 @@
         ]
       }
     ],
+    "firstDate": 20250421,
     "latestDate": 20250421,
     "tournamentId": "ATP:2025-1536"
   },
@@ -105612,6 +105785,7 @@
         ]
       }
     ],
+    "firstDate": 20250623,
     "latestDate": 20250623,
     "tournamentId": "ATP:2025-8994"
   },
@@ -107106,6 +107280,7 @@
         ]
       }
     ],
+    "firstDate": 20250331,
     "latestDate": 20250331,
     "tournamentId": "ATP:2025-360"
   },
@@ -108564,6 +108739,7 @@
         ]
       }
     ],
+    "firstDate": 20250210,
     "latestDate": 20250210,
     "tournamentId": "ATP:2025-496"
   },
@@ -110102,6 +110278,7 @@
         ]
       }
     ],
+    "firstDate": 20251103,
     "latestDate": 20251103,
     "tournamentId": "ATP:2025-341"
   },
@@ -115300,6 +115477,7 @@
         ]
       }
     ],
+    "firstDate": 20250317,
     "latestDate": 20250317,
     "tournamentId": "ATP:2025-403"
   },
@@ -118390,6 +118568,7 @@
         ]
       }
     ],
+    "firstDate": 20250407,
     "latestDate": 20250407,
     "tournamentId": "ATP:2025-410"
   },
@@ -119844,6 +120023,7 @@
         ]
       }
     ],
+    "firstDate": 20250127,
     "latestDate": 20250127,
     "tournamentId": "ATP:2025-375"
   },
@@ -121610,6 +121790,7 @@
         ]
       }
     ],
+    "firstDate": 20250414,
     "latestDate": 20250414,
     "tournamentId": "ATP:2025-308"
   },
@@ -122072,6 +122253,7 @@
         ]
       }
     ],
+    "firstDate": 20251222,
     "latestDate": 20251222,
     "tournamentId": "ATP:2025-7696"
   },
@@ -125178,6 +125360,7 @@
         ]
       }
     ],
+    "firstDate": 20251027,
     "latestDate": 20251027,
     "tournamentId": "ATP:2025-352"
   },
@@ -126952,6 +127135,7 @@
         ]
       }
     ],
+    "firstDate": 20250616,
     "latestDate": 20250616,
     "tournamentId": "ATP:2025-311"
   },
@@ -128634,6 +128818,7 @@
         ]
       }
     ],
+    "firstDate": 20250217,
     "latestDate": 20250217,
     "tournamentId": "ATP:2025-6932"
   },
@@ -135560,6 +135745,7 @@
         ]
       }
     ],
+    "firstDate": 20250526,
     "latestDate": 20250526,
     "tournamentId": "ATP:2025-520"
   },
@@ -140810,6 +140996,7 @@
         ]
       }
     ],
+    "firstDate": 20250505,
     "latestDate": 20250505,
     "tournamentId": "ATP:2025-416"
   },
@@ -142468,6 +142655,7 @@
         ]
       }
     ],
+    "firstDate": 20250203,
     "latestDate": 20250203,
     "tournamentId": "ATP:2025-407"
   },
@@ -143946,6 +144134,7 @@
         ]
       }
     ],
+    "firstDate": 20250224,
     "latestDate": 20250224,
     "tournamentId": "ATP:2025-8996"
   },
@@ -149224,6 +149413,7 @@
         ]
       }
     ],
+    "firstDate": 20250924,
     "latestDate": 20250924,
     "tournamentId": "ATP:2025-5014"
   },
@@ -150766,6 +150956,7 @@
         ]
       }
     ],
+    "firstDate": 20251013,
     "latestDate": 20251013,
     "tournamentId": "ATP:2025-429"
   },
@@ -152320,6 +152511,7 @@
         ]
       }
     ],
+    "firstDate": 20250609,
     "latestDate": 20250609,
     "tournamentId": "ATP:2025-321"
   },
@@ -154094,6 +154286,7 @@
         ]
       }
     ],
+    "firstDate": 20250924,
     "latestDate": 20250924,
     "tournamentId": "ATP:2025-329"
   },
@@ -161088,6 +161281,7 @@
         ]
       }
     ],
+    "firstDate": 20250824,
     "latestDate": 20250824,
     "tournamentId": "ATP:2025-560"
   },
@@ -162618,6 +162812,7 @@
         ]
       }
     ],
+    "firstDate": 20250721,
     "latestDate": 20250721,
     "tournamentId": "ATP:2025-439"
   },
@@ -164396,6 +164591,7 @@
         ]
       }
     ],
+    "firstDate": 20251020,
     "latestDate": 20251020,
     "tournamentId": "ATP:2025-337"
   },
@@ -167038,6 +167234,7 @@
         ]
       }
     ],
+    "firstDate": 20250721,
     "latestDate": 20250721,
     "tournamentId": "ATP:2025-418"
   },
@@ -173988,6 +174185,7 @@
         ]
       }
     ],
+    "firstDate": 20250630,
     "latestDate": 20250630,
     "tournamentId": "ATP:2025-540"
   },
@@ -176642,6 +176840,7 @@
         ]
       }
     ],
+    "firstDate": 20250818,
     "latestDate": 20250818,
     "tournamentId": "ATP:2025-6242"
   },
@@ -178420,6 +178619,7 @@
         ]
       }
     ],
+    "firstDate": 20250224,
     "latestDate": 20250226,
     "tournamentId": "WTA:2025-W-ATX Open"
   },
@@ -179974,6 +180174,7 @@
         ]
       }
     ],
+    "firstDate": 20250203,
     "latestDate": 20250205,
     "tournamentId": "WTA:2025-W-Abu Dhabi"
   },
@@ -181575,6 +181776,7 @@
         ]
       }
     ],
+    "firstDate": 20250106,
     "latestDate": 20250108,
     "tournamentId": "WTA:2025-W-Adelaide I"
   },
@@ -188212,6 +188414,7 @@
         ]
       }
     ],
+    "firstDate": 20250112,
     "latestDate": 20250114,
     "tournamentId": "WTA:2025-W-Australian"
   },
@@ -193333,6 +193536,7 @@
         ]
       }
     ],
+    "firstDate": 20250305,
     "latestDate": 20250310,
     "tournamentId": "WTA:2025-W-BNP Pariba"
   },
@@ -194789,6 +194993,7 @@
         ]
       }
     ],
+    "firstDate": 20250622,
     "latestDate": 20250625,
     "tournamentId": "WTA:2025-W-Bad Hombur"
   },
@@ -199855,6 +200060,7 @@
         ]
       }
     ],
+    "firstDate": 20250727,
     "latestDate": 20250801,
     "tournamentId": "WTA:2025-W-Canadian O"
   },
@@ -202513,6 +202719,7 @@
         ]
       }
     ],
+    "firstDate": 20250331,
     "latestDate": 20250403,
     "tournamentId": "WTA:2025-W-Charleston"
   },
@@ -204235,6 +204442,7 @@
         ]
       }
     ],
+    "firstDate": 20251029,
     "latestDate": 20251029,
     "tournamentId": "WTA:2025-W-Chennai Op"
   },
@@ -209140,6 +209348,7 @@
         ]
       }
     ],
+    "firstDate": 20250924,
     "latestDate": 20250929,
     "tournamentId": "WTA:2025-W-China Open"
   },
@@ -210706,6 +210915,7 @@
         ]
       }
     ],
+    "firstDate": 20250721,
     "latestDate": 20250724,
     "tournamentId": "WTA:2025-W-Citi Open"
   },
@@ -212291,6 +212501,7 @@
         ]
       }
     ],
+    "firstDate": 20250401,
     "latestDate": 20250402,
     "tournamentId": "WTA:2025-W-Copa Colsa"
   },
@@ -215330,6 +215541,7 @@
         ]
       }
     ],
+    "firstDate": 20250216,
     "latestDate": 20250219,
     "tournamentId": "WTA:2025-W-Dubai Duty"
   },
@@ -217057,6 +217269,7 @@
         ]
       }
     ],
+    "firstDate": 20250623,
     "latestDate": 20250625,
     "tournamentId": "WTA:2025-W-Eastbourne"
   },
@@ -223714,6 +223927,7 @@
         ]
       }
     ],
+    "firstDate": 20250525,
     "latestDate": 20250529,
     "tournamentId": "WTA:2025-W-French Ope"
   },
@@ -225280,6 +225494,7 @@
         ]
       }
     ],
+    "firstDate": 20250616,
     "latestDate": 20250619,
     "tournamentId": "WTA:2025-W-German Ope"
   },
@@ -226559,6 +226774,7 @@
         ]
       }
     ],
+    "firstDate": 20250908,
     "latestDate": 20250912,
     "tournamentId": "WTA:2025-W-Guadalajar"
   },
@@ -228168,6 +228384,7 @@
         ]
       }
     ],
+    "firstDate": 20251020,
     "latestDate": 20251024,
     "tournamentId": "WTA:2025-W-Guangzhou"
   },
@@ -229757,6 +229974,7 @@
         ]
       }
     ],
+    "firstDate": 20250714,
     "latestDate": 20250717,
     "tournamentId": "WTA:2025-W-Hamburg Op"
   },
@@ -231425,6 +231643,7 @@
         ]
       }
     ],
+    "firstDate": 20250106,
     "latestDate": 20250107,
     "tournamentId": "WTA:2025-W-Hobart Int"
   },
@@ -233136,6 +233355,7 @@
         ]
       }
     ],
+    "firstDate": 20251027,
     "latestDate": 20251029,
     "tournamentId": "WTA:2025-W-Hong Kong"
   },
@@ -234780,6 +235000,7 @@
         ]
       }
     ],
+    "firstDate": 20250714,
     "latestDate": 20250715,
     "tournamentId": "WTA:2025-W-Iasi Open"
   },
@@ -236236,6 +236457,7 @@
         ]
       }
     ],
+    "firstDate": 20250518,
     "latestDate": 20250521,
     "tournamentId": "WTA:2025-W-Internatio"
   },
@@ -241302,6 +241524,7 @@
         ]
       }
     ],
+    "firstDate": 20250506,
     "latestDate": 20250510,
     "tournamentId": "WTA:2025-W-Internazio"
   },
@@ -243076,6 +243299,7 @@
         ]
       }
     ],
+    "firstDate": 20251013,
     "latestDate": 20251014,
     "tournamentId": "WTA:2025-W-Japan Open"
   },
@@ -244716,6 +244940,7 @@
         ]
       }
     ],
+    "firstDate": 20251027,
     "latestDate": 20251029,
     "tournamentId": "WTA:2025-W-Jiangxi Op"
   },
@@ -246164,6 +246389,7 @@
         ]
       }
     ],
+    "firstDate": 20250915,
     "latestDate": 20250918,
     "tournamentId": "WTA:2025-W-Korea Open"
   },
@@ -247730,6 +247956,7 @@
         ]
       }
     ],
+    "firstDate": 20250127,
     "latestDate": 20250130,
     "tournamentId": "WTA:2025-W-Ladies Lin"
   },
@@ -249241,6 +249468,7 @@
         ]
       }
     ],
+    "firstDate": 20250224,
     "latestDate": 20250228,
     "tournamentId": "WTA:2025-W-Merida Ope"
   },
@@ -254252,6 +254480,7 @@
         ]
       }
     ],
+    "firstDate": 20250318,
     "latestDate": 20250321,
     "tournamentId": "WTA:2025-W-Miami Open"
   },
@@ -255759,6 +255988,7 @@
         ]
       }
     ],
+    "firstDate": 20250818,
     "latestDate": 20250821,
     "tournamentId": "WTA:2025-W-Monterrey"
   },
@@ -257399,6 +257629,7 @@
         ]
       }
     ],
+    "firstDate": 20250519,
     "latestDate": 20250520,
     "tournamentId": "WTA:2025-W-Morocco Op"
   },
@@ -262477,6 +262708,7 @@
         ]
       }
     ],
+    "firstDate": 20250422,
     "latestDate": 20250427,
     "tournamentId": "WTA:2025-W-Mutua Madr"
   },
@@ -263984,6 +264216,7 @@
         ]
       }
     ],
+    "firstDate": 20251013,
     "latestDate": 20251016,
     "tournamentId": "WTA:2025-W-Ningbo Ope"
   },
@@ -265707,6 +265940,7 @@
         ]
       }
     ],
+    "firstDate": 20250616,
     "latestDate": 20250619,
     "tournamentId": "WTA:2025-W-Nottingham"
   },
@@ -267367,6 +267601,7 @@
         ]
       }
     ],
+    "firstDate": 20250414,
     "latestDate": 20250416,
     "tournamentId": "WTA:2025-W-Open de Ro"
   },
@@ -268878,6 +269113,7 @@
         ]
       }
     ],
+    "firstDate": 20250414,
     "latestDate": 20250417,
     "tournamentId": "WTA:2025-W-Porsche Te"
   },
@@ -270573,6 +270809,7 @@
         ]
       }
     ],
+    "firstDate": 20250721,
     "latestDate": 20250723,
     "tournamentId": "WTA:2025-W-Prague Ope"
   },
@@ -273553,6 +273790,7 @@
         ]
       }
     ],
+    "firstDate": 20250209,
     "latestDate": 20250211,
     "tournamentId": "WTA:2025-W-Qatar Open"
   },
@@ -275009,6 +275247,7 @@
         ]
       }
     ],
+    "firstDate": 20250609,
     "latestDate": 20250613,
     "tournamentId": "WTA:2025-W-Queen's Cl"
   },
@@ -276669,6 +276908,7 @@
         ]
       }
     ],
+    "firstDate": 20250609,
     "latestDate": 20250611,
     "tournamentId": "WTA:2025-W-Rosmalen G"
   },
@@ -278242,6 +278482,7 @@
         ]
       }
     ],
+    "firstDate": 20250908,
     "latestDate": 20250910,
     "tournamentId": "WTA:2025-W-SP Open"
   },
@@ -279855,6 +280096,7 @@
         ]
       }
     ],
+    "firstDate": 20250127,
     "latestDate": 20250128,
     "tournamentId": "WTA:2025-W-Singapore"
   },
@@ -281574,6 +281816,7 @@
         ]
       }
     ],
+    "firstDate": 20250817,
     "latestDate": 20250819,
     "tournamentId": "WTA:2025-W-Tennis in"
   },
@@ -283128,6 +283371,7 @@
         ]
       }
     ],
+    "firstDate": 20251020,
     "latestDate": 20251023,
     "tournamentId": "WTA:2025-W-Toray Pan"
   },
@@ -284855,6 +285099,7 @@
         ]
       }
     ],
+    "firstDate": 20250203,
     "latestDate": 20250205,
     "tournamentId": "WTA:2025-W-Transylvan"
   },
@@ -291559,6 +291804,7 @@
         ]
       }
     ],
+    "firstDate": 20250824,
     "latestDate": 20250829,
     "tournamentId": "WTA:2025-W-US Open"
   },
@@ -292080,6 +292326,7 @@
         ]
       }
     ],
+    "firstDate": 20251101,
     "latestDate": 20251105,
     "tournamentId": "WTA:2025-W-WTA Finals"
   },
@@ -297162,6 +297409,7 @@
         ]
       }
     ],
+    "firstDate": 20250807,
     "latestDate": 20250812,
     "tournamentId": "WTA:2025-W-Western &"
   },
@@ -303976,6 +304224,7 @@
         ]
       }
     ],
+    "firstDate": 20250630,
     "latestDate": 20250703,
     "tournamentId": "WTA:2025-W-Wimbledon"
   },
@@ -307027,6 +307276,7 @@
         ]
       }
     ],
+    "firstDate": 20251006,
     "latestDate": 20251008,
     "tournamentId": "WTA:2025-W-Wuhan Open"
   },
@@ -308589,6 +308839,7 @@
         ]
       }
     ],
+    "firstDate": 20241014,
     "latestDate": 20241014,
     "tournamentId": "ATP:2024-9410"
   },
@@ -310139,6 +310390,7 @@
         ]
       }
     ],
+    "firstDate": 20241014,
     "latestDate": 20241014,
     "tournamentId": "ATP:2024-7485"
   },
@@ -311921,6 +312173,7 @@
         ]
       }
     ],
+    "firstDate": 20241021,
     "latestDate": 20241021,
     "tournamentId": "ATP:2024-0328"
   },
@@ -313707,6 +313960,7 @@
         ]
       }
     ],
+    "firstDate": 20240926,
     "latestDate": 20240926,
     "tournamentId": "ATP:2024-0747"
   },
@@ -315269,6 +315523,7 @@
         ]
       }
     ],
+    "firstDate": 20241104,
     "latestDate": 20241104,
     "tournamentId": "ATP:2024-4787"
   },
@@ -316927,6 +317182,7 @@
         ]
       }
     ],
+    "firstDate": 20241229,
     "latestDate": 20241229,
     "tournamentId": "ATP:2025-339"
   },
@@ -318481,6 +318737,7 @@
         ]
       }
     ],
+    "firstDate": 20240918,
     "latestDate": 20240918,
     "tournamentId": "ATP:2024-7581"
   },
@@ -318726,6 +318983,7 @@
         ]
       }
     ],
+    "firstDate": 20241124,
     "latestDate": 20241124,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-ITA-NED-01"
   },
@@ -318971,6 +319229,7 @@
         ]
       }
     ],
+    "firstDate": 20241120,
     "latestDate": 20241120,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-GER-CAN-01"
   },
@@ -319216,6 +319475,7 @@
         ]
       }
     ],
+    "firstDate": 20241121,
     "latestDate": 20241121,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-ITA-ARG-01"
   },
@@ -319461,6 +319721,7 @@
         ]
       }
     ],
+    "firstDate": 20241119,
     "latestDate": 20241119,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-NED-ESP-01"
   },
@@ -319706,6 +319967,7 @@
         ]
       }
     ],
+    "firstDate": 20241121,
     "latestDate": 20241121,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-USA-AUS-01"
   },
@@ -319951,6 +320213,7 @@
         ]
       }
     ],
+    "firstDate": 20241122,
     "latestDate": 20241122,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-GER-NED-01"
   },
@@ -320196,6 +320459,7 @@
         ]
       }
     ],
+    "firstDate": 20241123,
     "latestDate": 20241123,
     "tournamentId": "ATP:2024-M-DC-2024-FLS-M-ITA-AUS-01"
   },
@@ -321750,6 +322014,7 @@
         ]
       }
     ],
+    "firstDate": 20240918,
     "latestDate": 20240918,
     "tournamentId": "ATP:2024-4713"
   },
@@ -323204,6 +323469,7 @@
         ]
       }
     ],
+    "firstDate": 20241229,
     "latestDate": 20241229,
     "tournamentId": "ATP:2025-336"
   },
@@ -323890,6 +324156,7 @@
         ]
       }
     ],
+    "firstDate": 20240920,
     "latestDate": 20240920,
     "tournamentId": "ATP:2024-9210"
   },
@@ -325448,6 +325715,7 @@
         ]
       }
     ],
+    "firstDate": 20241104,
     "latestDate": 20241104,
     "tournamentId": "ATP:2024-0341"
   },
@@ -325906,6 +326174,7 @@
         ]
       }
     ],
+    "firstDate": 20241218,
     "latestDate": 20241218,
     "tournamentId": "ATP:2024-7696"
   },
@@ -329012,6 +329281,7 @@
         ]
       }
     ],
+    "firstDate": 20241028,
     "latestDate": 20241028,
     "tournamentId": "ATP:2024-0352"
   },
@@ -334314,6 +334584,7 @@
         ]
       }
     ],
+    "firstDate": 20241002,
     "latestDate": 20241002,
     "tournamentId": "ATP:2024-5014"
   },
@@ -335876,6 +336147,7 @@
         ]
       }
     ],
+    "firstDate": 20241014,
     "latestDate": 20241014,
     "tournamentId": "ATP:2024-0429"
   },
@@ -337662,6 +337934,7 @@
         ]
       }
     ],
+    "firstDate": 20240925,
     "latestDate": 20240925,
     "tournamentId": "ATP:2024-0329"
   },
@@ -338128,6 +338401,7 @@
         ]
       }
     ],
+    "firstDate": 20241111,
     "latestDate": 20241111,
     "tournamentId": "ATP:2024-0605"
   },
@@ -339123,6 +339397,7 @@
         ]
       }
     ],
+    "firstDate": 20241229,
     "latestDate": 20241229,
     "tournamentId": "ATP:2025-9900"
   },
@@ -340905,6 +341180,7 @@
         ]
       }
     ],
+    "firstDate": 20241021,
     "latestDate": 20241021,
     "tournamentId": "ATP:2024-0337"
   },
@@ -342569,6 +342845,7 @@
         ]
       }
     ],
+    "firstDate": 20241229,
     "latestDate": 20250101,
     "tournamentId": "WTA:2025-W-ASB Classi"
   },
@@ -344131,6 +344408,7 @@
         ]
       }
     ],
+    "firstDate": 20241113,
     "latestDate": 20241113,
     "tournamentId": "WTA:2024-W-FC-2024-FLS"
   },
@@ -346164,6 +346442,7 @@
         ]
       }
     ],
+    "firstDate": 20241115,
     "latestDate": 20241115,
     "tournamentId": "WTA:2024-W-FC-2024-POS"
   },
@@ -351438,6 +351717,7 @@
         ]
       }
     ],
+    "firstDate": 20240925,
     "latestDate": 20240925,
     "tournamentId": "WTA:2024-1020"
   },
@@ -354080,6 +354360,7 @@
         ]
       }
     ],
+    "firstDate": 20241229,
     "latestDate": 20250101,
     "tournamentId": "WTA:2025-W-Brisbane I"
   },
@@ -355814,6 +356095,7 @@
         ]
       }
     ],
+    "firstDate": 20241125,
     "latestDate": 20241125,
     "tournamentId": "WTA:2024-2052"
   },
@@ -357588,6 +357870,7 @@
         ]
       }
     ],
+    "firstDate": 20241021,
     "latestDate": 20241021,
     "tournamentId": "WTA:2024-1023"
   },
@@ -359330,6 +359613,7 @@
         ]
       }
     ],
+    "firstDate": 20241028,
     "latestDate": 20241028,
     "tournamentId": "WTA:2024-1074"
   },
@@ -361092,6 +361376,7 @@
         ]
       }
     ],
+    "firstDate": 20241028,
     "latestDate": 20241028,
     "tournamentId": "WTA:2024-1077"
   },
@@ -362846,6 +363131,7 @@
         ]
       }
     ],
+    "firstDate": 20241028,
     "latestDate": 20241028,
     "tournamentId": "WTA:2024-2085"
   },
@@ -364400,6 +364686,7 @@
         ]
       }
     ],
+    "firstDate": 20241014,
     "latestDate": 20241014,
     "tournamentId": "WTA:2024-2092"
   },
@@ -366178,6 +366465,7 @@
         ]
       }
     ],
+    "firstDate": 20241014,
     "latestDate": 20241014,
     "tournamentId": "WTA:2024-405"
   },
@@ -366699,6 +366987,7 @@
         ]
       }
     ],
+    "firstDate": 20241104,
     "latestDate": 20241104,
     "tournamentId": "WTA:2024-808"
   },
@@ -368245,6 +368534,7 @@
         ]
       }
     ],
+    "firstDate": 20241021,
     "latestDate": 20241021,
     "tournamentId": "WTA:2024-1056"
   },
@@ -371351,6 +371641,7 @@
         ]
       }
     ],
+    "firstDate": 20241007,
     "latestDate": 20241007,
     "tournamentId": "WTA:2024-1075"
   }

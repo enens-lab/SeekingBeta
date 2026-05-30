@@ -1535,11 +1535,24 @@ ESPN_TENNIS_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/tennis"
 TENNIS_LIVE_SCHEDULE_DAYS_AHEAD = 80
 
 
+# Normalize differing names for the same event across the static board and ESPN
+# (e.g. the women's major is "French Open" in our data, "Roland Garros" on ESPN).
+_TENNIS_NAME_ALIASES = {
+    "french open": "roland garros",
+    "the championships wimbledon": "wimbledon",
+    "championships wimbledon": "wimbledon",
+    "us open tennis championships": "us open",
+    "australian open tennis": "australian open",
+}
+
+
 def _tennis_match_key(tour: str, name: str) -> tuple[str, str]:
-    """Match key that ignores a leading year so "2026 Roland Garros" (static
-    board) lines up with "Roland Garros" (ESPN)."""
+    """Match key that ignores a leading year and normalizes major-name aliases
+    so "2026 French Open" (static board) lines up with "Roland Garros" (ESPN)."""
     stripped = re.sub(r"^\s*(?:19|20)\d{2}\s+", "", str(name or ""))
-    return (str(tour or "").upper(), _canonical_sports_name(stripped))
+    canonical = _canonical_sports_name(stripped)
+    canonical = _TENNIS_NAME_ALIASES.get(canonical, canonical)
+    return (str(tour or "").upper(), canonical)
 
 
 def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
@@ -1585,14 +1598,18 @@ def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
 
 
 def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Override tennis tournament dates with the live ESPN schedule and append
-    live tournaments missing from the static board, so Grand Slams auto-track
-    with correct windows. Predictions on matched events are preserved."""
+    """Correct tennis tournament dates from the live ESPN schedule so events
+    (especially Grand Slams) track their real windows instead of drifting with
+    the static board. Predictions are preserved.
+
+    We only override dates on tournaments already in the curated board; we do
+    NOT append ESPN's full calendar, because those entries have no model field
+    (empty predictions) and ESPN's naming would duplicate curated events. The
+    curated board stays the source of which tournaments show + their fields."""
     schedule = _fetch_espn_tennis_schedule()
     if not schedule:
         return upcoming
 
-    matched: set[tuple[str, str]] = set()
     enriched: list[dict[str, Any]] = []
     for item in upcoming:
         key = _tennis_match_key(str(item.get("tour") or ""), str(item.get("name") or ""))
@@ -1603,24 +1620,7 @@ def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str
             item["latestDate"] = live["endKey"]
             if not item.get("course") and live.get("venue"):
                 item["course"] = live["venue"]
-            matched.add(key)
         enriched.append(item)
-
-    for key, live in schedule.items():
-        if key in matched:
-            continue
-        slug = re.sub(r"[^a-z0-9]+", "-", live["name"].lower()).strip("-")
-        enriched.append(
-            {
-                "id": f"{live['tour'].lower()}-{slug}-{live['startKey']}",
-                "name": f"{str(live['startKey'])[:4]} {live['name']}",
-                "tour": live["tour"],
-                "course": live.get("venue") or "",
-                "scheduledDate": live["startKey"],
-                "latestDate": live["endKey"],
-                "predictions": [],
-            }
-        )
     return enriched
 
 
@@ -1712,6 +1712,7 @@ def _sports_board_collection(
     backtests = _load_sports_json(backtests_filename)
 
     if sport == "tennis":
+        upcoming = _apply_live_tennis_schedule(upcoming)
         runtime_backtests = _build_runtime_tennis_backtests(upcoming, backtests)
         backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         upcoming = _filter_upcoming_tennis(upcoming, backtests)

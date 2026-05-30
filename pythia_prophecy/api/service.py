@@ -1531,6 +1531,14 @@ def _build_dated_collection_from_upcoming(
     )
 
 
+# How long a tennis tournament can stay on the "upcoming" board after its start
+# date when no explicit end date is present. Grand Slams run ~2 weeks, so a
+# fortnight-plus grace keeps an in-progress major (e.g. Roland Garros) visible
+# instead of dropping it the day after its first match. Finished events still
+# fall off once they appear in completed results (the `completed` dedup below).
+TENNIS_UPCOMING_GRACE_DAYS = 16
+
+
 def _filter_upcoming_tennis(
     upcoming: list[dict[str, Any]],
     backtests: list[dict[str, Any]],
@@ -1539,6 +1547,9 @@ def _filter_upcoming_tennis(
         upcoming = _build_dynamic_tennis_upcoming(backtests)
 
     today_key = _runtime_today_key()
+    grace_cutoff_key = int(
+        (datetime.now(timezone.utc).date() - timedelta(days=TENNIS_UPCOMING_GRACE_DAYS)).strftime("%Y%m%d")
+    )
     completed = {
         (
             str(row.get("tour") or "").upper(),
@@ -1552,7 +1563,15 @@ def _filter_upcoming_tennis(
     filtered: list[dict[str, Any]] = []
     for item in upcoming:
         scheduled = _safe_int(item.get("scheduledDate"))
-        if scheduled and scheduled < today_key:
+        end = _safe_int(item.get("latestDate"))
+        # Drop only tournaments that have clearly finished: past their end date,
+        # or — when no end date is provided — older than the grace window. This
+        # keeps an in-progress multi-week event (e.g. a Grand Slam mid-fortnight)
+        # on the board instead of dropping it the day after it starts.
+        if end:
+            if end < today_key:
+                continue
+        elif scheduled and scheduled < grace_cutoff_key:
             continue
         item_year = _event_year(item)
         event_name = _canonical_sports_name(str(item.get("name") or ""))

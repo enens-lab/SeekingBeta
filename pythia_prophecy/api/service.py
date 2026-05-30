@@ -1531,6 +1531,99 @@ def _build_dated_collection_from_upcoming(
     )
 
 
+ESPN_TENNIS_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/tennis"
+TENNIS_LIVE_SCHEDULE_DAYS_AHEAD = 80
+
+
+def _tennis_match_key(tour: str, name: str) -> tuple[str, str]:
+    """Match key that ignores a leading year so "2026 Roland Garros" (static
+    board) lines up with "Roland Garros" (ESPN)."""
+    stripped = re.sub(r"^\s*(?:19|20)\d{2}\s+", "", str(name or ""))
+    return (str(tour or "").upper(), _canonical_sports_name(stripped))
+
+
+def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
+    """Live ATP + WTA tournament schedule from ESPN, keyed by (TOUR, canonical
+    name) -> {name, tour, startKey, endKey, venue}. Cached; never raises."""
+    cache_key = "tennis_live_schedule"
+    cached = _sports_cache_get(cache_key, SPORTS_RUNTIME_CACHE_TTL_SECONDS)
+    if cached is not None:
+        return cached
+
+    today = datetime.now(timezone.utc).date()
+    window = f"{today:%Y%m%d}-{today + timedelta(days=TENNIS_LIVE_SCHEDULE_DAYS_AHEAD):%Y%m%d}"
+    schedule: dict[tuple[str, str], dict[str, Any]] = {}
+    try:
+        with httpx.Client(timeout=SPORTS_RUNTIME_FETCH_TIMEOUT_SECONDS) as client:
+            for tour in ("atp", "wta"):
+                resp = client.get(
+                    f"{ESPN_TENNIS_BASE_URL}/{tour}/scoreboard",
+                    params={"dates": window, "limit": 300},
+                )
+                resp.raise_for_status()
+                for event in resp.json().get("events", []) or []:
+                    name = str(event.get("name") or "").strip()
+                    start_key = _safe_int(str(event.get("date") or "")[:10].replace("-", ""))
+                    end_key = _safe_int(str(event.get("endDate") or "")[:10].replace("-", "")) or start_key
+                    if not name or not start_key:
+                        continue
+                    comp = (event.get("competitions") or [{}])[0]
+                    venue = (comp.get("venue") or {}).get("fullName")
+                    schedule[_tennis_match_key(tour, name)] = {
+                        "name": name,
+                        "tour": tour.upper(),
+                        "startKey": start_key,
+                        "endKey": end_key,
+                        "venue": venue,
+                    }
+    except Exception as exc:  # pragma: no cover - network
+        logger.warning("Live tennis schedule fetch failed: %s", exc)
+        return {}
+
+    _sports_cache_set(cache_key, schedule)
+    return schedule
+
+
+def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Override tennis tournament dates with the live ESPN schedule and append
+    live tournaments missing from the static board, so Grand Slams auto-track
+    with correct windows. Predictions on matched events are preserved."""
+    schedule = _fetch_espn_tennis_schedule()
+    if not schedule:
+        return upcoming
+
+    matched: set[tuple[str, str]] = set()
+    enriched: list[dict[str, Any]] = []
+    for item in upcoming:
+        key = _tennis_match_key(str(item.get("tour") or ""), str(item.get("name") or ""))
+        live = schedule.get(key)
+        if live:
+            item = dict(item)
+            item["scheduledDate"] = live["startKey"]
+            item["latestDate"] = live["endKey"]
+            if not item.get("course") and live.get("venue"):
+                item["course"] = live["venue"]
+            matched.add(key)
+        enriched.append(item)
+
+    for key, live in schedule.items():
+        if key in matched:
+            continue
+        slug = re.sub(r"[^a-z0-9]+", "-", live["name"].lower()).strip("-")
+        enriched.append(
+            {
+                "id": f"{live['tour'].lower()}-{slug}-{live['startKey']}",
+                "name": f"{str(live['startKey'])[:4]} {live['name']}",
+                "tour": live["tour"],
+                "course": live.get("venue") or "",
+                "scheduledDate": live["startKey"],
+                "latestDate": live["endKey"],
+                "predictions": [],
+            }
+        )
+    return enriched
+
+
 # How long a tennis tournament can stay on the "upcoming" board after its start
 # date when no explicit end date is present. Grand Slams run ~2 weeks, so a
 # fortnight-plus grace keeps an in-progress major (e.g. Roland Garros) visible

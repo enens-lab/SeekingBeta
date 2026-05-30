@@ -193,6 +193,7 @@ def _build_backtests(df: pd.DataFrame) -> list[dict]:
                 "hitStatus": hit_status,
                 "prob": float(probs[sorted_idx[0]]),
                 "fullField": full_field,
+                "firstDate": int(group["date"].min()),
                 "latestDate": int(group["date"].max()),
                 "tournamentId": str(group["tournament_id"].iloc[0]),
             }
@@ -220,9 +221,16 @@ def _build_upcoming(backtests: list[dict]) -> list[dict]:
         latest_date = int(bt.get("latestDate", 0) or 0)
         if latest_date <= 0:
             continue
+        first_date = int(bt.get("firstDate", 0) or 0) or latest_date
 
-        synthetic_event_date = today.year * 10000 + (latest_date % 10000)
-        if synthetic_event_date < today_key:
+        # Project last season's actual start/end (month-day) onto the current
+        # year, so the board shows a real date window and the BFF can drop the
+        # event the day after it ends instead of leaning on a grace window.
+        start_proj = today.year * 10000 + (first_date % 10000)
+        end_proj = today.year * 10000 + (latest_date % 10000)
+        if end_proj < start_proj:  # guard against any month-day wrap
+            end_proj = start_proj
+        if end_proj < today_key:  # this year's edition has already finished
             continue
 
         tournament_key = (bt["tour"], bt["tournament"])
@@ -239,7 +247,8 @@ def _build_upcoming(backtests: list[dict]) -> list[dict]:
                 "name": f"{today.year} {bt['tournament']}",
                 "tour": bt["tour"],
                 "course": bt.get("surface", "Unknown Surface"),
-                "scheduledDate": synthetic_event_date,
+                "scheduledDate": start_proj,
+                "latestDate": end_proj,
                 "predictions": bt["fullField"],
             }
         )

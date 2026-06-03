@@ -1469,6 +1469,15 @@ def _build_sports_season_summary(
     }
 
 
+# Max historical backtests embedded per sport in the API response. The full set
+# (mlb alone has ~3,400) ballooned /api/sports/boards to ~60MB / ~19s. The
+# season summary is computed from the FULL set first (accuracy unchanged), then
+# the embedded list is capped to the most recent N (sorted newest-first, so the
+# current season's track record is preserved for the History tab + the iOS
+# fallback summary). 0 / negative disables the cap.
+SPORTS_BACKTESTS_RESPONSE_CAP = int(os.getenv("SPORTS_BACKTESTS_RESPONSE_CAP", "150"))
+
+
 def _build_sports_board_collection(
     *,
     upcoming: list[dict[str, Any]],
@@ -1478,14 +1487,19 @@ def _build_sports_board_collection(
     selected_date: str | None = None,
     available_dates: list[dict[str, Any]] | None = None,
 ) -> SportsBoardCollection:
+    # Compute the season summary from the full history BEFORE capping.
+    season_summary = _build_sports_season_summary(backtests)
+    sorted_backtests = _sort_sports_backtests(backtests)
+    if SPORTS_BACKTESTS_RESPONSE_CAP > 0:
+        sorted_backtests = sorted_backtests[:SPORTS_BACKTESTS_RESPONSE_CAP]
     return SportsBoardCollection(
         upcoming=upcoming,
-        backtests=_sort_sports_backtests(backtests),
+        backtests=sorted_backtests,
         updated_at=updated_at,
         source=source,
         selectedDate=selected_date,
         availableDates=available_dates or [],
-        seasonSummary=_build_sports_season_summary(backtests),
+        seasonSummary=season_summary,
     )
 
 

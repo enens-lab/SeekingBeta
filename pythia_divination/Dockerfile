@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# awscli for the S3 artifact bootstrap (download_artifacts.sh). Pip install keeps
+# the image slim vs the bundled installer; only needed when AUTO_DOWNLOAD_ARTIFACTS=true.
+RUN pip install --no-cache-dir awscli
 
 # Copy application code
 COPY . .

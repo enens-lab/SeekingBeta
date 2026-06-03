@@ -7,8 +7,22 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 AUTO_DOWNLOAD_ARTIFACTS="${AUTO_DOWNLOAD_ARTIFACTS:-false}"
 STRICT_ARTIFACT_DOWNLOAD="${STRICT_ARTIFACT_DOWNLOAD:-false}"
 
+has_sports_artifacts() {
+  # True if ANY sports artifact dir exists (the *_torch / *_baseline /
+  # *_ranker_torch families). Uses a glob loop so a non-matching pattern doesn't
+  # fail the check the way `ls -d a b c` would when only some patterns match.
+  for d in "$ARTIFACTS_DIR"/*_torch "$ARTIFACTS_DIR"/*_baseline "$ARTIFACTS_DIR"/*_ranker_torch; do
+    [ -d "$d" ] && return 0
+  done
+  return 1
+}
+
 has_required_artifacts() {
-  [ -d "$ARTIFACTS_DIR/gradient_boosting" ] || [ -d "$ARTIFACTS_DIR/lstm_5d" ] || [ -d "$ARTIFACTS_DIR/lstm_jackpot" ]
+  # Require BOTH a stock model AND at least one sports artifact. Otherwise a box
+  # that only has the stock models (the bucket's original contents) would short-
+  # circuit the download and the sports boards would render empty.
+  { [ -d "$ARTIFACTS_DIR/gradient_boosting" ] || [ -d "$ARTIFACTS_DIR/lstm_5d" ] || [ -d "$ARTIFACTS_DIR/lstm_jackpot" ]; } \
+    && has_sports_artifacts
 }
 
 if [ "$AUTO_DOWNLOAD_ARTIFACTS" != "true" ]; then

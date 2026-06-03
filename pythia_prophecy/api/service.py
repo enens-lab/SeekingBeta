@@ -1533,6 +1533,10 @@ def _build_dated_collection_from_upcoming(
 
 ESPN_TENNIS_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/tennis"
 TENNIS_LIVE_SCHEDULE_DAYS_AHEAD = 80
+TENNIS_LIVE_SCHEDULE_CACHE_TTL_SECONDS = int(os.getenv("TENNIS_LIVE_SCHEDULE_CACHE_TTL_SECONDS", "900"))
+TENNIS_LIVE_SCHEDULE_TIMEOUT_SECONDS = float(os.getenv("TENNIS_LIVE_SCHEDULE_TIMEOUT_SECONDS", "12"))
+# (timestamp, schedule dict) — mirrors the _TENNIS_ATP_RESULTS_CACHE pattern.
+_TENNIS_LIVE_SCHEDULE_CACHE: tuple[float, dict[tuple[str, str], dict[str, Any]]] | None = None
 
 
 # Normalize differing names for the same event across the static board and ESPN
@@ -1558,16 +1562,16 @@ def _tennis_match_key(tour: str, name: str) -> tuple[str, str]:
 def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
     """Live ATP + WTA tournament schedule from ESPN, keyed by (TOUR, canonical
     name) -> {name, tour, startKey, endKey, venue}. Cached; never raises."""
-    cache_key = "tennis_live_schedule"
-    cached = _sports_cache_get(cache_key, SPORTS_RUNTIME_CACHE_TTL_SECONDS)
-    if cached is not None:
-        return cached
+    global _TENNIS_LIVE_SCHEDULE_CACHE
+    cached = _TENNIS_LIVE_SCHEDULE_CACHE
+    if cached is not None and (time.time() - cached[0]) < TENNIS_LIVE_SCHEDULE_CACHE_TTL_SECONDS:
+        return cached[1]
 
     today = datetime.now(timezone.utc).date()
     window = f"{today:%Y%m%d}-{today + timedelta(days=TENNIS_LIVE_SCHEDULE_DAYS_AHEAD):%Y%m%d}"
     schedule: dict[tuple[str, str], dict[str, Any]] = {}
     try:
-        with httpx.Client(timeout=SPORTS_RUNTIME_FETCH_TIMEOUT_SECONDS) as client:
+        with httpx.Client(timeout=TENNIS_LIVE_SCHEDULE_TIMEOUT_SECONDS) as client:
             for tour in ("atp", "wta"):
                 resp = client.get(
                     f"{ESPN_TENNIS_BASE_URL}/{tour}/scoreboard",
@@ -1591,9 +1595,9 @@ def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
                     }
     except Exception as exc:  # pragma: no cover - network
         logger.warning("Live tennis schedule fetch failed: %s", exc)
-        return {}
+        return cached[1] if cached else {}
 
-    _sports_cache_set(cache_key, schedule)
+    _TENNIS_LIVE_SCHEDULE_CACHE = (time.time(), schedule)
     return schedule
 
 

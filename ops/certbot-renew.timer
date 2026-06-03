@@ -1,0 +1,11 @@
+[Unit]
+Description=Run certbot-renew twice daily (Let's Encrypt best practice)
+
+[Timer]
+# Twice a day at randomized minutes; certbot only acts within 30 days of expiry.
+OnCalendar=*-*-* 03,15:00:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

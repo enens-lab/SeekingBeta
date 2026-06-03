@@ -1,0 +1,15 @@
+[Unit]
+Description=Renew Let's Encrypt certs for seekingbeta.ai (certbot)
+Documentation=https://certbot.eff.org/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Renews only when within 30 days of expiry (certbot no-ops otherwise).
+# The pre/post hooks that stop/start the frontend container so the standalone
+# authenticator can bind :80 are persisted in
+# /etc/letsencrypt/renewal/seekingbeta.ai.conf, so no flags are needed here.
+ExecStart=/usr/bin/certbot renew --quiet
+# Belt-and-suspenders: ensure the frontend is up even if a hook failed midway.
+ExecStartPost=/bin/bash -lc 'cd /home/ec2-user/seekingbeta && (docker compose start frontend || docker start pythia-frontend) || true'

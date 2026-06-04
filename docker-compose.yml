@@ -36,6 +36,11 @@ services:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       ARTIFACTS_DIR: /app/artifacts
+      # Auto-restore artifacts from S3 on container start (download_artifacts.sh).
+      # Default off; set AUTO_DOWNLOAD_ARTIFACTS=true in .env once the bucket is
+      # populated. STRICT=true makes a failed download abort startup.
+      AUTO_DOWNLOAD_ARTIFACTS: ${AUTO_DOWNLOAD_ARTIFACTS:-false}
+      STRICT_ARTIFACT_DOWNLOAD: ${STRICT_ARTIFACT_DOWNLOAD:-false}
       HOME_CACHE_MODELS: ${HOME_CACHE_MODELS:-lstm_5d,lstm_jackpot}
       HOME_CACHE_TICKERS: ${HOME_CACHE_TICKERS:-AAPL,MSFT,GOOGL,AMZN,NVDA,TSLA,META}
       CACHE_ALL_LSTM_PREDICTIONS: ${CACHE_ALL_LSTM_PREDICTIONS:-false}

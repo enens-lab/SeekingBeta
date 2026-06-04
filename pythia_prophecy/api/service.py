@@ -1616,18 +1616,23 @@ def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
 
 
 def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Correct tennis tournament dates from the live ESPN schedule so events
-    (especially Grand Slams) track their real windows instead of drifting with
-    the static board. Predictions are preserved.
+    """Correct tennis tournament dates from the live ESPN schedule, and ensure an
+    IN-PROGRESS tournament that's missing from the curated board still shows.
 
-    We only override dates on tournaments already in the curated board; we do
-    NOT append ESPN's full calendar, because those entries have no model field
-    (empty predictions) and ESPN's naming would duplicate curated events. The
-    curated board stays the source of which tournaments show + their fields."""
+    Two behaviors:
+      1. Date-correct curated tournaments from ESPN (predictions preserved).
+      2. Append any ESPN tournament that is currently underway (started, not yet
+         finished) but absent from the curated board — e.g. Roland Garros after
+         the periodic refresh rebuilt the board off a validation split and
+         dropped the in-progress major. We append ONLY currently-running events
+         (not ESPN's whole forward calendar), so there's no calendar spam; these
+         carry empty predictions (ESPN gives schedule, not the model field)."""
     schedule = _fetch_espn_tennis_schedule()
     if not schedule:
         return upcoming
 
+    today_key = _runtime_today_key()
+    matched: set[tuple[str, str]] = set()
     enriched: list[dict[str, Any]] = []
     for item in upcoming:
         key = _tennis_match_key(str(item.get("tour") or ""), str(item.get("name") or ""))
@@ -1638,7 +1643,29 @@ def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str
             item["latestDate"] = live["endKey"]
             if not item.get("course") and live.get("venue"):
                 item["course"] = live["venue"]
+            matched.add(key)
         enriched.append(item)
+
+    # Re-add currently-running ESPN tournaments the curated board is missing.
+    for key, live in schedule.items():
+        if key in matched:
+            continue
+        start = int(live.get("startKey") or 0)
+        end = int(live.get("endKey") or start)
+        if not (start <= today_key <= end):
+            continue  # only events underway right now — not the forward calendar
+        slug = re.sub(r"[^a-z0-9]+", "-", str(live["name"]).lower()).strip("-")
+        enriched.append(
+            {
+                "id": f"{live['tour'].lower()}-{slug}-{start}",
+                "name": f"{str(start)[:4]} {live['name']}",
+                "tour": live["tour"],
+                "course": live.get("venue") or "",
+                "scheduledDate": start,
+                "latestDate": end,
+                "predictions": [],
+            }
+        )
     return enriched
 
 

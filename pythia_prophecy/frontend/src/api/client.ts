@@ -799,8 +799,12 @@ export const sports = {
     footballDate?: string;
     soccerDate?: string;
     sports?: SportsBoardKey | SportsBoardKey[];
+    includeBacktests?: boolean;
   }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
+    if (options?.includeBacktests === false) {
+      params.set('include_backtests', 'false');
+    }
     if (options?.mlbDate) {
       params.set('mlb_date', options.mlbDate);
     }

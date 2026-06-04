@@ -70,11 +70,13 @@ function SportsPreview() {
       setLoading(true);
       setError(null);
       try {
-        // Only the sports this preview actually renders below (golf, tennis,
-        // basketball, mlb). Filtering avoids pulling every sport's full backtest
-        // history + the slow live football/soccer/olympics fetches for a card
-        // that shows just the next upcoming event per sport.
-        const payload = await sports.getBoards({ sports: ['golf', 'tennis', 'basketball', 'mlb'] });
+        // This preview shows only the next upcoming event per sport, so request
+        // just those sports AND drop the heavy backtests arrays. Avoids pulling
+        // every sport's history + the slow live football/soccer/olympics fetches.
+        const payload = await sports.getBoards({
+          sports: ['golf', 'tennis', 'basketball', 'mlb'],
+          includeBacktests: false,
+        });
         if (!cancelled) {
           setSportsBoards(payload);
         }

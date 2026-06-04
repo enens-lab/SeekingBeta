@@ -4767,6 +4767,14 @@ async def sports_boards(
     basketball_date: str | None = Query(None),
     football_date: str | None = Query(None),
     soccer_date: str | None = Query(None),
+    include_backtests: bool = Query(
+        True,
+        description=(
+            "Set false for upcoming-only surfaces (e.g. the landing preview) to "
+            "drop the heavy backtests arrays from the response. seasonSummary is "
+            "still computed and returned. Defaults true for backward compat."
+        ),
+    ),
     sports: str | None = Query(
         None,
         description=(
@@ -4897,15 +4905,17 @@ async def sports_boards(
             sport="olympics",
         )
 
-    return SportsBoardsResponse(
-        golf=golf,
-        tennis=tennis,
-        basketball=basketball,
-        mlb=mlb,
-        football=football,
-        soccer=soccer,
-        olympics=olympics,
-    )
+    collections = {
+        "golf": golf, "tennis": tennis, "basketball": basketball, "mlb": mlb,
+        "football": football, "soccer": soccer, "olympics": olympics,
+    }
+    if not include_backtests:
+        # Drop the heavy backtests arrays for upcoming-only surfaces; keep the
+        # (cheap) seasonSummary and everything else intact.
+        for key, coll in collections.items():
+            collections[key] = coll.model_copy(update={"backtests": []})
+
+    return SportsBoardsResponse(**collections)
 
 
 # ============================================================

@@ -35,31 +35,42 @@ echo "Ensuring ML artifacts are available from S3 bucket: $BUCKET_NAME"
 # Create artifacts directory
 mkdir -p "$ARTIFACTS_DIR"
 
-if has_required_artifacts; then
-  echo "✓ Artifacts already present at $ARTIFACTS_DIR"
-  exit 0
-fi
-
+# Fast path: if we have a complete-looking set AND no way/need to talk to S3,
+# skip. We still prefer to run `sync` below (it's cheap and self-heals a
+# partially-missing set), so this only short-circuits when tooling/creds are
+# absent — never silently leaving a partial set when we COULD repair it.
 if ! command -v aws >/dev/null 2>&1; then
-  echo "AWS CLI is not installed in this image. Skipping artifact download."
-  exit 0
+  if has_required_artifacts; then
+    echo "AWS CLI not installed but artifacts look present; continuing."
+    exit 0
+  fi
+  echo "AWS CLI is not installed and artifacts are incomplete. Skipping download."
+  [ "$STRICT_ARTIFACT_DOWNLOAD" = "true" ] && exit 1 || exit 0
 fi
 
 if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
-  echo "AWS credentials are missing. Skipping artifact download."
-  exit 0
+  if has_required_artifacts; then
+    echo "AWS credentials missing but artifacts look present; continuing."
+    exit 0
+  fi
+  echo "AWS credentials are missing and artifacts are incomplete. Skipping download."
+  [ "$STRICT_ARTIFACT_DOWNLOAD" = "true" ] && exit 1 || exit 0
 fi
 
-# Try both layouts used historically in the bucket.
-if aws s3 cp "s3://$BUCKET_NAME/artifacts/artifacts/" "$ARTIFACTS_DIR/" --region "$AWS_REGION" --recursive --quiet \
-  || aws s3 cp "s3://$BUCKET_NAME/artifacts/" "$ARTIFACTS_DIR/" --region "$AWS_REGION" --recursive --quiet; then
-  echo "✓ Successfully downloaded artifacts to $ARTIFACTS_DIR"
+# Always sync from S3: this pulls only missing/changed objects, so it self-heals
+# a partial set (e.g. one model dir deleted) without re-downloading everything.
+# Try the nested layout first (artifacts/artifacts/), then the flat one.
+if aws s3 sync "s3://$BUCKET_NAME/artifacts/artifacts/" "$ARTIFACTS_DIR/" --region "$AWS_REGION" --only-show-errors \
+  && [ -n "$(ls -A "$ARTIFACTS_DIR" 2>/dev/null)" ]; then
+  echo "✓ Synced artifacts from s3://$BUCKET_NAME/artifacts/artifacts/"
+elif aws s3 sync "s3://$BUCKET_NAME/artifacts/" "$ARTIFACTS_DIR/" --region "$AWS_REGION" --only-show-errors; then
+  echo "✓ Synced artifacts from s3://$BUCKET_NAME/artifacts/"
 else
   if [ "$STRICT_ARTIFACT_DOWNLOAD" = "true" ]; then
-    echo "✗ Error: failed to download artifacts from S3 with strict mode enabled."
+    echo "✗ Error: failed to sync artifacts from S3 with strict mode enabled."
     exit 1
   fi
-  echo "Artifact download failed; continuing without S3 artifacts."
+  echo "Artifact sync failed; continuing without S3 artifacts."
   exit 0
 fi
 

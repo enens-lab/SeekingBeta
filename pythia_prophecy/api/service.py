@@ -856,7 +856,12 @@ DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").r
 PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 ALLOW_RANDOM_FALLBACK = os.getenv("ALLOW_RANDOM_FALLBACK", "false").lower() == "true"
 DIVINATION_LSTM_TIMEOUT_SECONDS = float(os.getenv("DIVINATION_LSTM_TIMEOUT_SECONDS", "8"))
-SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "60"))
+# Per-sport proxy timeout to divination. Kept short: divination is single-worker,
+# so concurrent board requests serialize. A long timeout means one cold/slow sport
+# (e.g. soccer's recompute, or a live MLB-API fetch on a game day) holds the whole
+# combined /api/sports/boards response hostage and 504s the lot. With a short
+# timeout, a slow sport fails fast to its cached static-JSON fallback instead.
+SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "12"))
 TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
 TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"

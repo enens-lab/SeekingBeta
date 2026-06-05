@@ -1483,6 +1483,33 @@ def _build_sports_season_summary(
 SPORTS_BACKTESTS_RESPONSE_CAP = int(os.getenv("SPORTS_BACKTESTS_RESPONSE_CAP", "150"))
 
 
+def _annotate_event_state(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Tag each upcoming board with eventState (upcoming/live/completed) from its
+    date window vs today, so the UI can badge an in-progress event. Single-day
+    events use scheduledDate; multi-day events (Grand Slams, tournaments) use the
+    scheduled..latest span. Leaves eventState untouched if already set."""
+    today = _runtime_today_key()
+    out: list[dict[str, Any]] = []
+    for item in upcoming:
+        if item.get("eventState"):
+            out.append(item)
+            continue
+        start = _safe_int(item.get("scheduledDate"))
+        end = _safe_int(item.get("latestDate")) or start
+        state = None
+        if start:
+            if today < start:
+                state = "upcoming"
+            elif today > (end or start):
+                state = "completed"
+            else:
+                state = "live"
+        if state:
+            item = {**item, "eventState": state}
+        out.append(item)
+    return out
+
+
 def _build_sports_board_collection(
     *,
     upcoming: list[dict[str, Any]],
@@ -1492,6 +1519,7 @@ def _build_sports_board_collection(
     selected_date: str | None = None,
     available_dates: list[dict[str, Any]] | None = None,
 ) -> SportsBoardCollection:
+    upcoming = _annotate_event_state(upcoming)
     # Compute the season summary from the full history BEFORE capping.
     season_summary = _build_sports_season_summary(backtests)
     sorted_backtests = _sort_sports_backtests(backtests)
@@ -4860,17 +4888,12 @@ async def sports_boards(
     else:
         soccer = _empty_sports_board_collection()
 
-    if wants("mlb"):
-        mlb = _sports_board_collection(
-            upcoming_filename="mlb_upcoming_tournaments.json",
-            backtests_filename="mlb_historical_backtests.json",
-            sport="mlb",
-            selected_date=mlb_date,
-        )
-    else:
-        mlb = _empty_sports_board_collection()
-
-    # basketball + football + olympics remain live (fast: ~1-3s) with static fallback.
+    # basketball + football + olympics + mlb stay LIVE (fast once warm, ~0.1-3s)
+    # with static fallback. NOTE mlb is intentionally NOT static-only: its static
+    # export needs a historical dataset CSV that isn't on this box, so the static
+    # file can't be refreshed and goes stale — the live divination feed is the
+    # only source of today's games. (soccer, by contrast, regenerates cleanly via
+    # cron, so it's served static.)
     async def _basketball_or_none() -> Optional[SportsBoardCollection]:
         if not wants("basketball"):
             return None
@@ -4881,14 +4904,20 @@ async def sports_boards(
             return None
         return await _live_football_board_collection(football_date=football_date)
 
+    async def _mlb_or_none() -> Optional[SportsBoardCollection]:
+        if not wants("mlb"):
+            return None
+        return await _live_mlb_board_collection(mlb_date=mlb_date)
+
     async def _olympics_or_none() -> Optional[SportsBoardCollection]:
         if not wants("olympics"):
             return None
         return await _live_olympics_board_collection()
 
-    basketball_live, football_live, olympics_live = await asyncio.gather(
+    basketball_live, football_live, mlb_live, olympics_live = await asyncio.gather(
         _basketball_or_none(),
         _football_or_none(),
+        _mlb_or_none(),
         _olympics_or_none(),
     )
 
@@ -4914,6 +4943,18 @@ async def sports_boards(
             backtests_filename="football_historical_backtests.json",
             sport="football",
             selected_date=football_date,
+        )
+
+    if not wants("mlb"):
+        mlb = _empty_sports_board_collection()
+    elif mlb_live is not None:
+        mlb = mlb_live
+    else:
+        mlb = _sports_board_collection(
+            upcoming_filename="mlb_upcoming_tournaments.json",
+            backtests_filename="mlb_historical_backtests.json",
+            sport="mlb",
+            selected_date=mlb_date,
         )
 
     if not wants("olympics"):

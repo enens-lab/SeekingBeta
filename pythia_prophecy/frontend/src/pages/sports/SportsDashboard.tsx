@@ -709,7 +709,13 @@ function SportsDashboard() {
           <div className="tournament-header">
             <div className="header-left">
               <h2>{activeEvent.name}</h2>
-              <span className="market-status live">Board Live</span>
+              {activeEvent.eventState === 'live' ? (
+                <span className="market-status live">🔴 In Progress</span>
+              ) : activeEvent.eventState === 'completed' ? (
+                <span className="market-status staged">Completed</span>
+              ) : (
+                <span className="market-status live">Board Live</span>
+              )}
             </div>
             <div className="header-search">
               <input

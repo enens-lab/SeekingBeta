@@ -548,6 +548,11 @@ class SportsUpcomingBoard(BaseModel):
     scheduledDate: Optional[int] = None
     latestDate: Optional[int] = None
     venue: Optional[str] = None
+    # Lifecycle state derived from the date window vs today: "upcoming" (not
+    # started), "live" (in progress today), or "completed". Lets the UI badge an
+    # in-progress event (e.g. a Grand Slam mid-fortnight) instead of showing it
+    # as a plain upcoming card. Optional/None => UI falls back to old behavior.
+    eventState: Optional[str] = None
     predictedWinner: Optional[str] = None
     # 1X2 outcome distribution for sports that can draw (soccer). Optional so
     # binary home-win sports (NFL/NBA/MLB/NHL) and ranked sports (golf/tennis)

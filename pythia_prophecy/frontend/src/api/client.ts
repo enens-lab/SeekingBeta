@@ -398,6 +398,8 @@ export interface SportsUpcomingBoard {
   scheduledDate?: number;
   latestDate?: number;
   venue?: string;
+  // "upcoming" | "live" | "completed" — derived from the date window vs today.
+  eventState?: string;
   predictedWinner?: string;
   // 1X2 outcome probabilities (0..1) for sports that can draw (soccer).
   // Optional — binary/ranked sports leave them undefined.

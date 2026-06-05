@@ -856,12 +856,13 @@ DIVINATION_API_URL = os.getenv("PYTHIA_API_URL", "http://divination-api:8000").r
 PRICE_CACHE_MAX_AGE_HOURS = int(os.getenv("PRICE_CACHE_MAX_AGE_HOURS", "72"))
 ALLOW_RANDOM_FALLBACK = os.getenv("ALLOW_RANDOM_FALLBACK", "false").lower() == "true"
 DIVINATION_LSTM_TIMEOUT_SECONDS = float(os.getenv("DIVINATION_LSTM_TIMEOUT_SECONDS", "8"))
-# Per-sport proxy timeout to divination. Kept short: divination is single-worker,
-# so concurrent board requests serialize. A long timeout means one cold/slow sport
-# (e.g. soccer's recompute, or a live MLB-API fetch on a game day) holds the whole
-# combined /api/sports/boards response hostage and 504s the lot. With a short
-# timeout, a slow sport fails fast to its cached static-JSON fallback instead.
-SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "12"))
+# Per-sport proxy timeout to divination. Balanced: long enough that a warm-but-
+# large live feed (mlb's ~2MB game-day payload, served in <1s alone but slower
+# under the single-worker's concurrent load) doesn't spuriously time out and fall
+# back to a STALE static file — but short enough that a genuinely stuck upstream
+# fails over reasonably. soccer is now static (not on-demand), so the old
+# thundering-herd reason for a very short timeout is gone. 30s.
+SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "30"))
 TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
 TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
@@ -1853,7 +1854,7 @@ async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[Sp
             available_dates=payload.get("availableDates") or [],
         )
     except Exception as exc:
-        logger.warning("Falling back to cached MLB board feed: %s", exc)
+        logger.warning("Falling back to cached MLB board feed: %r", exc)
         return None
 
 

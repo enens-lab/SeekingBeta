@@ -1829,14 +1829,10 @@ async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[Sp
             response.raise_for_status()
             payload = response.json()
             upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
-            if isinstance(upcoming, list) and not upcoming:
-                refresh_response = await client.get(
-                    f"{DIVINATION_API_URL}/api/sports/mlb/boards",
-                    params={"force_refresh": "true", **({"mlb_date": mlb_date} if mlb_date else {})},
-                )
-                refresh_response.raise_for_status()
-                payload = refresh_response.json()
-                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            # NOTE: no force_refresh-on-empty retry. An empty upcoming is a valid
+            # result (off-day / slate already started), and force_refresh triggers
+            # divination's full ~60s live recompute -> ReadTimeout -> fallback to a
+            # STALE static file. The normal cached call returns today's games in ~1s.
         runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
         if not isinstance(runtime_backtests, list):
             runtime_backtests = []
@@ -1870,14 +1866,8 @@ async def _live_basketball_board_collection(basketball_date: str | None = None) 
             response.raise_for_status()
             payload = response.json()
             upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
-            if isinstance(upcoming, list) and not upcoming:
-                refresh_response = await client.get(
-                    f"{DIVINATION_API_URL}/api/sports/basketball/boards",
-                    params={"force_refresh": "true", **({"basketball_date": basketball_date} if basketball_date else {})},
-                )
-                refresh_response.raise_for_status()
-                payload = refresh_response.json()
-                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            # No force_refresh-on-empty retry (see mlb note) — it can trigger a
+            # multi-minute recompute and time out to a stale fallback.
         runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
         if not isinstance(runtime_backtests, list):
             runtime_backtests = []
@@ -1911,14 +1901,7 @@ async def _live_football_board_collection(football_date: str | None = None) -> O
             response.raise_for_status()
             payload = response.json()
             upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
-            if isinstance(upcoming, list) and not upcoming:
-                refresh_response = await client.get(
-                    f"{DIVINATION_API_URL}/api/sports/football/boards",
-                    params={"force_refresh": "true", **({"football_date": football_date} if football_date else {})},
-                )
-                refresh_response.raise_for_status()
-                payload = refresh_response.json()
-                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            # No force_refresh-on-empty retry (see mlb note).
         runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
         if not isinstance(runtime_backtests, list):
             runtime_backtests = []
@@ -1952,14 +1935,8 @@ async def _live_soccer_board_collection(soccer_date: str | None = None) -> Optio
             response.raise_for_status()
             payload = response.json()
             upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
-            if isinstance(upcoming, list) and not upcoming:
-                refresh_response = await client.get(
-                    f"{DIVINATION_API_URL}/api/sports/soccer/boards",
-                    params={"force_refresh": "true", **({"soccer_date": soccer_date} if soccer_date else {})},
-                )
-                refresh_response.raise_for_status()
-                payload = refresh_response.json()
-                upcoming = payload.get("upcoming") if isinstance(payload, dict) else None
+            # No force_refresh-on-empty retry (see mlb note). (Soccer is served
+            # static now; this live proxy is retained only as a fallback path.)
         runtime_backtests = payload.get("completed") if isinstance(payload, dict) else None
         if not isinstance(runtime_backtests, list):
             runtime_backtests = []

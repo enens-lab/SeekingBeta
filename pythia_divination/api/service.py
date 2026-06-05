@@ -686,15 +686,36 @@ def _warm_home_cache_once(force_refresh: bool = False) -> Dict[str, Any]:
     return summary
 
 
+def _warm_sports_board_caches() -> None:
+    """Pre-build the slow live sports board caches (mlb, basketball) in the
+    background. The mlb live build runs heavy MLB-API enrichment that can take
+    >60s cold, so the first user request after a restart/cache-expiry would
+    otherwise time out to an empty board. Warming at startup + periodically keeps
+    the cache hot so requests are always served fast from cache."""
+    for name, loader in (
+        ("mlb", _load_live_mlb_upcoming_payload),
+        ("basketball", _load_live_basketball_upcoming_payload),
+    ):
+        try:
+            payload = loader(force_refresh=True)
+            logger.info("Warmed %s board cache: %d upcoming", name, len(payload.get("upcoming", [])))
+        except Exception as exc:  # pragma: no cover - best-effort warm
+            logger.warning("Sports board warm failed for %s: %s", name, exc)
+
+
 async def _home_cache_warmer_loop() -> None:
     if HOME_CACHE_WARM_ON_STARTUP:
         summary = await run_in_threadpool(_warm_home_cache_once, False)
         logger.info("Initial homepage cache warm complete: %s", summary)
+    # Warm the slow sports boards too, so mlb's >60s cold build never lands on a
+    # user request.
+    await run_in_threadpool(_warm_sports_board_caches)
 
     while True:
         await asyncio.sleep(max(30, HOME_CACHE_WARM_INTERVAL_SECONDS))
         summary = await run_in_threadpool(_warm_home_cache_once, True)
         logger.info("Periodic homepage cache warm complete: %s", summary)
+        await run_in_threadpool(_warm_sports_board_caches)
 
 
 async def _market_data_sync_loop() -> None:

@@ -30,6 +30,15 @@ services:
       ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY}
       ALPACA_BASE_URL: ${ALPACA_BASE_URL:-https://data.alpaca.markets/v2}
       DATA_SOURCE: ${DATA_SOURCE:-yahoo}
+      # Thread caps: the box has 2 cores shared with postgres/prophecy/frontend.
+      # torch/numpy/scipy/BLAS default to grabbing every core, which oversubscribes
+      # and thrashes (observed 169% CPU) when a heavy job (soccer Dixon-Coles refit
+      # + World Cup sim) runs, stalling all concurrent sports requests. Cap them.
+      OMP_NUM_THREADS: ${OMP_NUM_THREADS:-1}
+      OPENBLAS_NUM_THREADS: ${OPENBLAS_NUM_THREADS:-1}
+      MKL_NUM_THREADS: ${MKL_NUM_THREADS:-1}
+      NUMEXPR_NUM_THREADS: ${NUMEXPR_NUM_THREADS:-1}
+      TORCH_NUM_THREADS: ${TORCH_NUM_THREADS:-1}
       # S3 Configuration
       S3_BUCKET: ${S3_BUCKET:-pythia-ml-artifacts}
       AWS_REGION: ${AWS_REGION:-us-east-1}

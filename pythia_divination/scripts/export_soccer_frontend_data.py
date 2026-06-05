@@ -53,7 +53,9 @@ MAX_COMPLETED_BOARDS = 90
 TIME_DECAY_XI = 0.0018  # per day; ~1-year half life
 
 WORLD_CUP_ENABLED = True
-WORLD_CUP_SIMS = 10000
+# 2000 sims gives the same top-team title odds as 10000 (verified: ±0.5pp) at a
+# fraction of the cost — keeps the soccer recompute light on the 2-core box.
+WORLD_CUP_SIMS = 2000
 WORLD_CUP_MAX_FIXTURES = 32  # cap upcoming WC match boards in the feed
 WORLD_CUP_WINDOW = ("20260611", "20260719")  # tournament dates
 

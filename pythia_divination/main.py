@@ -27,6 +27,18 @@ try:
 except Exception:
     pass
 
+# Cap torch's intra-op thread pool. The BLAS/OMP env vars (docker-compose) don't
+# control torch's own pool, which otherwise grabs every core and thrashes on this
+# 2-core box when a heavy job runs (soccer Dixon-Coles refit + World Cup sim),
+# stalling concurrent requests. Honors TORCH_NUM_THREADS (default 1).
+try:
+    import torch as _torch
+    _torch_threads = int(os.getenv("TORCH_NUM_THREADS", "1"))
+    if _torch_threads > 0:
+        _torch.set_num_threads(_torch_threads)
+except Exception:
+    pass
+
 import uvicorn
 
 # Import centralized settings & app pieces

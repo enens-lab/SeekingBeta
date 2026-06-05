@@ -10,7 +10,7 @@ import yaml
 from pathlib import Path
 from collections import Counter
 from datetime import datetime, timezone
-from threading import Lock
+from threading import Lock, Thread
 import pandas as pd
 
 logger = logging.getLogger(__name__)
@@ -165,7 +165,12 @@ _FOOTBALL_UPCOMING_BOARDS_LOCK = Lock()
 FOOTBALL_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("FOOTBALL_UPCOMING_CACHE_TTL_SECONDS", "900"))
 _SOCCER_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _SOCCER_UPCOMING_BOARDS_LOCK = Lock()
-SOCCER_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("SOCCER_UPCOMING_CACHE_TTL_SECONDS", "900"))
+_SOCCER_REFRESH_INFLIGHT: set[str] = set()  # cache keys with a background refresh running
+# Soccer board recompute is the heaviest (5 Dixon-Coles league refits + intl
+# model + World Cup sim). Cache it longer so that cold recompute is rare instead
+# of a per-15-min hot path that stalls concurrent sports requests on the 2-core
+# box. Boards change slowly (fixtures/odds), so 6h is fine.
+SOCCER_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("SOCCER_UPCOMING_CACHE_TTL_SECONDS", "21600"))
 _OLYMPICS_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _OLYMPICS_UPCOMING_BOARDS_LOCK = Lock()
 OLYMPICS_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("OLYMPICS_UPCOMING_CACHE_TTL_SECONDS", "3600"))
@@ -278,30 +283,55 @@ def _load_live_football_upcoming_payload(force_refresh: bool = False, football_d
     return dict(payload)
 
 
+def _compute_soccer_payload(cache_key: str, soccer_date: Optional[str]) -> dict[str, Any]:
+    """Run the heavy soccer board recompute and store it in the cache. Always
+    clears the in-flight flag, even on failure, so refreshes aren't blocked."""
+    try:
+        from scripts.export_soccer_frontend_data import build_live_upcoming_payload
+
+        payload = build_live_upcoming_payload(selected_date=soccer_date)
+        boards = payload.get("upcoming", [])
+        with _SOCCER_UPCOMING_BOARDS_LOCK:
+            if boards or cache_key not in _SOCCER_UPCOMING_BOARDS_CACHE:
+                _SOCCER_UPCOMING_BOARDS_CACHE[cache_key] = (time.time(), payload)
+        return payload
+    except Exception:
+        logger.exception("Soccer board recompute failed for cache_key=%s", cache_key)
+        raise
+    finally:
+        with _SOCCER_UPCOMING_BOARDS_LOCK:
+            _SOCCER_REFRESH_INFLIGHT.discard(cache_key)
+
+
 def _load_live_soccer_upcoming_payload(force_refresh: bool = False, soccer_date: Optional[str] = None) -> dict[str, Any]:
+    """Soccer boards with stale-while-revalidate.
+
+    The soccer recompute is the heaviest sport (5 Dixon-Coles league refits +
+    international model + World Cup sim), so a blocking cold recompute on this
+    2-core box stalls every concurrent sports request. Instead: if ANY cached
+    payload exists, return it immediately; when it's past TTL, trigger a single
+    background refresh. Only the very first ever request (cold, no cache) blocks.
+    """
     global _SOCCER_UPCOMING_BOARDS_CACHE
 
     now_ts = time.time()
     cache_key = soccer_date or "__default__"
     with _SOCCER_UPCOMING_BOARDS_LOCK:
-        if (
-            not force_refresh
-            and cache_key in _SOCCER_UPCOMING_BOARDS_CACHE
-            and now_ts - _SOCCER_UPCOMING_BOARDS_CACHE[cache_key][0] <= SOCCER_UPCOMING_CACHE_TTL_SECONDS
-        ):
-            return dict(_SOCCER_UPCOMING_BOARDS_CACHE[cache_key][1])
+        cached = _SOCCER_UPCOMING_BOARDS_CACHE.get(cache_key)
+        fresh = cached is not None and (now_ts - cached[0] <= SOCCER_UPCOMING_CACHE_TTL_SECONDS)
+        if cached is not None and fresh and not force_refresh:
+            return dict(cached[1])
+        # Stale or forced, but we have something to serve: refresh in background.
+        if cached is not None and not force_refresh:
+            if cache_key not in _SOCCER_REFRESH_INFLIGHT:
+                _SOCCER_REFRESH_INFLIGHT.add(cache_key)
+                Thread(
+                    target=_compute_soccer_payload, args=(cache_key, soccer_date), daemon=True
+                ).start()
+            return dict(cached[1])
 
-    from scripts.export_soccer_frontend_data import build_live_upcoming_payload
-
-    payload = build_live_upcoming_payload(selected_date=soccer_date)
-    boards = payload.get("upcoming", [])
-
-    with _SOCCER_UPCOMING_BOARDS_LOCK:
-        if boards or cache_key not in _SOCCER_UPCOMING_BOARDS_CACHE:
-            _SOCCER_UPCOMING_BOARDS_CACHE[cache_key] = (now_ts, payload)
-        elif _SOCCER_UPCOMING_BOARDS_CACHE.get(cache_key, ({}, {}))[1].get("upcoming"):
-            return dict(_SOCCER_UPCOMING_BOARDS_CACHE[cache_key][1])
-    return dict(payload)
+    # No cache yet (or force_refresh): compute synchronously this once.
+    return dict(_compute_soccer_payload(cache_key, soccer_date))
 
 
 def _load_live_olympics_upcoming_payload(force_refresh: bool = False) -> dict[str, Any]:

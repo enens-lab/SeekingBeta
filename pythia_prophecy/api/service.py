@@ -4870,7 +4870,7 @@ async def sports_boards(
     else:
         mlb = _empty_sports_board_collection()
 
-    # basketball + football remain live (fast: ~1-3s) with static fallback.
+    # basketball + football + olympics remain live (fast: ~1-3s) with static fallback.
     async def _basketball_or_none() -> Optional[SportsBoardCollection]:
         if not wants("basketball"):
             return None
@@ -4881,9 +4881,15 @@ async def sports_boards(
             return None
         return await _live_football_board_collection(football_date=football_date)
 
-    basketball_live, football_live = await asyncio.gather(
+    async def _olympics_or_none() -> Optional[SportsBoardCollection]:
+        if not wants("olympics"):
+            return None
+        return await _live_olympics_board_collection()
+
+    basketball_live, football_live, olympics_live = await asyncio.gather(
         _basketball_or_none(),
         _football_or_none(),
+        _olympics_or_none(),
     )
 
     if not wants("basketball"):

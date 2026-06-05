@@ -4845,37 +4845,45 @@ async def sports_boards(
     golf = _golf() if wants("golf") else _empty_sports_board_collection()
     tennis = _tennis() if wants("tennis") else _empty_sports_board_collection()
 
+    # soccer + mlb are served from PRECOMPUTED static JSON (like golf/tennis),
+    # NOT computed on-demand. Their live recompute is too heavy for this box
+    # (soccer: 5 Dixon-Coles refits + World Cup sim; mlb: live MLB-API enrichment
+    # on game days) and was the cause of sitewide sports slowness / 504s under
+    # concurrent load. A cron regenerates the static files on a schedule.
+    if wants("soccer"):
+        soccer = _sports_board_collection(
+            upcoming_filename="soccer_upcoming_tournaments.json",
+            backtests_filename="soccer_historical_backtests.json",
+            sport="soccer",
+            selected_date=soccer_date,
+        )
+    else:
+        soccer = _empty_sports_board_collection()
+
+    if wants("mlb"):
+        mlb = _sports_board_collection(
+            upcoming_filename="mlb_upcoming_tournaments.json",
+            backtests_filename="mlb_historical_backtests.json",
+            sport="mlb",
+            selected_date=mlb_date,
+        )
+    else:
+        mlb = _empty_sports_board_collection()
+
+    # basketball + football remain live (fast: ~1-3s) with static fallback.
     async def _basketball_or_none() -> Optional[SportsBoardCollection]:
         if not wants("basketball"):
             return None
         return await _live_basketball_board_collection(basketball_date=basketball_date)
-
-    async def _mlb_or_none() -> Optional[SportsBoardCollection]:
-        if not wants("mlb"):
-            return None
-        return await _live_mlb_board_collection(mlb_date=mlb_date)
 
     async def _football_or_none() -> Optional[SportsBoardCollection]:
         if not wants("football"):
             return None
         return await _live_football_board_collection(football_date=football_date)
 
-    async def _soccer_or_none() -> Optional[SportsBoardCollection]:
-        if not wants("soccer"):
-            return None
-        return await _live_soccer_board_collection(soccer_date=soccer_date)
-
-    async def _olympics_or_none() -> Optional[SportsBoardCollection]:
-        if not wants("olympics"):
-            return None
-        return await _live_olympics_board_collection()
-
-    basketball_live, mlb_live, football_live, soccer_live, olympics_live = await asyncio.gather(
+    basketball_live, football_live = await asyncio.gather(
         _basketball_or_none(),
-        _mlb_or_none(),
         _football_or_none(),
-        _soccer_or_none(),
-        _olympics_or_none(),
     )
 
     if not wants("basketball"):
@@ -4890,18 +4898,6 @@ async def sports_boards(
             selected_date=basketball_date,
         )
 
-    if not wants("mlb"):
-        mlb = _empty_sports_board_collection()
-    elif mlb_live is not None:
-        mlb = mlb_live
-    else:
-        mlb = _sports_board_collection(
-            upcoming_filename="mlb_upcoming_tournaments.json",
-            backtests_filename="mlb_historical_backtests.json",
-            sport="mlb",
-            selected_date=mlb_date,
-        )
-
     if not wants("football"):
         football = _empty_sports_board_collection()
     elif football_live is not None:
@@ -4912,18 +4908,6 @@ async def sports_boards(
             backtests_filename="football_historical_backtests.json",
             sport="football",
             selected_date=football_date,
-        )
-
-    if not wants("soccer"):
-        soccer = _empty_sports_board_collection()
-    elif soccer_live is not None:
-        soccer = soccer_live
-    else:
-        soccer = _sports_board_collection(
-            upcoming_filename="soccer_upcoming_tournaments.json",
-            backtests_filename="soccer_historical_backtests.json",
-            sport="soccer",
-            selected_date=soccer_date,
         )
 
     if not wants("olympics"):

@@ -1,0 +1,1950 @@
+[
+  {
+    "id": "fifa-world-cup-2026-title-odds",
+    "name": "World Cup 2026 \u2014 Title Odds",
+    "tour": "FIFA World Cup",
+    "course": "Monte Carlo tournament simulation",
+    "scheduledDate": 20260611,
+    "latestDate": 20260611,
+    "predictedWinner": "Argentina",
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Argentina",
+        "winProbability": 15.6,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 24% \u00b7 Advance 98%"
+        }
+      },
+      {
+        "rank": 2,
+        "playerName": "Spain",
+        "winProbability": 13.15,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 21% \u00b7 Advance 99%"
+        }
+      },
+      {
+        "rank": 3,
+        "playerName": "Brazil",
+        "winProbability": 8.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 15% \u00b7 Advance 99%"
+        }
+      },
+      {
+        "rank": 4,
+        "playerName": "England",
+        "winProbability": 7.3,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 14% \u00b7 Advance 98%"
+        }
+      },
+      {
+        "rank": 5,
+        "playerName": "France",
+        "winProbability": 6.6,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 12% \u00b7 Advance 93%"
+        }
+      },
+      {
+        "rank": 6,
+        "playerName": "Portugal",
+        "winProbability": 6.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 12% \u00b7 Advance 94%"
+        }
+      },
+      {
+        "rank": 7,
+        "playerName": "Germany",
+        "winProbability": 5.25,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 10% \u00b7 Advance 98%"
+        }
+      },
+      {
+        "rank": 8,
+        "playerName": "Netherlands",
+        "winProbability": 4.6,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 9% \u00b7 Advance 89%"
+        }
+      },
+      {
+        "rank": 9,
+        "playerName": "Colombia",
+        "winProbability": 4.45,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 10% \u00b7 Advance 90%"
+        }
+      },
+      {
+        "rank": 10,
+        "playerName": "Belgium",
+        "winProbability": 3.55,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 8% \u00b7 Advance 95%"
+        }
+      },
+      {
+        "rank": 11,
+        "playerName": "Morocco",
+        "winProbability": 3.45,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 8% \u00b7 Advance 94%"
+        }
+      },
+      {
+        "rank": 12,
+        "playerName": "Japan",
+        "winProbability": 3.1,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 6% \u00b7 Advance 85%"
+        }
+      },
+      {
+        "rank": 13,
+        "playerName": "Uruguay",
+        "winProbability": 2.15,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 6% \u00b7 Advance 88%"
+        }
+      },
+      {
+        "rank": 14,
+        "playerName": "Switzerland",
+        "winProbability": 2.0,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 5% \u00b7 Advance 97%"
+        }
+      },
+      {
+        "rank": 15,
+        "playerName": "Norway",
+        "winProbability": 1.9,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 5% \u00b7 Advance 81%"
+        }
+      },
+      {
+        "rank": 16,
+        "playerName": "Ecuador",
+        "winProbability": 1.8,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 5% \u00b7 Advance 94%"
+        }
+      },
+      {
+        "rank": 17,
+        "playerName": "Croatia",
+        "winProbability": 1.8,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 5% \u00b7 Advance 92%"
+        }
+      },
+      {
+        "rank": 18,
+        "playerName": "Austria",
+        "winProbability": 1.15,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 3% \u00b7 Advance 79%"
+        }
+      },
+      {
+        "rank": 19,
+        "playerName": "Senegal",
+        "winProbability": 0.95,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 3% \u00b7 Advance 77%"
+        }
+      },
+      {
+        "rank": 20,
+        "playerName": "Mexico",
+        "winProbability": 0.9,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 2% \u00b7 Advance 82%"
+        }
+      },
+      {
+        "rank": 21,
+        "playerName": "Egypt",
+        "winProbability": 0.85,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 72%"
+        }
+      },
+      {
+        "rank": 22,
+        "playerName": "Paraguay",
+        "winProbability": 0.7,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 68%"
+        }
+      },
+      {
+        "rank": 23,
+        "playerName": "Algeria",
+        "winProbability": 0.7,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 2% \u00b7 Advance 75%"
+        }
+      },
+      {
+        "rank": 24,
+        "playerName": "Ivory Coast",
+        "winProbability": 0.55,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 83%"
+        }
+      },
+      {
+        "rank": 25,
+        "playerName": "Canada",
+        "winProbability": 0.5,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 2% \u00b7 Advance 88%"
+        }
+      },
+      {
+        "rank": 26,
+        "playerName": "Turkey",
+        "winProbability": 0.4,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 2% \u00b7 Advance 74%"
+        }
+      },
+      {
+        "rank": 27,
+        "playerName": "Czechia",
+        "winProbability": 0.35,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 74%"
+        }
+      },
+      {
+        "rank": 28,
+        "playerName": "South Korea",
+        "winProbability": 0.3,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 74%"
+        }
+      },
+      {
+        "rank": 29,
+        "playerName": "Australia",
+        "winProbability": 0.3,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 72%"
+        }
+      },
+      {
+        "rank": 30,
+        "playerName": "Tunisia",
+        "winProbability": 0.25,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 50%"
+        }
+      },
+      {
+        "rank": 31,
+        "playerName": "Iran",
+        "winProbability": 0.25,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 2% \u00b7 Advance 77%"
+        }
+      },
+      {
+        "rank": 32,
+        "playerName": "Scotland",
+        "winProbability": 0.2,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 65%"
+        }
+      },
+      {
+        "rank": 33,
+        "playerName": "United States",
+        "winProbability": 0.2,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 60%"
+        }
+      },
+      {
+        "rank": 34,
+        "playerName": "Sweden",
+        "winProbability": 0.2,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 46%"
+        }
+      },
+      {
+        "rank": 35,
+        "playerName": "Dr Congo",
+        "winProbability": 0.15,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 1% \u00b7 Advance 42%"
+        }
+      },
+      {
+        "rank": 36,
+        "playerName": "South Africa",
+        "winProbability": 0.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 0% \u00b7 Advance 45%"
+        }
+      },
+      {
+        "rank": 37,
+        "playerName": "Bosnia Herzegovina",
+        "winProbability": 0.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 0% \u00b7 Advance 51%"
+        }
+      },
+      {
+        "rank": 38,
+        "playerName": "Cape Verde",
+        "winProbability": 0.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 0% \u00b7 Advance 34%"
+        }
+      },
+      {
+        "rank": 39,
+        "playerName": "Saudi Arabia",
+        "winProbability": 0.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 0% \u00b7 Advance 28%"
+        }
+      },
+      {
+        "rank": 40,
+        "playerName": "Uzbekistan",
+        "winProbability": 0.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 0% \u00b7 Advance 34%"
+        }
+      },
+      {
+        "rank": 41,
+        "playerName": "Ghana",
+        "winProbability": 0.05,
+        "side": null,
+        "profile": {
+          "subtitle": "Reach final 0% \u00b7 Advance 39%"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fifa.world-760415",
+    "name": "Mexico vs South Africa",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Estadio Banorte",
+    "scheduledDate": 20260611,
+    "latestDate": 20260611,
+    "homeTeam": "Mexico",
+    "awayTeam": "South Africa",
+    "predictedWinner": "Mexico",
+    "homeWinProbability": 0.5439,
+    "drawProbability": 0.2827,
+    "awayWinProbability": 0.1734,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Mexico",
+        "winProbability": 54.39,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 28.27,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "South Africa",
+        "winProbability": 17.34,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "MEX",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/mex.png",
+      "primaryColor": "#006847",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "RSA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/rsa.png",
+      "primaryColor": "#087d5a",
+      "secondaryColor": "#fbb516",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760414",
+    "name": "South Korea vs Czechia",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Estadio Akron",
+    "scheduledDate": 20260612,
+    "latestDate": 20260612,
+    "homeTeam": "South Korea",
+    "awayTeam": "Czechia",
+    "predictedWinner": "South Korea",
+    "homeWinProbability": 0.3683,
+    "drawProbability": 0.2745,
+    "awayWinProbability": 0.3572,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "South Korea",
+        "winProbability": 36.83,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Czechia",
+        "winProbability": 35.72,
+        "side": "away"
+      },
+      {
+        "rank": 3,
+        "playerName": "Draw",
+        "winProbability": 27.45,
+        "side": "draw"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "KOR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/kors.png",
+      "primaryColor": "#ce2028",
+      "secondaryColor": "#1e4384",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "CZE",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/cze.png",
+      "primaryColor": "#d7141a",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760416",
+    "name": "Canada vs Bosnia-Herzegovina",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "BMO Field",
+    "scheduledDate": 20260612,
+    "latestDate": 20260612,
+    "homeTeam": "Canada",
+    "awayTeam": "Bosnia-Herzegovina",
+    "predictedWinner": "Canada",
+    "homeWinProbability": 0.5573,
+    "drawProbability": 0.2737,
+    "awayWinProbability": 0.169,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Canada",
+        "winProbability": 55.73,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 27.37,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Bosnia-Herzegovina",
+        "winProbability": 16.9,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "CAN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/can.png",
+      "primaryColor": "#ed2224",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "BIH",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/bih.png",
+      "primaryColor": "#112855",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760417",
+    "name": "United States vs Paraguay",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "SoFi Stadium",
+    "scheduledDate": 20260613,
+    "latestDate": 20260613,
+    "homeTeam": "United States",
+    "awayTeam": "Paraguay",
+    "predictedWinner": "Paraguay",
+    "homeWinProbability": 0.3105,
+    "drawProbability": 0.2994,
+    "awayWinProbability": 0.3901,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Paraguay",
+        "winProbability": 39.01,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "United States",
+        "winProbability": 31.05,
+        "side": "home"
+      },
+      {
+        "rank": 3,
+        "playerName": "Draw",
+        "winProbability": 29.94,
+        "side": "draw"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "USA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/usa.png",
+      "primaryColor": "#213065",
+      "secondaryColor": "#d42339",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "PAR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/par.png",
+      "primaryColor": "#ea2300",
+      "secondaryColor": "#0c2fff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760420",
+    "name": "Qatar vs Switzerland",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Levi's Stadium",
+    "scheduledDate": 20260613,
+    "latestDate": 20260613,
+    "homeTeam": "Qatar",
+    "awayTeam": "Switzerland",
+    "predictedWinner": "Switzerland",
+    "homeWinProbability": 0.0474,
+    "drawProbability": 0.1029,
+    "awayWinProbability": 0.8496,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Switzerland",
+        "winProbability": 84.96,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 10.29,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Qatar",
+        "winProbability": 4.74,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "QAT",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/qat.png",
+      "primaryColor": "#691a40",
+      "secondaryColor": "#691a40",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "SUI",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/sui.png",
+      "primaryColor": "#d72b2c",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760419",
+    "name": "Brazil vs Morocco",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "MetLife Stadium",
+    "scheduledDate": 20260613,
+    "latestDate": 20260613,
+    "homeTeam": "Brazil",
+    "awayTeam": "Morocco",
+    "predictedWinner": "Brazil",
+    "homeWinProbability": 0.4089,
+    "drawProbability": 0.3209,
+    "awayWinProbability": 0.2702,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Brazil",
+        "winProbability": 40.89,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 32.09,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Morocco",
+        "winProbability": 27.02,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "BRA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/bra.png",
+      "primaryColor": "#fee000",
+      "secondaryColor": "#009c37",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "MAR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/mar.png",
+      "primaryColor": "#009060",
+      "secondaryColor": "#df2027",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760418",
+    "name": "Haiti vs Scotland",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Gillette Stadium",
+    "scheduledDate": 20260614,
+    "latestDate": 20260614,
+    "homeTeam": "Haiti",
+    "awayTeam": "Scotland",
+    "predictedWinner": "Scotland",
+    "homeWinProbability": 0.1337,
+    "drawProbability": 0.2002,
+    "awayWinProbability": 0.6661,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Scotland",
+        "winProbability": 66.61,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 20.02,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Haiti",
+        "winProbability": 13.37,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "HAI",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/hai.png",
+      "primaryColor": "#0033a0",
+      "secondaryColor": "#D20300",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "SCO",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png",
+      "primaryColor": "#1a2d69",
+      "secondaryColor": "#dcf5f7",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760421",
+    "name": "Australia vs T\u00fcrkiye",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "BC Place",
+    "scheduledDate": 20260614,
+    "latestDate": 20260614,
+    "homeTeam": "Australia",
+    "awayTeam": "T\u00fcrkiye",
+    "predictedWinner": "Australia",
+    "homeWinProbability": 0.7426,
+    "drawProbability": 0.188,
+    "awayWinProbability": 0.0694,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Australia",
+        "winProbability": 74.26,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 18.8,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "T\u00fcrkiye",
+        "winProbability": 6.94,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "AUS",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/aus.png",
+      "primaryColor": "#2a2d7c",
+      "secondaryColor": "#ed2f31",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "TUR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/tur.png",
+      "primaryColor": "#ffffff",
+      "secondaryColor": "#ef3340",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760422",
+    "name": "Germany vs Cura\u00e7ao",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "NRG Stadium",
+    "scheduledDate": 20260614,
+    "latestDate": 20260614,
+    "homeTeam": "Germany",
+    "awayTeam": "Cura\u00e7ao",
+    "predictedWinner": "Germany",
+    "homeWinProbability": 0.9491,
+    "drawProbability": 0.0391,
+    "awayWinProbability": 0.0118,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Germany",
+        "winProbability": 94.91,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 3.91,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Cura\u00e7ao",
+        "winProbability": 1.18,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "GER",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/ger.png",
+      "primaryColor": "#000000",
+      "secondaryColor": "#db41a9",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "CUW",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/soccer/500/11678.png",
+      "primaryColor": "#0537e4",
+      "secondaryColor": "#000000",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760425",
+    "name": "Netherlands vs Japan",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "AT&T Stadium",
+    "scheduledDate": 20260614,
+    "latestDate": 20260614,
+    "homeTeam": "Netherlands",
+    "awayTeam": "Japan",
+    "predictedWinner": "Netherlands",
+    "homeWinProbability": 0.3915,
+    "drawProbability": 0.282,
+    "awayWinProbability": 0.3265,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Netherlands",
+        "winProbability": 39.15,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Japan",
+        "winProbability": 32.65,
+        "side": "away"
+      },
+      {
+        "rank": 3,
+        "playerName": "Draw",
+        "winProbability": 28.2,
+        "side": "draw"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "NED",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/ned.png",
+      "primaryColor": "#fb5d00",
+      "secondaryColor": "#010080",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "JPN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/jpn.png",
+      "primaryColor": "#ed1c24",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760423",
+    "name": "Ivory Coast vs Ecuador",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Lincoln Financial Field",
+    "scheduledDate": 20260614,
+    "latestDate": 20260614,
+    "homeTeam": "Ivory Coast",
+    "awayTeam": "Ecuador",
+    "predictedWinner": "Ecuador",
+    "homeWinProbability": 0.2153,
+    "drawProbability": 0.3735,
+    "awayWinProbability": 0.4112,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Ecuador",
+        "winProbability": 41.12,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 37.35,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Ivory Coast",
+        "winProbability": 21.53,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "CIV",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/civ.png",
+      "primaryColor": "#d48c00",
+      "secondaryColor": "#5bbd19",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "ECU",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/ecu.png",
+      "primaryColor": "#ffdd00",
+      "secondaryColor": "#034ea2",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760424",
+    "name": "Sweden vs Tunisia",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Estadio BBVA",
+    "scheduledDate": 20260615,
+    "latestDate": 20260615,
+    "homeTeam": "Sweden",
+    "awayTeam": "Tunisia",
+    "predictedWinner": "Sweden",
+    "homeWinProbability": 0.3622,
+    "drawProbability": 0.2959,
+    "awayWinProbability": 0.3418,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Sweden",
+        "winProbability": 36.22,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Tunisia",
+        "winProbability": 34.18,
+        "side": "away"
+      },
+      {
+        "rank": 3,
+        "playerName": "Draw",
+        "winProbability": 29.59,
+        "side": "draw"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "SWE",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/swe.png",
+      "primaryColor": "#fecb00",
+      "secondaryColor": "#006aa7",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "TUN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/tun.png",
+      "primaryColor": "#D20300",
+      "secondaryColor": "#000000",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760428",
+    "name": "Spain vs Cape Verde",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Mercedes-Benz Stadium",
+    "scheduledDate": 20260615,
+    "latestDate": 20260615,
+    "homeTeam": "Spain",
+    "awayTeam": "Cape Verde",
+    "predictedWinner": "Spain",
+    "homeWinProbability": 0.8453,
+    "drawProbability": 0.1155,
+    "awayWinProbability": 0.0392,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Spain",
+        "winProbability": 84.53,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 11.55,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Cape Verde",
+        "winProbability": 3.92,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "ESP",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/esp.png",
+      "primaryColor": "#c60b1e",
+      "secondaryColor": "#f1ff91",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "CPV",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/cpv.png",
+      "primaryColor": "#0000ff",
+      "secondaryColor": "#EF3340",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760426",
+    "name": "Belgium vs Egypt",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Lumen Field",
+    "scheduledDate": 20260615,
+    "latestDate": 20260615,
+    "homeTeam": "Belgium",
+    "awayTeam": "Egypt",
+    "predictedWinner": "Belgium",
+    "homeWinProbability": 0.5171,
+    "drawProbability": 0.289,
+    "awayWinProbability": 0.1939,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Belgium",
+        "winProbability": 51.71,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 28.9,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Egypt",
+        "winProbability": 19.39,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "BEL",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/bel.png",
+      "primaryColor": "#ef3340",
+      "secondaryColor": "#d7e9f6",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "EGY",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/egy.png",
+      "primaryColor": "#D20300",
+      "secondaryColor": "#000000",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760429",
+    "name": "Saudi Arabia vs Uruguay",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Hard Rock Stadium",
+    "scheduledDate": 20260615,
+    "latestDate": 20260615,
+    "homeTeam": "Saudi Arabia",
+    "awayTeam": "Uruguay",
+    "predictedWinner": "Uruguay",
+    "homeWinProbability": 0.0985,
+    "drawProbability": 0.2595,
+    "awayWinProbability": 0.642,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Uruguay",
+        "winProbability": 64.2,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 25.95,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Saudi Arabia",
+        "winProbability": 9.85,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "KSA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/ksa.png",
+      "primaryColor": "#dddddd",
+      "secondaryColor": "#006233",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "URU",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/uru.png",
+      "primaryColor": "#003da5",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760427",
+    "name": "Iran vs New Zealand",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "SoFi Stadium",
+    "scheduledDate": 20260616,
+    "latestDate": 20260616,
+    "homeTeam": "Iran",
+    "awayTeam": "New Zealand",
+    "predictedWinner": "Iran",
+    "homeWinProbability": 0.6089,
+    "drawProbability": 0.258,
+    "awayWinProbability": 0.1331,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Iran",
+        "winProbability": 60.89,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 25.8,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "New Zealand",
+        "winProbability": 13.31,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "IRN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/irn.png",
+      "primaryColor": "#da0000",
+      "secondaryColor": "#239f40",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "NZL",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/nzl.png",
+      "primaryColor": "#273476",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760432",
+    "name": "France vs Senegal",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "MetLife Stadium",
+    "scheduledDate": 20260616,
+    "latestDate": 20260616,
+    "homeTeam": "France",
+    "awayTeam": "Senegal",
+    "predictedWinner": "France",
+    "homeWinProbability": 0.5102,
+    "drawProbability": 0.2768,
+    "awayWinProbability": 0.213,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "France",
+        "winProbability": 51.02,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 27.68,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Senegal",
+        "winProbability": 21.3,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "FRA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/fra.png",
+      "primaryColor": "#0c2fff",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "SEN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/sen.png",
+      "primaryColor": "#00853f",
+      "secondaryColor": "#fdef42",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760430",
+    "name": "Iraq vs Norway",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Gillette Stadium",
+    "scheduledDate": 20260616,
+    "latestDate": 20260616,
+    "homeTeam": "Iraq",
+    "awayTeam": "Norway",
+    "predictedWinner": "Norway",
+    "homeWinProbability": 0.1051,
+    "drawProbability": 0.2127,
+    "awayWinProbability": 0.6822,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Norway",
+        "winProbability": 68.22,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 21.27,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Iraq",
+        "winProbability": 10.51,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "IRQ",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/irq.png",
+      "primaryColor": "#00843d",
+      "secondaryColor": "#CE1126",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "NOR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/nor.png",
+      "primaryColor": "#ef2b2d",
+      "secondaryColor": "#002868",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760433",
+    "name": "Argentina vs Algeria",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "GEHA Field at Arrowhead Stadium",
+    "scheduledDate": 20260617,
+    "latestDate": 20260617,
+    "homeTeam": "Argentina",
+    "awayTeam": "Algeria",
+    "predictedWinner": "Argentina",
+    "homeWinProbability": 0.6402,
+    "drawProbability": 0.2458,
+    "awayWinProbability": 0.1141,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Argentina",
+        "winProbability": 64.02,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 24.58,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Algeria",
+        "winProbability": 11.41,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "ARG",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/arg.png",
+      "primaryColor": "#74acdf",
+      "secondaryColor": "#173e69",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "ALG",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/alg.png",
+      "primaryColor": "#5bbd19",
+      "secondaryColor": "#000000",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760431",
+    "name": "Austria vs Jordan",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Levi's Stadium",
+    "scheduledDate": 20260617,
+    "latestDate": 20260617,
+    "homeTeam": "Austria",
+    "awayTeam": "Jordan",
+    "predictedWinner": "Austria",
+    "homeWinProbability": 0.6828,
+    "drawProbability": 0.1979,
+    "awayWinProbability": 0.1193,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Austria",
+        "winProbability": 68.28,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 19.79,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Jordan",
+        "winProbability": 11.93,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "AUT",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/aut.png",
+      "primaryColor": "#d72b2c",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "JOR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/jor.png",
+      "primaryColor": "#E70000",
+      "secondaryColor": "#000000",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760435",
+    "name": "Portugal vs Congo DR",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "NRG Stadium",
+    "scheduledDate": 20260617,
+    "latestDate": 20260617,
+    "homeTeam": "Portugal",
+    "awayTeam": "Congo DR",
+    "predictedWinner": "Portugal",
+    "homeWinProbability": 0.9261,
+    "drawProbability": 0.0592,
+    "awayWinProbability": 0.0146,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Portugal",
+        "winProbability": 92.61,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 5.92,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Congo DR",
+        "winProbability": 1.46,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "POR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/por.png",
+      "primaryColor": "#da291c",
+      "secondaryColor": "#d7e9f6",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "COD",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/rdc.png",
+      "primaryColor": "#418fde",
+      "secondaryColor": "#C60000",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760437",
+    "name": "England vs Croatia",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "AT&T Stadium",
+    "scheduledDate": 20260617,
+    "latestDate": 20260617,
+    "homeTeam": "England",
+    "awayTeam": "Croatia",
+    "predictedWinner": "England",
+    "homeWinProbability": 0.4917,
+    "drawProbability": 0.2884,
+    "awayWinProbability": 0.2199,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "England",
+        "winProbability": 49.17,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 28.84,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Croatia",
+        "winProbability": 21.99,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "ENG",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/eng.png",
+      "primaryColor": "#ffffff",
+      "secondaryColor": "#4a2942",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "CRO",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/cro.png",
+      "primaryColor": "#ff0000",
+      "secondaryColor": "#0c2fff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760434",
+    "name": "Ghana vs Panama",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "BMO Field",
+    "scheduledDate": 20260617,
+    "latestDate": 20260617,
+    "homeTeam": "Ghana",
+    "awayTeam": "Panama",
+    "predictedWinner": "Ghana",
+    "homeWinProbability": 0.3909,
+    "drawProbability": 0.284,
+    "awayWinProbability": 0.3251,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Ghana",
+        "winProbability": 39.09,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Panama",
+        "winProbability": 32.51,
+        "side": "away"
+      },
+      {
+        "rank": 3,
+        "playerName": "Draw",
+        "winProbability": 28.4,
+        "side": "draw"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "GHA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/gha.png",
+      "primaryColor": "#ce2931",
+      "secondaryColor": "#fbd632",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "PAN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/pan.png",
+      "primaryColor": "#d21034",
+      "secondaryColor": "#005293",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760436",
+    "name": "Uzbekistan vs Colombia",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Estadio Banorte",
+    "scheduledDate": 20260618,
+    "latestDate": 20260618,
+    "homeTeam": "Uzbekistan",
+    "awayTeam": "Colombia",
+    "predictedWinner": "Colombia",
+    "homeWinProbability": 0.1114,
+    "drawProbability": 0.2271,
+    "awayWinProbability": 0.6615,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Colombia",
+        "winProbability": 66.15,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 22.71,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Uzbekistan",
+        "winProbability": 11.14,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "UZB",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/uzb.png",
+      "primaryColor": "#0081d6",
+      "secondaryColor": "#1EB53A",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "COL",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/col.png",
+      "primaryColor": "#fbd632",
+      "secondaryColor": "#21418c",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760438",
+    "name": "Czechia vs South Africa",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Mercedes-Benz Stadium",
+    "scheduledDate": 20260618,
+    "latestDate": 20260618,
+    "homeTeam": "Czechia",
+    "awayTeam": "South Africa",
+    "predictedWinner": "Czechia",
+    "homeWinProbability": 0.5056,
+    "drawProbability": 0.2691,
+    "awayWinProbability": 0.2253,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Czechia",
+        "winProbability": 50.56,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 26.91,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "South Africa",
+        "winProbability": 22.53,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "CZE",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/cze.png",
+      "primaryColor": "#d7141a",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "RSA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/rsa.png",
+      "primaryColor": "#087d5a",
+      "secondaryColor": "#fbb516",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760439",
+    "name": "Switzerland vs Bosnia-Herzegovina",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "SoFi Stadium",
+    "scheduledDate": 20260618,
+    "latestDate": 20260618,
+    "homeTeam": "Switzerland",
+    "awayTeam": "Bosnia-Herzegovina",
+    "predictedWinner": "Switzerland",
+    "homeWinProbability": 0.726,
+    "drawProbability": 0.18,
+    "awayWinProbability": 0.094,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Switzerland",
+        "winProbability": 72.6,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 18.0,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Bosnia-Herzegovina",
+        "winProbability": 9.4,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "SUI",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/sui.png",
+      "primaryColor": "#d72b2c",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "BIH",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/bih.png",
+      "primaryColor": "#112855",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760440",
+    "name": "Canada vs Qatar",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "BC Place",
+    "scheduledDate": 20260618,
+    "latestDate": 20260618,
+    "homeTeam": "Canada",
+    "awayTeam": "Qatar",
+    "predictedWinner": "Canada",
+    "homeWinProbability": 0.6945,
+    "drawProbability": 0.1969,
+    "awayWinProbability": 0.1087,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Canada",
+        "winProbability": 69.45,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 19.69,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Qatar",
+        "winProbability": 10.87,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "CAN",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/can.png",
+      "primaryColor": "#ed2224",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "QAT",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/qat.png",
+      "primaryColor": "#691a40",
+      "secondaryColor": "#691a40",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760441",
+    "name": "Mexico vs South Korea",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Estadio Akron",
+    "scheduledDate": 20260619,
+    "latestDate": 20260619,
+    "homeTeam": "Mexico",
+    "awayTeam": "South Korea",
+    "predictedWinner": "Mexico",
+    "homeWinProbability": 0.4103,
+    "drawProbability": 0.3029,
+    "awayWinProbability": 0.2868,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Mexico",
+        "winProbability": 41.03,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 30.29,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "South Korea",
+        "winProbability": 28.68,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "MEX",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/mex.png",
+      "primaryColor": "#006847",
+      "secondaryColor": "#ffffff",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "KOR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/kors.png",
+      "primaryColor": "#ce2028",
+      "secondaryColor": "#1e4384",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760442",
+    "name": "United States vs Australia",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Lumen Field",
+    "scheduledDate": 20260619,
+    "latestDate": 20260619,
+    "homeTeam": "United States",
+    "awayTeam": "Australia",
+    "predictedWinner": "Australia",
+    "homeWinProbability": 0.3002,
+    "drawProbability": 0.2851,
+    "awayWinProbability": 0.4147,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Australia",
+        "winProbability": 41.47,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "United States",
+        "winProbability": 30.02,
+        "side": "home"
+      },
+      {
+        "rank": 3,
+        "playerName": "Draw",
+        "winProbability": 28.51,
+        "side": "draw"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "USA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/usa.png",
+      "primaryColor": "#213065",
+      "secondaryColor": "#d42339",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "AUS",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/aus.png",
+      "primaryColor": "#2a2d7c",
+      "secondaryColor": "#ed2f31",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760445",
+    "name": "Scotland vs Morocco",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Gillette Stadium",
+    "scheduledDate": 20260619,
+    "latestDate": 20260619,
+    "homeTeam": "Scotland",
+    "awayTeam": "Morocco",
+    "predictedWinner": "Morocco",
+    "homeWinProbability": 0.1632,
+    "drawProbability": 0.2934,
+    "awayWinProbability": 0.5434,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Morocco",
+        "winProbability": 54.34,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 29.34,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Scotland",
+        "winProbability": 16.32,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "SCO",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/sco.png",
+      "primaryColor": "#1a2d69",
+      "secondaryColor": "#dcf5f7",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "MAR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/mar.png",
+      "primaryColor": "#009060",
+      "secondaryColor": "#df2027",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760444",
+    "name": "Brazil vs Haiti",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Lincoln Financial Field",
+    "scheduledDate": 20260620,
+    "latestDate": 20260620,
+    "homeTeam": "Brazil",
+    "awayTeam": "Haiti",
+    "predictedWinner": "Brazil",
+    "homeWinProbability": 0.9261,
+    "drawProbability": 0.0554,
+    "awayWinProbability": 0.0185,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Brazil",
+        "winProbability": 92.61,
+        "side": "home"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 5.54,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "Haiti",
+        "winProbability": 1.85,
+        "side": "away"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "BRA",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/bra.png",
+      "primaryColor": "#fee000",
+      "secondaryColor": "#009c37",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "HAI",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/hai.png",
+      "primaryColor": "#0033a0",
+      "secondaryColor": "#D20300",
+      "venue": null
+    }
+  },
+  {
+    "id": "fifa.world-760443",
+    "name": "T\u00fcrkiye vs Paraguay",
+    "tour": "FIFA World Cup",
+    "course": "",
+    "venue": "Levi's Stadium",
+    "scheduledDate": 20260620,
+    "latestDate": 20260620,
+    "homeTeam": "T\u00fcrkiye",
+    "awayTeam": "Paraguay",
+    "predictedWinner": "Paraguay",
+    "homeWinProbability": 0.0774,
+    "drawProbability": 0.2121,
+    "awayWinProbability": 0.7106,
+    "predictions": [
+      {
+        "rank": 1,
+        "playerName": "Paraguay",
+        "winProbability": 71.06,
+        "side": "away"
+      },
+      {
+        "rank": 2,
+        "playerName": "Draw",
+        "winProbability": 21.21,
+        "side": "draw"
+      },
+      {
+        "rank": 3,
+        "playerName": "T\u00fcrkiye",
+        "winProbability": 7.74,
+        "side": "home"
+      }
+    ],
+    "homeTeamDetails": {
+      "abbreviation": "TUR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/tur.png",
+      "primaryColor": "#ffffff",
+      "secondaryColor": "#ef3340",
+      "venue": null
+    },
+    "awayTeamDetails": {
+      "abbreviation": "PAR",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/countries/500/par.png",
+      "primaryColor": "#ea2300",
+      "secondaryColor": "#0c2fff",
+      "venue": null
+    }
+  }
+]

@@ -29,6 +29,8 @@ from typing import Any
 import numpy as np
 
 DIV_ROOT = Path(__file__).resolve().parents[1]
+PROJ_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
 if str(DIV_ROOT) not in sys.path:
     sys.path.insert(0, str(DIV_ROOT))
 
@@ -412,15 +414,27 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
     }
 
 
-if __name__ == "__main__":
+def export_soccer_frontend_data() -> None:
+    """Write the precomputed static soccer JSON the BFF serves (like tennis/golf).
+
+    Soccer is the heaviest sport to compute (5 Dixon-Coles league refits + intl
+    model + World Cup sim), so it is precomputed here on a schedule rather than
+    on-demand per request. The BFF reads these two files via _sports_board_collection.
+    """
     import json
 
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     payload = build_live_upcoming_payload()
-    print(json.dumps({
-        "upcoming": len(payload["upcoming"]),
-        "completed": len(payload["completed"]),
-        "source": payload["source"],
-        "sample_completed": payload["completed"][:2],
-        "sample_upcoming": payload["upcoming"][:2],
-    }, indent=2, default=str))
+    upcoming = payload.get("upcoming", [])
+    completed = payload.get("completed", [])
+
+    FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (FRONTEND_DATA_DIR / "soccer_upcoming_tournaments.json").write_text(json.dumps(upcoming, indent=2))
+    (FRONTEND_DATA_DIR / "soccer_historical_backtests.json").write_text(json.dumps(completed, indent=2))
+
+    print(f"Exported {len(upcoming)} soccer upcoming boards")
+    print(f"Exported {len(completed)} soccer historical boards")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    export_soccer_frontend_data()

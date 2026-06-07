@@ -38,6 +38,13 @@ const MODELS = [
     description:
       'Our higher-risk stock board for bigger moves over the next 20 trading days.'
   },
+  {
+    name: 'lstm_quant',
+    displayName: 'Options-Flow Board',
+    endpoint: '/predict/lstm_quant',
+    description:
+      'Our 5-day board enhanced with live options-market signals (implied volatility, gamma, put/call flow).'
+  },
 ];
 
 // Magnificent 7 stocks

@@ -4302,6 +4302,7 @@ SUPPORTED_HORIZON_ALIASES: dict[str, str] = {
 MODEL_HORIZON_REQUIREMENTS: dict[str, str] = {
     "lstm_5d": "5d",
     "lstm_jackpot": "20d",
+    "lstm_quant": "5d",
 }
 
 
@@ -4719,6 +4720,49 @@ async def predict_lstm_jackpot(ticker: str):
         if fallback:
             return fallback
         raise HTTPException(503, detail=f"LSTM Jackpot unavailable: {e}")
+
+
+@app.get("/predict/lstm_quant/{ticker}", response_model=PredictResponse)
+async def predict_lstm_quant(ticker: str):
+    """Proxy the options-flow quant LSTM (5-day) from divination. No local fallback
+    (it's a torch model with no sklearn/keras equivalent here); on upstream failure
+    use the cached-price fallback or 503."""
+    upstream_error = "unknown upstream error"
+    try:
+        async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
+            response = await client.get(f"{DIVINATION_API_URL}/predict/lstm_quant/{ticker}")
+            if response.status_code == 200:
+                data = response.json()
+                result = PredictResponse(
+                    ticker=data.get("ticker", ticker),
+                    horizon=_horizon_to_display(str(data.get("horizon", "5d"))),
+                    prob_up=_sanitize_probability(
+                        data.get("prob_up", data.get("probability")),
+                        default=0.5,
+                    ),
+                    signal=data.get("signal", "hold"),
+                    last_close=_sanitize_last_close(data.get("last_close"), default=0.0),
+                )
+                _cache_last_close_for_dashboard(
+                    ticker=ticker.upper(),
+                    horizon="5d",
+                    last_close=result.last_close,
+                    source="divination:lstm_quant",
+                )
+                return result
+            try:
+                detail = response.json().get("detail") or response.text.strip()
+            except Exception:
+                detail = response.text.strip() or "no error body"
+            upstream_error = f"status {response.status_code}: {detail}"
+    except Exception as e:
+        upstream_error = str(e)
+        logger.debug(f"LSTM Quant prediction from divination failed: {e}, evaluating fallback")
+
+    fallback = _cached_price_fallback_response(ticker=ticker, horizon="5d", reason=upstream_error)
+    if fallback:
+        return fallback
+    raise HTTPException(503, detail=f"LSTM Quant upstream unavailable: {upstream_error}")
 
 
 @app.get("/api/market/history/{ticker}", response_model=MarketHistoryResponse, tags=["Market"])
@@ -5456,15 +5500,22 @@ async def run_analysis(
     async with httpx.AsyncClient(timeout=30.0) as client:
         for ticker in data.tickers:
             try:
-                response = await client.get(
-                    f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
-                    params={
-                        "horizon": canonical_horizon,
-                        "model": data.model,
-                        "task": data.task,
-                        "period": data.period,
-                    },
-                )
+                if data.model == "lstm_quant":
+                    # Torch options-flow model: not in the keras/sklearn registry the
+                    # generic /predict/{ticker} uses — call its dedicated endpoint.
+                    response = await client.get(
+                        f"{DIVINATION_API_URL}/predict/lstm_quant/{ticker.upper()}",
+                    )
+                else:
+                    response = await client.get(
+                        f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
+                        params={
+                            "horizon": canonical_horizon,
+                            "model": data.model,
+                            "task": data.task,
+                            "period": data.period,
+                        },
+                    )
                 response.raise_for_status()
                 payload = response.json()
 

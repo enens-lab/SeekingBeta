@@ -225,7 +225,7 @@ function Pricing() {
                       <div className="pricing-highlights">
                         <div className="highlight">
                           <strong>{tier.stocks_limit === -1 ? 'Unlimited' : tier.stocks_limit}</strong>
-                          <span>watchlist</span>
+                          <span>watchlist stock{tier.stocks_limit === 1 ? '' : 's'}</span>
                         </div>
                         <div className="highlight">
                           <strong>{tier.timeframes.length}</strong>

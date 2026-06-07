@@ -228,7 +228,7 @@ function CompanyDetail({ ticker, onClose }: CompanyDetailProps) {
                   (article) => article.title && article.title.trim()
                 );
                 if (validNews.length === 0) {
-                  return <p className="no-news-message">No Recent News Found</p>;
+                  return <p className="no-news-message">No recent news</p>;
                 }
                 const displayedNews = showAllNews ? validNews : validNews.slice(0, 5);
                 const hasMore = validNews.length > 5;

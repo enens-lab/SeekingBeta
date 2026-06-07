@@ -118,10 +118,10 @@ function SportsPreview() {
       {
         key: 'basketball',
         eyebrow: 'Men + Women',
-        description: 'A quick look at the next Basketball slate and the side the model likes.',
+        description: 'A quick look at the next basketball slate and the side the model likes.',
         event: sportsBoards.basketball.upcoming[0] || fallbackReplayEvent(sportsBoards.basketball.backtests[0]),
         accent: 'orange',
-        cta: 'Open Basketball page',
+        cta: 'Open basketball page',
       },
     ],
     [sportsBoards]
@@ -131,7 +131,7 @@ function SportsPreview() {
   const mlbSelectedDate = sportsBoards.mlb.selectedDate;
   const mlbSelectedLabel =
     (sportsBoards.mlb.availableDates || []).find((option) => option.dateKey === mlbSelectedDate)?.label ||
-    'Next active Baseball slate';
+    'Next active baseball slate';
   const runtimeStamp = updatedLabel(
     sportsBoards.golf.updated_at || sportsBoards.tennis.updated_at || sportsBoards.basketball.updated_at || sportsBoards.mlb.updated_at
   );
@@ -143,7 +143,7 @@ function SportsPreview() {
           <span className="section-kicker">Sports</span>
           <h2 className="section-title">See today&apos;s sports boards at a glance.</h2>
           <p className="section-subtitle">
-            A quick look at golf, tennis, Basketball, and Baseball.
+            A quick look at golf, tennis, basketball, and baseball.
           </p>
         </div>
         <div className="sports-home-actions">

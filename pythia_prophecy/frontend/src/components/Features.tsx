@@ -51,8 +51,8 @@ const features: Feature[] = [
         <line x1="9" y1="21" x2="9" y2="9" />
       </svg>
     ),
-    title: 'See how it has done before',
-    description: 'You can check past results before you decide whether the model is useful.',
+    title: 'See how the model has done',
+    description: 'You can review past results before you decide whether to rely on the model.',
   },
 ];
 

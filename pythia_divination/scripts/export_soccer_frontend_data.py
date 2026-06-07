@@ -43,8 +43,10 @@ from sports.soccer.constants import (
     canonical_team_name,
     tour_for_league,
 )
+from sports.soccer.constants import canonical_national_name
 from sports.soccer.dixon_coles import DixonColesModel
 from sports.soccer import world_cup as wc
+from sports.soccer import world_cup_detail as wcd
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +323,29 @@ def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | No
     except Exception as exc:  # pragma: no cover
         logger.warning("World Cup simulation failed: %s", exc)
 
-    # --- upcoming WC fixtures as 1X2 boards (neutral) ---
+    # --- detail sources (best-effort; each guarded) ---
+    # Full all-time history for H2H + form (the model uses a shorter window).
+    try:
+        full_history = client.fetch_international_results(since_year=1990)
+    except Exception:  # pragma: no cover
+        full_history = None
+    # ESPN national-team id index, for rosters (fetched once, reused per team).
+    try:
+        team_index = client.fetch_espn_team_index("fifa.world")
+    except Exception:  # pragma: no cover
+        team_index = {}
+    roster_cache: dict[str, list[dict[str, Any]]] = {}
+
+    def _roster_for(team_name: str) -> list[dict[str, Any]]:
+        key = canonical_national_name(team_name)
+        if key in roster_cache:
+            return roster_cache[key]
+        tid = team_index.get(key)
+        players = client.fetch_espn_roster("fifa.world", tid) if tid else []
+        roster_cache[key] = players
+        return players
+
+    # --- upcoming WC fixtures as 1X2 boards (neutral), with detail ---
     match_boards: list[dict[str, Any]] = []
     try:
         payload = client.fetch_espn_scoreboard("fifa.world", dates=f"{WORLD_CUP_WINDOW[0]}-{WORLD_CUP_WINDOW[1]}")
@@ -331,26 +355,44 @@ def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | No
         for fx in fixtures[:WORLD_CUP_MAX_FIXTURES]:
             home_name = fx.get("home_name") or ""
             away_name = fx.get("away_name") or ""
-            from sports.soccer.constants import canonical_national_name
             pred = model.predict_match(
                 canonical_national_name(home_name), canonical_national_name(away_name), neutral=True
             )
-            match_boards.append(
-                build_soccer_board(
-                    board_id=f"fifa.world-{fx.get('id')}",
-                    name=f"{home_name} vs {away_name}",
-                    tour=wc.TOUR_NAME,
-                    home_team=home_name,
-                    away_team=away_name,
-                    home_win_probability=pred["homeWin"],
-                    draw_probability=pred["draw"],
-                    away_win_probability=pred["awayWin"],
-                    scheduled_date=fx.get("date_int"),
-                    venue=fx.get("venue"),
-                    home_team_details=branding_from_espn_team(fx.get("home_team")),
-                    away_team_details=branding_from_espn_team(fx.get("away_team")),
-                )
+            board = build_soccer_board(
+                board_id=f"fifa.world-{fx.get('id')}",
+                name=f"{home_name} vs {away_name}",
+                tour=wc.TOUR_NAME,
+                home_team=home_name,
+                away_team=away_name,
+                home_win_probability=pred["homeWin"],
+                draw_probability=pred["draw"],
+                away_win_probability=pred["awayWin"],
+                scheduled_date=fx.get("date_int"),
+                venue=fx.get("venue"),
+                home_team_details=branding_from_espn_team(fx.get("home_team")),
+                away_team_details=branding_from_espn_team(fx.get("away_team")),
             )
+            # attach detail blocks (best-effort)
+            try:
+                if full_history is not None and not full_history.empty:
+                    board["headToHead"] = wcd.head_to_head(full_history, home_name, away_name)
+                    board["teamHistory"] = [
+                        wcd.team_history(full_history, home_name),
+                        wcd.team_history(full_history, away_name),
+                    ]
+            except Exception as exc:  # pragma: no cover
+                logger.warning("WC detail (h2h/history) failed for %s v %s: %s", home_name, away_name, exc)
+            try:
+                rosters = []
+                for tname in (home_name, away_name):
+                    players = _roster_for(tname)
+                    if players:
+                        rosters.append({"team": tname, "players": players})
+                if rosters:
+                    board["rosters"] = rosters
+            except Exception as exc:  # pragma: no cover
+                logger.warning("WC roster fetch failed for %s v %s: %s", home_name, away_name, exc)
+            match_boards.append(board)
     except Exception as exc:  # pragma: no cover
         logger.warning("World Cup fixtures fetch failed: %s", exc)
 

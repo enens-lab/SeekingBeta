@@ -539,6 +539,65 @@ class SportsBoardPrediction(BaseModel):
     radarMetrics: List[SportsRadarMetric] = []
 
 
+# ---- World Cup / Olympics detail blocks (all optional, attached per board) ----
+
+class SportsHeadToHeadMatch(BaseModel):
+    date: Optional[str] = None          # ISO yyyy-mm-dd
+    homeTeam: Optional[str] = None
+    awayTeam: Optional[str] = None
+    homeScore: Optional[int] = None
+    awayScore: Optional[int] = None
+    competition: Optional[str] = None   # e.g. "FIFA World Cup", "Friendly"
+
+
+class SportsHeadToHead(BaseModel):
+    summary: Optional[str] = None       # e.g. "Mexico 2-1-1 South Africa (4 mtgs)"
+    homeWins: Optional[int] = None
+    awayWins: Optional[int] = None
+    draws: Optional[int] = None
+    matches: List[SportsHeadToHeadMatch] = []
+
+
+class SportsTeamFormResult(BaseModel):
+    date: Optional[str] = None
+    opponent: Optional[str] = None
+    result: Optional[str] = None        # "W" | "D" | "L"
+    score: Optional[str] = None         # "2-1"
+    competition: Optional[str] = None
+
+
+class SportsTeamHistory(BaseModel):
+    team: str
+    recentForm: Optional[str] = None    # compact "WWDLW"
+    recentResults: List[SportsTeamFormResult] = []
+    pastTournament: List[str] = []      # e.g. ["2022: Round of 16", "2018: Group"]
+
+
+class SportsRosterPlayer(BaseModel):
+    name: str
+    position: Optional[str] = None
+    age: Optional[int] = None
+    number: Optional[str] = None
+
+
+class SportsTeamRoster(BaseModel):
+    team: str
+    players: List[SportsRosterPlayer] = []
+
+
+class SportsMedalist(BaseModel):
+    medal: str                          # "Gold" | "Silver" | "Bronze"
+    name: str
+    country: Optional[str] = None
+
+
+class SportsOlympicDiscipline(BaseModel):
+    sport: str                          # e.g. "Athletics"
+    event: str                          # e.g. "Men's 100 metres"
+    year: Optional[int] = None
+    medalists: List[SportsMedalist] = []
+
+
 class SportsUpcomingBoard(BaseModel):
     id: str
     name: str
@@ -579,6 +638,11 @@ class SportsUpcomingBoard(BaseModel):
     awayFeaturedPlayer: Optional[SportsLineupPlayer] = None
     homeFeaturedPlayer: Optional[SportsLineupPlayer] = None
     predictions: List[SportsBoardPrediction] = []
+    # World Cup / Olympics detail (optional; only populated for those tours).
+    headToHead: Optional[SportsHeadToHead] = None
+    teamHistory: List[SportsTeamHistory] = []          # [home, away] for WC matches
+    rosters: List[SportsTeamRoster] = []               # [home, away] squads
+    disciplines: List[SportsOlympicDiscipline] = []    # Olympics: events under a sport
 
 
 class SportsHistoricalBoard(BaseModel):

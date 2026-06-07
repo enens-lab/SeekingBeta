@@ -142,7 +142,7 @@ def fetch_international_results(since_year: int | None = None) -> pd.DataFrame:
         if cache_path.exists():
             raw = pd.read_csv(cache_path)
     if raw is None or raw.empty:
-        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "neutral"])
+        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "neutral", "tournament"])
 
     frame = pd.DataFrame(
         {
@@ -154,6 +154,8 @@ def fetch_international_results(since_year: int | None = None) -> pd.DataFrame:
             "neutral": raw.get("neutral", False).astype(str).str.upper().eq("TRUE")
             if "neutral" in raw.columns
             else False,
+            # Competition label ("FIFA World Cup", "Friendly", ...) for H2H/history.
+            "tournament": raw["tournament"].astype(str) if "tournament" in raw.columns else "",
         }
     ).dropna(subset=["date", "home", "away", "home_goals", "away_goals"])
 
@@ -170,6 +172,51 @@ def fetch_espn_scoreboard(espn_slug: str, dates: str | None = None) -> dict[str,
     resp = _session().get(url, params=params, timeout=DEFAULT_TIMEOUT_SECONDS)
     resp.raise_for_status()
     return resp.json()
+
+
+def fetch_espn_team_index(espn_slug: str) -> dict[str, str]:
+    """Map canonical national-team name -> ESPN team id, for the given league."""
+    url = f"{ESPN_BASE_URL}/{espn_slug}/teams"
+    resp = _session().get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
+    resp.raise_for_status()
+    data = resp.json()
+    index: dict[str, str] = {}
+    try:
+        teams = data["sports"][0]["leagues"][0]["teams"]
+    except (KeyError, IndexError, TypeError):
+        return index
+    for entry in teams:
+        team = entry.get("team") or {}
+        name = team.get("displayName") or team.get("name")
+        tid = team.get("id")
+        if name and tid:
+            index[canonical_national_name(name)] = str(tid)
+    return index
+
+
+def fetch_espn_roster(espn_slug: str, team_id: str) -> list[dict[str, Any]]:
+    """Squad list for a team: [{name, position, age, number}]. Empty on failure."""
+    url = f"{ESPN_BASE_URL}/{espn_slug}/teams/{team_id}/roster"
+    try:
+        resp = _session().get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
+        resp.raise_for_status()
+        athletes = resp.json().get("athletes", []) or []
+    except Exception as exc:  # pragma: no cover - network
+        logger.warning("ESPN roster fetch failed for %s/%s: %s", espn_slug, team_id, exc)
+        return []
+
+    players: list[dict[str, Any]] = []
+    for a in athletes:
+        pos = a.get("position")
+        pos_abbr = pos.get("abbreviation") if isinstance(pos, dict) else pos
+        age = a.get("age")
+        players.append({
+            "name": a.get("displayName") or a.get("fullName") or "",
+            "position": pos_abbr,
+            "age": int(age) if isinstance(age, (int, float)) else None,
+            "number": str(a.get("jersey")) if a.get("jersey") else None,
+        })
+    return [p for p in players if p["name"]]
 
 
 def parse_espn_fixtures(payload: dict[str, Any]) -> list[dict[str, Any]]:

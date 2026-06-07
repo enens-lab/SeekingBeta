@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import joblib
@@ -232,6 +232,26 @@ def _build_upcoming(backtests: list[dict]) -> list[dict]:
         end_proj = today.year * 10000 + (latest_date % 10000)
         if end_proj < start_proj:  # guard against any month-day wrap
             end_proj = start_proj
+
+        # Some backtests record a tournament as a single day (firstDate ==
+        # latestDate, e.g. only the final's date). That makes a multi-week event
+        # look already-finished the day after, dropping an in-progress major
+        # (Roland Garros, Wimbledon, ...) along with its predicted field. Extend
+        # the projected end to a realistic duration so an event that's actually
+        # underway is retained. Grand Slams ~14 days; other events ~7.
+        name_lc = str(bt.get("tournament") or "").lower()
+        is_slam = any(s in name_lc for s in (
+            "roland garros", "french open", "wimbledon", "us open", "australian open",
+        ))
+        duration_days = 14 if is_slam else 7
+        try:
+            start_dt = datetime.strptime(str(start_proj), "%Y%m%d")
+            min_end = int((start_dt + timedelta(days=duration_days)).strftime("%Y%m%d"))
+            if min_end > end_proj:
+                end_proj = min_end
+        except ValueError:
+            pass
+
         if end_proj < today_key:  # this year's edition has already finished
             continue
 

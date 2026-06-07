@@ -1166,7 +1166,21 @@ def _compute_lstm_quant_prediction(ticker: str) -> dict:
         "volume": raw["Volume"].to_numpy(dtype=float),
     })
 
-    result = predict_quant(ohlcv, ticker, options_source=QUANT_OPTIONS_SOURCE)
+    # Resolve the options source. If configured for Schwab (real greeks), try to
+    # fetch a live chain; if no token/unavailable, fall back to yfinance so we
+    # never hard-fail — and report the source ACTUALLY used, not the configured one.
+    opt_source = QUANT_OPTIONS_SOURCE
+    schwab_chain = None
+    if opt_source in ("schwab", "auto"):
+        try:
+            from models.quant.schwab_chain import fetch_option_chain_json
+            schwab_chain = fetch_option_chain_json(ticker)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Schwab chain fetch errored for %s: %s", ticker, exc)
+            schwab_chain = None
+        opt_source = "schwab" if schwab_chain else "yfinance"
+
+    result = predict_quant(ohlcv, ticker, options_source=opt_source, schwab_chain_json=schwab_chain)
     prob_pct = round(float(result["probability"]) * 100, 2)
     signal = str(result["signal"])
     reco = _QUANT_RECO.get(signal, "{prob:.1f}% probability").format(

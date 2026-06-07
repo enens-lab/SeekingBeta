@@ -9,6 +9,9 @@ scikit-learn==1.5.1
 # 1.x pulls curl_cffi (browser TLS impersonation) — required for the Yahoo options
 # endpoint from datacenter/AWS IPs, which 401s plain-requests (lstm_quant options flow).
 yfinance==1.2.0
+# Optional: real-greeks options source for lstm_quant (QUANT_OPTIONS_SOURCE=schwab).
+# Needs an OAuth token (scripts/schwab_auth.py); falls back to yfinance if absent.
+schwab-py>=1.0.0
 joblib==1.4.2
 PyYAML==6.0.2
 requests==2.32.3

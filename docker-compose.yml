@@ -73,6 +73,14 @@ services:
       MARKET_DATA_SYNC_LOOKBACK_DAYS: ${MARKET_DATA_SYNC_LOOKBACK_DAYS:-520}
       MARKET_DATA_SYNC_SOURCE: ${MARKET_DATA_SYNC_SOURCE:-stooq}
       MARKET_DATA_SYNC_TICKERS: ${MARKET_DATA_SYNC_TICKERS:-}
+      # lstm_quant options flow: "yfinance" (free, BS greeks) or "schwab" (real greeks,
+      # needs an OAuth token via scripts/schwab_auth.py; falls back to yfinance if absent).
+      QUANT_OPTIONS_SOURCE: ${QUANT_OPTIONS_SOURCE:-yfinance}
+      SCHWAB_APP_KEY: ${SCHWAB_APP_KEY:-}
+      SCHWAB_APP_SECRET: ${SCHWAB_APP_SECRET:-}
+      SCHWAB_CALLBACK_URL: ${SCHWAB_CALLBACK_URL:-https://127.0.0.1:8182}
+      # Token lives on the mounted artifacts volume so it survives container rebuilds.
+      SCHWAB_TOKEN_PATH: ${SCHWAB_TOKEN_PATH:-/app/artifacts/schwab_token.json}
     ports:
       - "8000:8000"
     volumes:

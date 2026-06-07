@@ -1607,9 +1607,58 @@ def _tennis_match_key(tour: str, name: str) -> tuple[str, str]:
     return (str(tour or "").upper(), canonical)
 
 
+def _tennis_player_key(name: str) -> str:
+    """Normalize a player name to a match key (lowercased surname-ish token).
+
+    Field names look like "Carlos Alcaraz"; ESPN notes like "(1) Jannik Sinner"
+    or "Hanyu Guo". We key on the last alpha token (surname), which is stable
+    across both and across seed prefixes."""
+    text = re.sub(r"^\s*\(\d+\)\s*", "", str(name or ""))  # drop "(1) " seed
+    text = re.sub(r"\([A-Za-z]{2,3}\)", " ", text)          # drop "(ESP)" country
+    text = re.sub(r"[^a-zA-Z' \-]", " ", text).strip().lower()
+    tokens = [t for t in re.split(r"\s+", text) if t]
+    return tokens[-1] if tokens else ""
+
+
+def _parse_espn_participants(event: dict[str, Any]) -> set[str]:
+    """Set of surname keys for players who actually appeared in a match note,
+    e.g. 'Hanyu Guo (CHN) bt Miriam Bulgaru (ROM) 7-5 6-0' -> {'guo','bulgaru'}.
+    Empty set when no results yet (the caller then skips participant filtering)."""
+    keys: set[str] = set()
+    for grouping in event.get("groupings") or []:
+        for comp in grouping.get("competitions") or []:
+            for note in comp.get("notes") or []:
+                text = str(note.get("text") or "")
+                # split on the result verb; both sides may have "A & B" doubles
+                m = re.match(r"(.+?)\s+bt\s+(.+?)\s+\d", text)
+                if not m:
+                    continue
+                for side in (m.group(1), m.group(2)):
+                    for player in side.split("&"):
+                        key = _tennis_player_key(player)
+                        if key:
+                            keys.add(key)
+    return keys
+
+
+def _filter_field_to_participants(predictions: list[dict[str, Any]], participants: set[str]) -> list[dict[str, Any]]:
+    """Keep only predicted players who actually appeared in the live event, then
+    re-rank. If we have no participant data (no results yet), return as-is."""
+    if not participants:
+        return predictions
+    kept = [p for p in predictions if _tennis_player_key(str(p.get("playerName") or "")) in participants]
+    # Safety: if matching nuked almost everything (name-format mismatch), keep the
+    # original field rather than show an empty board.
+    if len(kept) < max(4, len(predictions) // 8):
+        return predictions
+    for i, p in enumerate(kept):
+        p["rank"] = i + 1
+    return kept
+
+
 def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
     """Live ATP + WTA tournament schedule from ESPN, keyed by (TOUR, canonical
-    name) -> {name, tour, startKey, endKey, venue}. Cached; never raises."""
+    name) -> {name, tour, startKey, endKey, venue, participants}. Cached; never raises."""
     global _TENNIS_LIVE_SCHEDULE_CACHE
     cached = _TENNIS_LIVE_SCHEDULE_CACHE
     if cached is not None and (time.time() - cached[0]) < TENNIS_LIVE_SCHEDULE_CACHE_TTL_SECONDS:
@@ -1640,6 +1689,10 @@ def _fetch_espn_tennis_schedule() -> dict[tuple[str, str], dict[str, Any]]:
                         "startKey": start_key,
                         "endKey": end_key,
                         "venue": venue,
+                        # Last-name keys of players who ACTUALLY appeared in a
+                        # match (from result notes) — lets us drop withdrawn names
+                        # (e.g. an injured top seed) from the projected field.
+                        "participants": _parse_espn_participants(event),
                     }
     except Exception as exc:  # pragma: no cover - network
         logger.warning("Live tennis schedule fetch failed: %s", exc)
@@ -1666,7 +1719,6 @@ def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str
         return upcoming
 
     today_key = _runtime_today_key()
-    matched: set[tuple[str, str]] = set()
     enriched: list[dict[str, Any]] = []
     for item in upcoming:
         key = _tennis_match_key(str(item.get("tour") or ""), str(item.get("name") or ""))
@@ -1677,29 +1729,23 @@ def _apply_live_tennis_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str
             item["latestDate"] = live["endKey"]
             if not item.get("course") and live.get("venue"):
                 item["course"] = live["venue"]
-            matched.add(key)
+            # For an event currently underway, prune the projected field to the
+            # players who actually appeared, so withdrawn entrants (e.g. an
+            # injured top seed) are not shown as top picks.
+            start = int(live.get("startKey") or 0)
+            end = int(live.get("endKey") or start)
+            if start <= today_key <= end and item.get("predictions"):
+                item["predictions"] = _filter_field_to_participants(
+                    item["predictions"], live.get("participants") or set()
+                )
+                if item["predictions"]:
+                    item["predictedWinner"] = item["predictions"][0].get("playerName")
         enriched.append(item)
 
-    # Re-add currently-running ESPN tournaments the curated board is missing.
-    for key, live in schedule.items():
-        if key in matched:
-            continue
-        start = int(live.get("startKey") or 0)
-        end = int(live.get("endKey") or start)
-        if not (start <= today_key <= end):
-            continue  # only events underway right now — not the forward calendar
-        slug = re.sub(r"[^a-z0-9]+", "-", str(live["name"]).lower()).strip("-")
-        enriched.append(
-            {
-                "id": f"{live['tour'].lower()}-{slug}-{start}",
-                "name": f"{str(start)[:4]} {live['name']}",
-                "tour": live["tour"],
-                "course": live.get("venue") or "",
-                "scheduledDate": start,
-                "latestDate": end,
-                "predictions": [],
-            }
-        )
+    # NOTE: we intentionally do NOT append ESPN events missing from the curated
+    # board. They have no model field, so they'd render as blank "In Progress"
+    # cards (grass 250s / ITF events). The curated board is the source of which
+    # tournaments show; the live feed only corrects dates + prunes withdrawals.
     return enriched
 
 

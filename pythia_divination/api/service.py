@@ -9,7 +9,7 @@ import time
 import yaml
 from pathlib import Path
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from threading import Lock, Thread
 import pandas as pd
 
@@ -149,6 +149,11 @@ MARKET_DATA_SYNC_MAX_AGE_DAYS = int(os.getenv("MARKET_DATA_SYNC_MAX_AGE_DAYS", "
 MARKET_DATA_SYNC_LOOKBACK_DAYS = int(os.getenv("MARKET_DATA_SYNC_LOOKBACK_DAYS", "520"))
 MARKET_DATA_SYNC_TICKERS_ENV = os.getenv("MARKET_DATA_SYNC_TICKERS", "")
 MARKET_DATA_SYNC_SOURCE = os.getenv("MARKET_DATA_SYNC_SOURCE", DATA_SOURCE).strip().lower() or DATA_SOURCE
+# Daily options-feature archive (lstm_quant): snapshot the 10 options features per
+# symbol per trade day -> Postgres + S3 mirror. See models/quant/options_archive.py.
+OPTIONS_ARCHIVE_ENABLED = os.getenv("OPTIONS_ARCHIVE_ENABLED", "true").lower() == "true"
+OPTIONS_ARCHIVE_HOUR_UTC = int(os.getenv("OPTIONS_ARCHIVE_HOUR_UTC", "21"))  # ~after US market close
+OPTIONS_ARCHIVE_TICKERS_ENV = os.getenv("OPTIONS_ARCHIVE_TICKERS", "")  # default: full analyzable universe
 
 _LSTM_RESPONSE_CACHE: Dict[Tuple[str, str, str], Tuple[float, dict]] = {}
 _LSTM_RAW_DATA_CACHE: Dict[Tuple[str, str], Tuple[float, pd.DataFrame]] = {}
@@ -156,6 +161,7 @@ _LSTM_SINGLEFLIGHT_LOCKS: Dict[Tuple[str, str, str], Lock] = {}
 _LSTM_CACHE_LOCK = Lock()
 _HOME_CACHE_WARMER_TASK: Optional[asyncio.Task] = None
 _MARKET_DATA_SYNC_TASK: Optional[asyncio.Task] = None
+_OPTIONS_ARCHIVE_TASK: Optional[asyncio.Task] = None
 _MLB_UPCOMING_BOARDS_CACHE: Dict[str, Tuple[float, dict[str, Any]]] = {}
 _MLB_UPCOMING_BOARDS_LOCK = Lock()
 MLB_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("MLB_UPCOMING_CACHE_TTL_SECONDS", "900"))
@@ -747,6 +753,49 @@ async def _market_data_sync_loop() -> None:
         logger.info("Periodic market-data sync complete: %s", summary)
 
 
+def _options_archive_symbols() -> list[str]:
+    """Universe to archive options for: OPTIONS_ARCHIVE_TICKERS override, else the
+    full analyzable universe."""
+    if OPTIONS_ARCHIVE_TICKERS_ENV.strip():
+        return [t.strip().upper() for t in OPTIONS_ARCHIVE_TICKERS_ENV.split(",") if t.strip()]
+    return sorted({str(t).upper() for t in UNIVERSE})
+
+
+def _run_options_archive_once() -> dict:
+    """Snapshot + persist the day's options features for the archive universe, then
+    mirror the day's rows to S3. Runs in a threadpool (sync DB + network)."""
+    from models.quant import options_archive
+
+    trade_date = datetime.now(timezone.utc).date()
+    symbols = _options_archive_symbols()
+    summary = options_archive.run_daily_archive(symbols, trade_date, source=QUANT_OPTIONS_SOURCE)
+    summary["s3"] = options_archive.export_day_to_s3(trade_date)
+    return summary
+
+
+async def _options_archive_loop() -> None:
+    if not OPTIONS_ARCHIVE_ENABLED:
+        return
+    while True:
+        # Sleep until the next OPTIONS_ARCHIVE_HOUR_UTC so the snapshot is taken at a
+        # consistent time each day (~after US market close).
+        now = datetime.now(timezone.utc)
+        target = now.replace(
+            hour=max(0, min(23, OPTIONS_ARCHIVE_HOUR_UTC)), minute=0, second=0, microsecond=0
+        )
+        if target <= now:
+            target += timedelta(days=1)
+        await asyncio.sleep(max(60, (target - now).total_seconds()))
+        # Skip weekends — US markets closed, no fresh chains worth archiving.
+        if datetime.now(timezone.utc).weekday() >= 5:
+            continue
+        try:
+            summary = await run_in_threadpool(_run_options_archive_once)
+            logger.info("Daily options archive complete: %s", summary)
+        except Exception as exc:  # pragma: no cover - best effort
+            logger.warning("Daily options archive failed: %s", exc)
+
+
 def _start_home_cache_warmer() -> None:
     global _HOME_CACHE_WARMER_TASK
     if not HOME_CACHE_WARM_ENABLED:
@@ -770,6 +819,19 @@ def _start_market_data_sync() -> None:
     _MARKET_DATA_SYNC_TASK = asyncio.create_task(_market_data_sync_loop())
 
 
+def _start_options_archive() -> None:
+    global _OPTIONS_ARCHIVE_TASK
+    if not OPTIONS_ARCHIVE_ENABLED:
+        logger.info("Options archive disabled via OPTIONS_ARCHIVE_ENABLED=false")
+        return
+    if not market_data_store_enabled():
+        logger.warning("Options archive requested but DB store is disabled")
+        return
+    if _OPTIONS_ARCHIVE_TASK is not None and not _OPTIONS_ARCHIVE_TASK.done():
+        return
+    _OPTIONS_ARCHIVE_TASK = asyncio.create_task(_options_archive_loop())
+
+
 @app.on_event("startup")
 async def _startup():
     # Temporarily disable database for LSTM testing
@@ -790,11 +852,12 @@ async def _startup():
     _hydrate_prediction_cache_from_db()
     _start_home_cache_warmer()
     _start_market_data_sync()
+    _start_options_archive()
 
 
 @app.on_event("shutdown")
 async def _shutdown():
-    global _HOME_CACHE_WARMER_TASK, _MARKET_DATA_SYNC_TASK
+    global _HOME_CACHE_WARMER_TASK, _MARKET_DATA_SYNC_TASK, _OPTIONS_ARCHIVE_TASK
     if _HOME_CACHE_WARMER_TASK is not None:
         _HOME_CACHE_WARMER_TASK.cancel()
         with contextlib.suppress(asyncio.CancelledError):
@@ -805,6 +868,11 @@ async def _shutdown():
         with contextlib.suppress(asyncio.CancelledError):
             await _MARKET_DATA_SYNC_TASK
         _MARKET_DATA_SYNC_TASK = None
+    if _OPTIONS_ARCHIVE_TASK is not None:
+        _OPTIONS_ARCHIVE_TASK.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await _OPTIONS_ARCHIVE_TASK
+        _OPTIONS_ARCHIVE_TASK = None
     _save_home_cache_snapshot()
 
 
@@ -1759,6 +1827,37 @@ def market_data_status():
         "configured_tickers": len(tickers),
         "db_enabled": market_data_store_enabled(),
     }
+
+
+@app.get("/ops/options-archive/status")
+def options_archive_status():
+    return {
+        "enabled": OPTIONS_ARCHIVE_ENABLED,
+        "hour_utc": OPTIONS_ARCHIVE_HOUR_UTC,
+        "options_source": QUANT_OPTIONS_SOURCE,
+        "universe_size": len(_options_archive_symbols()),
+        "db_enabled": market_data_store_enabled(),
+        "s3_bucket": os.getenv("S3_BUCKET", ""),
+    }
+
+
+@app.post("/ops/options-archive/run")
+async def options_archive_run(tickers: Optional[str] = None, skip_s3: bool = False):
+    """Manually run the daily options-feature archive (operational / backfill).
+    Optional `tickers` (comma list) limits the run; otherwise the full universe."""
+    from models.quant import options_archive
+
+    trade_date = datetime.now(timezone.utc).date()
+    symbols = (
+        [t.strip().upper() for t in tickers.split(",") if t.strip()]
+        if tickers else _options_archive_symbols()
+    )
+    summary = await run_in_threadpool(
+        options_archive.run_daily_archive, symbols, trade_date, QUANT_OPTIONS_SOURCE
+    )
+    if not skip_s3:
+        summary["s3"] = await run_in_threadpool(options_archive.export_day_to_s3, trade_date)
+    return summary
 
 
 @app.post("/ops/market-data/sync")

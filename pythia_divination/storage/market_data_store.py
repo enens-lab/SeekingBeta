@@ -17,6 +17,14 @@ logger = logging.getLogger(__name__)
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 MARKET_DATA_TABLE = os.getenv("MARKET_DATA_TABLE", "market_ohlcv_daily")
 LSTM_PREDICTION_TABLE = os.getenv("LSTM_PREDICTION_TABLE", "lstm_prediction_cache")
+OPTIONS_FEATURES_TABLE = os.getenv("OPTIONS_FEATURES_TABLE", "options_features_daily")
+
+# The 10 ThetaData-schema options features captured per symbol per day (archival).
+# Order is the canonical column order used for the S3 parquet export.
+OPTIONS_FEATURE_COLUMNS = (
+    "atm_iv", "iv_skew_25d", "iv_term_slope", "pc_oi_ratio", "pc_volume_ratio",
+    "opt_volume_ratio", "gex", "net_delta_oi", "total_oi", "n_contracts",
+)
 
 
 def is_enabled() -> bool:
@@ -78,19 +86,115 @@ def ensure_tables() -> bool:
         ON {LSTM_PREDICTION_TABLE}(updated_at DESC)
     """
 
+    # Daily options-feature archive (one row per symbol per trade day). Rebuilds a
+    # ThetaData-like options history from live Schwab/yfinance reconstructions.
+    sql_options_table = f"""
+        CREATE TABLE IF NOT EXISTS {OPTIONS_FEATURES_TABLE} (
+            symbol TEXT NOT NULL,
+            trade_date DATE NOT NULL,
+            source TEXT NOT NULL DEFAULT 'unknown',
+            options_live BOOLEAN NOT NULL DEFAULT FALSE,
+            underlying_price DOUBLE PRECISION NULL,
+            atm_iv DOUBLE PRECISION NULL,
+            iv_skew_25d DOUBLE PRECISION NULL,
+            iv_term_slope DOUBLE PRECISION NULL,
+            pc_oi_ratio DOUBLE PRECISION NULL,
+            pc_volume_ratio DOUBLE PRECISION NULL,
+            opt_volume_ratio DOUBLE PRECISION NULL,
+            gex DOUBLE PRECISION NULL,
+            net_delta_oi DOUBLE PRECISION NULL,
+            total_oi DOUBLE PRECISION NULL,
+            n_contracts DOUBLE PRECISION NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (symbol, trade_date)
+        )
+    """
+    sql_options_index = f"""
+        CREATE INDEX IF NOT EXISTS idx_{OPTIONS_FEATURES_TABLE}_date
+        ON {OPTIONS_FEATURES_TABLE}(trade_date DESC)
+    """
+
     with _get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(sql_market_table)
             cur.execute(sql_market_index)
             cur.execute(sql_prediction_table)
             cur.execute(sql_prediction_index)
+            cur.execute(sql_options_table)
+            cur.execute(sql_options_index)
         conn.commit()
     logger.info(
-        "Market data tables ready: %s, %s",
+        "Market data tables ready: %s, %s, %s",
         MARKET_DATA_TABLE,
         LSTM_PREDICTION_TABLE,
+        OPTIONS_FEATURES_TABLE,
     )
     return True
+
+
+def upsert_options_features_daily(
+    symbol: str,
+    trade_date: date,
+    source: str,
+    features: Dict[str, Any],
+    underlying_price: Optional[float] = None,
+    options_live: bool = False,
+) -> bool:
+    """Upsert one symbol's options-feature snapshot for a trade day (last write wins)."""
+    if not is_enabled():
+        return False
+
+    def _num(key: str) -> Optional[float]:
+        val = features.get(key)
+        try:
+            return float(val) if val is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    cols = ", ".join(OPTIONS_FEATURE_COLUMNS)
+    placeholders = ", ".join(["%s"] * len(OPTIONS_FEATURE_COLUMNS))
+    updates = ", ".join(f"{c} = EXCLUDED.{c}" for c in OPTIONS_FEATURE_COLUMNS)
+    sql = f"""
+        INSERT INTO {OPTIONS_FEATURES_TABLE} (
+            symbol, trade_date, source, options_live, underlying_price, {cols}
+        )
+        VALUES (%s, %s, %s, %s, %s, {placeholders})
+        ON CONFLICT (symbol, trade_date) DO UPDATE SET
+            source = EXCLUDED.source,
+            options_live = EXCLUDED.options_live,
+            underlying_price = EXCLUDED.underlying_price,
+            {updates},
+            updated_at = NOW()
+    """
+    params = [
+        symbol.upper(), trade_date, source, bool(options_live),
+        float(underlying_price) if underlying_price is not None else None,
+    ] + [_num(c) for c in OPTIONS_FEATURE_COLUMNS]
+    with _get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+        conn.commit()
+    return True
+
+
+def fetch_options_features_for_date(trade_date: date) -> pd.DataFrame:
+    """Return all archived options-feature rows for a trade day (for S3 export)."""
+    if not is_enabled():
+        return pd.DataFrame()
+    cols = ", ".join(OPTIONS_FEATURE_COLUMNS)
+    sql = f"""
+        SELECT symbol, trade_date, source, options_live, underlying_price, {cols},
+               created_at, updated_at
+        FROM {OPTIONS_FEATURES_TABLE}
+        WHERE trade_date = %s
+        ORDER BY symbol
+    """
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, (trade_date,))
+            records = [dict(r) for r in cur.fetchall()]
+    return pd.DataFrame.from_records(records)
 
 
 def upsert_ohlcv_dataframe(ticker: str, frame: pd.DataFrame, source: str) -> int:

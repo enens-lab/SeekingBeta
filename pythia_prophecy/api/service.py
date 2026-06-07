@@ -5500,11 +5500,11 @@ async def run_analysis(
     async with httpx.AsyncClient(timeout=30.0) as client:
         for ticker in data.tickers:
             try:
-                if data.model == "lstm_quant":
-                    # Torch options-flow model: not in the keras/sklearn registry the
-                    # generic /predict/{ticker} uses — call its dedicated endpoint.
+                if data.model in ("lstm_5d", "lstm_jackpot", "lstm_quant"):
+                    # Torch options models: served by their dedicated endpoints, not the
+                    # generic /predict/{ticker} (keras-registry) path.
                     response = await client.get(
-                        f"{DIVINATION_API_URL}/predict/lstm_quant/{ticker.upper()}",
+                        f"{DIVINATION_API_URL}/predict/{data.model}/{ticker.upper()}",
                     )
                 else:
                     response = await client.get(

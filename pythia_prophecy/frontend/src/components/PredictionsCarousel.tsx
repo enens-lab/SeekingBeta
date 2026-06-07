@@ -29,21 +29,14 @@ const MODELS = [
     displayName: '5-Day Board',
     endpoint: '/predict/lstm_5d',
     description:
-      'Our short-term stock board for the next 5 trading days.'
+      'Short-term stock board for the next 5 trading days, enhanced with live options-market signals (implied volatility, gamma, put/call flow). Marginal in recent backtests — treat it as one input, not a standalone edge.'
   },
   {
     name: 'lstm_jackpot',
     displayName: '20-Day Board',
     endpoint: '/predict/lstm_jackpot',
     description:
-      'Our higher-risk stock board for bigger moves over the next 20 trading days.'
-  },
-  {
-    name: 'lstm_quant',
-    displayName: 'Options-Flow Board',
-    endpoint: '/predict/lstm_quant',
-    description:
-      'Our 5-day board enhanced with live options-market signals (implied volatility, gamma, put/call flow).'
+      'Higher-risk board hunting bigger moves over the next 20 trading days, using the same live options signals. High-variance and high-beta: historically the stronger performer but with deep drawdowns — size positions small.'
   },
 ];
 

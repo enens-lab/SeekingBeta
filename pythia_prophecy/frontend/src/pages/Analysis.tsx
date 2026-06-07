@@ -37,7 +37,6 @@ interface HorizonOption {
 const REQUIRED_HORIZON_BY_MODEL: Record<string, string> = {
   lstm_5d: '5d',
   lstm_jackpot: '20d',
-  lstm_quant: '5d',
 };
 
 function horizonLabel(value: string): string {
@@ -125,17 +124,11 @@ function Analysis() {
         <line x1="8" y1="18" x2="16" y2="12" />
       </svg>
     ),
-    lstm_quant: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 12h3l3-7 4 14 3-7h5" />
-      </svg>
-    ),
   };
 
   const allModels: ModelOption[] = [
     { value: 'lstm_5d', label: 'LSTM 5-Day' },
     { value: 'lstm_jackpot', label: 'LSTM Jackpot' },
-    { value: 'lstm_quant', label: 'Options-Flow Board' },
   ];
 
   const allTasks: TaskOption[] = [
@@ -163,12 +156,6 @@ function Analysis() {
   }, [horizon, requiredHorizon]);
 
   const loadTrackRecord = useCallback(async () => {
-    // lstm_quant has no logged history yet; skip the fetch (the backend would
-    // otherwise alias an unknown model to lstm_5d and show misleading numbers).
-    if (model === 'lstm_quant') {
-      setTrackRecord(null);
-      return;
-    }
     const trackRecordRes = await performance.getTrackRecord(model).catch(() => null);
     setTrackRecord(trackRecordRes);
   }, [model]);

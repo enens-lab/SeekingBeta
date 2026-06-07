@@ -106,8 +106,10 @@ function buildAttributionTopDrivers(
   ];
 }
 
-function normalizeLstmModelName(model: string | null | undefined): LstmModelName | null {
-  if (model === 'lstm_5d' || model === 'lstm_jackpot') return model;
+function normalizeLstmModelName(_model: string | null | undefined): LstmModelName | null {
+  // lstm_5d/lstm_jackpot are now torch options models with no integrated-gradients
+  // attribution (it was keras/TF-specific). Skip the attribution fetch so the card
+  // uses its trend/volatility fallback drivers rather than mismatched keras reasoning.
   return null;
 }
 

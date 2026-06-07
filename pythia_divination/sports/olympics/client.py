@@ -31,17 +31,17 @@ def load_athlete_events() -> pd.DataFrame:
     return pd.read_csv(io.BytesIO(resp.content))
 
 
-def summer_medal_table(df: pd.DataFrame | None = None) -> pd.DataFrame:
-    """Medals per (year, NOC) for the Summer Games.
+def medal_table(df: pd.DataFrame | None = None, season: str = "Summer") -> pd.DataFrame:
+    """Medals per (year, NOC) for the given Olympic season ('Summer'|'Winter').
 
     A team-event medal appears as many athlete rows; dedup to one medal per
     (Year, Event, Medal, NOC). Returns columns: year, noc, gold, total.
     """
     if df is None:
         df = load_athlete_events()
-    summer = df[(df["Season"] == "Summer") & df["Medal"].notna()].copy()
+    season_df = df[(df["Season"] == season) & df["Medal"].notna()].copy()
     # one medal per country per event (collapse team events)
-    medals = summer.drop_duplicates(subset=["Year", "Event", "Medal", "NOC"])
+    medals = season_df.drop_duplicates(subset=["Year", "Event", "Medal", "NOC"])
     grouped = (
         medals.groupby(["Year", "NOC", "Medal"]).size().unstack(fill_value=0).reset_index()
     )
@@ -51,3 +51,8 @@ def summer_medal_table(df: pd.DataFrame | None = None) -> pd.DataFrame:
     grouped["total"] = grouped["Gold"] + grouped["Silver"] + grouped["Bronze"]
     grouped = grouped.rename(columns={"Year": "year", "NOC": "noc", "Gold": "gold"})
     return grouped[["year", "noc", "gold", "total"]].sort_values(["year", "total"], ascending=[True, False]).reset_index(drop=True)
+
+
+def summer_medal_table(df: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Back-compat alias for medal_table(season='Summer')."""
+    return medal_table(df, season="Summer")

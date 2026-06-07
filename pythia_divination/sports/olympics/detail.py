@@ -18,20 +18,25 @@ from .constants import noc_display_name
 _MEDAL_ORDER = {"Gold": 0, "Silver": 1, "Bronze": 2}
 
 
+def latest_year(df: pd.DataFrame, season: str = "Summer") -> int:
+    s = df[df["Season"] == season]
+    return int(s["Year"].max())
+
+
+# Back-compat alias.
 def latest_summer_year(df: pd.DataFrame) -> int:
-    summer = df[df["Season"] == "Summer"]
-    return int(summer["Year"].max())
+    return latest_year(df, "Summer")
 
 
-def sports_for_year(df: pd.DataFrame, year: int) -> list[str]:
-    s = df[(df["Season"] == "Summer") & (df["Year"] == year)]
+def sports_for_year(df: pd.DataFrame, year: int, season: str = "Summer") -> list[str]:
+    s = df[(df["Season"] == season) & (df["Year"] == year)]
     return sorted(s["Sport"].dropna().unique().tolist())
 
 
-def disciplines_for_sport(df: pd.DataFrame, sport: str, year: int) -> list[dict[str, Any]]:
+def disciplines_for_sport(df: pd.DataFrame, sport: str, year: int, season: str = "Summer") -> list[dict[str, Any]]:
     """Each event under a sport for a Games year, with its medalists."""
     rows = df[
-        (df["Season"] == "Summer")
+        (df["Season"] == season)
         & (df["Year"] == year)
         & (df["Sport"] == sport)
         & (df["Medal"].notna())

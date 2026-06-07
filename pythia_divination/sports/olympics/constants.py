@@ -14,15 +14,23 @@ DEFAULT_USER_AGENT = (
 )
 
 SPORT_KEY = "olympics"
-TOUR_NAME = "Summer Olympics"
 
 ATHLETE_EVENTS_URL = (
     "https://raw.githubusercontent.com/rgriff23/Olympic_history/master/data/athlete_events.csv"
 )
 
-# Next Summer Games to project. (Historical training data ends at Rio 2016;
-# the projection is trained on all available editions and rolled forward.)
-NEXT_SUMMER_GAMES = {"year": 2028, "city": "Los Angeles", "host_noc": "USA"}
+# One olympics key serves both seasons as separate "tours" (like soccer leagues).
+# Each NEXT_*_GAMES is the real next edition the medal table is projected toward.
+# (Historical training data ends at Rio 2016 / Sochi 2014; projections roll the
+# model forward from the latest available editions.)
+NEXT_SUMMER_GAMES = {"season": "Summer", "year": 2028, "city": "Los Angeles", "host_noc": "USA",
+                     "tour": "Summer Olympics 2028"}
+NEXT_WINTER_GAMES = {"season": "Winter", "year": 2026, "city": "Milan-Cortina", "host_noc": "ITA",
+                     "tour": "Winter Olympics 2026"}
+OLYMPIC_EDITIONS = (NEXT_SUMMER_GAMES, NEXT_WINTER_GAMES)
+
+# Back-compat alias (older imports referenced TOUR_NAME = "Summer Olympics").
+TOUR_NAME = "Summer Olympics"
 
 # NOC -> display country name for the medal-table board.
 NOC_DISPLAY: dict[str, str] = {
@@ -32,6 +40,9 @@ NOC_DISPLAY: dict[str, str] = {
     "BRA": "Brazil", "ESP": "Spain", "HUN": "Hungary", "SWE": "Sweden",
     "URS": "Soviet Union", "GDR": "East Germany", "CUB": "Cuba", "KEN": "Kenya",
     "JAM": "Jamaica", "NZL": "New Zealand", "NOR": "Norway", "UKR": "Ukraine",
+    # Winter-strong nations
+    "AUT": "Austria", "SUI": "Switzerland", "FIN": "Finland", "SWZ": "Switzerland",
+    "TCH": "Czechoslovakia", "CZE": "Czechia", "POL": "Poland", "EUN": "Unified Team",
 }
 
 

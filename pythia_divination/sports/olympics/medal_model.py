@@ -1,8 +1,8 @@
-"""Country medal-count model for the Summer Olympics.
+"""Country medal-count model for the Olympics (Summer or Winter).
 
 Gradient-boosted regression on lagged medal counts (the previous three Games)
-plus a host-nation indicator. Trained on all historical Summer editions and
-rolled forward to project the next Games' medal table.
+plus a host-nation indicator. Trained on all historical editions of a given
+season and rolled forward to project the next Games' medal table.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
 
-# Summer Games host NOC by year (best-effort match to dataset NOC codes).
+# Host NOC by year (best-effort match to dataset NOC codes).
 SUMMER_HOSTS: dict[int, str] = {
     1896: "GRE", 1900: "FRA", 1904: "USA", 1908: "GBR", 1912: "SWE", 1920: "BEL",
     1924: "FRA", 1928: "NED", 1932: "USA", 1936: "GER", 1948: "GBR", 1952: "FIN",
@@ -19,11 +19,18 @@ SUMMER_HOSTS: dict[int, str] = {
     1980: "URS", 1984: "USA", 1988: "KOR", 1992: "ESP", 1996: "USA", 2000: "AUS",
     2004: "GRE", 2008: "CHN", 2012: "GBR", 2016: "BRA",
 }
+WINTER_HOSTS: dict[int, str] = {
+    1924: "FRA", 1928: "SUI", 1932: "USA", 1936: "GER", 1948: "SUI", 1952: "NOR",
+    1956: "ITA", 1960: "USA", 1964: "AUT", 1968: "FRA", 1972: "JPN", 1976: "AUT",
+    1980: "USA", 1984: "YUG", 1988: "CAN", 1992: "FRA", 1994: "NOR", 1998: "JPN",
+    2002: "USA", 2006: "ITA", 2010: "CAN", 2014: "RUS",
+}
 
 FEATURES = ["prev1", "prev2", "prev3", "avg3", "host"]
 
 
-def build_panel(medal_table: pd.DataFrame) -> pd.DataFrame:
+def build_panel(medal_table: pd.DataFrame, hosts: dict[int, str] | None = None) -> pd.DataFrame:
+    hosts = hosts if hosts is not None else SUMMER_HOSTS
     """Build a (year x noc) panel with lagged medal features over editions."""
     editions = sorted(medal_table["year"].unique())
     edition_index = {y: i for i, y in enumerate(editions)}
@@ -50,7 +57,7 @@ def build_panel(medal_table: pd.DataFrame) -> pd.DataFrame:
                     "year": y, "noc": noc,
                     "prev1": prev1, "prev2": prev2, "prev3": prev3,
                     "avg3": (prev1 + prev2 + prev3) / 3.0,
-                    "host": 1.0 if SUMMER_HOSTS.get(y) == noc else 0.0,
+                    "host": 1.0 if hosts.get(y) == noc else 0.0,
                     "total": float(series[y]),
                 }
             )
@@ -76,9 +83,9 @@ def _feature_row_for_projection(pivot_row: pd.Series, editions: list[int], host:
     }
 
 
-def project_next_games(medal_table: pd.DataFrame, host_noc: str) -> pd.DataFrame:
+def project_next_games(medal_table: pd.DataFrame, host_noc: str, hosts: dict[int, str] | None = None) -> pd.DataFrame:
     """Project the next Games' medal totals per NOC. Returns noc, projected."""
-    panel = build_panel(medal_table)
+    panel = build_panel(medal_table, hosts)
     model = train_model(panel)
     editions = sorted(medal_table["year"].unique())
     pivot = (
@@ -96,11 +103,11 @@ def project_next_games(medal_table: pd.DataFrame, host_noc: str) -> pd.DataFrame
     return pd.DataFrame(out).sort_values("projected", ascending=False).reset_index(drop=True)
 
 
-def backtest_last_games(medal_table: pd.DataFrame) -> dict:
+def backtest_last_games(medal_table: pd.DataFrame, hosts: dict[int, str] | None = None) -> dict:
     """Hold out the most recent edition, predict it, compare to actual."""
     editions = sorted(medal_table["year"].unique())
     holdout = editions[-1]
-    panel = build_panel(medal_table)
+    panel = build_panel(medal_table, hosts)
     model = train_model(panel, exclude_year=holdout)
 
     test = panel[panel["year"] == holdout].copy()

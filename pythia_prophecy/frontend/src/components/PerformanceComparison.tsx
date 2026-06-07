@@ -41,7 +41,7 @@ type ChartState = {
 };
 
 const MODEL_OPTIONS: Array<{ value: TrackModel; label: string }> = [
-  { value: 'lstm_5d', label: 'Core 5-Day' },
+  // Core 5-Day temporarily hidden from the public homepage track record.
   { value: 'lstm_jackpot', label: 'Jackpot 20-Day' },
 ];
 
@@ -83,7 +83,7 @@ function buildPath(xs: number[], ys: Array<number | null>): string {
 }
 
 function PerformanceComparison() {
-  const [selectedModel, setSelectedModel] = useState<TrackModel>('lstm_5d');
+  const [selectedModel, setSelectedModel] = useState<TrackModel>('lstm_jackpot');
   const [data, setData] = useState<LoadedData>({ curve: null, summary: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -307,20 +307,22 @@ function PerformanceComparison() {
           <p>Before you trust it, compare it with SPY.</p>
         </div>
 
-        <div className="performance-model-tabs" role="tablist" aria-label="Track record model">
-          {MODEL_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="tab"
-              aria-selected={selectedModel === option.value}
-              className={`performance-model-tab${selectedModel === option.value ? ' active' : ''}`}
-              onClick={() => handleModelSelect(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        {MODEL_OPTIONS.length > 1 && (
+          <div className="performance-model-tabs" role="tablist" aria-label="Track record model">
+            {MODEL_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="tab"
+                aria-selected={selectedModel === option.value}
+                className={`performance-model-tab${selectedModel === option.value ? ' active' : ''}`}
+                onClick={() => handleModelSelect(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="performance-metrics-row">
           <div className="performance-chip">

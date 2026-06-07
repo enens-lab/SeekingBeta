@@ -6,7 +6,9 @@ pyarrow==18.1.0
 numpy==1.26.4
 scipy==1.13.1
 scikit-learn==1.5.1
-yfinance==0.2.43
+# 1.x pulls curl_cffi (browser TLS impersonation) — required for the Yahoo options
+# endpoint from datacenter/AWS IPs, which 401s plain-requests (lstm_quant options flow).
+yfinance==1.2.0
 joblib==1.4.2
 PyYAML==6.0.2
 requests==2.32.3

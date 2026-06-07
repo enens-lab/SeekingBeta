@@ -687,14 +687,15 @@ def _warm_home_cache_once(force_refresh: bool = False) -> Dict[str, Any]:
 
 
 def _warm_sports_board_caches() -> None:
-    """Pre-build the slow live sports board caches (mlb, basketball) in the
-    background. The mlb live build runs heavy MLB-API enrichment that can take
-    >60s cold, so the first user request after a restart/cache-expiry would
-    otherwise time out to an empty board. Warming at startup + periodically keeps
-    the cache hot so requests are always served fast from cache."""
+    """Pre-build the slow live sports board caches (mlb, basketball, olympics) in
+    the background. mlb's MLB-API enrichment (>60s cold) and olympics' 271k-row
+    discipline build (~9s cold) would otherwise time out the first user request
+    after a restart/cache-expiry to an empty board. Warming at startup +
+    periodically keeps the cache hot so requests are always served fast."""
     for name, loader in (
         ("mlb", _load_live_mlb_upcoming_payload),
         ("basketball", _load_live_basketball_upcoming_payload),
+        ("olympics", _load_live_olympics_upcoming_payload),
     ):
         try:
             payload = loader(force_refresh=True)

@@ -243,7 +243,7 @@ function SportsLanding() {
               <span className="sports-badge">Sports</span>
               <h1 className="sports-title">See today&apos;s sports picks in one place.</h1>
               <p className="sports-subtitle">
-                Check golf, tennis, Basketball, Baseball, and Football on one page. See the top picks, the live matchups, and the past results.
+                Check golf, tennis, basketball, baseball, and football on one page. See the top picks, the live matchups, and the past results.
               </p>
 
               <div className="sports-hero-tags">

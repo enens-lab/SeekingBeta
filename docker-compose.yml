@@ -85,6 +85,8 @@ services:
       OPTIONS_ARCHIVE_ENABLED: ${OPTIONS_ARCHIVE_ENABLED:-true}
       OPTIONS_ARCHIVE_HOUR_UTC: ${OPTIONS_ARCHIVE_HOUR_UTC:-21}
       OPTIONS_ARCHIVE_TICKERS: ${OPTIONS_ARCHIVE_TICKERS:-}
+      # Inter-symbol delay (ms) so the full-universe sweep stays under Schwab rate limits.
+      OPTIONS_ARCHIVE_SLEEP_MS: ${OPTIONS_ARCHIVE_SLEEP_MS:-750}
       OPTIONS_ARCHIVE_S3_PREFIX: ${OPTIONS_ARCHIVE_S3_PREFIX:-options_archive}
     ports:
       - "8000:8000"

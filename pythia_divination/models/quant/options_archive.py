@@ -18,11 +18,16 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Inter-symbol delay so a full-universe sweep stays under Schwab's ~120 req/min and
+# leaves headroom for the live prediction path sharing the token. 750ms ≈ 80/min.
+ARCHIVE_SLEEP_SECONDS = max(0.0, int(os.getenv("OPTIONS_ARCHIVE_SLEEP_MS", "750")) / 1000.0)
 
 
 def snapshot_symbol(symbol: str, source: str = "schwab") -> dict | None:
@@ -90,26 +95,33 @@ def run_daily_archive(symbols, trade_date, source: str = "schwab") -> dict[str, 
         summary["errors"].append("market data store disabled (no DATABASE_URL)")
         return summary
 
-    for symbol in symbols:
+    total = len(symbols)
+    for i, symbol in enumerate(symbols):
         try:
             snap = snapshot_symbol(symbol, source=source)
             if not snap:
                 summary["failed"] += 1
-                continue
-            upsert_options_features_daily(
-                symbol=symbol,
-                trade_date=trade_date,
-                source=snap["source"],
-                features=snap["features"],
-                underlying_price=snap["underlying_price"],
-                options_live=snap["options_live"],
-            )
-            summary["stored"] += 1
-            summary[snap["source"]] = summary.get(snap["source"], 0) + 1
+            else:
+                upsert_options_features_daily(
+                    symbol=symbol,
+                    trade_date=trade_date,
+                    source=snap["source"],
+                    features=snap["features"],
+                    underlying_price=snap["underlying_price"],
+                    options_live=snap["options_live"],
+                )
+                summary["stored"] += 1
+                summary[snap["source"]] = summary.get(snap["source"], 0) + 1
         except Exception as exc:  # pragma: no cover - per-symbol resilience
             summary["failed"] += 1
             if len(summary["errors"]) < 20:
                 summary["errors"].append({"symbol": symbol, "error": str(exc)})
+        # Throttle to respect Schwab rate limits over a full-universe sweep.
+        if ARCHIVE_SLEEP_SECONDS and i + 1 < total:
+            time.sleep(ARCHIVE_SLEEP_SECONDS)
+        if total > 200 and (i + 1) % 250 == 0:
+            logger.info("options archive progress: %d/%d (stored=%d, failed=%d)",
+                        i + 1, total, summary["stored"], summary["failed"])
     return summary
 
 

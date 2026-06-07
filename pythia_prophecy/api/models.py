@@ -661,6 +661,7 @@ class SportsHistoricalBoard(BaseModel):
     venue: Optional[str] = None
     course: Optional[str] = None
     fullField: List[SportsBoardPrediction] = []
+    disciplines: List[SportsOlympicDiscipline] = []   # Olympics historical browser
     latestDate: Optional[int] = None
     tournamentId: Optional[str] = None
     scheduledDate: Optional[int] = None

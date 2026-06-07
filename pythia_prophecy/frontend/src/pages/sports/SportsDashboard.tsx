@@ -614,6 +614,100 @@ function SportsDashboard() {
     trackEvent('football_date_selector_change', { date: value });
   };
 
+  // World Cup / Olympics extra detail: head-to-head, team form/history, squad
+  // rosters, and Olympic discipline -> medalist drilldowns. Rendered only when
+  // the board actually carries the data (all optional/back-compat).
+  const renderEventDetail = (event: SportsUpcomingBoard) => {
+    const h2h = event.headToHead;
+    const history = event.teamHistory || [];
+    const rosters = event.rosters || [];
+    const disciplines = event.disciplines || [];
+    if (!h2h && !history.length && !rosters.length && !disciplines.length) return null;
+
+    return (
+      <div className="event-detail-sections">
+        {h2h && (
+          <div className="detail-block">
+            <h4>Head-to-Head</h4>
+            <p className="detail-summary">{h2h.summary}</p>
+            {h2h.matches?.length > 0 && (
+              <div className="h2h-list">
+                {h2h.matches.map((m, i) => (
+                  <div key={i} className="h2h-row">
+                    <span className="h2h-date">{m.date}</span>
+                    <span className="h2h-score">{m.homeTeam} {m.homeScore}–{m.awayScore} {m.awayTeam}</span>
+                    {m.competition && <span className="h2h-comp">{m.competition}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {history.length > 0 && (
+          <div className="detail-block detail-grid">
+            {history.map((t, i) => (
+              <div key={i} className="team-history-card">
+                <h4>{t.team}</h4>
+                {t.recentForm && <div className="form-badges">{t.recentForm.split('').map((c, j) => (
+                  <span key={j} className={`form-badge form-${c.toLowerCase()}`}>{c}</span>
+                ))}</div>}
+                {t.recentResults?.length > 0 && (
+                  <ul className="form-results">
+                    {t.recentResults.slice(0, 5).map((r, j) => (
+                      <li key={j}>{r.result} {r.score} vs {r.opponent}{r.competition ? ` · ${r.competition}` : ''}</li>
+                    ))}
+                  </ul>
+                )}
+                {t.pastTournament?.length > 0 && (
+                  <p className="past-tourn">Past WC: {t.pastTournament.join(', ')}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {rosters.length > 0 && (
+          <div className="detail-block detail-grid">
+            {rosters.map((r, i) => (
+              <div key={i} className="roster-card">
+                <h4>{r.team} squad</h4>
+                <ul className="roster-list">
+                  {r.players.map((p, j) => (
+                    <li key={j}>
+                      {p.number ? `#${p.number} ` : ''}{p.name}
+                      <span className="roster-meta">{[p.position, p.age ? `${p.age}y` : null].filter(Boolean).join(' · ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {disciplines.length > 0 && (
+          <div className="detail-block">
+            <h4>Events &amp; medalists</h4>
+            <div className="discipline-list">
+              {disciplines.map((d, i) => (
+                <div key={i} className="discipline-card">
+                  <div className="discipline-event">{d.event}{d.year ? ` (${d.year})` : ''}</div>
+                  <div className="medalist-row">
+                    {d.medalists.map((m, j) => (
+                      <span key={j} className={`medalist medal-${m.medal.toLowerCase()}`}>
+                        {m.medal === 'Gold' ? '🥇' : m.medal === 'Silver' ? '🥈' : '🥉'} {m.name}{m.country ? ` (${m.country})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderGenericUpcomingBoard = () => {
     if (!filteredUpcoming.length) {
       return (
@@ -782,6 +876,8 @@ function SportsDashboard() {
               </button>
             </div>
           )}
+
+          {renderEventDetail(activeEvent)}
         </div>
       </div>
     );

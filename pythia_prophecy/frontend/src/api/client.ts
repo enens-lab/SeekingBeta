@@ -389,6 +389,57 @@ export interface SportsLineupPlayer {
   radarMetrics?: SportsRadarMetric[];
 }
 
+// ---- World Cup / Olympics detail blocks (optional, per board) ----
+export interface SportsHeadToHeadMatch {
+  date?: string;
+  homeTeam?: string;
+  awayTeam?: string;
+  homeScore?: number;
+  awayScore?: number;
+  competition?: string;
+}
+export interface SportsHeadToHead {
+  summary?: string;
+  homeWins?: number;
+  awayWins?: number;
+  draws?: number;
+  matches: SportsHeadToHeadMatch[];
+}
+export interface SportsTeamFormResult {
+  date?: string;
+  opponent?: string;
+  result?: string;
+  score?: string;
+  competition?: string;
+}
+export interface SportsTeamHistory {
+  team: string;
+  recentForm?: string;
+  recentResults: SportsTeamFormResult[];
+  pastTournament: string[];
+}
+export interface SportsRosterPlayer {
+  name: string;
+  position?: string;
+  age?: number;
+  number?: string;
+}
+export interface SportsTeamRoster {
+  team: string;
+  players: SportsRosterPlayer[];
+}
+export interface SportsMedalist {
+  medal: string;
+  name: string;
+  country?: string;
+}
+export interface SportsOlympicDiscipline {
+  sport: string;
+  event: string;
+  year?: number;
+  medalists: SportsMedalist[];
+}
+
 export interface SportsUpcomingBoard {
   id: string;
   name: string;
@@ -425,6 +476,11 @@ export interface SportsUpcomingBoard {
   awayFeaturedPlayer?: SportsLineupPlayer;
   homeFeaturedPlayer?: SportsLineupPlayer;
   predictions: SportsBoardPrediction[];
+  // World Cup / Olympics detail (optional)
+  headToHead?: SportsHeadToHead;
+  teamHistory?: SportsTeamHistory[];
+  rosters?: SportsTeamRoster[];
+  disciplines?: SportsOlympicDiscipline[];
 }
 
 export interface SportsHistoricalBoard {
@@ -443,6 +499,7 @@ export interface SportsHistoricalBoard {
   venue?: string;
   course?: string;
   fullField?: SportsBoardPrediction[];
+  disciplines?: SportsOlympicDiscipline[];
   latestDate?: number;
   tournamentId?: string;
   scheduledDate?: number;

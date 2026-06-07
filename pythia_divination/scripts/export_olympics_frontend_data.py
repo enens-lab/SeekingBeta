@@ -23,12 +23,14 @@ DIV_ROOT = Path(__file__).resolve().parents[1]
 if str(DIV_ROOT) not in sys.path:
     sys.path.insert(0, str(DIV_ROOT))
 
-from sports.olympics import client, medal_model as mm
+from sports.olympics import client, medal_model as mm, detail as od
 from sports.olympics.constants import NEXT_SUMMER_GAMES, TOUR_NAME, noc_display_name
 
 logger = logging.getLogger(__name__)
 
 LIVE_SOURCE = "divination_olympics_medal_model"
+# Number of past Summer Games to expose as a historical browser (most recent N).
+HISTORICAL_GAMES_COUNT = 4
 
 
 def _empty_payload(selected_date: str | None) -> dict[str, Any]:
@@ -110,6 +112,40 @@ def _backtest_board(table) -> dict[str, Any] | None:
     }
 
 
+def _discipline_boards_for_year(df, year: int, *, historical: bool) -> list[dict[str, Any]]:
+    """One board per sport for a Games year, carrying its disciplines+medalists.
+
+    These render as expandable cards: sport -> events -> gold/silver/bronze. Used
+    for both the latest Games (upcoming-side detail) and past Games (historical
+    browser). Each board's `disciplines` list is the events under that sport."""
+    boards: list[dict[str, Any]] = []
+    for sport in od.sports_for_year(df, year):
+        disciplines = od.disciplines_for_sport(df, sport, year)
+        if not disciplines:
+            continue
+        n_events = len(disciplines)
+        n_medalists = sum(len(d["medalists"]) for d in disciplines)
+        board: dict[str, Any] = {
+            "id": f"olympics-{year}-{sport.lower().replace(' ', '-')}",
+            "name": f"{sport}",
+            "tour": TOUR_NAME,
+            "course": f"{n_events} events · {n_medalists} medalists",
+            "scheduledDate": int(f"{year}0714"),
+            "latestDate": int(f"{year}0730"),
+            "disciplines": disciplines,
+            "predictions": [],
+        }
+        if historical:
+            board.update({
+                "year": int(year),
+                "tournament": f"{sport} — {year} Summer Olympics",
+                "hitStatus": "Top Pick",  # neutral label; these are results, not predictions
+                "predictedWinner": None,
+            })
+        boards.append(board)
+    return boards
+
+
 def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
     """Return the Olympics medal-table board payload."""
     try:
@@ -132,6 +168,20 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
             completed.append(bt)
     except Exception as exc:  # pragma: no cover
         logger.warning("Olympics backtest failed: %s", exc)
+
+    # Discipline drill-down (sport -> events -> medalists) from the athlete dataset.
+    try:
+        df = client.load_athlete_events()
+        years = sorted(df[df["Season"] == "Summer"]["Year"].dropna().unique().tolist(), reverse=True)
+        latest = int(years[0]) if years else None
+        # Latest Games disciplines shown alongside the projection (upcoming side).
+        if latest is not None:
+            upcoming.extend(_discipline_boards_for_year(df, latest, historical=False))
+        # Historical browser: the most recent N past Games as completed boards.
+        for year in [int(y) for y in years[:HISTORICAL_GAMES_COUNT]]:
+            completed.extend(_discipline_boards_for_year(df, year, historical=True))
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Olympics discipline detail failed: %s", exc)
 
     return {
         "selectedDate": selected_date,

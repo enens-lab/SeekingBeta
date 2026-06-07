@@ -185,7 +185,7 @@ OLYMPICS_UPCOMING_CACHE_TTL_SECONDS = int(os.getenv("OLYMPICS_UPCOMING_CACHE_TTL
 
 LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
     "lstm_5d": {
-        "description": "5-Day Consistency Model (Production LSTM)",
+        "description": "5-Day Options-Enriched LSTM (48 features incl. live options flow)",
         "horizon": "5 days",
         "target_return": ">2%",
         "high_cutoff": 0.60,
@@ -198,7 +198,7 @@ LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
         "low_reco": "Weak signal ({prob:.1f}% probability, consider avoiding)",
     },
     "lstm_jackpot": {
-        "description": "20-Day Jackpot Model (High-Return Hunter)",
+        "description": "20-Day Options-Enriched Jackpot LSTM (48 features incl. live options flow)",
         "horizon": "20 days",
         "target_return": ">20%",
         "high_cutoff": 0.55,
@@ -1212,17 +1212,18 @@ def _predict_lstm_cached(model_name: str, ticker: str, force_refresh: bool = Fal
         lock.release()
 
 
-def _compute_lstm_quant_prediction(ticker: str) -> dict:
-    """Run the options-enriched quant LSTM (torch). Self-contained: reuses the
-    shared OHLCV cache, reconstructs the 10 options features live, and returns a
-    response in the same shape as the keras LSTM endpoints (plus options fields)."""
+def _compute_lstm_quant_prediction(model_name: str, ticker: str) -> dict:
+    """Run an options-enriched torch LSTM (lstm_5d / lstm_jackpot / lstm_quant).
+    Self-contained: reuses the shared OHLCV cache, reconstructs the 10 options
+    features live, and returns the same response shape as the other LSTM endpoints
+    (plus options fields). Horizon/target come from the model checkpoint."""
     from models.quant.lstm_quant import predict_quant  # lazy: torch import is heavy
 
     ticker = ticker.upper()
-    meta = LSTM_MODEL_METADATA["lstm_quant"]
+    meta = LSTM_MODEL_METADATA[model_name]
     raw = _get_cached_lstm_raw_data(ticker)
     if len(raw) < 60:
-        raise HTTPException(400, f"Not enough data for lstm_quant (need 60 bars, got {len(raw)})")
+        raise HTTPException(400, f"Not enough data for {model_name} (need 60 bars, got {len(raw)})")
 
     # Adapt the cached frame (DatetimeIndex + capitalized OHLCV) to predict_quant's schema.
     ohlcv = pd.DataFrame({
@@ -1248,7 +1249,8 @@ def _compute_lstm_quant_prediction(ticker: str) -> dict:
             schwab_chain = None
         opt_source = "schwab" if schwab_chain else "yfinance"
 
-    result = predict_quant(ohlcv, ticker, options_source=opt_source, schwab_chain_json=schwab_chain)
+    result = predict_quant(ohlcv, ticker, model_name=model_name,
+                           options_source=opt_source, schwab_chain_json=schwab_chain)
     prob_pct = round(float(result["probability"]) * 100, 2)
     signal = str(result["signal"])
     reco = _QUANT_RECO.get(signal, "{prob:.1f}% probability").format(
@@ -1256,7 +1258,7 @@ def _compute_lstm_quant_prediction(ticker: str) -> dict:
     )
     return {
         "ticker": ticker,
-        "model": "lstm_quant",
+        "model": model_name,
         "description": str(meta["description"]),
         "horizon": f"{int(result['horizon_days'])} days",
         "target_return": f">{float(result['target_return_pct']):.0f}%",
@@ -1271,10 +1273,9 @@ def _compute_lstm_quant_prediction(ticker: str) -> dict:
     }
 
 
-def _predict_lstm_quant_cached(ticker: str, force_refresh: bool = False) -> dict:
-    """Cached/singleflight wrapper for the quant LSTM, mirroring _predict_lstm_cached
-    so the new model shares the same caching + stale-fallback behavior."""
-    model_name = "lstm_quant"
+def _predict_lstm_quant_cached(model_name: str, ticker: str, force_refresh: bool = False) -> dict:
+    """Cached/singleflight wrapper for a torch options LSTM, mirroring _predict_lstm_cached
+    so it shares the same caching + stale-fallback behavior."""
     ticker = ticker.upper()
     use_cache = _should_cache_ticker(ticker) or LSTM_SERVE_CACHE_ONLY
 
@@ -1309,7 +1310,7 @@ def _predict_lstm_quant_cached(ticker: str, force_refresh: bool = False) -> dict
                 cached["cache_status"] = "hit"
                 return cached
 
-        response = _compute_lstm_quant_prediction(ticker)
+        response = _compute_lstm_quant_prediction(model_name, ticker)
         response["cache_status"] = "miss" if not force_refresh else "refreshed"
         if use_cache:
             _cache_set(model_name, ticker, response)
@@ -1335,11 +1336,15 @@ def _predict_lstm_quant_cached(ticker: str, force_refresh: bool = False) -> dict
         lock.release()
 
 
+# lstm_5d/lstm_jackpot are now served by the torch options models (keras retired);
+# lstm_quant is kept as an alias of lstm_5d. Any other name falls back to the keras path.
+_TORCH_LSTM_MODELS = {"lstm_5d", "lstm_jackpot", "lstm_quant"}
+
+
 def _dispatch_lstm_cached(model_name: str, ticker: str, force_refresh: bool = False) -> dict:
-    """Route by model: the torch quant model vs the keras lstm_5d/lstm_jackpot models.
-    Keeps the shared cache/batch/warm paths working without touching the keras flow."""
-    if model_name == "lstm_quant":
-        return _predict_lstm_quant_cached(ticker, force_refresh=force_refresh)
+    """Route by model: torch options models vs the (dormant) keras path."""
+    if model_name in _TORCH_LSTM_MODELS:
+        return _predict_lstm_quant_cached(model_name, ticker, force_refresh=force_refresh)
     return _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
 
 
@@ -1703,58 +1708,23 @@ def predict(
 
 
 @app.get("/predict/lstm_5d/{ticker}")
-def predict_lstm_5d(
-    ticker: str,
-    with_attribution: bool = False,
-    attribution_method: str = "integrated_gradients",
-    attribution_steps: int = 24,
-    attribution_top_k: int = 5,
-):
-    base = _predict_lstm_cached("lstm_5d", ticker)
-    if not with_attribution:
-        return base
-    response = dict(base)
-    response["attribution"] = _compute_lstm_attribution(
-        "lstm_5d",
-        ticker,
-        method=attribution_method,
-        steps=attribution_steps,
-        top_k=attribution_top_k,
-    )["attribution"]
-    return response
+def predict_lstm_5d(ticker: str, force_refresh: bool = False):
+    """5-day board: options-enriched 48-feature torch LSTM, P(>2% in 5d).
+    (Migrated from the keras model; integrated-gradients attribution is not
+    available for the torch path.)"""
+    return _dispatch_lstm_cached("lstm_5d", ticker, force_refresh=force_refresh)
 
 
 @app.get("/predict/lstm_jackpot/{ticker}")
-def predict_lstm_jackpot(
-    ticker: str,
-    with_attribution: bool = False,
-    attribution_method: str = "integrated_gradients",
-    attribution_steps: int = 24,
-    attribution_top_k: int = 5,
-):
-    base = _predict_lstm_cached("lstm_jackpot", ticker)
-    if not with_attribution:
-        return base
-    response = dict(base)
-    response["attribution"] = _compute_lstm_attribution(
-        "lstm_jackpot",
-        ticker,
-        method=attribution_method,
-        steps=attribution_steps,
-        top_k=attribution_top_k,
-    )["attribution"]
-    return response
+def predict_lstm_jackpot(ticker: str, force_refresh: bool = False):
+    """20-day jackpot board: options-enriched 48-feature torch LSTM, P(>20% in 20d)."""
+    return _dispatch_lstm_cached("lstm_jackpot", ticker, force_refresh=force_refresh)
 
 
 @app.get("/predict/lstm_quant/{ticker}")
 def predict_lstm_quant(ticker: str, force_refresh: bool = False):
-    """Options-enriched quant LSTM (48-feature torch model, ported from TradeBot).
-
-    Parallel to lstm_5d/lstm_jackpot for A/B comparison. The 10 options-flow
-    features are reconstructed live (yfinance Black-Scholes greeks by default;
-    Schwab real greeks when QUANT_OPTIONS_SOURCE is switched and a chain is
-    available). Attribution is not supported (the IG path is keras/TF-specific)."""
-    return _predict_lstm_quant_cached(ticker, force_refresh=force_refresh)
+    """Alias of lstm_5d (the interim parallel name for the options-enriched model)."""
+    return _dispatch_lstm_cached("lstm_quant", ticker, force_refresh=force_refresh)
 
 
 @app.get("/predict/lstm/{model_name}/{ticker}/attribution")

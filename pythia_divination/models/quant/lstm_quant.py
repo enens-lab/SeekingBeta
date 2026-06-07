@@ -20,10 +20,27 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 DIV_ROOT = Path(__file__).resolve().parents[2]
-ARTIFACT_DIR = DIV_ROOT / "artifacts" / "lstm_quant"
+ARTIFACTS_ROOT = DIV_ROOT / "artifacts"
 SEQ_LEN = 60
 
-_STATE: dict[str, Any] = {}  # lazy singleton cache: model, scaler, feature_cols, cfg, device
+# Torch options models -> artifact dir holding model.pt / scaler.joblib / feature_columns.json.
+# Keras models live under artifacts/<name>/classifier/; the torch options models live under
+# artifacts/<name>/torch/ (so they don't clobber the dormant keras files). "lstm_quant" is kept
+# as an alias of lstm_5d (the interim parallel name, byte-identical model) so the older
+# endpoint keeps working during/after the keras->torch migration.
+_MODEL_DIRS = {
+    "lstm_5d": ARTIFACTS_ROOT / "lstm_5d" / "torch",
+    "lstm_jackpot": ARTIFACTS_ROOT / "lstm_jackpot" / "torch",
+    "lstm_quant": ARTIFACTS_ROOT / "lstm_5d" / "torch",
+}
+DEFAULT_MODEL = "lstm_5d"
+
+_STATES: dict[str, dict[str, Any]] = {}  # per-model lazy cache
+
+
+def is_torch_model(model_name: str) -> bool:
+    """True if this model name is served by the torch options path (vs the keras path)."""
+    return model_name in _MODEL_DIRS
 
 
 # ── Architecture (verbatim port of TradeBot lstm/models_torch/lstm_baseline.py) ──
@@ -70,15 +87,18 @@ def _build_net(cfg: LSTMBaselineConfig):
     return LSTMBaseline(cfg)
 
 
-def load_quant_model() -> dict[str, Any]:
-    """Lazy-load the torch model + scaler + feature columns (cached)."""
-    if _STATE:
-        return _STATE
+def load_quant_model(model_name: str = DEFAULT_MODEL) -> dict[str, Any]:
+    """Lazy-load a torch options model (+ scaler + feature columns) by name, cached per model."""
+    if model_name in _STATES:
+        return _STATES[model_name]
+    art_dir = _MODEL_DIRS.get(model_name)
+    if art_dir is None:
+        raise ValueError(f"unknown torch options model '{model_name}' (known: {sorted(_MODEL_DIRS)})")
     import warnings
     import torch
     import joblib
 
-    ckpt = torch.load(ARTIFACT_DIR / "model.pt", map_location="cpu", weights_only=False)
+    ckpt = torch.load(art_dir / "model.pt", map_location="cpu", weights_only=False)
     cfg = LSTMBaselineConfig(**{k: v for k, v in (ckpt.get("config") or {}).items()
                                 if k in LSTMBaselineConfig.__dataclass_fields__})
     net = _build_net(cfg)
@@ -89,8 +109,8 @@ def load_quant_model() -> dict[str, Any]:
     # so a sklearn version mismatch is harmless here — silence the benign warning.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        scaler = joblib.load(ARTIFACT_DIR / "scaler.joblib")
-    with open(ARTIFACT_DIR / "feature_columns.json") as f:
+        scaler = joblib.load(art_dir / "scaler.joblib")
+    with open(art_dir / "feature_columns.json") as f:
         feature_cols = json.load(f)
 
     # Extract StandardScaler params as plain arrays so scaling is independent of the
@@ -100,7 +120,7 @@ def load_quant_model() -> dict[str, Any]:
     scaler_scale = np.asarray(getattr(scaler, "scale_", 1.0), dtype=np.float64)
     scaler_scale = np.where(scaler_scale == 0, 1.0, scaler_scale)  # guard zero-variance cols
 
-    _STATE.update({
+    state = {
         "model": net,
         "scaler": scaler,
         "scaler_mean": scaler_mean,
@@ -109,10 +129,13 @@ def load_quant_model() -> dict[str, Any]:
         "cfg": cfg,
         "horizon": ckpt.get("pred_horizon", 5),
         "target_return": ckpt.get("target_return", 0.02),
-    })
-    logger.info("Loaded lstm_quant: %d features, seq_len=%d, %d params",
-                cfg.num_features, cfg.seq_len, ckpt.get("n_params", 0))
-    return _STATE
+        "model_name": model_name,
+    }
+    _STATES[model_name] = state
+    logger.info("Loaded torch options model %s: %d features, seq_len=%d, %d params, horizon=%sd target=%s",
+                model_name, cfg.num_features, cfg.seq_len, ckpt.get("n_params", 0),
+                state["horizon"], state["target_return"])
+    return state
 
 
 def _signal(prob: float) -> str:
@@ -125,21 +148,23 @@ def _signal(prob: float) -> str:
     return "avoid"
 
 
-def predict_quant(ohlcv_df, symbol: str, *, options_source: str = "auto",
+def predict_quant(ohlcv_df, symbol: str, *, model_name: str = DEFAULT_MODEL,
+                  options_source: str = "auto",
                   schwab_chain_json: dict | None = None) -> dict[str, Any]:
-    """Run the options-enriched quant LSTM for one ticker. Returns a dict with
-    probability/signal/horizon (P(>2% in 5d)). Raises ValueError if < 60 bars."""
+    """Run an options-enriched torch LSTM for one ticker. `model_name` selects the
+    model (lstm_5d / lstm_jackpot / lstm_quant). Returns probability/signal and the
+    model's horizon + target_return (read from the checkpoint). Raises ValueError if < 60 bars."""
     import torch
     from .feature_engine import engineer_quant_features
     from .options_features import FEATURE_COLUMNS as OPTION_COLS
 
-    state = load_quant_model()
+    state = load_quant_model(model_name)
     feat = engineer_quant_features(
         ohlcv_df, state["feature_cols"], symbol=symbol,
         options_source=options_source, schwab_chain_json=schwab_chain_json,
     )
     if len(feat) < SEQ_LEN:
-        raise ValueError(f"need >= {SEQ_LEN} bars for lstm_quant, got {len(feat)}")
+        raise ValueError(f"need >= {SEQ_LEN} bars for {model_name}, got {len(feat)}")
 
     # Did live options reconstruction actually populate the 10 options features,
     # or did it fail and zero-fill? (last row carries today's reconstructed values.)
@@ -155,6 +180,7 @@ def predict_quant(ohlcv_df, symbol: str, *, options_source: str = "auto",
     prob = float(1.0 / (1.0 + np.exp(-logit)))  # logit -> probability
 
     return {
+        "model_name": model_name,
         "probability": round(prob, 4),
         "signal": _signal(prob),
         "horizon_days": int(state["horizon"]),

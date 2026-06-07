@@ -379,6 +379,7 @@ function SportsDashboard() {
   const [tennisTourFilter, setTennisTourFilter] = useState<'All' | 'ATP' | 'WTA'>('All');
   const [golfTourFilter, setGolfTourFilter] = useState<'All' | 'PGA' | 'LPGA'>('All');
   const [soccerTourFilter, setSoccerTourFilter] = useState<string>('All');
+  const [olympicsTourFilter, setOlympicsTourFilter] = useState<string>('All');
   const [requestedMlbDate, setRequestedMlbDate] = useState<string>('');
   const [requestedBasketballDate, setRequestedBasketballDate] = useState<string>('');
   const [requestedFootballDate, setRequestedFootballDate] = useState<string>('');
@@ -458,6 +459,16 @@ function SportsDashboard() {
     return Array.from(tours).sort();
   }, [activeSport, currentUpcoming, currentBacktests]);
 
+  // Olympics: the distinct editions present (Summer Olympics 2028 / Winter
+  // Olympics 2026), used for the season filter dropdown.
+  const olympicsTours = useMemo(() => {
+    if (activeSport !== 'Olympics') return [] as string[];
+    const tours = new Set<string>();
+    currentUpcoming.forEach((event) => event.tour && tours.add(event.tour));
+    currentBacktests.forEach((board) => board.tour && tours.add(board.tour));
+    return Array.from(tours).sort();
+  }, [activeSport, currentUpcoming, currentBacktests]);
+
   const filteredUpcoming = useMemo(() => {
     if (activeSport === 'Tennis' && tennisTourFilter !== 'All') {
       return currentUpcoming.filter((event) => event.tour === tennisTourFilter);
@@ -468,8 +479,11 @@ function SportsDashboard() {
     if (activeSport === 'Soccer' && soccerTourFilter !== 'All') {
       return currentUpcoming.filter((event) => event.tour === soccerTourFilter);
     }
+    if (activeSport === 'Olympics' && olympicsTourFilter !== 'All') {
+      return currentUpcoming.filter((event) => event.tour === olympicsTourFilter);
+    }
     return currentUpcoming;
-  }, [activeSport, currentUpcoming, tennisTourFilter, golfTourFilter, soccerTourFilter]);
+  }, [activeSport, currentUpcoming, tennisTourFilter, golfTourFilter, soccerTourFilter, olympicsTourFilter]);
 
   useEffect(() => {
     if (activeSport === 'Baseball' || activeSport === 'Basketball' || activeSport === 'Football') return;
@@ -562,11 +576,13 @@ function SportsDashboard() {
         matchesTour = golfTourFilter === 'All' || backtest.tour === golfTourFilter;
       } else if (activeSport === 'Soccer') {
         matchesTour = soccerTourFilter === 'All' || backtest.tour === soccerTourFilter;
+      } else if (activeSport === 'Olympics') {
+        matchesTour = olympicsTourFilter === 'All' || backtest.tour === olympicsTourFilter;
       }
 
       return matchesSearch && matchesFilter && matchesTour;
     });
-  }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, soccerTourFilter, activeSport]);
+  }, [currentBacktests, backtestSearchQuery, backtestFilter, tennisTourFilter, golfTourFilter, soccerTourFilter, olympicsTourFilter, activeSport]);
 
   const handleSportChange = (sport: SportCategory) => {
     if (sport !== 'Golf' && sport !== 'Tennis' && sport !== 'Basketball' && sport !== 'Baseball' && sport !== 'Football' && sport !== 'Soccer' && sport !== 'Olympics') return;
@@ -585,6 +601,7 @@ function SportsDashboard() {
     setTennisTourFilter('All');
     setGolfTourFilter('All');
     setSoccerTourFilter('All');
+    setOlympicsTourFilter('All');
   };
 
   const toggleBacktestDetails = (idx: number) => {
@@ -792,6 +809,22 @@ function SportsDashboard() {
               >
                 <option value="All">All competitions</option>
                 {soccerTours.map((tour) => (
+                  <option key={tour} value={tour}>{tour}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {activeSport === 'Olympics' && olympicsTours.length > 1 && (
+            <div className="selector-group tour-filter-group">
+              <label>Games:</label>
+              <select
+                value={olympicsTourFilter}
+                onChange={(event) => setOlympicsTourFilter(event.target.value)}
+                className="sports-filter-dropdown"
+              >
+                <option value="All">All Games</option>
+                {olympicsTours.map((tour) => (
                   <option key={tour} value={tour}>{tour}</option>
                 ))}
               </select>
@@ -1755,6 +1788,18 @@ function SportsDashboard() {
                         >
                           <option value="All">All competitions</option>
                           {soccerTours.map((tour) => (
+                            <option key={tour} value={tour}>{tour}</option>
+                          ))}
+                        </select>
+                      )}
+                      {activeSport === 'Olympics' && olympicsTours.length > 1 && (
+                        <select
+                          value={olympicsTourFilter}
+                          onChange={(event) => setOlympicsTourFilter(event.target.value)}
+                          className="sports-filter-dropdown"
+                        >
+                          <option value="All">All Games</option>
+                          {olympicsTours.map((tour) => (
                             <option key={tour} value={tour}>{tour}</option>
                           ))}
                         </select>

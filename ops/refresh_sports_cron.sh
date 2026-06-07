@@ -43,7 +43,12 @@ docker run --rm \
     python scripts/export_mlb_frontend_data.py || echo "mlb refresh FAILED"
   '
 
-echo "[refresh_sports_cron] restart prophecy-api to serve refreshed boards"
-$DC restart prophecy-api
+# IMPORTANT: prophecy bakes frontend/src/data into the image at build time
+# (Dockerfile: COPY frontend/src/data/ ./frontend_data/), and serves from that
+# copy — NOT from the host dir. A plain `restart` will NOT pick up the files the
+# export just wrote; the image must be rebuilt. (This is also why committing the
+# static JSON to git matters: the build uses the repo copy.)
+echo "[refresh_sports_cron] rebuild prophecy-api to bake in the refreshed boards"
+$DC up -d --build prophecy-api
 
 echo "[refresh_sports_cron] $(date -u +%FT%TZ) done"

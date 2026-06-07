@@ -77,7 +77,7 @@ function StarterRadarChart({
                 key={`ring-${index}`}
                 points={points}
                 fill="none"
-                stroke="rgba(255,255,255,0.08)"
+                stroke="var(--sports-border)"
                 strokeWidth="1"
               />
             ))}
@@ -88,7 +88,7 @@ function StarterRadarChart({
                 y1="120"
                 x2={point.outer.x}
                 y2={point.outer.y}
-                stroke="rgba(255,255,255,0.08)"
+                stroke="var(--sports-border)"
                 strokeWidth="1"
               />
             ))}

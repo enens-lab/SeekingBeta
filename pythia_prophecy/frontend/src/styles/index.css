@@ -27,6 +27,11 @@
   --font-display: 'Sora', 'Public Sans', sans-serif;
   --primary: var(--accent);
   --text: var(--text-primary);
+  /* Aliases for legacy names used by the sports pages — resolve to theme-aware vars
+     so they work in both light and dark (previously undefined → broke light mode). */
+  --text-main: var(--text-primary);
+  --bg-body: var(--bg-primary);
+  --border-color: var(--border);
   --page-radial-a: rgba(0, 143, 122, 0.16);
   --page-radial-b: var(--brand-secondary-soft);
   --header-bg: rgba(244, 251, 249, 0.9);
@@ -47,6 +52,15 @@
   --auth-radial-a: rgba(0, 143, 122, 0.14);
   --auth-radial-b: var(--brand-secondary-soft);
   --focus-ring: 0 0 0 3px var(--accent-soft);
+  /* Sports landing surfaces — theme-aware (light) */
+  --sports-veil: rgba(0, 143, 122, 0.05);
+  --sports-card-bg: linear-gradient(180deg, #ffffff, #f5fcfa);
+  --sports-surface: rgba(0, 143, 122, 0.05);
+  --sports-border: var(--border);
+  --sports-border-strong: var(--border-light);
+  --sports-shadow: 0 18px 44px rgba(10, 75, 74, 0.10);
+  --sports-teal: var(--accent);
+  --sports-blue: var(--brand-secondary);
 }
 
 :root[data-theme='dark'] {
@@ -91,6 +105,15 @@
   --chart-benchmark-line: #8ca5c9;
   --auth-radial-a: rgba(45, 212, 191, 0.12);
   --auth-radial-b: rgba(96, 165, 250, 0.15);
+  /* Sports landing surfaces — theme-aware (dark; preserves the original look) */
+  --sports-veil: rgba(8, 15, 29, 0.96);
+  --sports-card-bg: linear-gradient(180deg, rgba(15, 23, 39, 0.92), rgba(11, 18, 30, 0.82));
+  --sports-surface: rgba(255, 255, 255, 0.04);
+  --sports-border: rgba(255, 255, 255, 0.08);
+  --sports-border-strong: rgba(255, 255, 255, 0.12);
+  --sports-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+  --sports-teal: #dffcf6;
+  --sports-blue: #9ad5ff;
 }
 
 * {

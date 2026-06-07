@@ -40,7 +40,7 @@
   font-size: 0.9rem;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--text-main);
+  color: rgba(255, 255, 255, 0.92); /* sits on the dark logo tile in both themes */
 }
 
 .player-portrait {
@@ -80,7 +80,7 @@
 }
 
 .player-portrait-fallback {
-  color: var(--text-main);
+  color: rgba(255, 255, 255, 0.92); /* sits on the dark portrait ring in both themes */
   font-size: 0.92rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -117,7 +117,7 @@
 }
 
 .player-profile-name {
-  color: var(--text-main);
+  color: var(--text-primary);
   font-size: 0.98rem;
   line-height: 1.2;
 }
@@ -152,23 +152,23 @@
   gap: 0.35rem;
   padding: 0.28rem 0.52rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--sports-border);
+  background: var(--sports-surface);
   color: var(--text-muted);
   font-size: 0.72rem;
   line-height: 1.2;
 }
 
 .player-stat-chip strong {
-  color: var(--text-main);
+  color: var(--text-primary);
   font-size: 0.76rem;
 }
 
 .starter-radar {
   padding: 1rem;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(14, 22, 38, 0.92), rgba(9, 14, 24, 0.88));
+  border: 1px solid var(--sports-border);
+  background: var(--sports-card-bg);
 }
 
 .starter-radar-header {
@@ -182,7 +182,7 @@
 .starter-radar-title {
   margin: 0;
   font-size: 1rem;
-  color: var(--text-main);
+  color: var(--text-primary);
 }
 
 .starter-radar-subtitle {
@@ -220,7 +220,7 @@
 }
 
 .starter-radar-labels strong {
-  color: var(--text-main);
+  color: var(--text-primary);
 }
 
 .starter-radar-empty {

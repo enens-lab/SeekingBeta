@@ -132,6 +132,8 @@ LSTM_RAW_DATA_CACHE_TTL = int(os.getenv("LSTM_RAW_DATA_CACHE_TTL_SECONDS", "600"
 LSTM_RAW_DATA_STALE_TTL = int(os.getenv("LSTM_RAW_DATA_STALE_TTL_SECONDS", "86400"))
 LSTM_CACHE_MAX_ITEMS = int(os.getenv("LSTM_CACHE_MAX_ITEMS", "512"))
 LSTM_SINGLEFLIGHT_WAIT_SECONDS = float(os.getenv("LSTM_SINGLEFLIGHT_WAIT_SECONDS", "3.0"))
+# lstm_quant: live options source. "yfinance" (free, BS greeks) now; "schwab"/"auto" once re-authed.
+QUANT_OPTIONS_SOURCE = os.getenv("QUANT_OPTIONS_SOURCE", "yfinance")
 HOME_CACHE_WARM_ENABLED = os.getenv("HOME_CACHE_WARM_ENABLED", "true").lower() == "true"
 HOME_CACHE_WARM_ON_STARTUP = os.getenv("HOME_CACHE_WARM_ON_STARTUP", "true").lower() == "true"
 HOME_CACHE_WARM_INTERVAL_SECONDS = int(os.getenv("HOME_CACHE_WARM_INTERVAL_SECONDS", "900"))
@@ -202,6 +204,19 @@ LSTM_MODEL_METADATA: Dict[str, Dict[str, Any]] = {
         "medium_reco": "Moderate signal ({prob:.1f}% probability, monitor for entry)",
         "low_reco": "Low probability ({prob:.1f}%), not a jackpot candidate",
     },
+    "lstm_quant": {
+        "description": "Options-Enriched Quant LSTM (48-feature, live options flow)",
+        "horizon": "5 days",
+        "target_return": ">2%",
+    },
+}
+
+# lstm_quant uses its own signal thresholds (in models.quant.lstm_quant); map them to reco text.
+_QUANT_RECO = {
+    "strong_buy": "Strong buy ({prob:.1f}% probability of >{tgt:.0f}% gain in {h}d; options flow confirms)",
+    "buy": "Buy ({prob:.1f}% probability of >{tgt:.0f}% gain in {h}d)",
+    "hold": "Neutral ({prob:.1f}% probability, hold)",
+    "avoid": "Weak signal ({prob:.1f}% probability, consider avoiding)",
 }
 
 
@@ -675,7 +690,7 @@ def _warm_home_cache_once(force_refresh: bool = False) -> Dict[str, Any]:
     for model_name in models:
         for ticker in tickers:
             try:
-                _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
+                _dispatch_lstm_cached(model_name, ticker, force_refresh=force_refresh)
                 summary["success"] += 1
             except Exception as exc:
                 summary["failed"] += 1
@@ -1129,6 +1144,123 @@ def _predict_lstm_cached(model_name: str, ticker: str, force_refresh: bool = Fal
         lock.release()
 
 
+def _compute_lstm_quant_prediction(ticker: str) -> dict:
+    """Run the options-enriched quant LSTM (torch). Self-contained: reuses the
+    shared OHLCV cache, reconstructs the 10 options features live, and returns a
+    response in the same shape as the keras LSTM endpoints (plus options fields)."""
+    from models.quant.lstm_quant import predict_quant  # lazy: torch import is heavy
+
+    ticker = ticker.upper()
+    meta = LSTM_MODEL_METADATA["lstm_quant"]
+    raw = _get_cached_lstm_raw_data(ticker)
+    if len(raw) < 60:
+        raise HTTPException(400, f"Not enough data for lstm_quant (need 60 bars, got {len(raw)})")
+
+    # Adapt the cached frame (DatetimeIndex + capitalized OHLCV) to predict_quant's schema.
+    ohlcv = pd.DataFrame({
+        "date": pd.to_datetime(raw.index),
+        "open": raw["Open"].to_numpy(dtype=float),
+        "high": raw["High"].to_numpy(dtype=float),
+        "low": raw["Low"].to_numpy(dtype=float),
+        "close": raw["Close"].to_numpy(dtype=float),
+        "volume": raw["Volume"].to_numpy(dtype=float),
+    })
+
+    result = predict_quant(ohlcv, ticker, options_source=QUANT_OPTIONS_SOURCE)
+    prob_pct = round(float(result["probability"]) * 100, 2)
+    signal = str(result["signal"])
+    reco = _QUANT_RECO.get(signal, "{prob:.1f}% probability").format(
+        prob=prob_pct, tgt=float(result["target_return_pct"]), h=int(result["horizon_days"])
+    )
+    return {
+        "ticker": ticker,
+        "model": "lstm_quant",
+        "description": str(meta["description"]),
+        "horizon": f"{int(result['horizon_days'])} days",
+        "target_return": f">{float(result['target_return_pct']):.0f}%",
+        "probability": prob_pct,
+        "signal": signal,
+        "last_close": float(raw["Close"].iloc[-1]),
+        "recommendation": reco,
+        "options_source": result["options_source"],
+        "options_live": bool(result["options_live"]),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data_source": DATA_SOURCE,
+    }
+
+
+def _predict_lstm_quant_cached(ticker: str, force_refresh: bool = False) -> dict:
+    """Cached/singleflight wrapper for the quant LSTM, mirroring _predict_lstm_cached
+    so the new model shares the same caching + stale-fallback behavior."""
+    model_name = "lstm_quant"
+    ticker = ticker.upper()
+    use_cache = _should_cache_ticker(ticker) or LSTM_SERVE_CACHE_ONLY
+
+    if use_cache and not force_refresh:
+        cached = _cache_get(model_name, ticker, LSTM_RESPONSE_CACHE_TTL)
+        if cached:
+            cached["cache_status"] = "hit"
+            return cached
+        if LSTM_SERVE_CACHE_ONLY:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale_cache_only"
+                stale["warning"] = "Serving stale cached prediction while live refresh is disabled"
+                return stale
+            raise HTTPException(503, detail=f"Cached prediction unavailable for {model_name}/{ticker}")
+
+    lock = _singleflight_lock(model_name, ticker)
+    acquired = lock.acquire(timeout=LSTM_SINGLEFLIGHT_WAIT_SECONDS)
+    if not acquired:
+        if use_cache:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale_inflight"
+                stale["warning"] = "Refresh in progress; returned cached prediction"
+                return stale
+        raise HTTPException(503, detail="Prediction refresh in progress. Please retry shortly.")
+
+    try:
+        if use_cache and not force_refresh:
+            cached = _cache_get(model_name, ticker, LSTM_RESPONSE_CACHE_TTL)
+            if cached:
+                cached["cache_status"] = "hit"
+                return cached
+
+        response = _compute_lstm_quant_prediction(ticker)
+        response["cache_status"] = "miss" if not force_refresh else "refreshed"
+        if use_cache:
+            _cache_set(model_name, ticker, response)
+        return response
+    except HTTPException:
+        if use_cache:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale"
+                stale["warning"] = "Returning stale cached result due to live data fetch failure"
+                return stale
+        raise
+    except Exception as exc:
+        if use_cache:
+            stale = _cache_get(model_name, ticker, LSTM_STALE_CACHE_TTL)
+            if stale:
+                stale["cache_status"] = "stale"
+                stale["warning"] = "Returning stale cached result due to live data fetch failure"
+                stale["last_error"] = str(exc)
+                return stale
+        raise HTTPException(400, detail=str(exc))
+    finally:
+        lock.release()
+
+
+def _dispatch_lstm_cached(model_name: str, ticker: str, force_refresh: bool = False) -> dict:
+    """Route by model: the torch quant model vs the keras lstm_5d/lstm_jackpot models.
+    Keeps the shared cache/batch/warm paths working without touching the keras flow."""
+    if model_name == "lstm_quant":
+        return _predict_lstm_quant_cached(ticker, force_refresh=force_refresh)
+    return _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
+
+
 def _market_history_frame(ticker: str, limit: int) -> pd.DataFrame:
     normalized = ticker.strip().upper()
     if not normalized:
@@ -1425,7 +1557,7 @@ def predict_homepage(
 
             try:
                 model_predictions.append(
-                    _predict_lstm_cached(model_name, ticker, force_refresh=force_refresh)
+                    _dispatch_lstm_cached(model_name, ticker, force_refresh=force_refresh)
                 )
             except Exception as exc:
                 failures.append({"ticker": ticker, "error": str(exc)})
@@ -1530,6 +1662,17 @@ def predict_lstm_jackpot(
         top_k=attribution_top_k,
     )["attribution"]
     return response
+
+
+@app.get("/predict/lstm_quant/{ticker}")
+def predict_lstm_quant(ticker: str, force_refresh: bool = False):
+    """Options-enriched quant LSTM (48-feature torch model, ported from TradeBot).
+
+    Parallel to lstm_5d/lstm_jackpot for A/B comparison. The 10 options-flow
+    features are reconstructed live (yfinance Black-Scholes greeks by default;
+    Schwab real greeks when QUANT_OPTIONS_SOURCE is switched and a chain is
+    available). Attribution is not supported (the IG path is keras/TF-specific)."""
+    return _predict_lstm_quant_cached(ticker, force_refresh=force_refresh)
 
 
 @app.get("/predict/lstm/{model_name}/{ticker}/attribution")

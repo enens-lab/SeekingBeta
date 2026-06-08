@@ -41,7 +41,7 @@ type ChartState = {
 };
 
 const MODEL_OPTIONS: Array<{ value: TrackModel; label: string }> = [
-  // Core 5-Day temporarily hidden from the public homepage track record.
+  { value: 'lstm_5d', label: 'Core 5-Day' },
   { value: 'lstm_jackpot', label: 'Jackpot 20-Day' },
 ];
 
@@ -83,7 +83,7 @@ function buildPath(xs: number[], ys: Array<number | null>): string {
 }
 
 function PerformanceComparison() {
-  const [selectedModel, setSelectedModel] = useState<TrackModel>('lstm_jackpot');
+  const [selectedModel, setSelectedModel] = useState<TrackModel>('lstm_5d');
   const [data, setData] = useState<LoadedData>({ curve: null, summary: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

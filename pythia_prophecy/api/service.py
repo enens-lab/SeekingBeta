@@ -2110,6 +2110,18 @@ def _coerce_subscription_tier(raw_value: Optional[str], fallback: SubscriptionTi
         return fallback
 
 
+def _epoch_to_utc(numeric: float) -> Optional[datetime]:
+    """Convert a Unix epoch to UTC, tolerating millisecond epochs (StoreKit/Apple send
+    expiresDate etc. in milliseconds) and never raising on out-of-range values."""
+    # Anything beyond ~year 2286 expressed in "seconds" is really milliseconds.
+    if abs(numeric) > 10_000_000_000:
+        numeric = numeric / 1000.0
+    try:
+        return datetime.fromtimestamp(numeric, tz=timezone.utc)
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
 def _to_utc_datetime(value: Optional[object]) -> Optional[datetime]:
     if value is None:
         return None
@@ -2117,17 +2129,16 @@ def _to_utc_datetime(value: Optional[object]) -> Optional[datetime]:
         if value.tzinfo is None:
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
+    if isinstance(value, bool):  # bool is an int subclass; a flag is not a timestamp
+        return None
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+        return _epoch_to_utc(float(value))
     if isinstance(value, str):
         candidate = value.strip()
         if not candidate:
             return None
-        if candidate.isdigit():
-            numeric = int(candidate)
-            if numeric > 10_000_000_000:
-                return datetime.fromtimestamp(numeric / 1000.0, tz=timezone.utc)
-            return datetime.fromtimestamp(float(numeric), tz=timezone.utc)
+        if candidate.lstrip("-").isdigit():
+            return _epoch_to_utc(float(int(candidate)))
         try:
             return datetime.fromisoformat(candidate.replace("Z", "+00:00")).astimezone(timezone.utc)
         except ValueError:
@@ -3722,7 +3733,11 @@ def _validate_apple_purchase_payload(data: AppleVerifyRequest) -> dict[str, Any]
         and parsed_original_transaction_id != data.original_transaction_id
     ):
         raise HTTPException(400, detail="Apple original transaction mismatch")
-    if parsed_account_token and data.app_account_token and parsed_account_token != data.app_account_token:
+    if (
+        parsed_account_token
+        and data.app_account_token
+        and parsed_account_token.lower() != data.app_account_token.lower()  # appAccountToken is a case-insensitive UUID
+    ):
         raise HTTPException(400, detail="Apple app account token mismatch")
 
     return parsed

@@ -4,9 +4,15 @@ set -euo pipefail
 # ==============================================================================
 # Sports static-board refresh — cron wrapper for EC2.
 # ==============================================================================
-# soccer + mlb + tennis are served from PRECOMPUTED static JSON (the BFF reads
-# files; it does NOT recompute per request — that was the cause of sitewide
-# sports slowness / 504s under load). This job regenerates those static files.
+# Sports boards are served from PRECOMPUTED static JSON (the BFF reads files;
+# it does NOT recompute per request — that was the cause of sitewide sports
+# slowness / 504s under load). This job regenerates the static files for ALL
+# sports: tennis, soccer, mlb, golf, basketball, football, olympics.
+#
+# NOTE: the cron entry must redirect its log somewhere ec2-user can write
+# (e.g. ~/logs/refresh_sports.log). The original install pointed at
+# /var/log/refresh_sports.log, which ec2-user cannot create — the shell died on
+# the redirect before this script ever ran, so boards silently froze for weeks.
 #
 # The divination Python deps (pandas/torch/sklearn/scipy) live ONLY inside the
 # seekingbeta-divination-api image, and the exports must write to the host's
@@ -41,6 +47,14 @@ docker run --rm \
     python scripts/export_soccer_frontend_data.py || echo "soccer refresh FAILED"
     echo "--- mlb ---"
     python scripts/export_mlb_frontend_data.py || echo "mlb refresh FAILED"
+    echo "--- golf ---"
+    python scripts/export_frontend_data.py || echo "golf refresh FAILED"
+    echo "--- basketball ---"
+    python scripts/export_basketball_frontend_data.py || echo "basketball refresh FAILED"
+    echo "--- football ---"
+    python scripts/export_football_frontend_data.py || echo "football refresh FAILED"
+    echo "--- olympics ---"
+    python scripts/export_olympics_frontend_data.py || echo "olympics refresh FAILED"
   '
 
 # IMPORTANT: prophecy bakes frontend/src/data into the image at build time

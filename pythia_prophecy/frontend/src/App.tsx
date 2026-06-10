@@ -21,6 +21,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import RefundCancellation from './pages/RefundCancellation';
 import Methodology from './pages/Methodology';
+import Support from './pages/Support';
 import SportsLanding from './pages/sports/SportsLanding';
 import SportsDashboard from './pages/sports/SportsDashboard';
 
@@ -200,6 +201,7 @@ function AppRoutes() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund-cancellation" element={<RefundCancellation />} />
       <Route path="/methodology" element={<Methodology />} />
+      <Route path="/support" element={<Support />} />
       <Route path="/sports" element={<SportsLanding />} />
       <Route
         path="/dashboard"

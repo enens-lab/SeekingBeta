@@ -1960,7 +1960,31 @@ def _sports_board_collection(
     )
 
 
+def _sanitize_requested_slate_date(raw: str | None, grace_days: int = 1) -> str | None:
+    """Clients persist their last-selected slate date and re-send it on reload.
+    A stale date (e.g. April, cached before a data refresh) must NOT reach
+    divination: off-cache dates trigger its ~60s live recompute, the request
+    times out, and the client keeps showing its cached stale boards forever.
+    Past/unparseable dates resolve to None (= today's slate)."""
+    if not raw:
+        return None
+    text = str(raw).strip()
+    for fmt in ("%Y-%m-%d", "%Y%m%d"):
+        try:
+            requested = datetime.strptime(text, fmt).date()
+            break
+        except ValueError:
+            continue
+    else:
+        return None
+    today = datetime.now(timezone.utc).date()
+    if requested < today - timedelta(days=grace_days):
+        return None
+    return text
+
+
 async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[SportsBoardCollection]:
+    mlb_date = _sanitize_requested_slate_date(mlb_date)
     backtests_filename = "mlb_historical_backtests.json"
     backtests = _load_sports_json(backtests_filename)
     fallback_updated_at = _sports_data_updated_at([backtests_filename])

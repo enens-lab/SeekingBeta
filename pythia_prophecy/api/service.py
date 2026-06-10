@@ -2546,6 +2546,55 @@ async def _hydrate_company_from_alpaca(ticker: str) -> Optional[dict]:
     return payload
 
 
+# ── Company profile/news freshness (stale-while-revalidate) ──
+# Profiles + news were previously fetched once and served from SQLite forever.
+# Serve the cached copy immediately, and when the newest stored article is older
+# than COMPANY_NEWS_REFRESH_HOURS, refresh profile+news in the background
+# (throttled per ticker so concurrent viewers can't stampede yfinance).
+COMPANY_NEWS_REFRESH_HOURS = float(os.getenv("COMPANY_NEWS_REFRESH_HOURS", "24"))
+_COMPANY_REFRESH_MIN_INTERVAL_S = 1800.0
+_company_refresh_attempts: dict[str, float] = {}
+
+
+def _company_news_is_stale(news_rows: list[dict]) -> bool:
+    if not news_rows:
+        return True
+    newest = None
+    for row in news_rows:
+        raw = row.get("published_at")
+        if not raw:
+            continue
+        try:
+            parsed = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        if newest is None or parsed > newest:
+            newest = parsed
+    if newest is None:
+        return True
+    return (datetime.now(timezone.utc) - newest).total_seconds() > COMPANY_NEWS_REFRESH_HOURS * 3600
+
+
+def _maybe_refresh_company_in_background(ticker: str) -> None:
+    now = time.monotonic()
+    if now - _company_refresh_attempts.get(ticker, 0.0) < _COMPANY_REFRESH_MIN_INTERVAL_S:
+        return
+    _company_refresh_attempts[ticker] = now
+
+    async def _refresh() -> None:
+        try:
+            from .stock_info import fetch_and_store_stock_info
+            result = await asyncio.to_thread(fetch_and_store_stock_info, ticker, True)
+            logger.info("Background company refresh for %s: news_count=%s error=%s",
+                        ticker, result.get("news_count"), result.get("error"))
+        except Exception as exc:  # noqa: BLE001 - best effort, stale data keeps serving
+            logger.warning("Background company refresh failed for %s: %s", ticker, exc)
+
+    asyncio.create_task(_refresh())
+
+
 async def _hydrate_company_from_yfinance(ticker: str) -> Optional[dict]:
     """Best-effort yfinance hydrate for symbols not covered by Alpaca asset metadata."""
     try:
@@ -5611,6 +5660,8 @@ async def get_company_detail(ticker: str):
         }
 
     news_rows = get_company_news(normalized, limit=20)
+    if _company_news_is_stale(news_rows):
+        _maybe_refresh_company_in_background(normalized)
 
     company_resp = CompanyResponse(**company)
 
@@ -5648,6 +5699,8 @@ async def get_company_news_endpoint(ticker: str, limit: int = 50):
         raise HTTPException(404, detail=f"Company '{normalized}' not found")
 
     news_rows = get_company_news(normalized, limit=limit)
+    if _company_news_is_stale(news_rows):
+        _maybe_refresh_company_in_background(normalized)
     return [
         CompanyNewsItem(
             article_id=n.get("article_id"),

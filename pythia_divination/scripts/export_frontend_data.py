@@ -2,6 +2,7 @@ from __future__ import annotations  # py3.9-compatible PEP 604 annotations
 
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -407,13 +408,35 @@ def _build_upcoming(df: pd.DataFrame) -> list[dict]:
         course = latest_event.iloc[0]["course_name"] if pd.notna(latest_event.iloc[0]["course_name"]) else "TBD Course"
         state = latest_event.iloc[0]["course_state_code"] if pd.notna(latest_event.iloc[0]["course_state_code"]) else ""
 
+        # Emit the event date so completed tournaments self-retire from the
+        # Upcoming tab (the BFF drops past-dated boards at serve time). Without
+        # this, played majors (Masters, PGA Championship) lingered as "upcoming"
+        # until the training dataset was rebuilt.
+        event_date_key = None
+        if "event_start_date" in latest_event.columns:
+            try:
+                raw_date = latest_event["event_start_date"].dropna().max()
+                if pd.notna(raw_date):
+                    event_date_key = int(pd.to_datetime(raw_date).strftime("%Y%m%d"))
+            except Exception:
+                event_date_key = None
+        grace_cutoff = int((datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y%m%d"))
+        if event_date_key is not None and event_date_key < grace_cutoff:
+            continue  # already played — belongs in backtests, not upcoming
+
+        try:
+            season_label = int(latest_event.iloc[0]["season_year"])
+        except Exception:
+            season_label = datetime.now(timezone.utc).year
         upcoming.append(
             {
                 "id": f"{tour.lower()}-{str(tournament_name).replace(' ', '-').lower()}",
-                "name": f"2026 {tournament_name}",
+                "name": f"{season_label} {tournament_name}",
                 "original_name": str(tournament_name),
                 "tour": str(tour),
                 "course": f"{course}, {state}".strip(", "),
+                "scheduledDate": event_date_key,
+                "latestDate": event_date_key,
                 "predictions": predictions,
             }
         )

@@ -1807,6 +1807,101 @@ def _filter_upcoming_tennis(
     )
 
 
+ESPN_GOLF_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/golf"
+_GOLF_LIVE_SCHEDULE_CACHE: tuple[float, dict[tuple[str, str], dict[str, Any]]] | None = None
+
+
+def _fetch_espn_golf_schedule() -> dict[tuple[str, str], dict[str, Any]]:
+    """Live PGA + LPGA tournament schedule from ESPN, keyed by (TOUR, canonical
+    name) -> {startKey, endKey, venue}. Cached; never raises. Mirrors the tennis
+    fetcher (same TTL/window/timeout constants)."""
+    global _GOLF_LIVE_SCHEDULE_CACHE
+    cached = _GOLF_LIVE_SCHEDULE_CACHE
+    if cached is not None and (time.time() - cached[0]) < TENNIS_LIVE_SCHEDULE_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    today = datetime.now(timezone.utc).date()
+    window = f"{today:%Y%m%d}-{today + timedelta(days=TENNIS_LIVE_SCHEDULE_DAYS_AHEAD):%Y%m%d}"
+    schedule: dict[tuple[str, str], dict[str, Any]] = {}
+    try:
+        with httpx.Client(timeout=TENNIS_LIVE_SCHEDULE_TIMEOUT_SECONDS) as client:
+            for tour in ("pga", "lpga"):
+                resp = client.get(
+                    f"{ESPN_GOLF_BASE_URL}/{tour}/scoreboard",
+                    params={"dates": window, "limit": 100},
+                )
+                resp.raise_for_status()
+                for event in resp.json().get("events", []) or []:
+                    name = str(event.get("name") or "").strip()
+                    start_key = _safe_int(str(event.get("date") or "")[:10].replace("-", ""))
+                    end_key = _safe_int(str(event.get("endDate") or "")[:10].replace("-", "")) or start_key
+                    if not name or not start_key:
+                        continue
+                    comp = (event.get("competitions") or [{}])[0]
+                    venue = (comp.get("venue") or {}).get("fullName")
+                    schedule[(tour.upper(), _canonical_sports_name(name))] = {
+                        "startKey": start_key,
+                        "endKey": end_key,
+                        "venue": venue,
+                    }
+    except Exception as exc:  # pragma: no cover - network
+        logger.warning("Live golf schedule fetch failed: %s", exc)
+        return cached[1] if cached else {}
+
+    _GOLF_LIVE_SCHEDULE_CACHE = (time.time(), schedule)
+    return schedule
+
+
+def _apply_live_golf_schedule(upcoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Date golf boards from the live ESPN schedule and DROP boards with no live
+    match. The static golf board is a latest-season construct from the training
+    dataset (no dates; possibly already-played events labeled as upcoming) — only
+    tournaments ESPN lists in the forward window are genuinely upcoming. Matched
+    boards keep the model's projected field and get real dates + a correct
+    season-year label."""
+    schedule = _fetch_espn_golf_schedule()
+    if not schedule:
+        # ESPN unreachable: keep boards that already carry a usable future date,
+        # drop the undated rest (stale-by-construction).
+        return [item for item in upcoming if _safe_int(item.get("scheduledDate"))]
+
+    matched: list[dict[str, Any]] = []
+    for item in upcoming:
+        tour = str(item.get("tour") or "").upper()
+        base_name = str(item.get("original_name") or item.get("name") or "")
+        live = schedule.get((tour, _canonical_sports_name(base_name)))
+        if not live:
+            continue
+        item = dict(item)
+        item["scheduledDate"] = live["startKey"]
+        item["latestDate"] = live["endKey"]
+        season = live["startKey"] // 10000
+        item["name"] = f"{season} {item.get('original_name') or base_name}"
+        if not item.get("course") and live.get("venue"):
+            item["course"] = live["venue"]
+        matched.append(item)
+    matched.sort(key=lambda b: _safe_int(b.get("scheduledDate")) or 99999999)
+    return matched
+
+
+def _drop_past_dated_upcoming(
+    upcoming: list[dict[str, Any]],
+    grace_days: int = 2,
+) -> list[dict[str, Any]]:
+    """Serve-time staleness guard for every sport: an 'upcoming' board whose event
+    END date is more than grace_days in the past is never shown, regardless of
+    what an exporter wrote. Undated boards pass through (their feeds filter at
+    the source)."""
+    cutoff = int((datetime.now(timezone.utc) - timedelta(days=grace_days)).strftime("%Y%m%d"))
+    kept: list[dict[str, Any]] = []
+    for item in upcoming:
+        end_key = _safe_int(item.get("latestDate")) or _safe_int(item.get("scheduledDate"))
+        if end_key is not None and end_key < cutoff:
+            continue
+        kept.append(item)
+    return kept
+
+
 def _filter_upcoming_golf(
     upcoming: list[dict[str, Any]],
     backtests: list[dict[str, Any]],
@@ -1845,7 +1940,9 @@ def _sports_board_collection(
         runtime_backtests = _build_runtime_golf_backtests(upcoming, backtests)
         backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         upcoming = _filter_upcoming_golf(upcoming, backtests)
+        upcoming = _apply_live_golf_schedule(upcoming)
 
+    upcoming = _drop_past_dated_upcoming(upcoming)
     updated_at = _sports_data_updated_at([upcoming_filename, backtests_filename])
     if sport in {"mlb", "football"}:
         return _build_dated_collection_from_upcoming(
@@ -2021,6 +2118,7 @@ async def _live_olympics_board_collection() -> Optional[SportsBoardCollection]:
         merged_backtests = _merge_runtime_backtests(backtests, runtime_backtests)
         if not isinstance(upcoming, list):
             return None
+        upcoming = _drop_past_dated_upcoming(upcoming)
         updated_at = _to_utc_datetime(payload.get("updated_at")) or fallback_updated_at
         return _build_sports_board_collection(
             upcoming=upcoming,

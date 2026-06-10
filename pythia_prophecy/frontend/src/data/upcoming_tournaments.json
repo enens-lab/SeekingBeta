@@ -1,10 +1,12 @@
 [
   {
     "id": "pga-masters-tournament",
-    "name": "2026 Masters Tournament",
+    "name": "2025 Masters Tournament",
     "original_name": "Masters Tournament",
     "tour": "PGA",
     "course": "Augusta National Golf Club, GA",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -4255,10 +4257,12 @@
   },
   {
     "id": "pga-pga-championship",
-    "name": "2026 PGA Championship",
+    "name": "2025 PGA Championship",
     "original_name": "PGA Championship",
     "tour": "PGA",
     "course": "Quail Hollow Club, NC",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -10717,10 +10721,12 @@
   },
   {
     "id": "pga-u.s.-open",
-    "name": "2026 U.S. Open",
+    "name": "2025 U.S. Open",
     "original_name": "U.S. Open",
     "tour": "PGA",
     "course": "Oakmont Country Club, PA",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -16594,10 +16600,12 @@
   },
   {
     "id": "pga-the-open-championship",
-    "name": "2026 The Open Championship",
+    "name": "2025 The Open Championship",
     "original_name": "The Open Championship",
     "tour": "PGA",
     "course": "Royal Portrush Golf Club",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -22207,10 +22215,12 @@
   },
   {
     "id": "pga-the-players-championship",
-    "name": "2026 THE PLAYERS Championship",
+    "name": "2025 THE PLAYERS Championship",
     "original_name": "THE PLAYERS Championship",
     "tour": "PGA",
     "course": "TPC Sawgrass (THE PLAYERS Stadium Course), FL",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -29392,10 +29402,12 @@
   },
   {
     "id": "pga-3m-open",
-    "name": "2026 3M Open",
+    "name": "2025 3M Open",
     "original_name": "3M Open",
     "tour": "PGA",
     "course": "TPC Twin Cities, MN",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -36031,10 +36043,12 @@
   },
   {
     "id": "pga-at&t-pebble-beach-pro-am",
-    "name": "2026 AT&T Pebble Beach Pro-Am",
+    "name": "2025 AT&T Pebble Beach Pro-Am",
     "original_name": "AT&T Pebble Beach Pro-Am",
     "tour": "PGA",
     "course": "Pebble Beach Golf Links, CA",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -40192,10 +40206,12 @@
   },
   {
     "id": "pga-arnold-palmer-invitational-presented-by-mastercard",
-    "name": "2026 Arnold Palmer Invitational presented by Mastercard",
+    "name": "2025 Arnold Palmer Invitational presented by Mastercard",
     "original_name": "Arnold Palmer Invitational presented by Mastercard",
     "tour": "PGA",
     "course": "Arnold Palmer's Bay Hill Club & Lodge, FL",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -43921,10 +43937,12 @@
   },
   {
     "id": "pga-bmw-championship",
-    "name": "2026 BMW Championship",
+    "name": "2025 BMW Championship",
     "original_name": "BMW Championship",
     "tour": "PGA",
     "course": "Caves Valley Golf Club, MD",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -46504,10 +46522,12 @@
   },
   {
     "id": "pga-bank-of-utah-championship",
-    "name": "2026 Bank of Utah Championship",
+    "name": "2025 Bank of Utah Championship",
     "original_name": "Bank of Utah Championship",
     "tour": "PGA",
     "course": "Black Desert Resort, UT",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -51751,10 +51771,12 @@
   },
   {
     "id": "pga-barracuda-championship",
-    "name": "2026 Barracuda Championship",
+    "name": "2025 Barracuda Championship",
     "original_name": "Barracuda Championship",
     "tour": "PGA",
     "course": "Tahoe Mountain Club (Old Greenwood), CA",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -57025,10 +57047,12 @@
   },
   {
     "id": "pga-baycurrent-classic",
-    "name": "2026 Baycurrent Classic",
+    "name": "2025 Baycurrent Classic",
     "original_name": "Baycurrent Classic",
     "tour": "PGA",
     "course": "Yokohama Country Club (West Course)",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -60682,10 +60706,12 @@
   },
   {
     "id": "pga-butterfield-bermuda-championship",
-    "name": "2026 Butterfield Bermuda Championship",
+    "name": "2025 Butterfield Bermuda Championship",
     "original_name": "Butterfield Bermuda Championship",
     "tour": "PGA",
     "course": "Port Royal Golf Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -65134,10 +65160,12 @@
   },
   {
     "id": "pga-charles-schwab-challenge",
-    "name": "2026 Charles Schwab Challenge",
+    "name": "2025 Charles Schwab Challenge",
     "original_name": "Charles Schwab Challenge",
     "tour": "PGA",
     "course": "Colonial Country Club, TX",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -71542,10 +71570,12 @@
   },
   {
     "id": "pga-cognizant-classic-in-the-palm-beaches",
-    "name": "2026 Cognizant Classic in The Palm Beaches",
+    "name": "2025 Cognizant Classic in The Palm Beaches",
     "original_name": "Cognizant Classic in The Palm Beaches",
     "tour": "PGA",
     "course": "PGA National Resort (The Champion Course), FL",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -77938,10 +77968,12 @@
   },
   {
     "id": "pga-corales-puntacana-championship",
-    "name": "2026 Corales Puntacana Championship",
+    "name": "2025 Corales Puntacana Championship",
     "original_name": "Corales Puntacana Championship",
     "tour": "PGA",
     "course": "Puntacana Resort & Club (Corales Golf Course)",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -82399,10 +82431,12 @@
   },
   {
     "id": "pga-farmers-insurance-open",
-    "name": "2026 Farmers Insurance Open",
+    "name": "2025 Farmers Insurance Open",
     "original_name": "Farmers Insurance Open",
     "tour": "PGA",
     "course": "Torrey Pines Golf Course (South Course), CA",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -88882,10 +88916,12 @@
   },
   {
     "id": "pga-fedex-st.-jude-championship",
-    "name": "2026 FedEx St. Jude Championship",
+    "name": "2025 FedEx St. Jude Championship",
     "original_name": "FedEx St. Jude Championship",
     "tour": "PGA",
     "course": "TPC Southwind, TN",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -92545,10 +92581,12 @@
   },
   {
     "id": "lpga-kpmg-women's-pga-championship",
-    "name": "2026 KPMG Women's PGA Championship",
+    "name": "2025 KPMG Women's PGA Championship",
     "original_name": "KPMG Women's PGA Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -95662,10 +95700,12 @@
   },
   {
     "id": "lpga-amundi-evian-championship",
-    "name": "2026 Amundi Evian Championship",
+    "name": "2023 Amundi Evian Championship",
     "original_name": "Amundi Evian Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -98212,10 +98252,12 @@
   },
   {
     "id": "lpga-the-amundi-evian-championship",
-    "name": "2026 The Amundi Evian Championship",
+    "name": "2025 The Amundi Evian Championship",
     "original_name": "The Amundi Evian Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -100762,10 +100804,12 @@
   },
   {
     "id": "lpga-the-chevron-championship",
-    "name": "2026 The Chevron Championship",
+    "name": "2025 The Chevron Championship",
     "original_name": "The Chevron Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -103417,10 +103461,12 @@
   },
   {
     "id": "lpga-aig-women's-open",
-    "name": "2026 AIG Women's Open",
+    "name": "2025 AIG Women's Open",
     "original_name": "AIG Women's Open",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -106198,10 +106244,12 @@
   },
   {
     "id": "lpga-bmw-ladies-championship",
-    "name": "2026 BMW Ladies Championship",
+    "name": "2025 BMW Ladies Championship",
     "original_name": "BMW Ladies Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -107824,10 +107872,12 @@
   },
   {
     "id": "lpga-black-desert-championship",
-    "name": "2026 Black Desert Championship",
+    "name": "2025 Black Desert Championship",
     "original_name": "Black Desert Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -110794,10 +110844,12 @@
   },
   {
     "id": "lpga-blue-bay-lpga",
-    "name": "2026 Blue Bay LPGA",
+    "name": "2025 Blue Bay LPGA",
     "original_name": "Blue Bay LPGA",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -112672,10 +112724,12 @@
   },
   {
     "id": "lpga-buick-lpga-shanghai",
-    "name": "2026 Buick LPGA Shanghai",
+    "name": "2025 Buick LPGA Shanghai",
     "original_name": "Buick LPGA Shanghai",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -114193,10 +114247,12 @@
   },
   {
     "id": "lpga-cme-group-tour-championship",
-    "name": "2026 CME Group Tour Championship",
+    "name": "2025 CME Group Tour Championship",
     "original_name": "CME Group Tour Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -115462,10 +115518,12 @@
   },
   {
     "id": "lpga-cp-women's-open",
-    "name": "2026 CP Women's Open",
+    "name": "2022 CP Women's Open",
     "original_name": "CP Women's Open",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -118390,10 +118448,12 @@
   },
   {
     "id": "lpga-cpkc-women's-open",
-    "name": "2026 CPKC Women's Open",
+    "name": "2025 CPKC Women's Open",
     "original_name": "CPKC Women's Open",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -121465,10 +121525,12 @@
   },
   {
     "id": "lpga-cognizant-founders-cup",
-    "name": "2026 Cognizant Founders Cup",
+    "name": "2024 Cognizant Founders Cup",
     "original_name": "Cognizant Founders Cup",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -124477,10 +124539,12 @@
   },
   {
     "id": "lpga-dio-implant-la-open",
-    "name": "2026 DIO Implant LA Open",
+    "name": "2023 DIO Implant LA Open",
     "original_name": "DIO Implant LA Open",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -127153,10 +127217,12 @@
   },
   {
     "id": "lpga-dana-open",
-    "name": "2026 Dana Open",
+    "name": "2024 Dana Open",
     "original_name": "Dana Open",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -130039,10 +130105,12 @@
   },
   {
     "id": "lpga-dana-open-pres.-by-marathon",
-    "name": "2026 Dana Open pres. by Marathon",
+    "name": "2022 Dana Open pres. by Marathon",
     "original_name": "Dana Open pres. by Marathon",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -133009,10 +133077,12 @@
   },
   {
     "id": "lpga-fir-hills-seri-pak-championship",
-    "name": "2026 FIR HILLS SERI PAK Championship",
+    "name": "2024 FIR HILLS SERI PAK Championship",
     "original_name": "FIR HILLS SERI PAK Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,
@@ -135832,10 +135902,12 @@
   },
   {
     "id": "lpga-fm-championship",
-    "name": "2026 FM Championship",
+    "name": "2025 FM Championship",
     "original_name": "FM Championship",
     "tour": "LPGA",
     "course": "TBD Course",
+    "scheduledDate": null,
+    "latestDate": null,
     "predictions": [
       {
         "rank": 1,

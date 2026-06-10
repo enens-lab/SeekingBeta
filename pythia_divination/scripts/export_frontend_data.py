@@ -1,3 +1,5 @@
+from __future__ import annotations  # py3.9-compatible PEP 604 annotations
+
 import json
 import sys
 from pathlib import Path

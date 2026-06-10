@@ -19,6 +19,9 @@ function Footer() {
           <Link to="/methodology" onClick={() => trackEvent('footer_link_click', { destination: 'methodology' })}>
             Methodology
           </Link>
+          <Link to="/support" onClick={() => trackEvent('footer_link_click', { destination: 'support' })}>
+            Support
+          </Link>
           <a
             href="https://discord.gg/ckTC8JhWU9"
             target="_blank"

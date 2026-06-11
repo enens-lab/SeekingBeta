@@ -1007,18 +1007,23 @@ h4 {
   min-width: 0;
 }
 
-.sports-home-mlb-team div {
+/* Text block next to the logo only — a bare `div` selector also matched the
+   TeamLogo root and broke its flex centering (logo drifted bottom-left). */
+.sports-home-mlb-team > div:not(.team-logo) {
   min-width: 0;
   display: grid;
   gap: 2px;
 }
 
-.sports-home-mlb-team strong {
+.sports-home-mlb-team > div:not(.team-logo) strong {
   color: var(--text-primary);
   font-size: 0.98rem;
+  min-width: 0;
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
-.sports-home-mlb-team span {
+.sports-home-mlb-team > div:not(.team-logo) span {
   color: var(--text-muted);
   font-size: 0.86rem;
 }

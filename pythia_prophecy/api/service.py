@@ -5849,10 +5849,18 @@ if FRONTEND_DIR.exists():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str):
-        """Serve React SPA - return index.html for all non-API routes."""
-        file_path = FRONTEND_DIR / full_path
+        """Serve React SPA - prerendered HTML per route when it exists, else index.html."""
+        try:
+            file_path = (FRONTEND_DIR / full_path).resolve()
+            file_path.relative_to(FRONTEND_DIR.resolve())
+        except ValueError:
+            raise HTTPException(404)
         if file_path.is_file():
             return FileResponse(file_path)
+        # Static prerender output: dist/<route>/index.html (see frontend/scripts/prerender.mjs)
+        prerendered = file_path / "index.html"
+        if full_path and prerendered.is_file():
+            return FileResponse(prerendered)
         return FileResponse(FRONTEND_DIR / "index.html")
 else:
     @app.get("/", include_in_schema=False)

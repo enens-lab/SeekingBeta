@@ -5,3 +5,6 @@ dist/
 
 # Local dependencies
 node_modules/
+
+# SSR prerender bundle (build intermediate)
+dist-ssr/

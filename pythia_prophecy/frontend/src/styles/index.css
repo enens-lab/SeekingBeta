@@ -234,7 +234,9 @@ h4 {
   display: flex;
   gap: 18px;
   flex-wrap: nowrap;
-  min-width: 0;
+  /* Never let the nav shrink below its content — doing so let the last item
+     ("Pricing") slide under the theme toggle in .header-actions. */
+  flex-shrink: 0;
 }
 
 .nav-link {
@@ -1934,6 +1936,27 @@ h4 {
 }
 
 /* Responsive */
+
+/* The full desktop nav (7 links) + wide wordmark + header actions need ~1260px
+   to lay out without the last link colliding with the theme toggle (and the
+   action buttons overflowing). Switch to the mobile menu below 1300px for a
+   safe margin. This only governs the header so footer/logo rules in the 960px
+   block below are unaffected. */
+@media (max-width: 1300px) {
+  .desktop-nav,
+  .desktop-header-actions {
+    display: none;
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-nav-panel.open {
+    display: block;
+  }
+}
+
 @media (max-width: 960px) {
   .header-content {
     padding: 12px 16px;
@@ -3596,6 +3619,95 @@ h4 {
   padding-left: 18px;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+/* Track Record page (/track-record) */
+.track-record-page {
+  padding-top: 96px;
+}
+
+.track-record-intro,
+.track-record-howto {
+  padding: 0 24px;
+}
+
+.track-record-intro-inner,
+.track-record-howto-inner {
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+.track-record-intro {
+  padding-top: 24px;
+  padding-bottom: 8px;
+}
+
+.track-record-intro h1 {
+  margin: 10px 0 16px;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+.track-record-intro p {
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.track-record-intro-note {
+  font-size: 14px;
+}
+
+.track-record-intro-note a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.track-record-intro-note a:hover {
+  text-decoration: underline;
+}
+
+.track-record-howto {
+  padding-top: 8px;
+  padding-bottom: 64px;
+}
+
+.track-record-howto h2 {
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0 0 16px;
+}
+
+.track-record-howto ul {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+
+.track-record-howto li {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.track-record-howto li strong {
+  color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .track-record-intro,
+  .track-record-howto {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
 
 /* Stock Panel */

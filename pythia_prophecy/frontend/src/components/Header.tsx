@@ -52,13 +52,13 @@ function Header() {
               <Link to="/sports" className="nav-link">Sports</Link>
             </div>
           </div>
-          <a
-            href="/#performance"
+          <Link
+            to="/track-record"
             className="nav-link"
-            onClick={(e) => scrollToSection(e, 'performance')}
+            onClick={() => trackEvent('landing_nav_click', { destination: 'track_record' })}
           >
             Track Record
-          </a>
+          </Link>
           <a
             href="/#features"
             className="nav-link"
@@ -172,13 +172,16 @@ function Header() {
         <div className="mobile-nav-group">
           <span className="mobile-nav-group-label">Explore</span>
           <div className="mobile-nav-links">
-            <a
-              href="/#performance"
+            <Link
+              to="/track-record"
               className="nav-link"
-              onClick={(e) => scrollToSection(e, 'performance')}
+              onClick={() => {
+                trackEvent('landing_nav_click', { destination: 'track_record' });
+                closeMobileMenu();
+              }}
             >
               Track Record
-            </a>
+            </Link>
             <a
               href="/#features"
               className="nav-link"

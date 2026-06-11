@@ -21,6 +21,7 @@ import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import RefundCancellation from './pages/RefundCancellation';
 import Methodology from './pages/Methodology';
+import TrackRecord from './pages/TrackRecord';
 import Support from './pages/Support';
 import SportsLanding from './pages/sports/SportsLanding';
 import SportsDashboard from './pages/sports/SportsDashboard';
@@ -59,6 +60,13 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
     description:
       'Learn how SeekingBeta.AI builds, evaluates, and presents model-generated probability boards.',
     canonicalPath: '/methodology',
+    indexable: true,
+  },
+  '/track-record': {
+    title: 'Track Record | SeekingBeta.AI',
+    description:
+      'See how SeekingBeta.AI model ratings have performed against the S&P 500 benchmark, with hit rate, Sharpe, and drawdown.',
+    canonicalPath: '/track-record',
     indexable: true,
   },
   '/terms': {
@@ -201,6 +209,7 @@ function AppRoutes() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund-cancellation" element={<RefundCancellation />} />
       <Route path="/methodology" element={<Methodology />} />
+      <Route path="/track-record" element={<TrackRecord />} />
       <Route path="/support" element={<Support />} />
       <Route path="/sports" element={<SportsLanding />} />
       <Route

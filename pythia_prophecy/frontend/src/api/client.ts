@@ -573,7 +573,14 @@ export function setToken(token: string | null): void {
 
 interface RequestOptions extends Omit<RequestInit, 'headers'> {
   headers?: Record<string, string>;
+  // Per-request timeout override in milliseconds. Defaults to DEFAULT_TIMEOUT_MS.
+  timeoutMs?: number;
 }
+
+// Hard ceiling on every request so a slow/hung backend (e.g. the live sports
+// feeds) never leaves the UI on an infinite spinner. Callers fall into their
+// error/empty states instead. Override per-request via options.timeoutMs.
+const DEFAULT_TIMEOUT_MS = 15000;
 
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const token = getToken();
@@ -586,10 +593,40 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal: callerSignal, ...fetchOptions } = options;
+
+  // Abort on timeout. If the caller passed their own signal, abort when either
+  // fires so component-unmount cancellation still works.
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      timeoutController.abort();
+    } else {
+      callerSignal.addEventListener('abort', () => timeoutController.abort(), { once: true });
+    }
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...fetchOptions,
+      headers,
+      signal: timeoutController.signal,
+    });
+  } catch (err) {
+    if ((err as Error)?.name === 'AbortError') {
+      // Surface a clear, user-facing message rather than a generic DOM error.
+      throw new Error(
+        callerSignal?.aborted
+          ? 'Request cancelled'
+          : 'This is taking longer than expected. Please try again in a moment.',
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     // Handle 401 Unauthorized - token expired or invalid

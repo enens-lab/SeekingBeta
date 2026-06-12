@@ -638,6 +638,10 @@ class SportsUpcomingBoard(BaseModel):
     awayFeaturedPlayer: Optional[SportsLineupPlayer] = None
     homeFeaturedPlayer: Optional[SportsLineupPlayer] = None
     predictions: List[SportsBoardPrediction] = []
+    # Set only by the ?preview=true response shaping: the size of the full
+    # predictions list before it was trimmed, so UIs can keep showing the real
+    # field size ("131 names") next to the trimmed top-N list.
+    predictionsTotal: Optional[int] = None
     # World Cup / Olympics detail (optional; only populated for those tours).
     headToHead: Optional[SportsHeadToHead] = None
     teamHistory: List[SportsTeamHistory] = []          # [home, away] for WC matches

@@ -76,6 +76,7 @@ function SportsPreview() {
         const payload = await sports.getBoards({
           sports: ['golf', 'tennis', 'basketball', 'mlb'],
           includeBacktests: false,
+          preview: true,
         });
         if (!cancelled) {
           setSportsBoards(payload);
@@ -189,7 +190,7 @@ function SportsPreview() {
 
                 <div className="sports-home-meta">
                   <span>{board.event?.course || 'Venue TBD'}</span>
-                  <span>{board.event?.predictions?.length || 0} names</span>
+                  <span>{board.event?.predictionsTotal ?? board.event?.predictions?.length ?? 0} names</span>
                 </div>
 
                 {isTeamPreview && board.event ? (

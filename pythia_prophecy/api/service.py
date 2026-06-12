@@ -5075,39 +5075,18 @@ def _parse_sports_filter(raw: str | None) -> set[str] | None:
     return requested or None
 
 
-@app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
-async def sports_boards(
-    mlb_date: str | None = Query(None),
-    basketball_date: str | None = Query(None),
-    football_date: str | None = Query(None),
-    soccer_date: str | None = Query(None),
-    include_backtests: bool = Query(
-        True,
-        description=(
-            "Set false for upcoming-only surfaces (e.g. the landing preview) to "
-            "drop the heavy backtests arrays from the response. seasonSummary is "
-            "still computed and returned. Defaults true for backward compat."
-        ),
-    ),
-    sports: str | None = Query(
-        None,
-        description=(
-            "Optional comma-separated list of sports to compute "
-            "(golf, tennis, basketball, mlb, football, soccer). "
-            "Omit to return all sports (legacy behavior). "
-            "Sports not requested are returned as empty placeholder collections "
-            "so the response shape is unchanged for older clients."
-        ),
-    ),
-):
-    """Runtime-filtered sports boards for public marketing and dashboard surfaces.
-
-    Supports per-sport pagination via ``?sports=`` so clients (web tab, iOS sport
-    switcher) only pay for inference on the sport(s) they intend to render. When
-    ``sports`` is omitted the endpoint returns every sport for backward compat.
-    Live sport feeds (basketball, mlb, football) are fetched concurrently.
-    """
-    requested = _parse_sports_filter(sports)
+async def _assemble_sports_boards(
+    *,
+    requested: set[str] | None,
+    mlb_date: str | None,
+    basketball_date: str | None,
+    football_date: str | None,
+    soccer_date: str | None,
+) -> dict[str, SportsBoardCollection]:
+    """Build the full per-sport board collections (the expensive part of
+    /api/sports/boards). Pure with respect to the request: response shaping
+    (backtests stripping, preview trimming) happens in the endpoint so the
+    result can be cached and shared across those variants."""
     wants = (lambda key: True) if requested is None else (lambda key: key in requested)
 
     def _golf() -> SportsBoardCollection:
@@ -5222,17 +5201,199 @@ async def sports_boards(
             sport="olympics",
         )
 
-    collections = {
+    return {
         "golf": golf, "tennis": tennis, "basketball": basketball, "mlb": mlb,
         "football": football, "soccer": soccer, "olympics": olympics,
     }
-    if not include_backtests:
+
+
+# --- /api/sports/boards response cache -------------------------------------
+# The assembly above costs ~4s (4+ sports, partially sequential, plus live
+# feeds). The boards only change on cron refreshes and slow live-feed updates,
+# so a short server-side cache turns nearly all landing/dashboard loads into
+# ~100ms responses. Stale-while-revalidate: a stale entry is served immediately
+# while one background task rebuilds it; truly ancient entries rebuild inline.
+SPORTS_BOARDS_CACHE_TTL_SECONDS = int(os.getenv("SPORTS_BOARDS_CACHE_TTL_SECONDS", "60"))
+SPORTS_BOARDS_CACHE_MAX_STALE_SECONDS = int(
+    os.getenv("SPORTS_BOARDS_CACHE_MAX_STALE_SECONDS", "900")
+)
+_SPORTS_BOARDS_CACHE_MAX_KEYS = 32
+_sports_boards_cache: dict[tuple, tuple[float, dict[str, SportsBoardCollection]]] = {}
+_sports_boards_cache_locks: dict[tuple, asyncio.Lock] = {}
+_sports_boards_refreshing: set[tuple] = set()
+
+
+def _store_sports_boards_cache(key: tuple, collections: dict[str, SportsBoardCollection]) -> None:
+    _sports_boards_cache[key] = (time.monotonic(), collections)
+    while len(_sports_boards_cache) > _SPORTS_BOARDS_CACHE_MAX_KEYS:
+        oldest = min(_sports_boards_cache, key=lambda k: _sports_boards_cache[k][0])
+        _sports_boards_cache.pop(oldest, None)
+        _sports_boards_cache_locks.pop(oldest, None)
+
+
+async def _refresh_sports_boards_cache(key: tuple, assemble_kwargs: dict) -> None:
+    try:
+        collections = await _assemble_sports_boards(**assemble_kwargs)
+        _store_sports_boards_cache(key, collections)
+    except Exception as exc:  # keep serving stale rather than crash the task
+        logger.warning("sports boards background refresh failed for %s: %s", key, exc)
+    finally:
+        _sports_boards_refreshing.discard(key)
+
+
+async def _cached_sports_boards(
+    key: tuple, assemble_kwargs: dict
+) -> dict[str, SportsBoardCollection]:
+    now = time.monotonic()
+    entry = _sports_boards_cache.get(key)
+    if entry is not None:
+        age = now - entry[0]
+        if age <= SPORTS_BOARDS_CACHE_TTL_SECONDS:
+            return entry[1]
+        if age <= SPORTS_BOARDS_CACHE_MAX_STALE_SECONDS:
+            if key not in _sports_boards_refreshing:
+                _sports_boards_refreshing.add(key)
+                asyncio.create_task(_refresh_sports_boards_cache(key, assemble_kwargs))
+            return entry[1]
+    # Cold (or ancient) entry: compute inline, with a per-key lock so a burst of
+    # concurrent first requests does the work once.
+    lock = _sports_boards_cache_locks.setdefault(key, asyncio.Lock())
+    async with lock:
+        entry = _sports_boards_cache.get(key)
+        if entry is not None and time.monotonic() - entry[0] <= SPORTS_BOARDS_CACHE_TTL_SECONDS:
+            return entry[1]
+        collections = await _assemble_sports_boards(**assemble_kwargs)
+        _store_sports_boards_cache(key, collections)
+        return collections
+
+
+# Per-sport caps for ?preview=true. The landing preview renders one spotlight
+# event for golf/tennis/basketball and four MLB rows.
+_SPORTS_PREVIEW_EVENT_CAPS = {"mlb": 4}
+_SPORTS_PREVIEW_DEFAULT_EVENT_CAP = 1
+_SPORTS_PREVIEW_PREDICTIONS_CAP = 8
+
+
+def _preview_sports_board_collection(
+    coll: SportsBoardCollection, *, events_cap: int
+) -> SportsBoardCollection:
+    """Trim a collection to what preview surfaces render: the first N events,
+    top-N predictions (with predictionsTotal preserving the real field size),
+    and none of the heavy per-event blobs (lineups, rosters, starter profiles,
+    radar metrics). TeamDetails stay — they are scalar-only and the preview's
+    matchup rows need them."""
+    trimmed = []
+    for event in coll.upcoming[:events_cap]:
+        trimmed.append(
+            event.model_copy(
+                update={
+                    "predictions": event.predictions[:_SPORTS_PREVIEW_PREDICTIONS_CAP],
+                    "predictionsTotal": len(event.predictions),
+                    "awayLineup": [],
+                    "homeLineup": [],
+                    "awayFeaturedPlayer": None,
+                    "homeFeaturedPlayer": None,
+                    "awayStarterProfile": None,
+                    "homeStarterProfile": None,
+                    "awayStarterRadar": None,
+                    "homeStarterRadar": None,
+                    "awayAvailability": None,
+                    "homeAvailability": None,
+                    "projectedLineupContext": None,
+                    "headToHead": None,
+                    "teamHistory": [],
+                    "rosters": [],
+                    "disciplines": [],
+                }
+            )
+        )
+    return coll.model_copy(update={"upcoming": trimmed, "backtests": []})
+
+
+@app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
+async def sports_boards(
+    mlb_date: str | None = Query(None),
+    basketball_date: str | None = Query(None),
+    football_date: str | None = Query(None),
+    soccer_date: str | None = Query(None),
+    include_backtests: bool = Query(
+        True,
+        description=(
+            "Set false for upcoming-only surfaces (e.g. the landing preview) to "
+            "drop the heavy backtests arrays from the response. seasonSummary is "
+            "still computed and returned. Defaults true for backward compat."
+        ),
+    ),
+    preview: bool = Query(
+        False,
+        description=(
+            "Lean mode for spotlight surfaces (the landing preview): trims each "
+            "sport to its first event(s) and top predictions, drops lineups/"
+            "rosters/profiles, and implies include_backtests=false. Adds "
+            "predictionsTotal so UIs can show the untrimmed field size."
+        ),
+    ),
+    sports: str | None = Query(
+        None,
+        description=(
+            "Optional comma-separated list of sports to compute "
+            "(golf, tennis, basketball, mlb, football, soccer). "
+            "Omit to return all sports (legacy behavior). "
+            "Sports not requested are returned as empty placeholder collections "
+            "so the response shape is unchanged for older clients."
+        ),
+    ),
+):
+    """Runtime-filtered sports boards for public marketing and dashboard surfaces.
+
+    Supports per-sport pagination via ``?sports=`` so clients (web tab, iOS sport
+    switcher) only pay for inference on the sport(s) they intend to render. When
+    ``sports`` is omitted the endpoint returns every sport for backward compat.
+    Live sport feeds (basketball, mlb, football) are fetched concurrently. The
+    assembled collections are cached server-side (stale-while-revalidate, see
+    SPORTS_BOARDS_CACHE_TTL_SECONDS); ``include_backtests``/``preview`` shaping
+    happens per-request on top of the shared cache entry.
+    """
+    requested = _parse_sports_filter(sports)
+    key = (
+        tuple(sorted(requested)) if requested is not None else ("__all__",),
+        mlb_date or "",
+        basketball_date or "",
+        football_date or "",
+        soccer_date or "",
+    )
+    collections = await _cached_sports_boards(
+        key,
+        {
+            "requested": requested,
+            "mlb_date": mlb_date,
+            "basketball_date": basketball_date,
+            "football_date": football_date,
+            "soccer_date": soccer_date,
+        },
+    )
+
+    # Response shaping below must not mutate the cached models — model_copy only.
+    shaped: dict[str, SportsBoardCollection] = dict(collections)
+    if preview:
+        shaped = {
+            sport: _preview_sports_board_collection(
+                coll,
+                events_cap=_SPORTS_PREVIEW_EVENT_CAPS.get(
+                    sport, _SPORTS_PREVIEW_DEFAULT_EVENT_CAP
+                ),
+            )
+            for sport, coll in shaped.items()
+        }
+    elif not include_backtests:
         # Drop the heavy backtests arrays for upcoming-only surfaces; keep the
         # (cheap) seasonSummary and everything else intact.
-        for key, coll in collections.items():
-            collections[key] = coll.model_copy(update={"backtests": []})
+        shaped = {
+            sport: coll.model_copy(update={"backtests": []})
+            for sport, coll in shaped.items()
+        }
 
-    return SportsBoardsResponse(**collections)
+    return SportsBoardsResponse(**shaped)
 
 
 # ============================================================

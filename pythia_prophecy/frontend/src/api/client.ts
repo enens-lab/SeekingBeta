@@ -476,6 +476,9 @@ export interface SportsUpcomingBoard {
   awayFeaturedPlayer?: SportsLineupPlayer;
   homeFeaturedPlayer?: SportsLineupPlayer;
   predictions: SportsBoardPrediction[];
+  // Present only on ?preview=true responses: size of the untrimmed predictions
+  // list, so spotlight cards can show the real field size ("131 names").
+  predictionsTotal?: number;
   // World Cup / Olympics detail (optional)
   headToHead?: SportsHeadToHead;
   teamHistory?: SportsTeamHistory[];
@@ -896,10 +899,14 @@ export const sports = {
     soccerDate?: string;
     sports?: SportsBoardKey | SportsBoardKey[];
     includeBacktests?: boolean;
+    preview?: boolean;
   }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
     if (options?.includeBacktests === false) {
       params.set('include_backtests', 'false');
+    }
+    if (options?.preview) {
+      params.set('preview', 'true');
     }
     if (options?.mlbDate) {
       params.set('mlb_date', options.mlbDate);

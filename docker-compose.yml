@@ -102,6 +102,12 @@ services:
       retries: 3
       start_period: 15s
     restart: unless-stopped
+    # OOM guardrail: on 2026-06-11 this container's python grew to ~6.7GB RSS,
+    # exhausted the host's 8GB RAM + 4GB swap, and swap-thrashed the whole box
+    # offline (SSH included) until a hard reboot. Cap it so the kernel kills and
+    # Docker restarts just this container instead of taking down the host.
+    mem_limit: 5g
+    memswap_limit: 6g
 
   # Dedicated MLB trainer (torch + Statcast) isolated from the live API image
   mlb-trainer:

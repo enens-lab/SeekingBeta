@@ -277,11 +277,13 @@ def _title(name: str) -> str:
     return name.title() if name and name.islower() else name
 
 
-def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
-    """Return (upcoming WC match boards, title-odds ranked board).
+def _build_world_cup_boards() -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None]:
+    """Return (upcoming WC match boards, completed WC backtest boards, title-odds board).
 
     The World Cup is just another ``tour`` ("FIFA World Cup") under the soccer
-    key, so these boards flow through the existing pipeline unchanged.
+    key, so these boards flow through the existing pipeline unchanged. Finished
+    fixtures are scored against a pre-tournament model so each one records a fair
+    out-of-sample hit/miss in the historical feed as the tournament progresses.
     """
     try:
         groups = wc.load_world_cup_groups()
@@ -289,7 +291,17 @@ def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | No
         model = wc.build_international_model(results)
     except Exception as exc:  # pragma: no cover - network / data
         logger.warning("World Cup model build failed: %s", exc)
-        return [], None
+        return [], [], None
+
+    # Pre-tournament model for scoring completed WC matches without leaking the
+    # in-tournament result into its own prediction (a fair out-of-sample hit/miss).
+    backtest_model = model
+    try:
+        pre = results[results["date"].dt.strftime("%Y%m%d") < WORLD_CUP_WINDOW[0]]
+        if not pre.empty:
+            backtest_model = wc.build_international_model(pre)
+    except Exception as exc:  # pragma: no cover
+        logger.warning("World Cup pre-tournament model fit failed (using full model): %s", exc)
 
     # --- title-odds ranked "field" board (renders like a golf field) ---
     title_board: dict[str, Any] | None = None
@@ -345,14 +357,52 @@ def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | No
         roster_cache[key] = players
         return players
 
-    # --- upcoming WC fixtures as 1X2 boards (neutral), with detail ---
+    # --- WC fixtures: finished → backtest boards, upcoming → 1X2 boards (neutral) ---
     match_boards: list[dict[str, Any]] = []
+    completed_boards: list[dict[str, Any]] = []
     try:
         payload = client.fetch_espn_scoreboard("fifa.world", dates=f"{WORLD_CUP_WINDOW[0]}-{WORLD_CUP_WINDOW[1]}")
         fixtures = client.parse_espn_fixtures(payload)
-        fixtures = [f for f in fixtures if f.get("state") != "post"]
-        fixtures.sort(key=lambda f: f.get("date_int") or 99999999)
-        for fx in fixtures[:WORLD_CUP_MAX_FIXTURES]:
+
+        # Finished matches (state == "post" with a final score) become out-of-sample
+        # hit/miss history boards, scored by the pre-tournament model.
+        finished = [
+            f for f in fixtures
+            if f.get("state") == "post"
+            and f.get("home_score") is not None
+            and f.get("away_score") is not None
+        ]
+        finished.sort(key=lambda f: f.get("date_int") or 0, reverse=True)
+        for fx in finished:
+            home_name = fx.get("home_name") or ""
+            away_name = fx.get("away_name") or ""
+            if not home_name or not away_name:
+                continue
+            try:
+                pred = backtest_model.predict_match(
+                    canonical_national_name(home_name), canonical_national_name(away_name), neutral=True
+                )
+                date_int = fx.get("date_int")
+                year = int(str(date_int)[:4]) if date_int else datetime.now(timezone.utc).year
+                completed_boards.append(
+                    build_soccer_backtest(
+                        tour=wc.TOUR_NAME,
+                        home_team=home_name,
+                        away_team=away_name,
+                        home_goals=int(fx["home_score"]),
+                        away_goals=int(fx["away_score"]),
+                        prediction=pred,
+                        match_date=date_int,
+                        year=year,
+                    )
+                )
+            except Exception as exc:  # pragma: no cover
+                logger.warning("WC backtest board failed for %s v %s: %s", home_name, away_name, exc)
+
+        # Upcoming / in-progress matches become 1X2 prediction boards with detail.
+        upcoming_fixtures = [f for f in fixtures if f.get("state") != "post"]
+        upcoming_fixtures.sort(key=lambda f: f.get("date_int") or 99999999)
+        for fx in upcoming_fixtures[:WORLD_CUP_MAX_FIXTURES]:
             home_name = fx.get("home_name") or ""
             away_name = fx.get("away_name") or ""
             pred = model.predict_match(
@@ -396,7 +446,7 @@ def _build_world_cup_boards() -> tuple[list[dict[str, Any]], dict[str, Any] | No
     except Exception as exc:  # pragma: no cover
         logger.warning("World Cup fixtures fetch failed: %s", exc)
 
-    return match_boards, title_board
+    return match_boards, completed_boards, title_board
 
 
 def _empty_payload(selected_date: str | None) -> dict[str, Any]:
@@ -435,10 +485,11 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
     # FIFA World Cup (international model + Monte Carlo) — just another tour.
     if WORLD_CUP_ENABLED:
         try:
-            wc_matches, title_board = _build_world_cup_boards()
+            wc_matches, wc_completed, title_board = _build_world_cup_boards()
             if title_board:
                 upcoming.append(title_board)
             upcoming.extend(wc_matches)
+            completed.extend(wc_completed)
         except Exception as exc:  # pragma: no cover
             logger.warning("World Cup board build failed: %s", exc)
 

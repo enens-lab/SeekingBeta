@@ -435,6 +435,12 @@ def _load_historical_lineup_map(game_pks: set[int]) -> dict[int, dict[str, list[
             batter_logs["game_pk"].isin(game_pks),
             [column for column in performance_columns if column in batter_logs.columns],
         ].copy()
+        # Dedupe on the join keys: a duplicated batter-game stat row would otherwise
+        # make this left-join many-to-many and explode to ~2^36 rows (a 512 GiB
+        # allocation crash that silently broke every MLB board refresh).
+        performance = performance.drop_duplicates(
+            subset=["game_pk", "team_side", "team_id", "batter_id"]
+        )
         lineup = lineup.merge(
             performance,
             on=["game_pk", "team_side", "team_id", "batter_id"],

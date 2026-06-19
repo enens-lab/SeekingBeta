@@ -48,4 +48,9 @@ docker run --rm \
 echo "[refresh_soccer_cron] rebuild prophecy-api to bake in the refreshed soccer boards"
 $DC up -d --build prophecy-api
 
+# prophecy-api was just recreated with a NEW container IP. nginx (frontend) caches
+# upstream IPs at config-load, so without this it keeps proxying to the dead IP and
+# 502s every API call until restarted. Graceful reload re-resolves; fall back to restart.
+$DC exec -T frontend nginx -s reload || $DC restart frontend
+
 echo "[refresh_soccer_cron] $(date -u +%FT%TZ) done"

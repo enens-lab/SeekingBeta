@@ -63,7 +63,10 @@ docker run --rm \
 # export just wrote; the image must be rebuilt. (This is also why committing the
 # static JSON to git matters: the build uses the repo copy.)
 echo "[refresh_sports_cron] rebuild prophecy-api to bake in the refreshed boards"
-$DC up -d --build prophecy-api
+# Narrow rebuild: build ONLY prophecy-api, then recreate it with --no-deps. `up --build
+# prophecy-api` also rebuilds the heavy divination-api image, which fails pip install on a
+# tight disk and leaves the boards stale (this silently broke sports refreshes).
+$DC build prophecy-api && $DC up -d --no-deps prophecy-api
 
 # prophecy-api was just recreated with a NEW container IP. nginx (frontend) caches
 # upstream IPs at config-load, so without this it keeps proxying to the dead IP and

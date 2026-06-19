@@ -12,3 +12,7 @@ psycopg2-binary>=2.9.9
 yfinance==1.2.0
 PyYAML>=6.0.2
 stripe>=11.6.0
+
+# Google Play Developer API (subscription verification + RTDN)
+google-api-python-client>=2.120.0
+google-auth>=2.29.0

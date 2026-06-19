@@ -93,6 +93,8 @@ from .models import (
     BillingChangeSubscriptionResponse,
     BillingStatusResponse,
     AppleVerifyRequest,
+    GoogleVerifyRequest,
+    RegisterAccountTokenRequest,
 )
 from .database import (
     create_user,
@@ -139,12 +141,16 @@ from .billing_store import (
     is_enabled as billing_store_enabled,
     get_state_by_user_id,
     get_state_by_customer_id,
+    get_state_by_google_purchase_token,
     upsert_customer_state,
     upsert_state_by_customer_id,
     delete_state_by_user_id,
     register_webhook_event,
     mark_webhook_event,
+    register_account_token,
+    get_user_id_by_account_token,
     list_states_with_expired_legacy_grace,
+    list_states_with_expired_google,
 )
 from .beta_program_store import (
     ensure_table as ensure_beta_program_table,
@@ -696,6 +702,14 @@ async def startup_validation():
                         source="startup_grace_enforcement",
                     )
                     update_user_tier(state["user_id"], SubscriptionTier.FREE)
+            if GOOGLE_PLAY_ENABLED:
+                # Safety net: downgrade users whose Google sub lapsed but whose
+                # stored tier was never flipped (e.g. a missed RTDN). Read-time
+                # gating already prevents granting; this just persists the change.
+                for state in list_states_with_expired_google():
+                    user = get_user_by_id(state["user_id"])
+                    if user:
+                        _sync_user_tier_with_billing(user)
         except Exception as e:
             errors.append(f"Billing store initialization failed: {e}")
     elif STRIPE_ENABLED:
@@ -900,6 +914,21 @@ APPLE_IAP_PRODUCT_PRO_MONTHLY = os.getenv(
     "APPLE_IAP_PRODUCT_PRO_MONTHLY",
     "ai.seekingbeta.pro.monthly",
 ).strip()
+# --- Google Play Billing ---
+GOOGLE_PLAY_ENABLED = os.getenv("GOOGLE_PLAY_ENABLED", "false").lower() == "true"
+GOOGLE_PLAY_PACKAGE_NAME = os.getenv("GOOGLE_PLAY_PACKAGE_NAME", "com.enens.seekingbeta").strip()
+# Base-plan ids that map to each tier (Play hierarchy: subscription -> base plan).
+GOOGLE_PLAY_PRODUCT_BASIC_MONTHLY = os.getenv("GOOGLE_PLAY_PRODUCT_BASIC_MONTHLY", "basic-monthly").strip()
+GOOGLE_PLAY_PRODUCT_PRO_MONTHLY = os.getenv("GOOGLE_PLAY_PRODUCT_PRO_MONTHLY", "pro-monthly").strip()
+# Path to the service-account JSON key (file path, NOT inline JSON in env). See
+# GOOGLE_APPLICATION_CREDENTIALS convention.
+GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv(
+    "GOOGLE_SERVICE_ACCOUNT_FILE", os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
+).strip()
+# Expected audience for the Pub/Sub push OIDC token (set on the push subscription).
+GOOGLE_RTDN_AUDIENCE = os.getenv("GOOGLE_RTDN_AUDIENCE", "").strip()
+# Treat test purchases as non-entitling in production unless explicitly allowed.
+GOOGLE_PLAY_ALLOW_TEST_PURCHASES = os.getenv("GOOGLE_PLAY_ALLOW_TEST_PURCHASES", "false").lower() == "true"
 STRIPE_LEGACY_GRACE_DAYS = int(os.getenv("STRIPE_LEGACY_GRACE_DAYS", "30"))
 STRIPE_BILLING_PORTAL_RETURN_URL = os.getenv("STRIPE_BILLING_PORTAL_RETURN_URL", "").strip()
 ALPACA_KEY_ID = os.getenv("ALPACA_KEY_ID", "").strip()
@@ -2223,6 +2252,22 @@ def _tier_from_apple_product_id(product_id: Optional[str]) -> Optional[Subscript
     return None
 
 
+def _tier_from_google_product_id(product_id: Optional[str]) -> Optional[SubscriptionTier]:
+    """Map a Google base-plan / product id to a tier (e.g. 'pro-monthly' -> PRO)."""
+    normalized = str(product_id or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized == GOOGLE_PLAY_PRODUCT_BASIC_MONTHLY.lower():
+        return SubscriptionTier.BASIC
+    if normalized == GOOGLE_PLAY_PRODUCT_PRO_MONTHLY.lower():
+        return SubscriptionTier.PRO
+    if "basic" in normalized:
+        return SubscriptionTier.BASIC
+    if "pro" in normalized:
+        return SubscriptionTier.PRO
+    return None
+
+
 def _coerce_subscription_tier(raw_value: Optional[str], fallback: SubscriptionTier) -> SubscriptionTier:
     if not raw_value:
         return fallback
@@ -2317,18 +2362,46 @@ def _apple_tier_from_state(state: Optional[dict]) -> Optional[SubscriptionTier]:
     return _tier_from_apple_product_id(state.get("apple_product_id") if state else None)
 
 
+def _google_subscription_active(state: Optional[dict]) -> bool:
+    if not state:
+        return False
+    status = str(state.get("google_subscription_status") or "").strip().lower()
+    # Entitled states that retain access until expiry: active, in grace, and
+    # canceled (auto-renew off but still in the paid period). on_hold / paused /
+    # expired / pending / revoked are NOT entitled. Expiry is enforced below.
+    if status not in {"active", "in_grace_period", "grace", "canceled"}:
+        return False
+    # Unlike Apple, never treat a missing expiry as active-forever — a Google
+    # grace/hold notification without an expiry must not grant indefinite access.
+    expires_at = _to_utc_datetime(state.get("google_expires_at"))
+    if expires_at is None:
+        return False
+    return expires_at > datetime.now(timezone.utc)
+
+
+def _google_tier_from_state(state: Optional[dict]) -> Optional[SubscriptionTier]:
+    if not _google_subscription_active(state):
+        return None
+    stored = _coerce_subscription_tier(state.get("google_tier"), SubscriptionTier.FREE) if state and state.get("google_tier") else None
+    if stored and stored != SubscriptionTier.FREE:
+        return stored
+    return _tier_from_google_product_id(state.get("google_product_id") if state else None)
+
+
 def _billing_provider_from_tiers(
     stripe_tier: Optional[SubscriptionTier],
     apple_tier: Optional[SubscriptionTier],
+    google_tier: Optional[SubscriptionTier] = None,
 ) -> str:
-    has_stripe = stripe_tier is not None and stripe_tier != SubscriptionTier.FREE
-    has_apple = apple_tier is not None and apple_tier != SubscriptionTier.FREE
-    if has_stripe and has_apple:
+    active = [
+        name
+        for name, tier in (("stripe", stripe_tier), ("apple", apple_tier), ("google", google_tier))
+        if tier is not None and tier != SubscriptionTier.FREE
+    ]
+    if len(active) > 1:
         return "hybrid"
-    if has_stripe:
-        return "stripe"
-    if has_apple:
-        return "apple"
+    if len(active) == 1:
+        return active[0]
     return "none"
 
 
@@ -2336,14 +2409,11 @@ def _entitlement_source_from_tiers(
     stripe_tier: Optional[SubscriptionTier],
     apple_tier: Optional[SubscriptionTier],
     user_tier: SubscriptionTier,
+    google_tier: Optional[SubscriptionTier] = None,
 ) -> Optional[str]:
-    provider = _billing_provider_from_tiers(stripe_tier, apple_tier)
-    if provider == "hybrid":
-        return "hybrid"
-    if provider == "stripe":
-        return "stripe"
-    if provider == "apple":
-        return "apple"
+    provider = _billing_provider_from_tiers(stripe_tier, apple_tier, google_tier)
+    if provider in {"hybrid", "stripe", "apple", "google"}:
+        return provider
     if user_tier != SubscriptionTier.FREE:
         return "manual"
     return None
@@ -2422,7 +2492,11 @@ def _effective_tier_from_state(state: Optional[dict], fallback_tier: Subscriptio
     if not state:
         return fallback_tier
 
-    return _max_tier(_stripe_tier_from_state(state), _apple_tier_from_state(state))
+    return _max_tier(
+        _stripe_tier_from_state(state),
+        _apple_tier_from_state(state),
+        _google_tier_from_state(state),
+    )
 
 
 def _sync_user_tier_with_billing(user: UserInDB) -> UserInDB:
@@ -2463,14 +2537,17 @@ def _sync_user_tier_with_billing(user: UserInDB) -> UserInDB:
 def _billing_status_payload(user: UserInDB, state: Optional[dict]) -> BillingStatusResponse:
     stripe_tier = _stripe_tier_from_state(state)
     apple_tier = _apple_tier_from_state(state)
+    google_tier = _google_tier_from_state(state)
     effective_tier = _effective_tier_from_state(state, user.tier)
-    plan_tier = _max_tier(stripe_tier, apple_tier, user.tier if not state else None)
+    plan_tier = _max_tier(stripe_tier, apple_tier, google_tier, user.tier if not state else None)
     stripe_status = str(state.get("subscription_status") if state else "none")
     apple_status = str(state.get("apple_subscription_status")) if state and state.get("apple_subscription_status") else None
+    google_status = str(state.get("google_subscription_status")) if state and state.get("google_subscription_status") else None
     stripe_expires_at = _to_utc_datetime(state.get("current_period_end")) if state else None
     apple_expires_at = _to_utc_datetime(state.get("apple_expires_at")) if state else None
-    billing_provider = _billing_provider_from_tiers(stripe_tier, apple_tier)
-    entitlement_source = _entitlement_source_from_tiers(stripe_tier, apple_tier, user.tier)
+    google_expires_at = _to_utc_datetime(state.get("google_expires_at")) if state else None
+    billing_provider = _billing_provider_from_tiers(stripe_tier, apple_tier, google_tier)
+    entitlement_source = _entitlement_source_from_tiers(stripe_tier, apple_tier, user.tier, google_tier)
     return BillingStatusResponse(
         billing_enabled=_billing_runtime_enabled(),
         user_tier=user.tier,
@@ -2479,6 +2556,7 @@ def _billing_status_payload(user: UserInDB, state: Optional[dict]) -> BillingSta
         subscription_status=stripe_status,
         tier_stripe=stripe_tier,
         tier_apple=apple_tier,
+        tier_google=google_tier,
         billing_provider=billing_provider,
         entitlement_source=entitlement_source,
         stripe_status=stripe_status,
@@ -2486,6 +2564,9 @@ def _billing_status_payload(user: UserInDB, state: Optional[dict]) -> BillingSta
         apple_product_id=str(state.get("apple_product_id")) if state and state.get("apple_product_id") else None,
         apple_subscription_status=apple_status,
         apple_expires_at=apple_expires_at,
+        google_product_id=str(state.get("google_product_id")) if state and state.get("google_product_id") else None,
+        google_subscription_status=google_status,
+        google_expires_at=google_expires_at,
         is_active=effective_tier != SubscriptionTier.FREE or _is_grace_active(state),
         cancel_at_period_end=bool(state.get("cancel_at_period_end")) if state else False,
         current_period_end=stripe_expires_at,
@@ -3948,6 +4029,130 @@ def _apple_state_updates_from_purchase(
     }
 
 
+ANDROIDPUBLISHER_SCOPE = "https://www.googleapis.com/auth/androidpublisher"
+# Play subscriptionState -> stored status (entitlement decided in _google_subscription_active).
+_GOOGLE_STATE_MAP = {
+    "SUBSCRIPTION_STATE_ACTIVE": "active",
+    "SUBSCRIPTION_STATE_IN_GRACE_PERIOD": "in_grace_period",
+    "SUBSCRIPTION_STATE_CANCELED": "canceled",
+    "SUBSCRIPTION_STATE_ON_HOLD": "on_hold",
+    "SUBSCRIPTION_STATE_PAUSED": "paused",
+    "SUBSCRIPTION_STATE_EXPIRED": "expired",
+    "SUBSCRIPTION_STATE_PENDING": "pending",
+}
+
+
+def _google_verify_runtime_enabled() -> bool:
+    return GOOGLE_PLAY_ENABLED and billing_store_enabled() and bool(GOOGLE_SERVICE_ACCOUNT_FILE)
+
+
+def _google_publisher_client():
+    """Lazily build the Google Play Developer API client (deps optional unless enabled)."""
+    from google.oauth2 import service_account  # type: ignore
+    from googleapiclient.discovery import build  # type: ignore
+
+    creds = service_account.Credentials.from_service_account_file(
+        GOOGLE_SERVICE_ACCOUNT_FILE, scopes=[ANDROIDPUBLISHER_SCOPE]
+    )
+    return build("androidpublisher", "v3", credentials=creds, cache_discovery=False)
+
+
+def _google_get_subscription(purchase_token: str) -> dict[str, Any]:
+    """Fetch the authoritative purchase via purchases.subscriptionsv2.get.
+
+    A forged/foreign token raises an HttpError (4xx) here — the real anti-spoof
+    guarantee. Caller must treat any failure as 'do not grant'."""
+    client = _google_publisher_client()
+    return (
+        client.purchases()
+        .subscriptionsv2()
+        .get(packageName=GOOGLE_PLAY_PACKAGE_NAME, token=purchase_token)
+        .execute()
+    )
+
+
+def _google_acknowledge(subscription_product_id: str, purchase_token: str) -> None:
+    """Acknowledge a subscription purchase (idempotent; avoids 3-day auto-refund)."""
+    try:
+        client = _google_publisher_client()
+        client.purchases().subscriptions().acknowledge(
+            packageName=GOOGLE_PLAY_PACKAGE_NAME,
+            subscriptionId=subscription_product_id,
+            token=purchase_token,
+            body={},
+        ).execute()
+    except Exception as exc:  # already-acknowledged returns an error we can ignore
+        logger.warning("Google acknowledge failed (token=...%s): %s", purchase_token[-6:], exc)
+
+
+def _google_state_updates_from_sub(sub: dict[str, Any], purchase_token: str) -> dict[str, Any]:
+    """Translate a SubscriptionPurchaseV2 into google_* state updates + raise on
+    anything that must not grant (wrong package, test purchase in prod, unknown tier)."""
+    line_items = sub.get("lineItems") or []
+    if not line_items:
+        raise HTTPException(400, detail="Google purchase has no line items")
+    line = line_items[0]
+    product_id = _normalized_text(line.get("productId"))
+    base_plan_id = _normalized_text((line.get("offerDetails") or {}).get("basePlanId"))
+    expires_at = _to_utc_datetime(line.get("expiryTime"))
+    state_raw = _normalized_text(sub.get("subscriptionState"))
+    status = _GOOGLE_STATE_MAP.get(state_raw, state_raw.lower() or "unknown")
+    # Google returns `testPurchase: {}` (an empty, falsy object) for test buys —
+    # detect by KEY PRESENCE, not truthiness.
+    is_test = "testPurchase" in sub
+
+    if is_test and not GOOGLE_PLAY_ALLOW_TEST_PURCHASES:
+        raise HTTPException(400, detail="Test purchase rejected in production")
+
+    tier = _tier_from_google_product_id(base_plan_id) or _tier_from_google_product_id(product_id)
+    if not tier:
+        raise HTTPException(400, detail="Unsupported Google product/base-plan id")
+
+    return {
+        "google_tier": tier.value,
+        "google_product_id": base_plan_id or product_id,
+        "google_purchase_token": purchase_token,
+        "google_order_id": _normalized_text(sub.get("latestOrderId")) or None,
+        "google_subscription_status": status,
+        "google_expires_at": expires_at,
+        "google_environment": "test" if is_test else "production",
+        "google_last_verified_at": datetime.now(timezone.utc),
+    }
+
+
+def _google_external_account_id(sub: dict[str, Any]) -> Optional[str]:
+    ext = sub.get("externalAccountIdentifiers") or {}
+    token = _normalized_text(ext.get("obfuscatedExternalAccountId"))
+    return token or None
+
+
+def _google_apply_purchase(user_id: str, email: str, sub: dict[str, Any], purchase_token: str, source: str) -> None:
+    """Monotonic-guarded upsert of a Google purchase + server-side acknowledge.
+
+    Tolerates Pub/Sub at-least-once / out-of-order delivery: skips an update whose
+    expiry is older than what we already stored for the same token."""
+    updates = _google_state_updates_from_sub(sub, purchase_token)
+    existing = get_state_by_user_id(user_id)
+    new_expiry = updates.get("google_expires_at")
+    if existing and existing.get("google_purchase_token") == purchase_token:
+        prior_expiry = _to_utc_datetime(existing.get("google_expires_at"))
+        if prior_expiry and new_expiry and new_expiry < prior_expiry:
+            logger.info("Skipping stale Google update for user=%s (older expiry)", user_id)
+            return
+    upsert_customer_state(user_id, email, updates=updates, source=source)
+
+    # Acknowledge if Play still considers it unacknowledged (idempotent + safe to retry).
+    if _normalized_text(sub.get("acknowledgementState")) == "ACKNOWLEDGEMENT_STATE_PENDING":
+        line_items = sub.get("lineItems") or []
+        product_id = _normalized_text(line_items[0].get("productId")) if line_items else ""
+        if product_id:
+            _google_acknowledge(product_id, purchase_token)
+
+    refreshed = get_user_by_id(user_id)
+    if refreshed:
+        _sync_user_tier_with_billing(refreshed)
+
+
 def _reset_stripe_linked_state_for_mode_switch(user: UserInDB, source: str) -> Optional[dict]:
     """Clear Stripe-linked ids so checkout can re-provision customer/subscription cleanly."""
     if not billing_store_enabled():
@@ -4082,6 +4287,64 @@ async def verify_apple_billing_purchase(
         source="apple_purchase_verify",
     )
     refreshed = _sync_user_tier_with_billing(user)
+    latest_state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
+    return _billing_status_payload(refreshed, latest_state)
+
+
+@app.post("/api/billing/account-token", response_model=MessageResponse, tags=["Billing"])
+async def register_billing_account_token(
+    data: RegisterAccountTokenRequest,
+    user: UserInDB = Depends(require_verified_user),
+):
+    """Register the Android per-install account token so an RTDN-only Google
+    purchase (client verify never landed) can still be attributed to this user."""
+    if not billing_store_enabled():
+        raise HTTPException(503, detail="Billing store is unavailable")
+    token = (data.app_account_token or "").strip()
+    if token:
+        register_account_token(token, user.id)
+    return MessageResponse(message="ok")
+
+
+@app.post("/api/billing/google/verify", response_model=BillingStatusResponse, tags=["Billing"])
+async def verify_google_billing_purchase(
+    data: GoogleVerifyRequest,
+    request: Request,
+    user: UserInDB = Depends(require_verified_user),
+):
+    if not _google_verify_runtime_enabled():
+        raise HTTPException(503, detail="Google billing verification is unavailable")
+
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(identifier=f"billing:google-verify:user:{user.id}", max_requests=20, window_seconds=3600)
+    _enforce_rate_limit(identifier=f"billing:google-verify:ip:{client_id}", max_requests=60, window_seconds=3600)
+
+    state = _ensure_billing_state_for_user(user)
+    if not state:
+        raise HTTPException(503, detail="Billing store is unavailable")
+
+    if data.app_account_token:
+        register_account_token(data.app_account_token, user.id)
+
+    # Authoritative fetch — a forged/foreign token raises here (never grants).
+    try:
+        sub = _google_get_subscription(data.purchase_token)
+    except Exception as exc:
+        logger.warning("Google subscription fetch failed for user=%s: %s", user.id, exc)
+        raise HTTPException(400, detail="Could not verify Google purchase")
+
+    # Bind the purchase to this user: the obfuscated account id on the purchase
+    # must not belong to a different user (prevents claiming someone else's token).
+    ext_token = _google_external_account_id(sub)
+    if ext_token:
+        owner = get_user_id_by_account_token(ext_token)
+        if owner and owner != user.id:
+            raise HTTPException(403, detail="Purchase belongs to a different account")
+        if data.app_account_token and ext_token.lower() != data.app_account_token.lower():
+            raise HTTPException(400, detail="Google account token mismatch")
+
+    _google_apply_purchase(user.id, user.email, sub, data.purchase_token, source="google_purchase_verify")
+    refreshed = get_user_by_id(user.id) or user
     latest_state = get_state_by_user_id(refreshed.id) if billing_store_enabled() else None
     return _billing_status_payload(refreshed, latest_state)
 
@@ -4468,6 +4731,130 @@ async def stripe_webhook(request: Request):
         logger.error("Stripe webhook processing failed for event %s: %s", event_id, e, exc_info=True)
         mark_webhook_event(event_id, "error", error_message=str(e))
         raise HTTPException(500, detail="Stripe webhook processing failed")
+
+
+def _verify_pubsub_push(request: Request) -> None:
+    """Verify the Pub/Sub push request's OIDC bearer token (audience-bound).
+
+    Skipped only when GOOGLE_RTDN_AUDIENCE is unset (local/dev). In production the
+    audience must be configured on the push subscription and here."""
+    if not GOOGLE_RTDN_AUDIENCE:
+        return
+    auth = request.headers.get("authorization", "")
+    if not auth.lower().startswith("bearer "):
+        raise HTTPException(403, detail="Missing Pub/Sub OIDC token")
+    token = auth.split(" ", 1)[1].strip()
+    try:
+        from google.oauth2 import id_token  # type: ignore
+        from google.auth.transport import requests as google_requests  # type: ignore
+
+        claims = id_token.verify_oauth2_token(
+            token, google_requests.Request(), audience=GOOGLE_RTDN_AUDIENCE
+        )
+        if claims.get("iss") not in {"https://accounts.google.com", "accounts.google.com"}:
+            raise HTTPException(403, detail="Invalid Pub/Sub token issuer")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning("Pub/Sub OIDC verification failed: %s", exc)
+        raise HTTPException(403, detail="Invalid Pub/Sub OIDC token")
+
+
+def _process_google_rtdn(notification: dict[str, Any]) -> None:
+    """Apply a decoded Google DeveloperNotification. Always re-fetches the
+    authoritative purchase rather than trusting the notification body."""
+    if notification.get("testNotification"):
+        logger.info("Google RTDN test notification received")
+        return
+
+    sub_notif = notification.get("subscriptionNotification") or {}
+    voided = notification.get("voidedPurchaseNotification") or {}
+    purchase_token = _normalized_text(sub_notif.get("purchaseToken")) or _normalized_text(voided.get("purchaseToken"))
+    if not purchase_token:
+        logger.info("Google RTDN without a purchase token; ignored")
+        return
+
+    state = get_state_by_google_purchase_token(purchase_token)
+    user_id = state.get("user_id") if state else None
+
+    # Refund / chargeback: revoke entitlement immediately for the stored token.
+    if voided and not sub_notif:
+        if not user_id:
+            logger.warning("Google voided RTDN for an unknown purchase token")
+            return
+        user = get_user_by_id(user_id)
+        if not user:
+            return
+        upsert_customer_state(
+            user.id,
+            user.email,
+            updates={
+                "google_subscription_status": "revoked",
+                "google_expires_at": datetime.now(timezone.utc) - timedelta(seconds=1),
+            },
+            source="google_rtdn_voided",
+        )
+        _sync_user_tier_with_billing(user)
+        return
+
+    sub = _google_get_subscription(purchase_token)
+    if not user_id:
+        ext = _google_external_account_id(sub)
+        if ext:
+            user_id = get_user_id_by_account_token(ext)
+    if not user_id:
+        logger.warning("Google RTDN: could not attribute purchase to a user")
+        return
+    user = get_user_by_id(user_id)
+    if not user:
+        return
+    _google_apply_purchase(user.id, user.email, sub, purchase_token, source="google_rtdn")
+
+
+@app.post("/api/webhooks/google", response_model=MessageResponse, tags=["System"])
+async def google_rtdn_webhook(request: Request):
+    if not (GOOGLE_PLAY_ENABLED and billing_store_enabled()):
+        raise HTTPException(503, detail="Google billing is unavailable")
+
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(identifier=f"webhook:google:ip:{client_id}", max_requests=120, window_seconds=60)
+    _verify_pubsub_push(request)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(400, detail="Invalid JSON")
+
+    message = (body or {}).get("message") or {}
+    message_id = _normalized_text(message.get("messageId") or message.get("message_id"))
+    data_b64 = message.get("data") or ""
+    if not data_b64:
+        return MessageResponse(message="Ignored: empty Pub/Sub message")
+    try:
+        notification = json.loads(base64.b64decode(data_b64).decode("utf-8"))
+    except Exception:
+        raise HTTPException(400, detail="Invalid Pub/Sub data payload")
+
+    # Idempotency keyed on the Pub/Sub messageId, namespaced so a Stripe event id
+    # can never collide with it on the shared PK.
+    event_key = f"google:{message_id or data_b64[:200]}"
+    if notification.get("testNotification"):
+        event_type = "google_test"
+    elif notification.get("voidedPurchaseNotification"):
+        event_type = "google_voided"
+    else:
+        event_type = "google_subscription"
+
+    if not register_webhook_event(event_key, event_type, notification, provider="google"):
+        return MessageResponse(message="Duplicate Google notification ignored")
+    try:
+        _process_google_rtdn(notification)
+        mark_webhook_event(event_key, "success")
+        return MessageResponse(message=f"Processed Google notification type={event_type}")
+    except Exception as e:
+        logger.error("Google RTDN processing failed for %s: %s", event_key, e, exc_info=True)
+        mark_webhook_event(event_key, "error", error_message=str(e))
+        raise HTTPException(500, detail="Google RTDN processing failed")
 
 
 # ============================================================

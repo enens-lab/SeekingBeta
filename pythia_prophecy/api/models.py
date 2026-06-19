@@ -365,6 +365,24 @@ class AppleVerifyRequest(BaseModel):
     signed_transaction_info: str
 
 
+class GoogleVerifyRequest(BaseModel):
+    """Payload from the Android app after a Play-Billing purchase. The server
+    re-verifies the purchase_token against the Google Play Developer API; the
+    client-supplied fields are only cross-checks."""
+    purchase_token: str
+    product_id: str  # the subscription product id (e.g. seekingbeta_subscription)
+    base_plan_id: Optional[str] = None  # e.g. basic-monthly / pro-monthly
+    package_name: Optional[str] = None
+    order_id: Optional[str] = None
+    app_account_token: Optional[str] = None  # obfuscatedExternalAccountId
+
+
+class RegisterAccountTokenRequest(BaseModel):
+    """Lets the client register its per-install account token up front, so an
+    RTDN-only purchase (client verify never landed) can still be attributed."""
+    app_account_token: str
+
+
 class BillingStatusResponse(BaseModel):
     """Current billing/subscription state for authenticated user."""
     billing_enabled: bool
@@ -374,6 +392,7 @@ class BillingStatusResponse(BaseModel):
     subscription_status: str
     tier_stripe: Optional[SubscriptionTier] = None
     tier_apple: Optional[SubscriptionTier] = None
+    tier_google: Optional[SubscriptionTier] = None
     billing_provider: str = "none"
     entitlement_source: Optional[str] = None
     stripe_status: Optional[str] = None
@@ -381,6 +400,9 @@ class BillingStatusResponse(BaseModel):
     apple_product_id: Optional[str] = None
     apple_subscription_status: Optional[str] = None
     apple_expires_at: Optional[datetime] = None
+    google_product_id: Optional[str] = None
+    google_subscription_status: Optional[str] = None
+    google_expires_at: Optional[datetime] = None
     is_active: bool = False
     cancel_at_period_end: bool
     current_period_end: Optional[datetime] = None

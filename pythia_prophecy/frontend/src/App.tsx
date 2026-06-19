@@ -21,6 +21,7 @@ import Profile from './pages/Profile';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import RefundCancellation from './pages/RefundCancellation';
+import DeleteAccount from './pages/DeleteAccount';
 import Methodology from './pages/Methodology';
 import TrackRecord from './pages/TrackRecord';
 import Support from './pages/Support';
@@ -89,6 +90,7 @@ function AppRoutes() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/refund-cancellation" element={<RefundCancellation />} />
+      <Route path="/delete-account" element={<DeleteAccount />} />
       <Route path="/methodology" element={<Methodology />} />
       <Route path="/track-record" element={<TrackRecord />} />
       <Route path="/support" element={<Support />} />

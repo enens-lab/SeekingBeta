@@ -42,6 +42,12 @@ function Footer() {
           >
             Refund &amp; Cancellation
           </Link>
+          <Link
+            to="/delete-account"
+            onClick={() => trackEvent('footer_link_click', { destination: 'delete_account' })}
+          >
+            Delete Account
+          </Link>
         </nav>
         <p className="footer-copyright">
           &copy; {currentYear} SeekingBeta.AI. All rights reserved.

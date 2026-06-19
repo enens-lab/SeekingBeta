@@ -56,6 +56,12 @@ export const ROUTE_SEO: Record<string, SeoMeta> = {
     canonicalPath: '/refund-cancellation',
     indexable: true,
   },
+  '/delete-account': {
+    title: 'Delete Your Account | SeekingBeta.AI',
+    description: 'Permanently delete your SeekingBeta.AI account and associated data from the web, the app, or by email.',
+    canonicalPath: '/delete-account',
+    indexable: true,
+  },
   '/support': {
     title: 'Support | SeekingBeta.AI',
     description: 'Get help with your SeekingBeta.AI account, billing, and prediction boards.',

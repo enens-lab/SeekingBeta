@@ -64,10 +64,17 @@ def prepare_games(
 ) -> pd.DataFrame:
     """Merge normalized schedule/detail tables into one game frame."""
     games = schedule_df.copy()
+    # Dedupe on game_pk up front. A duplicated game row makes every downstream per-row
+    # feature merge (pregame team/starter, transactions) many-to-many and explodes to a
+    # 512 GiB allocation; this single guard immunizes the whole build at the root.
+    if "game_pk" in games.columns:
+        games = games.drop_duplicates(subset=["game_pk"])
     games["official_date"] = pd.to_datetime(games["official_date"], utc=True, errors="coerce").dt.tz_localize(None)
     if require_completed:
         games = games.loc[games["winner_team_id"].notna()].copy()
-    merged = games.merge(details_df, on="game_pk", how="left", suffixes=("", "_detail"))
+    # Dedupe the reference table on the join key so this stays a many-to-one merge.
+    details_unique = details_df.drop_duplicates(subset=["game_pk"]) if "game_pk" in details_df.columns else details_df
+    merged = games.merge(details_unique, on="game_pk", how="left", suffixes=("", "_detail"))
 
     merged["home_win"] = np.where(
         merged["winner_team_id"].notna(),
@@ -104,7 +111,7 @@ def prepare_games(
             "division_name": "away_division_name",
             "league_name": "away_league_name",
         }
-        merged = merged.merge(team_meta[list({"away_team_id", *away_cols.keys()})], on="away_team_id", how="left")
+        merged = merged.merge(team_meta[list({"away_team_id", *away_cols.keys()})].drop_duplicates(subset=["away_team_id"]), on="away_team_id", how="left")
         merged = merged.rename(columns=away_cols)
 
         team_meta = team_meta_df.rename(columns={"team_id": "home_team_id"})
@@ -113,17 +120,17 @@ def prepare_games(
             "division_name": "home_division_name",
             "league_name": "home_league_name",
         }
-        merged = merged.merge(team_meta[list({"home_team_id", *home_cols.keys()})], on="home_team_id", how="left")
+        merged = merged.merge(team_meta[list({"home_team_id", *home_cols.keys()})].drop_duplicates(subset=["home_team_id"]), on="home_team_id", how="left")
         merged = merged.rename(columns=home_cols)
 
     if pitcher_profiles_df is not None and not pitcher_profiles_df.empty:
         away_profiles = pitcher_profiles_df.rename(columns={"player_id": "away_probable_pitcher_id"}).add_prefix("away_starter_profile_")
         away_profiles = away_profiles.rename(columns={"away_starter_profile_away_probable_pitcher_id": "away_probable_pitcher_id"})
-        merged = merged.merge(away_profiles, on="away_probable_pitcher_id", how="left")
+        merged = merged.merge(away_profiles.drop_duplicates(subset=["away_probable_pitcher_id"]), on="away_probable_pitcher_id", how="left")
 
         home_profiles = pitcher_profiles_df.rename(columns={"player_id": "home_probable_pitcher_id"}).add_prefix("home_starter_profile_")
         home_profiles = home_profiles.rename(columns={"home_starter_profile_home_probable_pitcher_id": "home_probable_pitcher_id"})
-        merged = merged.merge(home_profiles, on="home_probable_pitcher_id", how="left")
+        merged = merged.merge(home_profiles.drop_duplicates(subset=["home_probable_pitcher_id"]), on="home_probable_pitcher_id", how="left")
 
         for side in ("away", "home"):
             merged[f"{side}_starter_profile_years_since_debut"] = _years_since(

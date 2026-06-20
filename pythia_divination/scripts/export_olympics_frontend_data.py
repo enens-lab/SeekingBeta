@@ -23,6 +23,9 @@ DIV_ROOT = Path(__file__).resolve().parents[1]
 if str(DIV_ROOT) not in sys.path:
     sys.path.insert(0, str(DIV_ROOT))
 
+PROJ_ROOT = Path(__file__).resolve().parents[2]
+FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
+
 from sports.olympics import client, medal_model as mm, detail as od
 from sports.olympics.constants import OLYMPIC_EDITIONS, noc_display_name
 
@@ -214,13 +217,37 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
     }
 
 
-if __name__ == "__main__":
+def _json_default(o: Any) -> Any:
+    # numpy scalars/arrays aren't JSON-serializable; convert to native so board
+    # numbers stay NUMBERS (not stringified) for the frontend. Fall back to str.
+    import numpy as np
+
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.floating):
+        return float(o)
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    return str(o)
+
+
+def export_olympics_frontend_data() -> None:
     import json
 
+    payload = build_live_upcoming_payload()
+    upcoming = payload["upcoming"]
+    completed = payload["completed"]
+    FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    (FRONTEND_DATA_DIR / "olympics_upcoming_tournaments.json").write_text(
+        json.dumps(upcoming, indent=2, default=_json_default)
+    )
+    (FRONTEND_DATA_DIR / "olympics_historical_backtests.json").write_text(
+        json.dumps(completed, indent=2, default=_json_default)
+    )
+    print(f"Exported {len(upcoming)} olympics upcoming boards")
+    print(f"Exported {len(completed)} olympics historical boards")
+
+
+if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    p = build_live_upcoming_payload()
-    print(json.dumps({
-        "upcoming": len(p["upcoming"]),
-        "completed": len(p["completed"]),
-        "top5": [(x["playerName"], x["winProbability"]) for x in (p["upcoming"][0]["predictions"][:5] if p["upcoming"] else [])],
-    }, indent=2, default=str))
+    export_olympics_frontend_data()

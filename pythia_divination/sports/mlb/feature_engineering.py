@@ -207,6 +207,9 @@ def attach_pregame_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -
             on_cols=["official_date", "game_pk"],
         ).rename(columns={column: f"{side}_team_{column}" for column in general_columns})
         general = general.rename(columns={"team_id": team_col})
+        # Dedupe on the merge keys so a duplicated feature row can't make this a
+        # many-to-many join and explode to ~2^36 rows (a 512 GiB allocation crash).
+        general = general.drop_duplicates(subset=["game_pk", "official_date", team_col])
         merged = merged.merge(general, on=["game_pk", "official_date", team_col], how="left")
 
         same_site_history = team_logs.loc[team_logs["is_home"] == is_home_value, ["team_id", "game_pk", "official_date", "same_site_win_pct_last_10"]]
@@ -217,6 +220,7 @@ def attach_pregame_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -
             feature_cols=["same_site_win_pct_last_10"],
             on_cols=["official_date", "game_pk"],
         ).rename(columns={"same_site_win_pct_last_10": f"{side}_team_same_site_win_pct_last_10", "team_id": team_col})
+        same_site = same_site.drop_duplicates(subset=["game_pk", "official_date", team_col])
         merged = merged.merge(same_site, on=["game_pk", "official_date", team_col], how="left")
 
     return merged
@@ -282,6 +286,12 @@ def attach_pregame_starter_features(games: pd.DataFrame, starter_logs: pd.DataFr
                 "team_id": team_col,
                 **{column: f"{side}_starter_{column}" for column in safe_feature_columns},
             }
+        )
+        # Dedupe on the merge keys so a duplicated feature row can't make this a
+        # many-to-many join and explode to ~2^36 rows (the 512 GiB allocation that
+        # crashed the MLB upcoming export). Mirrors the lineup-merge dedupe.
+        feature_frame = feature_frame.drop_duplicates(
+            subset=["game_pk", "official_date", starter_col, team_col]
         )
         merged = merged.merge(feature_frame, on=["game_pk", "official_date", starter_col, team_col], how="left")
 

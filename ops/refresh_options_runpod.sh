@@ -58,6 +58,11 @@ for i in $(seq 1 "$POLL_MAX"); do
 done
 [ "$STATUS" = "COMPLETED" ] || { echo "[runpod-options] timed out after $((POLL_INTERVAL*POLL_MAX))s"; exit 1; }
 
-echo "[runpod-options] ingest parquet -> Postgres (in divination container)"
-$DC exec -T divination-api python scripts/ingest_options_archive.py
+# Run the ingest in a one-off divination container with the HOST repo mounted, so it
+# uses the current scripts/ (not the baked image, which predates this script) while
+# still being on the compose network (DATABASE_URL=postgres:5432 resolves) with the
+# service env (.env: DATABASE_URL, AWS creds, S3_BUCKET).
+echo "[runpod-options] ingest parquet -> Postgres (one-off divination container, host repo mounted)"
+$DC run --rm -T -v "$REPO":/work -w /work/pythia_divination divination-api \
+  python scripts/ingest_options_archive.py
 echo "[runpod-options] $(date -u +%FT%TZ) done"

@@ -52,8 +52,11 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Expose port
 EXPOSE 80
 
-# Health check
+# Health check. Probe HTTPS directly: nginx 301-redirects http->https, and wget
+# follows the redirect to a cert issued for seekingbeta.ai (not "localhost"),
+# failing SSL verification (exit 5) and falsely marking the container unhealthy.
+# --no-check-certificate against the static root reflects nginx actually serving.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost/ || exit 1
+    CMD wget -q -T 4 --spider --no-check-certificate https://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]

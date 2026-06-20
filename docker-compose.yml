@@ -239,7 +239,12 @@ services:
       - divination-api
       - prophecy-api
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/"]
+      # Probe HTTPS directly: nginx 301-redirects http->https, and wget follows
+      # the redirect to a cert issued for seekingbeta.ai (not "localhost"), failing
+      # SSL verification (exit 5) and marking the container falsely "unhealthy".
+      # Hit https with --no-check-certificate against the static root (no backend
+      # dependency) so the check reflects nginx actually serving.
+      test: ["CMD", "wget", "-q", "-T", "4", "--spider", "--no-check-certificate", "https://localhost/"]
       interval: 30s
       timeout: 5s
       retries: 3

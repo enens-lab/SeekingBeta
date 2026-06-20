@@ -140,13 +140,17 @@ def _export_one(sport):
     for cmd in SPORTS[sport]["cmds"]:
         last_rc, last_log = _run(cmd, DIV, RUN_TIMEOUT_SEC)
         if last_rc != 0:
-            return {"sport": sport, "ok": False, "exit_code": last_rc, "boards": [], "log_tail": last_log[-2000:]}
+            break  # stop the chain, but still upload any boards already written
 
+    # Upload whatever boards this run produced, even on partial failure. Each board is
+    # written atomically at the end of its phase, so e.g. if the MLB *upcoming* phase
+    # OOMs (exit -9), the *historical* board from phase 1 is already complete on disk —
+    # publish it rather than losing the whole run.
     try:
         boards = _upload_boards(start)
     except Exception as exc:  # noqa: BLE001
-        return {"sport": sport, "ok": False, "exit_code": 0, "error": f"board upload failed: {exc}"}
-    return {"sport": sport, "ok": True, "exit_code": 0, "boards": boards, "log_tail": last_log[-1200:]}
+        return {"sport": sport, "ok": False, "exit_code": last_rc, "boards": [], "error": f"board upload failed: {exc}", "log_tail": last_log[-1500:]}
+    return {"sport": sport, "ok": last_rc == 0, "exit_code": last_rc, "boards": boards, "log_tail": last_log[-1500:]}
 
 
 def handler(job):

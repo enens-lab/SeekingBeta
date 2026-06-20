@@ -11,7 +11,7 @@
       "Resource": "arn:aws:s3:::pythia-ml-artifacts"
     },
     {
-      "Sid": "ReadWriteArtifactObjects",
+      "Sid": "ReadWritePythiaObjects",
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
@@ -19,7 +19,12 @@
         "s3:AbortMultipartUpload",
         "s3:ListMultipartUploadParts"
       ],
-      "Resource": "arn:aws:s3:::pythia-ml-artifacts/artifacts/*"
+      "Resource": [
+        "arn:aws:s3:::pythia-ml-artifacts/artifacts/*",
+        "arn:aws:s3:::pythia-ml-artifacts/sports-data/*",
+        "arn:aws:s3:::pythia-ml-artifacts/frontend-boards/*",
+        "arn:aws:s3:::pythia-ml-artifacts/options_archive/*"
+      ]
     }
   ]
 }

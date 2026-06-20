@@ -42,9 +42,16 @@ stays small and the boards always reflect current data without an image rebuild.
      docker build -f runpod/sports/Dockerfile -t <youruser>/pythia-sports-runpod:latest .
      docker push <youruser>/pythia-sports-runpod:latest
      ```
-   - **RunPod GitHub build**: point a new serverless endpoint at this repo +
-     Dockerfile path `runpod/sports/Dockerfile` (RunPod clones + builds; the repo is
-     code-only so the build is lean). Needs RunPod's GitHub app authorized on the repo.
+   - **RunPod GitHub build (chosen):** RunPod console → Serverless → New Endpoint →
+     "Import Git Repository". Authorize RunPod's GitHub app on the **private** repo
+     `enens-lab/SeekingBeta`, then set:
+       - Branch: `feature/sports-prediction-market` (where the worker lives today;
+         switch to `lstm_v2`/main once merged)
+       - Dockerfile path: `runpod/sports/Dockerfile`
+       - Build context: repo root (default) — the Dockerfile COPYs `pythia_divination/`
+         from the root, so do NOT set the context to `runpod/sports`.
+     RunPod clones + builds on each push; the repo is code-only (data/artifacts
+     gitignored) so the build stays lean.
 
 4. **Create the RunPod serverless endpoint** from that image:
    - Worker: **CPU** is fine (exports are CPU/RAM-bound, no GPU needed) — pick a

@@ -33,7 +33,19 @@ echo "[refresh_sports_cron] $(date -u +%FT%TZ) start"
 # One container run does all three exports. Each export step is allowed to fail
 # without aborting the others (a single sport's upstream hiccup shouldn't block
 # the rest), but we surface failures in the log.
+#
+# HARD MEMORY CAP (--memory=3g --memory-swap=3g): the export runs in a throwaway
+# container with NO limit by default, so a buggy export (e.g. a many-to-many merge
+# that explodes a DataFrame) can consume ALL host RAM *and* swap and global-OOM the
+# whole instance — taking the live site down with it (this happened 2026-06-19: an
+# uncaught cartesian in export_mlb allocated >10 GB, exhausted swap, and made the
+# box unreachable on every port). With this cap the runaway python is OOM-killed
+# inside its own 3 GB cgroup (caught by the per-step `|| echo FAILED` below) and the
+# host is never starved. --memory-swap=3g (== --memory) means ZERO swap for the
+# container, so it can never thrash swap. Bump only if a *legitimate* export needs
+# more, after confirming the host has the headroom (services use ~5 GB at peak).
 docker run --rm \
+  --memory=3g --memory-swap=3g \
   -v "$REPO":/work \
   -w /work/pythia_divination \
   "$IMAGE" \

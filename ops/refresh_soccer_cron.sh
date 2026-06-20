@@ -32,7 +32,14 @@ DC="docker compose"; $DC version >/dev/null 2>&1 || DC="docker-compose"
 
 echo "[refresh_soccer_cron] $(date -u +%FT%TZ) start"
 
+# HARD MEMORY CAP (--memory=3g --memory-swap=3g): confine the throwaway export
+# container so a buggy export can never consume all host RAM/swap and global-OOM the
+# instance (this took the live site down on 2026-06-19 via an uncapped export). The
+# runaway process is OOM-killed inside its own 3 GB cgroup instead; --memory-swap=3g
+# (== --memory) disables swap for the container so it can't thrash. See
+# refresh_sports_cron.sh for the full incident note.
 docker run --rm \
+  --memory=3g --memory-swap=3g \
   -v "$REPO":/work \
   -w /work/pythia_divination \
   "$IMAGE" \

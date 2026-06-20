@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import json
 import sys
 from datetime import datetime, timedelta, timezone
@@ -48,6 +49,7 @@ MLB_DATA_ROOT = DEFAULT_MLB_DATA_ROOT
 NORMALIZED_DIR = MLB_DATA_ROOT / "normalized"
 FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
 DATASET_PATH = NORMALIZED_DIR / "mlb_training_dataset_latest.csv"
+DATASET_PARQUET_PATH = NORMALIZED_DIR / "mlb_training_dataset_latest.parquet"
 HISTORICAL_PREDICTIONS_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "validation_predictions.csv"
 MODEL_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "model.joblib"
 FEATURE_COLUMNS_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "feature_columns.csv"
@@ -626,13 +628,21 @@ def _fallback_predict_upcoming(frame: pd.DataFrame) -> pd.DataFrame:
 
 def _load_historical_source() -> pd.DataFrame:
     predictions = pd.read_csv(HISTORICAL_PREDICTIONS_PATH)
-    dataset = pd.read_csv(DATASET_PATH, low_memory=False)
+    # Prefer the parquet sibling: the CSV is ~64 MB and `low_memory=False`
+    # inflates it to ~700 MB+ in pandas (object dtypes), while the parquet
+    # (~15 MB) loads at a fraction of that with correct dtypes. This was a major
+    # contributor to the export's peak RSS that risked OOM on the shared box.
+    try:
+        dataset = read_preferred_table(DATASET_PARQUET_PATH, DATASET_PATH)
+    except ImportError:
+        dataset = pd.read_csv(DATASET_PATH, low_memory=False)
     merged = predictions.merge(
         dataset.drop_duplicates(subset=["game_pk"]),
         on="game_pk",
         how="left",
         suffixes=("", "_dataset"),
     )
+    del dataset
     official_date_column = "official_date_dataset" if "official_date_dataset" in merged.columns else "official_date"
     merged["official_date"] = pd.to_datetime(merged[official_date_column], errors="coerce")
     merged = merged.dropna(subset=["game_pk", "official_date", "away_team_name", "home_team_name"])
@@ -1155,16 +1165,34 @@ def _build_live_completed_backtests(calendar_year: int | None = None) -> list[di
 
 
 def export_mlb_frontend_data() -> None:
+    FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Phase 1 — historical backtests. Write and FREE this phase before building
+    # the upcoming payload. The full backtests structure (the ~74 MB JSON held as
+    # live Python objects) would otherwise stay resident while the upcoming phase
+    # re-loads the large game-log tables, stacking both peaks and pushing RSS past
+    # the safe memory budget on the shared box (this export must coexist with the
+    # ~4-5 GB divination service). Flushing + dropping here keeps the two heavy
+    # phases from overlapping. See ops/refresh_sports_cron.sh for the cap that
+    # backstops this. Progress is printed (flush=True) so a future stall/OOM is
+    # diagnosable from the logs.
+    print("[mlb-export] phase 1/2: building historical backtests...", flush=True)
     historical_frame = _load_historical_source()
     backtests = _build_backtests(historical_frame)
+    del historical_frame
+    historical_count = len(backtests)
+    (FRONTEND_DATA_DIR / "mlb_historical_backtests.json").write_text(json.dumps(backtests, indent=2))
+    del backtests
+    gc.collect()
+    print(f"[mlb-export] phase 1/2 done: wrote {historical_count} historical boards", flush=True)
+
+    # Phase 2 — live upcoming + completed boards.
+    print("[mlb-export] phase 2/2: building upcoming payload...", flush=True)
     upcoming_payload = build_live_upcoming_payload()
     upcoming = upcoming_payload["upcoming"]
-
-    FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    (FRONTEND_DATA_DIR / "mlb_historical_backtests.json").write_text(json.dumps(backtests, indent=2))
     (FRONTEND_DATA_DIR / "mlb_upcoming_tournaments.json").write_text(json.dumps(upcoming, indent=2))
 
-    print(f"Exported {len(backtests)} MLB historical boards")
+    print(f"Exported {historical_count} MLB historical boards")
     print(f"Exported {len(upcoming)} MLB upcoming boards")
 
 

@@ -153,6 +153,78 @@ def _export_one(sport):
     return {"sport": sport, "ok": last_rc == 0, "exit_code": last_rc, "boards": boards, "log_tail": last_log[-1500:]}
 
 
+def _options_archive(payload):
+    """Snapshot the daily options features for the universe and write the day's
+    parquet to S3 (the EC2 side ingests it into Postgres — this worker has no DB).
+
+    Mirrors models/quant/options_archive.run_daily_archive, minus the Postgres
+    write: snapshot_symbol per ticker -> rows -> DataFrame -> S3 parquet at the
+    SAME key the box's export uses (options_archive/dt=<date>/...). Default source
+    is yfinance (no Schwab token in the worker; set source/QUANT_OPTIONS_SOURCE +
+    sync a token for real greeks)."""
+    import sys as _sys
+    if str(DIV) not in _sys.path:
+        _sys.path.insert(0, str(DIV))
+    import datetime as _dt
+    import tempfile
+    import time as _time
+
+    import pandas as pd
+    from config.settings import settings
+    from models.quant.options_archive import ARCHIVE_SLEEP_SECONDS, snapshot_symbol
+    from models.quant.options_features import FEATURE_COLUMNS
+
+    tickers = payload.get("tickers")
+    if isinstance(tickers, str):
+        tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+    if not tickers:
+        env = os.getenv("OPTIONS_ARCHIVE_TICKERS", "").strip()
+        tickers = ([t.strip().upper() for t in env.split(",") if t.strip()] if env
+                   else sorted({str(t).upper() for t in settings.universe}))
+    source = str(payload.get("source") or os.getenv("QUANT_OPTIONS_SOURCE", "yfinance")).strip() or "yfinance"
+    trade_date = _dt.datetime.utcnow().strftime("%Y-%m-%d")
+    print(f"[options-archive] {len(tickers)} tickers, source={source}, date={trade_date}", flush=True)
+
+    rows, by_source, failed = [], {}, 0
+    for i, sym in enumerate(tickers):
+        try:
+            snap = snapshot_symbol(sym, source=source)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[options-archive] {sym} error: {exc}", flush=True)
+            snap = None
+        if not snap:
+            failed += 1
+        else:
+            row = {"symbol": sym.upper(), "trade_date": trade_date, "source": snap["source"],
+                   "options_live": bool(snap["options_live"]), "underlying_price": snap["underlying_price"]}
+            for c in FEATURE_COLUMNS:
+                row[c] = snap["features"].get(c)
+            rows.append(row)
+            by_source[snap["source"]] = by_source.get(snap["source"], 0) + 1
+        if ARCHIVE_SLEEP_SECONDS and i + 1 < len(tickers):
+            _time.sleep(ARCHIVE_SLEEP_SECONDS)
+        if len(tickers) > 200 and (i + 1) % 250 == 0:
+            print(f"[options-archive] progress {i+1}/{len(tickers)} stored={len(rows)} failed={failed}", flush=True)
+
+    if not rows:
+        return {"ok": False, "trade_date": trade_date, "requested": len(tickers), "stored": 0,
+                "failed": failed, "error": "no rows snapshotted"}
+
+    df = pd.DataFrame(rows, columns=["symbol", "trade_date", "source", "options_live",
+                                     "underlying_price", *FEATURE_COLUMNS])
+    prefix = os.getenv("OPTIONS_ARCHIVE_S3_PREFIX", "options_archive").strip("/")
+    s3_uri = f"s3://{S3_BUCKET}/{prefix}/dt={trade_date}/options_features_{trade_date}.parquet"
+    with tempfile.TemporaryDirectory() as tmp:
+        local = f"{tmp}/options_features_{trade_date}.parquet"
+        df.to_parquet(local, index=False)
+        rc, _ = _run(["aws", "s3", "cp", local, s3_uri, "--region", AWS_REGION, "--only-show-errors"], REPO, 600)
+        if rc != 0:
+            return {"ok": False, "trade_date": trade_date, "stored": len(rows), "failed": failed,
+                    "error": f"s3 upload rc={rc}"}
+    return {"ok": True, "trade_date": trade_date, "requested": len(tickers), "stored": len(rows),
+            "failed": failed, "by_source": by_source, "s3_uri": s3_uri}
+
+
 def handler(job):
     payload = job.get("input") or {}
     if not isinstance(payload, dict):
@@ -161,7 +233,11 @@ def handler(job):
 
     if jtype == "health":
         rc, out = _run(["aws", "--version"], REPO, 30)
-        return {"ok": rc == 0, "aws_cli": out.strip()[:120], "sports": sorted(SPORTS), "bucket": S3_BUCKET}
+        return {"ok": rc == 0, "aws_cli": out.strip()[:120], "sports": sorted(SPORTS),
+                "types": ["sports_export", "options_archive", "health"], "bucket": S3_BUCKET}
+
+    if jtype == "options_archive":
+        return _options_archive(payload)
 
     if jtype == "sports_export":
         sports = payload.get("sports")
@@ -175,7 +251,7 @@ def handler(job):
         results = [_export_one(str(s).lower()) for s in sports]
         return {"ok": all(r.get("ok") for r in results), "results": results}
 
-    raise ValueError(f"Unsupported type: {jtype!r} (expected sports_export | health)")
+    raise ValueError(f"Unsupported type: {jtype!r} (expected sports_export | options_archive | health)")
 
 
 runpod.serverless.start({"handler": handler})

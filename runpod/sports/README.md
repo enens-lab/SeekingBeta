@@ -54,12 +54,20 @@ stays small and the boards always reflect current data without an image rebuild.
      gitignored) so the build stays lean.
 
 4. **Create the RunPod serverless endpoint** from that image:
-   - Worker: **CPU** is fine (exports are CPU/RAM-bound, no GPU needed) — pick a
-     flavor with **≥ 8 GB RAM** (MLB upcoming needs >3 GB; this is the whole point).
+   - **Compute — NO GPU is used** (exports are pandas/sklearn = CPU + RAM bound; the
+     constraint is system RAM ≥ 8 GB, not VRAM):
+       - If RunPod offers a **CPU endpoint**, pick it with a flavor of **≥ 8 GB RAM**
+         (16 GB comfortable — the MLB *upcoming* phase OOM'd at 3 GB). Cheapest + correct.
+       - If the flow **forces a GPU**, pick the cheapest 16 GB-class card JUST for its
+         bundled CPU+RAM — **RTX A4000 / RTX 4000 Ada / A5000** — and multi-select a few
+         for availability. Confirm RAM ≥ 8 GB. Never A100/H100 (paying for an unused GPU).
+         (Save real GPU spend for the future training worker, which actually uses CUDA.)
+   - **Active (min) workers 0** (pay-per-run), **Max workers 1–2**, **Idle timeout 5–10 s**.
+   - **Execution timeout ≥ 1800 s** — a full multi-sport run is ~10–15 min; the default is
+     often too low and would kill the job mid-run.
    - **Container disk ≥ 10 GB** (room for synced data + artifacts), or attach a
      **network volume** mounted somewhere stable to cache `data/`+`artifacts/`
      across runs (faster cold starts).
-   - Idle timeout small (e.g. 5 s), **min workers 0** (pure pay-per-run).
    - **Environment variables** on the endpoint:
      ```
      S3_BUCKET=pythia-ml-artifacts

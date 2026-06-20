@@ -20,10 +20,15 @@ set -euo pipefail
 #   ops/upload_sports_data_to_s3.sh "mlb pga" --no-artifacts
 # ==============================================================================
 REPO="${SEEKINGBETA_REPO:-/home/ec2-user/seekingbeta}"
+cd "$REPO"
+# Credentials: prefer creds already exported in the shell (e.g. the dedicated
+# pythia-artifact-uploader keys); otherwise fall back to the box .env (pythia-app,
+# which now has write access). Without this the aws CLI uses the ambient/default
+# chain and can fail with InvalidAccessKeyId.
+if [ -z "${AWS_ACCESS_KEY_ID:-}" ]; then set -a; [ -f .env ] && . ./.env; set +a; fi
 BUCKET="${S3_BUCKET:-pythia-ml-artifacts}"
 REGION="${AWS_REGION:-us-east-1}"
 DATA_PREFIX="${SPORTS_DATA_S3_PREFIX:-sports-data}"
-cd "$REPO"
 
 # data/sports subdir names (NOT the board prefixes): tennis lives under wta, golf under pga
 SPORTS="${1:-mlb soccer pga wta basketball football olympics}"

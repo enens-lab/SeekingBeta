@@ -153,6 +153,27 @@ def _export_one(sport):
     return {"sport": sport, "ok": last_rc == 0, "exit_code": last_rc, "boards": boards, "log_tail": last_log[-1500:]}
 
 
+def _options_universe():
+    """Default options-archive universe WITHOUT importing config.settings (that
+    triggers Settings.load() which REQUIRES DATABASE_URL — absent in the worker).
+    Reads pythia_divination/config.yaml's curated list via universe.load_universe.
+    data/universe.csv is excluded from the image, so this resolves to the ~170
+    curated set; sync that csv into the worker for the full ~6700 long tail."""
+    import sys as _sys
+    if str(DIV) not in _sys.path:
+        _sys.path.insert(0, str(DIV))
+    fallback = ["AAPL", "MSFT", "GOOGL", "AMZN", "META"]
+    try:
+        import yaml
+        from universe import load_universe
+        cfg = yaml.safe_load((DIV / "config.yaml").read_text()) or {}
+        base = cfg.get("universe") or fallback
+        return sorted({str(t).upper() for t in load_universe(base_universe=base)})
+    except Exception as exc:  # noqa: BLE001
+        print(f"[options-archive] universe load failed ({exc}); using fallback", flush=True)
+        return sorted(fallback)
+
+
 def _options_archive(payload):
     """Snapshot the daily options features for the universe and write the day's
     parquet to S3 (the EC2 side ingests it into Postgres — this worker has no DB).
@@ -170,7 +191,6 @@ def _options_archive(payload):
     import time as _time
 
     import pandas as pd
-    from config.settings import settings
     from models.quant.options_archive import ARCHIVE_SLEEP_SECONDS, snapshot_symbol
     from models.quant.options_features import FEATURE_COLUMNS
 
@@ -180,7 +200,7 @@ def _options_archive(payload):
     if not tickers:
         env = os.getenv("OPTIONS_ARCHIVE_TICKERS", "").strip()
         tickers = ([t.strip().upper() for t in env.split(",") if t.strip()] if env
-                   else sorted({str(t).upper() for t in settings.universe}))
+                   else _options_universe())
     source = str(payload.get("source") or os.getenv("QUANT_OPTIONS_SOURCE", "yfinance")).strip() or "yfinance"
     trade_date = _dt.datetime.utcnow().strftime("%Y-%m-%d")
     print(f"[options-archive] {len(tickers)} tickers, source={source}, date={trade_date}", flush=True)

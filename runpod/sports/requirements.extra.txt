@@ -1,0 +1,5 @@
+# Extra deps for the RunPod sports worker, on TOP of pythia_divination/requirements.txt
+# (installed together in runpod/sports/Dockerfile). The worker reuses the divination
+# stack (pandas/sklearn/scipy/torch/tf/etc.) for the export scripts, and adds:
+runpod==1.7.13   # serverless SDK (runpod.serverless.start)
+awscli           # S3 data/artifact/board exchange (aws s3 sync/cp)

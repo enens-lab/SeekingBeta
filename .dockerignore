@@ -1,0 +1,37 @@
+# Repo-root .dockerignore. Applies ONLY to image builds whose context is the repo
+# root — currently just the RunPod workers (runpod/*/Dockerfile). The docker-compose
+# services (divination-api, prophecy-api, frontend) build from their own sub-context
+# directories, so this file does NOT affect them.
+#
+# Keeps the RunPod worker image lean: the big inputs (normalized sport data + model
+# artifacts) are gitignored and synced from S3 at runtime, never baked in. Also keeps
+# secrets out of the image.
+.git
+.gitignore
+.github
+.claude
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/.venv
+**/dist
+**/build
+
+# Large runtime inputs — synced from S3 by the worker, never baked
+pythia_divination/data/
+pythia_divination/artifacts/
+pythia_prophecy/frontend/src/data/
+
+# Secrets / keys — must never enter an image
+.env
+**/.env
+**/.env.*
+*.pem
+*.jks
+keystore.properties
+
+# Misc large/irrelevant
+*.mp4
+*.pptx
+*.docx
+*.key

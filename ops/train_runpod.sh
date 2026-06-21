@@ -23,7 +23,11 @@ BASE="https://api.runpod.ai/v2/${RUNPOD_SPORTS_ENDPOINT_ID}"
 BUCKET="${S3_BUCKET:-pythia-ml-artifacts}"
 REGION="${AWS_REGION:-us-east-1}"
 DC="docker compose"; $DC version >/dev/null 2>&1 || DC="docker-compose"
-SPEC="${1:-{\"all\":true}}"
+# NOTE: don't put the JSON default inline in ${1:-...} — bash matches the default's
+# first '}' as the end of the expansion and appends a stray '}', corrupting the JSON
+# when an arg IS passed. Set it in two steps instead.
+SPEC="${1:-}"
+[ -z "$SPEC" ] && SPEC='{"all":true}'
 POLL_INTERVAL="${RUNPOD_POLL_INTERVAL_SEC:-30}"
 POLL_MAX="${RUNPOD_TRAIN_POLL_MAX:-150}"   # 150 * 30s = 75 min ceiling
 

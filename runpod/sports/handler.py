@@ -67,8 +67,6 @@ SPORTS = {
     ]},
 }
 
-_ARTIFACTS_READY = False
-
 
 def _run(cmd, cwd, timeout, env=None):
     print(f"[worker] $ {' '.join(cmd)}  (cwd={cwd})", flush=True)
@@ -88,17 +86,20 @@ def _run(cmd, cwd, timeout, env=None):
 
 def _aws_sync(src, dest, timeout=SYNC_TIMEOUT_SEC):
     Path(dest).mkdir(parents=True, exist_ok=True)
-    return _run(["aws", "s3", "sync", src, dest, "--region", AWS_REGION, "--only-show-errors"], REPO, timeout)
+    # --exact-timestamps: aws s3 sync (S3->local) ignores same-sized files by default,
+    # so an updated model/data file of the same byte size would be silently skipped.
+    return _run(["aws", "s3", "sync", src, dest, "--region", AWS_REGION,
+                 "--exact-timestamps", "--only-show-errors"], REPO, timeout)
 
 
 def _sync_artifacts():
-    global _ARTIFACTS_READY
-    if _ARTIFACTS_READY:
-        return
+    # Sync EVERY job (no cross-job cache). A warm/reused RunPod worker would otherwise
+    # keep serving the artifacts it pulled on its FIRST job, so an updated model (e.g. a
+    # retrain) would never reach it. aws s3 sync is incremental, so on a warm worker this
+    # only pulls the changed files.
     rc, _ = _aws_sync(ARTIFACTS_S3_URI, str(DIV / "artifacts") + "/")
     if rc != 0:
         raise RuntimeError(f"artifact sync failed (rc={rc}) from {ARTIFACTS_S3_URI}")
-    _ARTIFACTS_READY = True
 
 
 def _sync_sport_data(sport):

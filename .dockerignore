@@ -17,8 +17,11 @@
 **/dist
 **/build
 
-# Large runtime inputs — synced from S3 by the worker, never baked
-pythia_divination/data/
+# Large runtime inputs — synced from S3 by the worker, never baked. IMPORTANT: keep
+# the CODE under data/ (fetch.py, providers/) — exclude only the heavy datasets, else
+# models.train fails with `ModuleNotFoundError: No module named 'data.fetch'`.
+pythia_divination/data/sports/
+pythia_divination/data/universe.csv
 pythia_divination/artifacts/
 pythia_prophecy/frontend/src/data/
 

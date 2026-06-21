@@ -26,12 +26,14 @@ COPY pythia_divination/requirements.txt /tmp/requirements.txt
 COPY runpod/sports/requirements.extra.txt /tmp/requirements.extra.txt
 RUN pip install -r /tmp/requirements.txt -r /tmp/requirements.extra.txt
 
-# Divination code. data/ + artifacts/ are excluded by .dockerignore; the rm/mkdir
-# below is belt-and-suspenders for local builds where the gitignored dirs exist on
-# disk. The empty output dir must exist so the export scripts' PROJ_ROOT (parents[2])
-# resolves to /work, matching the EC2 repo layout.
+# Divination code. The HEAVY datasets (data/sports, data/universe.csv) + artifacts/
+# are excluded via .dockerignore and synced from S3 at runtime — but the CODE under
+# data/ (fetch.py, providers/) stays, since models.train imports data.fetch. The rm
+# is belt-and-suspenders for local builds; the empty output dir must exist so the
+# export scripts' PROJ_ROOT (parents[2]) resolves to /work, matching the EC2 layout.
 COPY pythia_divination/ /work/pythia_divination/
-RUN rm -rf /work/pythia_divination/data /work/pythia_divination/artifacts \
+RUN rm -rf /work/pythia_divination/data/sports /work/pythia_divination/data/universe.csv \
+           /work/pythia_divination/artifacts \
     && mkdir -p /work/pythia_divination/data/sports \
                 /work/pythia_divination/artifacts \
                 /work/pythia_prophecy/frontend/src/data

@@ -53,6 +53,10 @@ done
 [ "$STATUS" = "COMPLETED" ] || { echo "[runpod-train] timed out after $((POLL_INTERVAL*POLL_MAX))s"; exit 1; }
 
 echo "[runpod-train] pull retrained artifacts -> box (volume mount) + restart divination"
-aws s3 sync "s3://$BUCKET/artifacts/artifacts/" pythia_divination/artifacts/ --region "$REGION" --only-show-errors
+# --exact-timestamps is REQUIRED: `aws s3 sync` (S3->local) ignores same-sized files
+# by default, and a retrained model.joblib is often the same byte size as the old one,
+# so without this the new model is silently NOT pulled and the box keeps serving stale.
+aws s3 sync "s3://$BUCKET/artifacts/artifacts/" pythia_divination/artifacts/ \
+  --region "$REGION" --exact-timestamps --only-show-errors
 $DC up -d --no-deps divination-api 2>&1 | tail -2
 echo "[runpod-train] $(date -u +%FT%TZ) done"

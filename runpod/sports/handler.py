@@ -48,6 +48,7 @@ ARTIFACTS_S3_URI = os.getenv("ARTIFACTS_S3_URI", f"s3://{S3_BUCKET}/artifacts/ar
 BOARDS_PREFIX = os.getenv("BOARDS_S3_PREFIX", "frontend-boards").strip("/")
 RUN_TIMEOUT_SEC = int(os.getenv("SPORTS_EXPORT_TIMEOUT_SEC", "1800"))
 SYNC_TIMEOUT_SEC = int(os.getenv("S3_SYNC_TIMEOUT_SEC", "1800"))
+TRAIN_TIMEOUT_SEC = int(os.getenv("TRAIN_TIMEOUT_SEC", "3600"))
 
 # Per-sport: which data/sports/<dir> subtree(s) to sync from S3, and the command
 # chain to run (cwd = DIV). Mirrors ops/refresh_sports_cron.sh exactly — tennis
@@ -69,12 +70,12 @@ SPORTS = {
 _ARTIFACTS_READY = False
 
 
-def _run(cmd, cwd, timeout):
+def _run(cmd, cwd, timeout, env=None):
     print(f"[worker] $ {' '.join(cmd)}  (cwd={cwd})", flush=True)
     try:
         p = subprocess.run(
             cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, timeout=timeout, check=False,
+            text=True, timeout=timeout, check=False, env=env,
         )
     except subprocess.TimeoutExpired as exc:
         out = (exc.output or "") if isinstance(exc.output, str) else ""
@@ -245,6 +246,50 @@ def _options_archive(payload):
             "failed": failed, "by_source": by_source, "s3_uri": s3_uri}
 
 
+def _train(payload):
+    """Run models.train on the worker, then upload the trained artifacts to S3.
+
+    models.train imports config.settings, whose Settings.load() REQUIRES DATABASE_URL
+    — the worker has none, so set a dummy (training never connects; STORE_TRAINING
+    stays off) and default to Yahoo data (no Alpaca creds on the worker). Artifacts
+    land in DIV/artifacts/<model>/<task>/ then sync to s3://.../artifacts/artifacts/ —
+    the prefix the box auto-pulls via AUTO_DOWNLOAD_ARTIFACTS on the next divination start."""
+    env = dict(os.environ)
+    env.setdefault("DATABASE_URL", "postgresql://unused:unused@127.0.0.1:5432/none")
+    env["STORE_TRAINING"] = "0"
+    env.setdefault("DATA_SOURCE", "yahoo")
+
+    cmd = ["python", "-m", "models.train"]
+    model, task = payload.get("model"), payload.get("task")
+    if payload.get("all") or not (model or task):
+        cmd.append("--all")
+    else:
+        if model:
+            cmd += ["--model", str(model)]
+        if task:
+            cmd += ["--task", str(task)]
+    tickers = payload.get("tickers")
+    if tickers:
+        if isinstance(tickers, str):
+            tickers = [t.strip() for t in tickers.split(",") if t.strip()]
+        cmd += ["--tickers", *[str(t).upper() for t in tickers]]
+
+    rc, log = _run(cmd, DIV, TRAIN_TIMEOUT_SEC, env=env)
+    if rc != 0:
+        return {"ok": False, "exit_code": rc, "cmd": " ".join(cmd), "log_tail": log[-2500:]}
+
+    art = DIV / "artifacts"
+    if not art.exists() or not any(art.iterdir()):
+        return {"ok": False, "exit_code": 0, "error": "no artifacts produced", "log_tail": log[-2000:]}
+    rc2, _ = _run(["aws", "s3", "sync", str(art) + "/", ARTIFACTS_S3_URI,
+                   "--region", AWS_REGION, "--only-show-errors"], REPO, SYNC_TIMEOUT_SEC)
+    if rc2 != 0:
+        return {"ok": False, "exit_code": 0, "error": f"artifact upload rc={rc2}", "log_tail": log[-1500:]}
+    trained = sorted(p.name for p in art.iterdir() if p.is_dir())
+    return {"ok": True, "exit_code": 0, "cmd": " ".join(cmd), "trained_models": trained,
+            "artifacts_uri": ARTIFACTS_S3_URI, "log_tail": log[-1500:]}
+
+
 def handler(job):
     payload = job.get("input") or {}
     if not isinstance(payload, dict):
@@ -254,10 +299,13 @@ def handler(job):
     if jtype == "health":
         rc, out = _run(["aws", "--version"], REPO, 30)
         return {"ok": rc == 0, "aws_cli": out.strip()[:120], "sports": sorted(SPORTS),
-                "types": ["sports_export", "options_archive", "health"], "bucket": S3_BUCKET}
+                "types": ["sports_export", "options_archive", "train", "health"], "bucket": S3_BUCKET}
 
     if jtype == "options_archive":
         return _options_archive(payload)
+
+    if jtype == "train":
+        return _train(payload)
 
     if jtype == "sports_export":
         sports = payload.get("sports")
@@ -271,7 +319,7 @@ def handler(job):
         results = [_export_one(str(s).lower()) for s in sports]
         return {"ok": all(r.get("ok") for r in results), "results": results}
 
-    raise ValueError(f"Unsupported type: {jtype!r} (expected sports_export | options_archive | health)")
+    raise ValueError(f"Unsupported type: {jtype!r} (expected sports_export | options_archive | train | health)")
 
 
 runpod.serverless.start({"handler": handler})

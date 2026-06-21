@@ -6,10 +6,12 @@ from dataclasses import dataclass
 import re
 
 DEFAULT_TIMEOUT_SECONDS = 30
+# Must be a CLEAN browser UA — the NBA/WNBA CDN (Akamai) bot-detection 403s a UA with
+# a non-standard token appended (the old " SeekingBetaAI/1.0" suffix tripped WNBA).
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/123.0.0.0 Safari/537.36 SeekingBetaAI/1.0"
+    "Chrome/123.0.0.0 Safari/537.36"
 )
 
 

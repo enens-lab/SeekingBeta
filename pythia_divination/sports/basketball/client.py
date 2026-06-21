@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from urllib.parse import urlparse
 
 import pandas as pd
 import requests
@@ -97,10 +98,20 @@ class BasketballStatsClient:
     ) -> None:
         self.timeout = timeout
         self.session = session or requests.Session()
+        # NBA/WNBA CDN (Akamai) bot-detection 403s requests that don't look like a real
+        # browser XHR: it needs the sec-ch-ua / Sec-Fetch-* client hints (a bare UA is
+        # rejected for NBA). Referer/Origin are set per-league in _get_json.
         self.session.headers.update(
             {
-                "Accept": "application/json, text/plain, */*",
                 "User-Agent": user_agent,
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.9",
+                "sec-ch-ua": '"Chromium";v="123", "Not:A-Brand";v="8"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"macOS"',
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-site",
             }
         )
 
@@ -111,7 +122,13 @@ class BasketballStatsClient:
             raise ValueError(f"Unsupported basketball league: {league}") from exc
 
     def _get_json(self, url: str) -> Any:
-        response = self.session.get(url, timeout=self.timeout)
+        # Same-site Referer/Origin (cdn.nba.com -> www.nba.com) to match Sec-Fetch-Site,
+        # which the CDN bot-detection cross-checks.
+        host = urlparse(url).netloc
+        web = f"https://www.{host[4:]}" if host.startswith("cdn.") else f"https://{host}"
+        response = self.session.get(
+            url, timeout=self.timeout, headers={"Referer": f"{web}/", "Origin": web}
+        )
         response.raise_for_status()
         return response.json()
 

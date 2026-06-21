@@ -6,11 +6,19 @@ import argparse
 import concurrent.futures
 import json
 import logging
+import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+# Per-request throttle for CDN boxscore fetches. The NBA/WNBA CDN (Akamai) rate-limits
+# bursts and will 403 the whole IP for a cooldown — so even with correct browser headers,
+# fetching many boxscores concurrently trips it. Keep concurrency low (--max-workers) and
+# space requests. Tune via BASKETBALL_INGEST_SLEEP_MS.
+_INGEST_SLEEP_SECONDS = max(0.0, float(os.getenv("BASKETBALL_INGEST_SLEEP_MS", "300")) / 1000.0)
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -57,7 +65,7 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fetch boxscore-derived details for completed games. Archive backfills always fetch boxscores.",
     )
-    parser.add_argument("--max-workers", type=int, default=8, help="Parallel workers for completed-game detail fetches.")
+    parser.add_argument("--max-workers", type=int, default=2, help="Parallel workers for completed-game detail fetches. Keep low (2) — the NBA/WNBA CDN rate-limits/IP-flags concurrent bursts.")
     parser.add_argument(
         "--output-root",
         default=None,
@@ -89,6 +97,8 @@ def _season_labels_for_league(league: str, args: argparse.Namespace) -> list[str
 
 
 def _fetch_game_detail(league: str, game_id: str, *, season_display: str, optional: bool = False) -> dict[str, Any] | None:
+    if _INGEST_SLEEP_SECONDS:
+        time.sleep(_INGEST_SLEEP_SECONDS)  # throttle: avoid Akamai CDN rate-limit/IP-flag
     client = BasketballStatsClient()
     bundle = client.get_game_bundle_optional(league, game_id) if optional else client.get_game_bundle(league, game_id)
     if bundle is None:

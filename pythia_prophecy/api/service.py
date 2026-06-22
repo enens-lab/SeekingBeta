@@ -5765,18 +5765,44 @@ def _preview_sports_board_collection(
     return coll.model_copy(update={"upcoming": trimmed, "backtests": []})
 
 
-def _lean_backtests_collection(coll: SportsBoardCollection) -> SportsBoardCollection:
-    """Drop the heavy per-event `fullField` (the complete ranked field — ~97% of a
-    backtest's bytes) from all but the most-recent backtest per sport. The /sports
-    landing (SportsLanding) only reads `backtests[0].fullField` (its offseason
-    spotlight fallback) plus backtest counts/tours, so this cuts the all-sports
-    response from ~14.7 MB to <1 MB without changing what it renders. The per-sport
-    SportsDashboard detail view requests its own (non-lean) key, so it is unaffected."""
+def _lean_sports_collection(coll: SportsBoardCollection) -> SportsBoardCollection:
+    """Lean shaping for the /sports landing (SportsLanding) — an at-a-glance spotlight
+    surface that renders the matchup, predictions and starter profiles but NOT the
+    bulky per-event detail. Two trims, both verified safe for what it renders:
+      - upcoming: drop the heavy detail SportsLanding never reads (lineups ~6.5 KB/
+        game, rosters, teamHistory, head-to-head, radar, availability, featured
+        player, discipline lists), KEEPING starter profiles + predictions + team
+        details.
+      - backtests: keep `fullField` (the complete ranked field, ~97% of a backtest's
+        bytes) only on the most-recent one per sport; SportsLanding reads only
+        backtests[0]'s field plus counts/tours.
+    Cuts the all-sports response from ~14.7 MB to ~1 MB. The per-sport SportsDashboard
+    detail view uses its own (non-lean) cache key, so it is unaffected."""
+    leaned_upcoming = [
+        ev.model_copy(
+            update={
+                "awayLineup": [],
+                "homeLineup": [],
+                "awayFeaturedPlayer": None,
+                "homeFeaturedPlayer": None,
+                "awayStarterRadar": None,
+                "homeStarterRadar": None,
+                "awayAvailability": None,
+                "homeAvailability": None,
+                "projectedLineupContext": None,
+                "headToHead": None,
+                "teamHistory": [],
+                "rosters": [],
+                "disciplines": [],
+            }
+        )
+        for ev in coll.upcoming
+    ]
     bts = coll.backtests
-    if len(bts) <= 1:
-        return coll
-    leaned = [bts[0]] + [b.model_copy(update={"fullField": []}) for b in bts[1:]]
-    return coll.model_copy(update={"backtests": leaned})
+    leaned_backtests = bts
+    if len(bts) > 1:
+        leaned_backtests = [bts[0]] + [b.model_copy(update={"fullField": []}) for b in bts[1:]]
+    return coll.model_copy(update={"upcoming": leaned_upcoming, "backtests": leaned_backtests})
 
 
 @app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
@@ -5805,10 +5831,10 @@ async def sports_boards(
     lean_backtests: bool = Query(
         False,
         description=(
-            "Keep backtests but drop the heavy per-event fullField from all but the "
-            "most-recent one per sport (the /sports list only needs backtests[0]'s "
-            "field + counts). Massively shrinks the all-sports response. Ignored when "
-            "preview=true (which already drops backtests)."
+            "Lean shaping for the /sports list: drop heavy per-event upcoming detail "
+            "(lineups/rosters/history; keeps starter profiles + predictions) and "
+            "backtests' fullField on all but the newest per sport. Massively shrinks "
+            "the all-sports response. Ignored when preview=true (already minimal)."
         ),
     ),
     sports: str | None = Query(
@@ -5864,10 +5890,11 @@ async def sports_boards(
             for sport, coll in shaped.items()
         }
     elif lean_backtests:
-        # Keep backtests (counts/summary/spotlight intact) but strip the heavy
-        # fullField from all but the newest per sport — the /sports list payload.
+        # /sports list payload: keep counts/summary/spotlight + starter profiles +
+        # predictions, but strip the heavy per-event detail (upcoming lineups/rosters/
+        # history) and backtests' fullField (all but the newest per sport).
         shaped = {
-            sport: _lean_backtests_collection(coll) for sport, coll in shaped.items()
+            sport: _lean_sports_collection(coll) for sport, coll in shaped.items()
         }
     elif not include_backtests:
         # Drop the heavy backtests arrays for upcoming-only surfaces; keep the

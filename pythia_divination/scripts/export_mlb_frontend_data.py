@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gc
 import json
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -55,6 +56,13 @@ MODEL_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" 
 FEATURE_COLUMNS_PATH = DIV_ROOT / "artifacts" / "mlb_baseline" / "hist_gradient_boosting" / "home_win" / "feature_columns.csv"
 UPCOMING_LOOKAHEAD_DAYS = 7
 MAX_AVAILABLE_DATES = 7
+# How many upcoming game-days to actually build boards for (starting at the next
+# game date). Must be > 1: the BFF filters baked `upcoming` to scheduledDate >=
+# today (UTC) and derives the date picker from what survives, so baking only the
+# single next date leaves the board empty every day once that date passes the UTC
+# rollover — the recurring "MLB upcoming not loading" bug. A few days of buffer
+# keeps it populated between daily refreshes and feeds the multi-day date picker.
+UPCOMING_BOARD_DAYS = max(1, int(os.getenv("MLB_UPCOMING_BOARD_DAYS", "4")))
 
 
 def _optional_text(value: object) -> str | None:
@@ -927,9 +935,14 @@ def _build_upcoming_dataset(
     if full_schedule.empty or not resolved_selected_date:
         return pd.DataFrame(), resolved_selected_date, available_dates, {}
 
-    schedule = full_schedule.loc[
-        pd.to_datetime(full_schedule["official_date"], errors="coerce").dt.strftime("%Y-%m-%d") == resolved_selected_date
-    ].copy()
+    # Build boards for the next UPCOMING_BOARD_DAYS game-days (starting at the
+    # resolved selected date), not just that single date. Baking one day means the
+    # board empties every day once the UTC date rolls past it (see UPCOMING_BOARD_DAYS).
+    ordered_keys = [str(option["dateKey"]) for option in available_dates]
+    start_idx = ordered_keys.index(resolved_selected_date) if resolved_selected_date in ordered_keys else 0
+    target_dates = set(ordered_keys[start_idx : start_idx + UPCOMING_BOARD_DAYS])
+    schedule_date_keys = pd.to_datetime(full_schedule["official_date"], errors="coerce").dt.strftime("%Y-%m-%d")
+    schedule = full_schedule.loc[schedule_date_keys.isin(target_dates)].copy()
     if schedule.empty:
         return pd.DataFrame(), resolved_selected_date, available_dates, {}
 

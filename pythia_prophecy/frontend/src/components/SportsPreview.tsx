@@ -66,30 +66,45 @@ function SportsPreview() {
   useEffect(() => {
     let cancelled = false;
 
+    // This preview shows only the next upcoming event per sport, so request just
+    // those sports AND drop the heavy backtests arrays. Avoids pulling every
+    // sport's history + the slow live football/soccer/olympics fetches.
+    const fetchOnce = () =>
+      sports.getBoards({
+        sports: ['golf', 'tennis', 'basketball', 'mlb'],
+        includeBacktests: false,
+        preview: true,
+        // A cold boards cache computes inline and blocks on the live tennis fetch
+        // (~12s), which can exceed the 15s client default and drop the preview
+        // into the "Sports are updating" error. Allow more headroom so a cold
+        // first load resolves instead of erroring.
+        timeoutMs: 30000,
+      });
+
     const loadBoards = async () => {
       setLoading(true);
       setError(null);
-      try {
-        // This preview shows only the next upcoming event per sport, so request
-        // just those sports AND drop the heavy backtests arrays. Avoids pulling
-        // every sport's history + the slow live football/soccer/olympics fetches.
-        const payload = await sports.getBoards({
-          sports: ['golf', 'tennis', 'basketball', 'mlb'],
-          includeBacktests: false,
-          preview: true,
-        });
-        if (!cancelled) {
+      // Retry once on failure: the first (cold) request warms the server cache,
+      // so a quick retry succeeds — the same reason navigating to /sports and
+      // back used to be the only way to make this section appear.
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 2 && !cancelled; attempt += 1) {
+        try {
+          const payload = await fetchOnce();
+          if (cancelled) return;
           setSportsBoards(payload);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load sports preview right now.');
-        }
-      } finally {
-        if (!cancelled) {
           setLoading(false);
+          return;
+        } catch (loadError) {
+          lastError = loadError;
+          if (attempt === 0 && !cancelled) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
         }
       }
+      if (cancelled) return;
+      setError(lastError instanceof Error ? lastError.message : 'Unable to load sports preview right now.');
+      setLoading(false);
     };
 
     void loadBoards();

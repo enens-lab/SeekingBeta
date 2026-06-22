@@ -730,11 +730,24 @@ async def startup_validation():
 
     logger.info("Startup validation completed successfully")
 
+    # Keep the landing-preview sports board cache hot so the first visitor never
+    # hits the slow cold inline assemble (see _sports_boards_warm_loop).
+    global _sports_boards_warm_task
+    if _sports_boards_warm_task is None:
+        _sports_boards_warm_task = asyncio.create_task(_sports_boards_warm_loop())
+        logger.info(
+            "Started sports boards warmer (every %ss)", _SPORTS_BOARDS_WARM_INTERVAL_SECONDS
+        )
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on application shutdown."""
     logger.info("Application shutting down")
+    global _sports_boards_warm_task
+    if _sports_boards_warm_task is not None:
+        _sports_boards_warm_task.cancel()
+        _sports_boards_warm_task = None
 
 
 # CORS configuration - lock down to specific origins in production
@@ -5652,6 +5665,42 @@ async def _cached_sports_boards(
         collections = await _assemble_sports_boards(**assemble_kwargs)
         _store_sports_boards_cache(key, collections)
         return collections
+
+
+# Background warmer keeps the landing-preview board key hot. The cold path in
+# _cached_sports_boards computes inline and blocks on the live tennis ESPN fetch
+# (~12s), which can exceed the web client's request timeout — so the FIRST landing
+# visit after a (re)start or a >max-stale traffic gap would error with "Sports are
+# updating". Refreshing on an interval well under the TTL keeps the shared entry
+# fresh so visitors always get a fast cache hit. The cache key excludes preview/
+# include_backtests, so this one key serves both the landing preview and the full
+# sports tab for the same sport set. Sub-fetches (tennis schedule) are themselves
+# cached, so each refresh is cheap after the first.
+_SPORTS_BOARDS_WARM_REQUESTED = {"golf", "tennis", "basketball", "mlb"}
+_SPORTS_BOARDS_WARM_INTERVAL_SECONDS = max(
+    20, int(os.getenv("SPORTS_BOARDS_WARM_INTERVAL_SECONDS", str(max(20, SPORTS_BOARDS_CACHE_TTL_SECONDS - 15))))
+)
+_sports_boards_warm_task: "Optional[asyncio.Task[None]]" = None
+
+
+async def _sports_boards_warm_loop() -> None:
+    """Periodically recompute the landing-preview board key so it never goes cold."""
+    key = (tuple(sorted(_SPORTS_BOARDS_WARM_REQUESTED)), "", "", "", "")
+    assemble_kwargs = {
+        "requested": set(_SPORTS_BOARDS_WARM_REQUESTED),
+        "mlb_date": None,
+        "basketball_date": None,
+        "football_date": None,
+        "soccer_date": None,
+    }
+    while True:
+        try:
+            await _refresh_sports_boards_cache(key, assemble_kwargs)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # never let the warmer die on a transient failure
+            logger.warning("sports boards warm loop iteration failed: %s", exc)
+        await asyncio.sleep(_SPORTS_BOARDS_WARM_INTERVAL_SECONDS)
 
 
 # Per-sport caps for ?preview=true. The landing preview renders one spotlight

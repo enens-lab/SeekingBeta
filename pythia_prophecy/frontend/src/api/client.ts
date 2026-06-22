@@ -900,6 +900,7 @@ export const sports = {
     sports?: SportsBoardKey | SportsBoardKey[];
     includeBacktests?: boolean;
     preview?: boolean;
+    timeoutMs?: number;
   }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
     if (options?.includeBacktests === false) {
@@ -927,6 +928,7 @@ export const sports = {
       }
     }
     const query = params.toString();
-    return request(query ? `/api/sports/boards?${query}` : '/api/sports/boards');
+    const path = query ? `/api/sports/boards?${query}` : '/api/sports/boards';
+    return request(path, options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {});
   },
 };

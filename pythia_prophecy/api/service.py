@@ -5676,7 +5676,17 @@ async def _cached_sports_boards(
 # include_backtests, so this one key serves both the landing preview and the full
 # sports tab for the same sport set. Sub-fetches (tennis schedule) are themselves
 # cached, so each refresh is cheap after the first.
-_SPORTS_BOARDS_WARM_REQUESTED = {"golf", "tennis", "basketball", "mlb"}
+# Board cache keys to keep hot so visitors never hit the cold inline assemble
+# (which blocks on live sport feeds and exceeds the web client's request timeout).
+# The landing preview hits the 4-sport key; the /sports page (SportsLanding) hits
+# the all-sports key. Each spec = (requested sport set | None for all-sports,
+# refresh-every-N-cycles). The all-sports assemble is heavier (full backtests for
+# 7 sports) so it refreshes less often — but still well inside the max-stale window
+# (N * interval << SPORTS_BOARDS_CACHE_MAX_STALE_SECONDS) so it never goes cold.
+_SPORTS_BOARDS_WARM_SPECS: "tuple[tuple[Optional[frozenset], int], ...]" = (
+    (frozenset({"golf", "tennis", "basketball", "mlb"}), 1),  # landing preview — every cycle
+    (None, 5),                                                # /sports all-sports — every 5th cycle
+)
 _SPORTS_BOARDS_WARM_INTERVAL_SECONDS = max(
     20, int(os.getenv("SPORTS_BOARDS_WARM_INTERVAL_SECONDS", str(max(20, SPORTS_BOARDS_CACHE_TTL_SECONDS - 15))))
 )
@@ -5684,22 +5694,31 @@ _sports_boards_warm_task: "Optional[asyncio.Task[None]]" = None
 
 
 async def _sports_boards_warm_loop() -> None:
-    """Periodically recompute the landing-preview board key so it never goes cold."""
-    key = (tuple(sorted(_SPORTS_BOARDS_WARM_REQUESTED)), "", "", "", "")
-    assemble_kwargs = {
-        "requested": set(_SPORTS_BOARDS_WARM_REQUESTED),
-        "mlb_date": None,
-        "basketball_date": None,
-        "football_date": None,
-        "soccer_date": None,
-    }
+    """Periodically recompute the hot board keys so visitors never hit a cold assemble."""
+    cycle = 0
     while True:
-        try:
-            await _refresh_sports_boards_cache(key, assemble_kwargs)
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # never let the warmer die on a transient failure
-            logger.warning("sports boards warm loop iteration failed: %s", exc)
+        for requested, every in _SPORTS_BOARDS_WARM_SPECS:
+            if cycle % every != 0:
+                continue
+            req = set(requested) if requested is not None else None
+            key = (
+                tuple(sorted(req)) if req is not None else ("__all__",),
+                "", "", "", "",
+            )
+            assemble_kwargs = {
+                "requested": req,
+                "mlb_date": None,
+                "basketball_date": None,
+                "football_date": None,
+                "soccer_date": None,
+            }
+            try:
+                await _refresh_sports_boards_cache(key, assemble_kwargs)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # never let the warmer die on a transient failure
+                logger.warning("sports boards warm failed for %s: %s", key, exc)
+        cycle += 1
         await asyncio.sleep(_SPORTS_BOARDS_WARM_INTERVAL_SECONDS)
 
 

@@ -5765,43 +5765,61 @@ def _preview_sports_board_collection(
     return coll.model_copy(update={"upcoming": trimmed, "backtests": []})
 
 
+# Heavy per-board detail SportsLanding (the at-a-glance /sports list) never renders.
+# UPCOMING keeps starter profiles (its spotlight PlayerProfileCard reads them);
+# BACKTESTS drop them too (it reads only backtests[0].fullField + summary fields).
+# Field sets differ because SportsUpcomingBoard and SportsHistoricalBoard are
+# distinct models — only strip fields that exist on each.
+_LEAN_UPCOMING_STRIP = {
+    "awayLineup": [],
+    "homeLineup": [],
+    "awayFeaturedPlayer": None,
+    "homeFeaturedPlayer": None,
+    "awayStarterRadar": None,
+    "homeStarterRadar": None,
+    "awayAvailability": None,
+    "homeAvailability": None,
+    "projectedLineupContext": None,
+    "headToHead": None,
+    "teamHistory": [],
+    "rosters": [],
+    "disciplines": [],
+}
+_LEAN_BACKTEST_STRIP = {
+    "awayLineup": [],
+    "homeLineup": [],
+    "awayFeaturedPlayer": None,
+    "homeFeaturedPlayer": None,
+    "awayStarterProfile": None,
+    "homeStarterProfile": None,
+    "awayStarterRadar": None,
+    "homeStarterRadar": None,
+    "awayTeamDetails": None,
+    "homeTeamDetails": None,
+    "disciplines": [],
+}
+
+
 def _lean_sports_collection(coll: SportsBoardCollection) -> SportsBoardCollection:
     """Lean shaping for the /sports landing (SportsLanding) — an at-a-glance spotlight
     surface that renders the matchup, predictions and starter profiles but NOT the
-    bulky per-event detail. Two trims, both verified safe for what it renders:
-      - upcoming: drop the heavy detail SportsLanding never reads (lineups ~6.5 KB/
-        game, rosters, teamHistory, head-to-head, radar, availability, featured
-        player, discipline lists), KEEPING starter profiles + predictions + team
-        details.
-      - backtests: keep `fullField` (the complete ranked field, ~97% of a backtest's
-        bytes) only on the most-recent one per sport; SportsLanding reads only
-        backtests[0]'s field plus counts/tours.
+    bulky per-event detail. Verified safe for everything it renders:
+      - upcoming: drop the heavy detail it never reads (lineups ~6.5 KB/side, rosters,
+        teamHistory, head-to-head, radar, availability, featured player, disciplines),
+        KEEPING starter profiles + predictions + team details.
+      - backtests: drop the same heavy detail (team-sport backtests also carry
+        ~13 KB of lineups each — the dominant cost) AND keep `fullField` only on the
+        most-recent one per sport (SportsLanding reads only backtests[0]'s field +
+        counts/tours).
     Cuts the all-sports response from ~14.7 MB to ~1 MB. The per-sport SportsDashboard
     detail view uses its own (non-lean) cache key, so it is unaffected."""
-    leaned_upcoming = [
-        ev.model_copy(
-            update={
-                "awayLineup": [],
-                "homeLineup": [],
-                "awayFeaturedPlayer": None,
-                "homeFeaturedPlayer": None,
-                "awayStarterRadar": None,
-                "homeStarterRadar": None,
-                "awayAvailability": None,
-                "homeAvailability": None,
-                "projectedLineupContext": None,
-                "headToHead": None,
-                "teamHistory": [],
-                "rosters": [],
-                "disciplines": [],
-            }
-        )
-        for ev in coll.upcoming
-    ]
-    bts = coll.backtests
-    leaned_backtests = bts
-    if len(bts) > 1:
-        leaned_backtests = [bts[0]] + [b.model_copy(update={"fullField": []}) for b in bts[1:]]
+    leaned_upcoming = [ev.model_copy(update=_LEAN_UPCOMING_STRIP) for ev in coll.upcoming]
+    leaned_backtests = []
+    for index, bt in enumerate(coll.backtests):
+        update = dict(_LEAN_BACKTEST_STRIP)
+        if index > 0:
+            update["fullField"] = []  # keep the field only on the newest (spotlight fallback)
+        leaned_backtests.append(bt.model_copy(update=update))
     return coll.model_copy(update={"upcoming": leaned_upcoming, "backtests": leaned_backtests})
 
 

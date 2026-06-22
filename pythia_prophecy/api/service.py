@@ -5765,6 +5765,20 @@ def _preview_sports_board_collection(
     return coll.model_copy(update={"upcoming": trimmed, "backtests": []})
 
 
+def _lean_backtests_collection(coll: SportsBoardCollection) -> SportsBoardCollection:
+    """Drop the heavy per-event `fullField` (the complete ranked field — ~97% of a
+    backtest's bytes) from all but the most-recent backtest per sport. The /sports
+    landing (SportsLanding) only reads `backtests[0].fullField` (its offseason
+    spotlight fallback) plus backtest counts/tours, so this cuts the all-sports
+    response from ~14.7 MB to <1 MB without changing what it renders. The per-sport
+    SportsDashboard detail view requests its own (non-lean) key, so it is unaffected."""
+    bts = coll.backtests
+    if len(bts) <= 1:
+        return coll
+    leaned = [bts[0]] + [b.model_copy(update={"fullField": []}) for b in bts[1:]]
+    return coll.model_copy(update={"backtests": leaned})
+
+
 @app.get("/api/sports/boards", response_model=SportsBoardsResponse, tags=["Sports"])
 async def sports_boards(
     mlb_date: str | None = Query(None),
@@ -5786,6 +5800,15 @@ async def sports_boards(
             "sport to its first event(s) and top predictions, drops lineups/"
             "rosters/profiles, and implies include_backtests=false. Adds "
             "predictionsTotal so UIs can show the untrimmed field size."
+        ),
+    ),
+    lean_backtests: bool = Query(
+        False,
+        description=(
+            "Keep backtests but drop the heavy per-event fullField from all but the "
+            "most-recent one per sport (the /sports list only needs backtests[0]'s "
+            "field + counts). Massively shrinks the all-sports response. Ignored when "
+            "preview=true (which already drops backtests)."
         ),
     ),
     sports: str | None = Query(
@@ -5839,6 +5862,12 @@ async def sports_boards(
                 ),
             )
             for sport, coll in shaped.items()
+        }
+    elif lean_backtests:
+        # Keep backtests (counts/summary/spotlight intact) but strip the heavy
+        # fullField from all but the newest per sport — the /sports list payload.
+        shaped = {
+            sport: _lean_backtests_collection(coll) for sport, coll in shaped.items()
         }
     elif not include_backtests:
         # Drop the heavy backtests arrays for upcoming-only surfaces; keep the

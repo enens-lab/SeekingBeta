@@ -900,6 +900,7 @@ export const sports = {
     sports?: SportsBoardKey | SportsBoardKey[];
     includeBacktests?: boolean;
     preview?: boolean;
+    leanBacktests?: boolean;
     timeoutMs?: number;
   }): Promise<SportsBoardsResponse> => {
     const params = new URLSearchParams();
@@ -908,6 +909,9 @@ export const sports = {
     }
     if (options?.preview) {
       params.set('preview', 'true');
+    }
+    if (options?.leanBacktests) {
+      params.set('lean_backtests', 'true');
     }
     if (options?.mlbDate) {
       params.set('mlb_date', options.mlbDate);

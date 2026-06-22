@@ -77,6 +77,10 @@ function SportsLanding() {
         const payload = await sports.getBoards({
           mlbDate: requestedMlbDate || undefined,
           basketballDate: requestedBasketballDate || undefined,
+          // The landing list only needs each sport's backtest counts/tours +
+          // backtests[0]'s field (offseason spotlight); drop the heavy per-event
+          // fullField from the rest — cuts this response from ~14.7 MB to <1 MB.
+          leanBacktests: true,
         });
         if (!cancelled) {
           setSportsBoards(payload);

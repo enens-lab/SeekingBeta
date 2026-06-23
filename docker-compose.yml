@@ -193,6 +193,9 @@ services:
       GOOGLE_PLAY_PRODUCT_PRO_MONTHLY: ${GOOGLE_PLAY_PRODUCT_PRO_MONTHLY:-pro-monthly}
       GOOGLE_SERVICE_ACCOUNT_FILE: ${GOOGLE_SERVICE_ACCOUNT_FILE:-}
       GOOGLE_RTDN_AUDIENCE: ${GOOGLE_RTDN_AUDIENCE:-}
+      # TRUE only during closed/internal testing so license-tester (test) purchases
+      # grant entitlement. MUST be false for the real public launch.
+      GOOGLE_PLAY_ALLOW_TEST_PURCHASES: ${GOOGLE_PLAY_ALLOW_TEST_PURCHASES:-false}
       PYTHIA_API_URL: http://divination-api:8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
       ALPACA_KEY_ID: ${ALPACA_KEY_ID:-}

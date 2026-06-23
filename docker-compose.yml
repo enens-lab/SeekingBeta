@@ -184,6 +184,15 @@ services:
       SES_WEBHOOK_RATE_WINDOW_SECONDS: ${SES_WEBHOOK_RATE_WINDOW_SECONDS:-60}
       STRIPE_WEBHOOK_RATE_LIMIT: ${STRIPE_WEBHOOK_RATE_LIMIT:-240}
       STRIPE_WEBHOOK_RATE_WINDOW_SECONDS: ${STRIPE_WEBHOOK_RATE_WINDOW_SECONDS:-60}
+      # Google Play Billing (Android subscriptions). Flags/paths come from the box
+      # .env; the service-account JSON is mounted read-only via the volume below
+      # (GOOGLE_SERVICE_ACCOUNT_FILE points at /app/secrets/play-service-account.json).
+      GOOGLE_PLAY_ENABLED: ${GOOGLE_PLAY_ENABLED:-false}
+      GOOGLE_PLAY_PACKAGE_NAME: ${GOOGLE_PLAY_PACKAGE_NAME:-com.enens.seekingbeta}
+      GOOGLE_PLAY_PRODUCT_BASIC_MONTHLY: ${GOOGLE_PLAY_PRODUCT_BASIC_MONTHLY:-basic-monthly}
+      GOOGLE_PLAY_PRODUCT_PRO_MONTHLY: ${GOOGLE_PLAY_PRODUCT_PRO_MONTHLY:-pro-monthly}
+      GOOGLE_SERVICE_ACCOUNT_FILE: ${GOOGLE_SERVICE_ACCOUNT_FILE:-}
+      GOOGLE_RTDN_AUDIENCE: ${GOOGLE_RTDN_AUDIENCE:-}
       PYTHIA_API_URL: http://divination-api:8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
       ALPACA_KEY_ID: ${ALPACA_KEY_ID:-}
@@ -207,6 +216,8 @@ services:
     volumes:
       - prophecy_data:/app/data
       - ./pythia_prophecy/data/backtests:/app/data/backtests:ro
+      # Google Play service-account JSON (gitignored, placed on the host only).
+      - ./pythia_prophecy/secrets:/app/secrets:ro
     depends_on:
       - divination-api
     healthcheck:

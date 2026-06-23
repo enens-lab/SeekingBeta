@@ -1,3 +1,7 @@
+# Secrets (service-account keys, etc. — placed on hosts only, never committed)
+pythia_prophecy/secrets/
+*service-account*.json
+
 # Python
 __pycache__/
 *.py[cod]

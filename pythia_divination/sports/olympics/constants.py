@@ -23,10 +23,14 @@ ATHLETE_EVENTS_URL = (
 # Each NEXT_*_GAMES is the real next edition the medal table is projected toward.
 # (Historical training data ends at Rio 2016 / Sochi 2014; projections roll the
 # model forward from the latest available editions.)
+# start_date / end_date (YYYYMMDD) let the export tell when an edition has ended, so a
+# finished Games never lingers under "Upcoming". Winter rolls forward once its Games
+# end: the 2026 Milan-Cortina Winter Games are now over -> next is 2030 French Alps
+# (dates approximate until the IOC confirms the 2030 schedule).
 NEXT_SUMMER_GAMES = {"season": "Summer", "year": 2028, "city": "Los Angeles", "host_noc": "USA",
-                     "tour": "Summer Olympics 2028"}
-NEXT_WINTER_GAMES = {"season": "Winter", "year": 2026, "city": "Milan-Cortina", "host_noc": "ITA",
-                     "tour": "Winter Olympics 2026"}
+                     "tour": "Summer Olympics 2028", "start_date": 20280714, "end_date": 20280730}
+NEXT_WINTER_GAMES = {"season": "Winter", "year": 2030, "city": "French Alps", "host_noc": "FRA",
+                     "tour": "Winter Olympics 2030", "start_date": 20300208, "end_date": 20300224}
 OLYMPIC_EDITIONS = (NEXT_SUMMER_GAMES, NEXT_WINTER_GAMES)
 
 # Back-compat alias (older imports referenced TOUR_NAME = "Summer Olympics").

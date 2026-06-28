@@ -73,8 +73,8 @@ def _projection_board(table, games: dict) -> dict[str, Any] | None:
         "name": f"{games['city']} {games['year']} — Projected Medal Table",
         "tour": games["tour"],
         "course": "Gradient-boosted medal-count model",
-        "scheduledDate": int(f"{games['year']}0714"),
-        "latestDate": int(f"{games['year']}0714"),
+        "scheduledDate": int(games.get("start_date") or f"{games['year']}0714"),
+        "latestDate": int(games.get("end_date") or f"{games['year']}0714"),
         "predictedWinner": predictions[0]["playerName"],
         "predictions": predictions,
     }
@@ -159,6 +159,11 @@ def _build_edition(df, games: dict) -> tuple[list[dict[str, Any]], list[dict[str
     season = games["season"]
     upcoming: list[dict[str, Any]] = []
     completed: list[dict[str, Any]] = []
+    # An edition is "upcoming" only until its Games end; a finished edition (e.g. the
+    # 2026 Winter Games once they're over) must never linger under Upcoming as a stale
+    # projection. Defaults to end-of-year if an edition somehow lacks an end_date.
+    today_yyyymmdd = int(datetime.now(timezone.utc).strftime("%Y%m%d"))
+    edition_upcoming = int(games.get("end_date") or f"{games['year']}1231") >= today_yyyymmdd
     try:
         table = client.medal_table(df, season=season)
     except Exception as exc:  # pragma: no cover
@@ -167,7 +172,7 @@ def _build_edition(df, games: dict) -> tuple[list[dict[str, Any]], list[dict[str
 
     try:
         board = _projection_board(table, games)
-        if board:
+        if board and edition_upcoming:
             upcoming.append(board)
     except Exception as exc:  # pragma: no cover
         logger.warning("%s projection failed: %s", season, exc)

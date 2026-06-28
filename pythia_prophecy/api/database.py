@@ -157,6 +157,18 @@ def init_database():
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_auth_identities_email ON auth_identities(email_at_link)
         """)
+        # Data-deletion requests (e.g. Facebook's mandated callback). Stores a
+        # confirmation code + status so the provider-facing status URL can resolve.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS data_deletion_requests (
+                code TEXT PRIMARY KEY,
+                provider TEXT NOT NULL,
+                subject TEXT,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        """)
         conn.commit()
 
 
@@ -409,6 +421,31 @@ def _delete_identity_row(identity_id: str) -> None:
     with get_db() as conn:
         conn.execute("DELETE FROM auth_identities WHERE id = ?", (identity_id,))
         conn.commit()
+
+
+def record_data_deletion_request(code: str, provider: str, subject: Optional[str], status: str) -> None:
+    """Upsert a data-deletion request row (for the provider-facing status URL)."""
+    now = datetime.utcnow().isoformat()
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO data_deletion_requests (code, provider, subject, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(code) DO UPDATE SET
+                status = excluded.status,
+                updated_at = excluded.updated_at
+            """,
+            (code, provider, subject, status, now, now),
+        )
+        conn.commit()
+
+
+def get_data_deletion_request(code: str) -> Optional[dict]:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM data_deletion_requests WHERE code = ?", (code,)
+        ).fetchone()
+        return dict(row) if row else None
 
 
 def _synth_social_email(provider: str, subject: str) -> str:

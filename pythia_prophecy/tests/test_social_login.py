@@ -8,6 +8,10 @@ Exercises the find-or-create / link matrix in database.resolve_or_create_social_
 (the security-critical core) plus the verifier dispatch, against an ISOLATED temp
 SQLite DB — never the dev/prod pythia.db.
 """
+import base64
+import hashlib
+import hmac
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -112,6 +116,67 @@ try:
     check("unconfigured provider raises (never grants)", False)
 except social_auth.SocialAuthError:
     check("unconfigured provider raises (never grants)", True)
+
+# 9. Facebook signed_request verification (stdlib only — runs everywhere).
+_fb_secret = "test-app-secret"
+social_auth.FACEBOOK_APP_SECRET = _fb_secret
+
+
+def _b64(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).decode("utf-8").rstrip("=")
+
+
+_fb_payload = {"algorithm": "HMAC-SHA256", "user_id": "fb-123", "issued_at": 1700000000}
+_payload_b64 = _b64(json.dumps(_fb_payload).encode("utf-8"))
+_good_sig = hmac.new(_fb_secret.encode("utf-8"), _payload_b64.encode("utf-8"), hashlib.sha256).digest()
+_good_sr = f"{_b64(_good_sig)}.{_payload_b64}"
+check("fb signed_request: valid signature parses",
+      social_auth.parse_facebook_signed_request(_good_sr).get("user_id") == "fb-123")
+try:
+    social_auth.parse_facebook_signed_request(f"{_b64(b'not-the-sig')}.{_payload_b64}")
+    check("fb signed_request: tampered signature rejected", False)
+except social_auth.SocialAuthError:
+    check("fb signed_request: tampered signature rejected", True)
+try:
+    social_auth.parse_facebook_signed_request("garbage-no-dot")
+    check("fb signed_request: malformed rejected", False)
+except social_auth.SocialAuthError:
+    check("fb signed_request: malformed rejected", True)
+
+# 10. Apple refresh-token encryption round-trips (Fernet from the JWT secret).
+_enc = social_auth.encrypt_token("apple-refresh-xyz")
+check("token encrypts to ciphertext", bool(_enc) and _enc != "apple-refresh-xyz")
+check("token decrypts back", social_auth.decrypt_token(_enc) == "apple-refresh-xyz")
+check("decrypt(None) -> None", social_auth.decrypt_token(None) is None)
+
+# 11. Apple ES256 client_secret build (guarded: needs jose + cryptography).
+try:
+    from jose import jwt as _jose_jwt
+    from cryptography.hazmat.primitives.asymmetric import ec as _ec
+    from cryptography.hazmat.primitives import serialization as _ser
+    _have_jose = True
+except Exception:
+    _have_jose = False
+
+if _have_jose:
+    _key = _ec.generate_private_key(_ec.SECP256R1())
+    _pem = _key.private_bytes(_ser.Encoding.PEM, _ser.PrivateFormat.PKCS8, _ser.NoEncryption()).decode("utf-8")
+    _kf = Path(_tmp) / "apple_key.p8"
+    _kf.write_text(_pem)
+    social_auth.APPLE_OAUTH_PRIVATE_KEY_FILE = str(_kf)
+    social_auth.APPLE_OAUTH_TEAM_ID = "TEAM123456"
+    social_auth.APPLE_OAUTH_KEY_ID = "KEY1234567"
+    _cs = social_auth._build_apple_client_secret("ai.seekingbeta.app")
+    _hdr = _jose_jwt.get_unverified_header(_cs)
+    _claims = _jose_jwt.get_unverified_claims(_cs)
+    check("apple client_secret: ES256 + kid header",
+          _hdr.get("alg") == "ES256" and _hdr.get("kid") == "KEY1234567")
+    check("apple client_secret: iss/sub/aud claims",
+          _claims.get("iss") == "TEAM123456"
+          and _claims.get("sub") == "ai.seekingbeta.app"
+          and _claims.get("aud") == "https://appleid.apple.com")
+else:
+    print("  (skipped apple client_secret test — jose/cryptography not in this venv)")
 
 print(f"\nAll {len(_passed)} checks passed:")
 for _name in _passed:

@@ -13,6 +13,7 @@ lazily inside each verifier so this module stays importable — and unit-testabl
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
@@ -22,6 +23,7 @@ import urllib.request
 from dataclasses import dataclass, field
 from typing import Optional
 
+from .auth import SECRET_KEY
 from .logging_config import get_logger
 
 logger = get_logger("social_auth")
@@ -35,12 +37,19 @@ def _csv_env(name: str) -> list[str]:
 
 # --- Provider config (env; values come from the provider consoles, plan §A) ---
 GOOGLE_OAUTH_CLIENT_IDS = _csv_env("GOOGLE_OAUTH_CLIENT_IDS")
-APPLE_OAUTH_AUDIENCES = [
-    a for a in (
-        os.getenv("APPLE_OAUTH_BUNDLE_ID", "").strip(),   # iOS native
-        os.getenv("APPLE_OAUTH_SERVICES_ID", "").strip(),  # web / Android
-    ) if a
-]
+APPLE_OAUTH_BUNDLE_ID = os.getenv("APPLE_OAUTH_BUNDLE_ID", "").strip()      # iOS native client_id
+APPLE_OAUTH_SERVICES_ID = os.getenv("APPLE_OAUTH_SERVICES_ID", "").strip()  # web / Android client_id
+APPLE_OAUTH_AUDIENCES = [a for a in (APPLE_OAUTH_BUNDLE_ID, APPLE_OAUTH_SERVICES_ID) if a]
+# Needed to build the ES256 client_secret for the /auth/token + /auth/revoke calls.
+APPLE_OAUTH_TEAM_ID = os.getenv("APPLE_OAUTH_TEAM_ID", "").strip()
+APPLE_OAUTH_KEY_ID = os.getenv("APPLE_OAUTH_KEY_ID", "").strip()
+APPLE_OAUTH_PRIVATE_KEY_FILE = os.getenv("APPLE_OAUTH_PRIVATE_KEY_FILE", "").strip()
+# Web/Services-ID auth-code exchange requires the redirect_uri registered on the
+# Services ID; native-app exchange omits it.
+APPLE_OAUTH_REDIRECT_URI = os.getenv("APPLE_OAUTH_REDIRECT_URI", "").strip()
+APPLE_TOKEN_URL = "https://appleid.apple.com/auth/token"
+APPLE_REVOKE_URL = "https://appleid.apple.com/auth/revoke"
+
 FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "").strip()
 FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "").strip()
 FACEBOOK_GRAPH_VERSION = os.getenv("FACEBOOK_GRAPH_VERSION", "v19.0").strip()
@@ -223,7 +232,12 @@ def _verify_apple(credential: str, nonce: Optional[str]) -> SocialIdentity:
         subject=str(sub),
         email=email,
         email_verified=bool(email_verified and email),
-        raw={"is_private_email": str(claims.get("is_private_email")).lower() == "true"},
+        raw={
+            "is_private_email": str(claims.get("is_private_email")).lower() == "true",
+            # The audience == the client_id the client used (Bundle ID for native,
+            # Services ID for web). The auth-code exchange + revoke must reuse it.
+            "aud": claims.get("aud"),
+        },
     )
 
 
@@ -291,16 +305,187 @@ def _verify_facebook(credential: str) -> SocialIdentity:
 
 
 # --------------------------------------------------------------------------- #
-# Account deletion — provider-side revocation
+# Token encryption at rest (Apple refresh tokens). Symmetric key derived from
+# the app's JWT secret — no extra secret to manage; rotating JWT_SECRET_KEY
+# invalidates stored tokens (acceptable: a re-login re-stores them).
 # --------------------------------------------------------------------------- #
-def revoke_apple_identity(subject: Optional[str]) -> bool:
-    """Best-effort Apple token revocation on account deletion (an App Store
-    requirement). No-op (returns False) until the Apple ``.p8`` client-secret and
-    the stored Apple refresh token are wired in — that lands with the Apple
-    console setup (plan §A.2 / §B.8). Kept as a hook so the deletion path already
-    calls it.
-    """
-    # TODO(phase-1b): build the client_secret JWT from APPLE_OAUTH_PRIVATE_KEY_FILE
-    # + Team/Key/Services IDs and POST the stored refresh token to
-    # https://appleid.apple.com/auth/revoke.
-    return False
+def _token_cipher():
+    from cryptography.fernet import Fernet
+    key = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode("utf-8")).digest())
+    return Fernet(key)
+
+
+def encrypt_token(plaintext: Optional[str]) -> Optional[str]:
+    if not plaintext:
+        return None
+    try:
+        return _token_cipher().encrypt(plaintext.encode("utf-8")).decode("utf-8")
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Token encryption failed: %s", exc)
+        return None
+
+
+def decrypt_token(ciphertext: Optional[str]) -> Optional[str]:
+    if not ciphertext:
+        return None
+    try:
+        return _token_cipher().decrypt(ciphertext.encode("utf-8")).decode("utf-8")
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Token decryption failed: %s", exc)
+        return None
+
+
+# --------------------------------------------------------------------------- #
+# Apple: client_secret (ES256), authorization-code exchange, token revocation
+# --------------------------------------------------------------------------- #
+def _load_apple_private_key() -> str:
+    if not APPLE_OAUTH_PRIVATE_KEY_FILE:
+        raise SocialAuthError("Apple private key file not configured")
+    try:
+        with open(APPLE_OAUTH_PRIVATE_KEY_FILE, "r") as fh:
+            return fh.read()
+    except Exception as exc:
+        raise SocialAuthError(f"Could not read Apple private key: {exc}")
+
+
+def _build_apple_client_secret(client_id: str) -> str:
+    """ES256 JWT signed by the .p8 — the client_secret for /auth/token + /auth/revoke.
+    Built fresh and short-lived per call (Apple caps exp at 6 months)."""
+    if not (APPLE_OAUTH_TEAM_ID and APPLE_OAUTH_KEY_ID and client_id):
+        raise SocialAuthError("Apple client-secret config incomplete (team/key/client id)")
+    try:
+        from jose import jwt as jose_jwt
+    except Exception as exc:  # pragma: no cover - dep present in container
+        raise SocialAuthError(f"Apple verify dependency missing: {exc}")
+    now = int(time.time())
+    claims = {
+        "iss": APPLE_OAUTH_TEAM_ID,
+        "iat": now,
+        "exp": now + 3600,
+        "aud": APPLE_ISSUER,
+        "sub": client_id,
+    }
+    try:
+        return jose_jwt.encode(
+            claims, _load_apple_private_key(), algorithm="ES256",
+            headers={"kid": APPLE_OAUTH_KEY_ID},
+        )
+    except SocialAuthError:
+        raise
+    except Exception as exc:
+        raise SocialAuthError(f"Apple client-secret build failed: {exc}")
+
+
+def apple_client_id_for_aud(aud: Optional[str]) -> Optional[str]:
+    """The client_id to use for exchange/revoke == the audience of the token the
+    client presented (Bundle ID for native, Services ID for web/Android)."""
+    if aud and aud in APPLE_OAUTH_AUDIENCES:
+        return aud
+    return APPLE_OAUTH_BUNDLE_ID or APPLE_OAUTH_SERVICES_ID or None
+
+
+def exchange_apple_auth_code(
+    authorization_code: str, client_id: str, redirect_uri: Optional[str] = None
+) -> dict:
+    """Exchange the single-use authorization code for tokens. Returns the JSON
+    (refresh_token, access_token, id_token). Raises SocialAuthError on failure.
+    redirect_uri is required for the web/Services-ID flow and omitted for native."""
+    if not authorization_code:
+        raise SocialAuthError("Missing Apple authorization code")
+    client_secret = _build_apple_client_secret(client_id)
+    data = {
+        "grant_type": "authorization_code",
+        "code": authorization_code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }
+    if redirect_uri:
+        data["redirect_uri"] = redirect_uri
+    try:
+        import httpx
+    except Exception as exc:  # pragma: no cover
+        raise SocialAuthError(f"Apple token exchange dependency missing: {exc}")
+    try:
+        with httpx.Client(timeout=_HTTP_TIMEOUT) as client:
+            resp = client.post(
+                APPLE_TOKEN_URL, data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        if resp.status_code != 200:
+            raise SocialAuthError(
+                f"Apple token exchange failed: {resp.status_code} {resp.text[:200]}"
+            )
+        return resp.json() or {}
+    except SocialAuthError:
+        raise
+    except Exception as exc:
+        raise SocialAuthError(f"Apple token exchange error: {exc}")
+
+
+def revoke_apple_identity(refresh_token: Optional[str], client_id: Optional[str] = None) -> bool:
+    """Revoke an Apple refresh token on account deletion (App Store requirement).
+    Best-effort: returns True on success, False on any failure (never raises) so
+    deletion always proceeds. No-ops when no token/config is available — e.g.
+    users who signed in before authorization-code capture shipped."""
+    if not refresh_token:
+        return False
+    cid = client_id or APPLE_OAUTH_BUNDLE_ID or APPLE_OAUTH_SERVICES_ID
+    if not cid:
+        logger.warning("Apple revoke skipped: no client_id configured")
+        return False
+    try:
+        client_secret = _build_apple_client_secret(cid)
+        import httpx
+        with httpx.Client(timeout=_HTTP_TIMEOUT) as client:
+            resp = client.post(
+                APPLE_REVOKE_URL,
+                data={
+                    "client_id": cid,
+                    "client_secret": client_secret,
+                    "token": refresh_token,
+                    "token_type_hint": "refresh_token",
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+        if resp.status_code == 200:
+            return True
+        logger.warning("Apple revoke non-200: %s %s", resp.status_code, resp.text[:200])
+        return False
+    except Exception as exc:
+        logger.warning("Apple revoke failed: %s", exc)
+        return False
+
+
+# --------------------------------------------------------------------------- #
+# Facebook: verify a Meta signed_request (data-deletion callback)
+# --------------------------------------------------------------------------- #
+def parse_facebook_signed_request(signed_request: str) -> dict:
+    """Verify + parse a Meta signed_request ('<sig>.<payload>', base64url). The
+    HMAC-SHA256 is keyed by the APP SECRET over the RAW (still-encoded) payload
+    string. Raises SocialAuthError on any tampering. Returns the payload dict."""
+    if not FACEBOOK_APP_SECRET:
+        raise SocialAuthError("Facebook app secret not configured")
+    if not signed_request or "." not in signed_request:
+        raise SocialAuthError("Malformed Facebook signed_request")
+    sig_b64, payload_b64 = signed_request.split(".", 1)
+
+    def _b64url(data: str) -> bytes:
+        return base64.urlsafe_b64decode(data + ("=" * (-len(data) % 4)))
+
+    try:
+        sig = _b64url(sig_b64)
+        payload = json.loads(_b64url(payload_b64).decode("utf-8"))
+    except Exception as exc:
+        raise SocialAuthError(f"Facebook signed_request decode failed: {exc}")
+
+    expected = hmac.new(
+        FACEBOOK_APP_SECRET.encode("utf-8"),
+        payload_b64.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    if not hmac.compare_digest(expected, sig):
+        raise SocialAuthError("Facebook signed_request signature mismatch")
+    algo = str(payload.get("algorithm", "")).upper()
+    if algo and algo != "HMAC-SHA256":
+        raise SocialAuthError("Facebook signed_request unexpected algorithm")
+    return payload

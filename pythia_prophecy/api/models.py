@@ -143,6 +143,10 @@ class OAuthVerifyRequest(BaseModel):
     credential: str = Field(..., min_length=1)
     nonce: Optional[str] = None
     name: Optional[OAuthName] = None
+    # Apple only: the single-use authorization code. Exchanged server-side for a
+    # refresh token so the account can be revoked on deletion (App Store 5.1.1(v)).
+    # Optional — sign-in still works without it; revocation just no-ops.
+    authorization_code: Optional[str] = None
 
 
 class PasswordResetRequest(BaseModel):

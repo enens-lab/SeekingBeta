@@ -35,7 +35,7 @@ if PYTHIA_PATH.exists() and str(PYTHIA_PATH) not in sys.path:
     sys.path.insert(0, str(PYTHIA_PATH))
 
 from fastapi import FastAPI, HTTPException, Depends, Header, Query, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
 try:
@@ -119,8 +119,12 @@ from .database import (
     delete_user_account,
     list_users_by_tiers,
     resolve_or_create_social_user,
+    upsert_auth_identity,
+    get_identity_by_provider_subject,
     get_identities_by_user_id,
     delete_identities_for_user,
+    record_data_deletion_request,
+    get_data_deletion_request,
     SocialEmailConflict,
 )
 from .price_cache_store import (
@@ -175,6 +179,13 @@ from .social_auth import (
     SocialAuthError,
     SUPPORTED_PROVIDERS,
     revoke_apple_identity,
+    exchange_apple_auth_code,
+    apple_client_id_for_aud,
+    parse_facebook_signed_request,
+    encrypt_token,
+    decrypt_token,
+    APPLE_OAUTH_SERVICES_ID,
+    APPLE_OAUTH_REDIRECT_URI,
 )
 from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
 from .performance import get_track_record, get_track_record_curve
@@ -957,6 +968,13 @@ GOOGLE_PLAY_ALLOW_TEST_PURCHASES = os.getenv("GOOGLE_PLAY_ALLOW_TEST_PURCHASES",
 # Master gate. While false the OAuth endpoint 404s, so clients can merge before
 # the provider consoles are set up. Flip to true once verifiers are configured.
 SOCIAL_LOGIN_ENABLED = os.getenv("SOCIAL_LOGIN_ENABLED", "false").lower() == "true"
+# Public base for the Facebook data-deletion status URL Meta surfaces to users.
+# Must be the real public host in prod (set on the box); falls back to FRONTEND_URL.
+DATA_DELETION_STATUS_BASE_URL = (
+    os.getenv("DATA_DELETION_STATUS_BASE_URL", "").strip()
+    or os.getenv("FRONTEND_URL", "").strip()
+    or "https://seekingbeta.ai"
+).rstrip("/")
 STRIPE_LEGACY_GRACE_DAYS = int(os.getenv("STRIPE_LEGACY_GRACE_DAYS", "30"))
 STRIPE_BILLING_PORTAL_RETURN_URL = os.getenv("STRIPE_BILLING_PORTAL_RETURN_URL", "").strip()
 ALPACA_KEY_ID = os.getenv("ALPACA_KEY_ID", "").strip()
@@ -3393,6 +3411,31 @@ async def oauth_login(provider: str, data: OAuthVerifyRequest, request: Request)
     except SocialEmailConflict as exc:
         raise HTTPException(409, detail=str(exc))
 
+    # Apple: exchange the one-time authorization code for a refresh token and store
+    # it (encrypted) so the account can be revoked on deletion (App Store 5.1.1(v)).
+    # Best-effort — sign-in must not fail if the exchange does. Inert until clients
+    # actually send authorization_code (native iOS / web Services-ID flow).
+    if provider == "apple" and data.authorization_code:
+        try:
+            aud = (identity.raw or {}).get("aud")
+            apple_client_id = apple_client_id_for_aud(aud)
+            redirect_uri = (
+                APPLE_OAUTH_REDIRECT_URI
+                if (apple_client_id and apple_client_id == APPLE_OAUTH_SERVICES_ID)
+                else None
+            )
+            tokens = exchange_apple_auth_code(data.authorization_code, apple_client_id, redirect_uri)
+            refresh_token = tokens.get("refresh_token")
+            if refresh_token:
+                merged = dict(identity.raw or {})
+                merged["apple_refresh_token_enc"] = encrypt_token(refresh_token)
+                merged["apple_client_id"] = apple_client_id
+                upsert_auth_identity(user.id, "apple", identity.subject, identity.email, merged)
+        except SocialAuthError as exc:
+            logger.warning("Apple auth-code exchange failed for user=%s: %s", user.id, exc)
+        except Exception as exc:
+            logger.warning("Apple refresh-token persist failed for user=%s: %s", user.id, exc)
+
     if created:
         logger.info("New user via %s social login: %s (id=%s)", provider, user.email, user.id)
         if billing_store_enabled():
@@ -3818,6 +3861,27 @@ async def change_password(
     return MessageResponse(message="Password updated successfully.")
 
 
+def _revoke_apple_for_identity(ident: dict) -> None:
+    """Decrypt the stored Apple refresh token for a linked identity and revoke it
+    at Apple (best-effort; no-ops if nothing is stored — e.g. users who linked
+    before authorization-code capture shipped, or non-Apple identities)."""
+    if (ident or {}).get("provider") != "apple":
+        return
+    raw = ident.get("raw_profile")
+    if not raw:
+        return
+    try:
+        profile = json.loads(raw) if isinstance(raw, str) else (raw or {})
+    except Exception:
+        profile = {}
+    enc = profile.get("apple_refresh_token_enc")
+    if not enc:
+        return
+    refresh_token = decrypt_token(enc)
+    if refresh_token:
+        revoke_apple_identity(refresh_token, profile.get("apple_client_id"))
+
+
 @app.post("/api/auth/delete-account", response_model=MessageResponse, tags=["Authentication"])
 async def delete_account(
     data: DeleteAccountRequest,
@@ -3879,11 +3943,10 @@ async def delete_account(
     # removes the rows, so this is also a no-op-safe belt-and-suspenders.
     try:
         for ident in get_identities_by_user_id(user.id):
-            if ident.get("provider") == "apple":
-                try:
-                    revoke_apple_identity(ident.get("subject"))
-                except Exception as revoke_err:
-                    logger.warning("Apple revoke failed for user_id=%s: %s", user.id, revoke_err)
+            try:
+                _revoke_apple_for_identity(ident)
+            except Exception as revoke_err:
+                logger.warning("Provider revoke failed for user_id=%s: %s", user.id, revoke_err)
         delete_identities_for_user(user.id)
     except Exception as ident_err:
         logger.warning("Auth identity cleanup failed for user_id=%s: %s", user.id, ident_err)
@@ -3894,6 +3957,99 @@ async def delete_account(
 
     logger.info("Deleted account for user: %s", user.email)
     return MessageResponse(message="Account deleted successfully.")
+
+
+def _purge_user_data(user_id: str, email: str) -> None:
+    """Non-interactive account purge used by provider data-deletion callbacks.
+    Mirrors delete_account's cleanup minus the password check / Stripe cancel."""
+    try:
+        for ident in get_identities_by_user_id(user_id):
+            try:
+                _revoke_apple_for_identity(ident)
+            except Exception as revoke_err:
+                logger.warning("Provider revoke failed during purge user_id=%s: %s", user_id, revoke_err)
+    except Exception as ident_err:
+        logger.warning("Identity enumeration failed during purge user_id=%s: %s", user_id, ident_err)
+    if compliance_store_enabled():
+        try:
+            delete_user_records(user_id, email)
+        except Exception as e:
+            logger.warning("Compliance cleanup failed during purge user_id=%s: %s", user_id, e)
+    if billing_store_enabled():
+        try:
+            delete_state_by_user_id(user_id)
+        except Exception as e:
+            logger.warning("Billing cleanup failed during purge user_id=%s: %s", user_id, e)
+    try:
+        delete_identities_for_user(user_id)
+    except Exception as e:
+        logger.warning("Identity cleanup failed during purge user_id=%s: %s", user_id, e)
+    delete_user_account(user_id)
+
+
+@app.post("/api/auth/facebook/data-deletion", tags=["Authentication"])
+async def facebook_data_deletion(request: Request):
+    """Meta-mandated Data Deletion callback. PUBLIC + unauthenticated (Meta calls
+    it server-to-server with a signed_request, not our JWT). Verifies the
+    signed_request (HMAC keyed by the app secret), purges the matching
+    Facebook-linked account, and returns the {url, confirmation_code} JSON Meta
+    requires. Idempotent — a no-match is still a 200 success."""
+    try:
+        body = (await request.body()).decode("utf-8")
+        signed_request = dict(parse_qsl(body)).get("signed_request", "")
+    except Exception:
+        signed_request = ""
+    if not signed_request:
+        raise HTTPException(400, detail="Missing signed_request")
+
+    try:
+        payload = parse_facebook_signed_request(signed_request)
+    except SocialAuthError as exc:
+        logger.warning("Facebook data-deletion signed_request invalid: %s", exc)
+        raise HTTPException(400, detail="Invalid signed_request")
+
+    fb_user_id = str(payload.get("user_id") or "").strip()
+    code = uuid.uuid4().hex
+    status = "completed"
+    if fb_user_id:
+        try:
+            ident = get_identity_by_provider_subject("facebook", fb_user_id)
+            if ident:
+                target = get_user_by_id(ident["user_id"])
+                if target:
+                    _purge_user_data(target.id, target.email)
+                    logger.info("Facebook data-deletion purged user_id=%s", target.id)
+        except Exception as exc:
+            logger.warning("Facebook data-deletion purge failed fb_user=%s: %s", fb_user_id, exc)
+            status = "error"
+    try:
+        record_data_deletion_request(code, "facebook", fb_user_id or None, status)
+    except Exception as exc:
+        logger.warning("Could not record data-deletion request: %s", exc)
+    status_url = f"{DATA_DELETION_STATUS_BASE_URL}/api/auth/facebook/data-deletion/status?code={code}"
+    return JSONResponse({"url": status_url, "confirmation_code": code})
+
+
+@app.get("/api/auth/facebook/data-deletion/status", tags=["Authentication"])
+async def facebook_data_deletion_status(code: str = Query("")):
+    """Human-readable status page for a Facebook data-deletion request (Meta and
+    the user may click the URL the callback returned)."""
+    req = get_data_deletion_request(code) if code else None
+    shell = (
+        "<html><body style=\"font-family:system-ui,sans-serif;max-width:640px;"
+        "margin:48px auto;padding:0 16px;color:#1a1a1a\">"
+        "<h2>SeekingBeta.AI — Data deletion request</h2>{body}</body></html>"
+    )
+    if not req:
+        return HTMLResponse(shell.format(body="<p>No deletion request was found for this code.</p>"),
+                            status_code=404)
+    msg = {
+        "completed": "Your data linked to this app has been deleted.",
+        "error": "We encountered an error processing this request. Please email support@seekingbeta.ai.",
+    }.get(req.get("status"), f"Status: {req.get('status')}")
+    return HTMLResponse(shell.format(
+        body=f"<p><b>Confirmation code:</b> {code}</p><p>{msg}</p>"
+    ))
 
 
 @app.get("/api/auth/me", response_model=UserResponse)

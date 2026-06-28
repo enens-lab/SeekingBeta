@@ -27,6 +27,12 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7
 PASSWORD_RESET_TOKEN_EXPIRE_HOURS = 1
 UNSUBSCRIBE_TOKEN_EXPIRE_DAYS = 365
 
+# Stored in users.hashed_password for social-login-only accounts (no password
+# set). It deliberately lacks the "salt$key" separator that verify_password()
+# requires, so password login can never succeed against it (verify_password
+# returns False on the split). This avoids a NOT NULL schema migration.
+SOCIAL_ONLY_PASSWORD_SENTINEL = "!social-login-no-password!"
+
 
 def hash_password(password: str) -> str:
     """Hash a password using PBKDF2-HMAC-SHA256."""

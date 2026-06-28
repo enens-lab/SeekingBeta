@@ -196,6 +196,22 @@ services:
       # TRUE only during closed/internal testing so license-tester (test) purchases
       # grant entitlement. MUST be false for the real public launch.
       GOOGLE_PLAY_ALLOW_TEST_PURCHASES: ${GOOGLE_PLAY_ALLOW_TEST_PURCHASES:-false}
+      # --- Social login (Apple + Google + Facebook). Provider-agnostic verify. ---
+      # Master gate; while false the /api/auth/oauth endpoint 404s.
+      SOCIAL_LOGIN_ENABLED: ${SOCIAL_LOGIN_ENABLED:-false}
+      # Google: allow-list ALL platform OAuth client IDs as valid token audiences.
+      GOOGLE_OAUTH_CLIENT_IDS: ${GOOGLE_OAUTH_CLIENT_IDS:-}
+      # Apple: allow-list Bundle ID (iOS native) + Services ID (web / Android).
+      APPLE_OAUTH_BUNDLE_ID: ${APPLE_OAUTH_BUNDLE_ID:-}
+      APPLE_OAUTH_SERVICES_ID: ${APPLE_OAUTH_SERVICES_ID:-}
+      APPLE_OAUTH_TEAM_ID: ${APPLE_OAUTH_TEAM_ID:-}
+      APPLE_OAUTH_KEY_ID: ${APPLE_OAUTH_KEY_ID:-}
+      # Apple .p8 rides the existing read-only secrets mount (like the Play SA JSON).
+      APPLE_OAUTH_PRIVATE_KEY_FILE: ${APPLE_OAUTH_PRIVATE_KEY_FILE:-/app/secrets/apple-signin-key.p8}
+      # Facebook: server-to-server debug_token + Graph /me.
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      FACEBOOK_GRAPH_VERSION: ${FACEBOOK_GRAPH_VERSION:-v19.0}
       PYTHIA_API_URL: http://divination-api:8000
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
       ALPACA_KEY_ID: ${ALPACA_KEY_ID:-}

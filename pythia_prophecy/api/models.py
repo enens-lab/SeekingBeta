@@ -130,6 +130,21 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+class OAuthName(BaseModel):
+    """Human name a provider supplies. Apple sends this only on the FIRST
+    authorization (never again), so the client forwards it for that one call."""
+    first: Optional[str] = None
+    last: Optional[str] = None
+
+
+class OAuthVerifyRequest(BaseModel):
+    """Body for POST /api/auth/oauth/{provider}. `credential` is the provider
+    token (Google ID token / Apple identityToken / Facebook access token)."""
+    credential: str = Field(..., min_length=1)
+    nonce: Optional[str] = None
+    name: Optional[OAuthName] = None
+
+
 class PasswordResetRequest(BaseModel):
     email: EmailStr
 

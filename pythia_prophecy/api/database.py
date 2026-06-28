@@ -6,12 +6,14 @@ from __future__ import annotations
 
 import sqlite3
 import json
+import uuid
 from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 from typing import Optional
 
 from .models import UserInDB, SubscriptionTier, UserOracle
+from .auth import SOCIAL_ONLY_PASSWORD_SENTINEL
 from .logging_config import get_logger
 
 logger = get_logger("database")
@@ -130,6 +132,30 @@ def init_database():
         """)
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_company_news_ticker ON company_news(ticker)
+        """)
+        # Social login: provider identities linked to a user (Apple/Google/Facebook/...).
+        # One provider identity (provider, subject) maps to at most one user; a user
+        # may link several providers. `subject` (the provider 'sub'/'id') is the durable
+        # join key — emails change, subjects don't.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS auth_identities (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                email_at_link TEXT,
+                raw_profile TEXT,
+                linked_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(provider, subject),
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_auth_identities_user_id ON auth_identities(user_id)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_auth_identities_email ON auth_identities(email_at_link)
         """)
         conn.commit()
 
@@ -272,6 +298,7 @@ def delete_user_account(user_id: str) -> bool:
     with get_db() as conn:
         # Explicitly delete dependent rows since foreign-key cascades are not guaranteed.
         conn.execute("DELETE FROM user_oracle WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM auth_identities WHERE user_id = ?", (user_id,))
         cursor = conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
         conn.commit()
         if cursor.rowcount > 0:
@@ -309,6 +336,173 @@ def _row_to_user(row: sqlite3.Row) -> UserInDB:
         created_at=datetime.fromisoformat(row["created_at"]),
         updated_at=datetime.fromisoformat(row["updated_at"]),
     )
+
+
+# ============================================================
+# Social Login (Auth Identities) Functions
+# ============================================================
+
+class SocialEmailConflict(Exception):
+    """Raised when a social login presents an email that already belongs to an
+    existing account but cannot be safely linked because the provider did NOT
+    assert the email is verified. Linking on an unverified email is an
+    account-takeover vector, so we refuse rather than link or silently duplicate.
+    The endpoint maps this to HTTP 409."""
+
+
+def upsert_auth_identity(
+    user_id: str,
+    provider: str,
+    subject: str,
+    email_at_link: Optional[str] = None,
+    raw_profile: Optional[dict] = None,
+) -> None:
+    """Idempotently link a provider identity to a user. Keyed on
+    (provider, subject); re-linking the same identity refreshes the audit fields."""
+    now = datetime.utcnow().isoformat()
+    profile_json = json.dumps(raw_profile) if raw_profile else None
+    email_norm = (email_at_link or "").strip().lower() or None
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO auth_identities
+                (id, user_id, provider, subject, email_at_link, raw_profile, linked_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(provider, subject) DO UPDATE SET
+                email_at_link = excluded.email_at_link,
+                raw_profile = COALESCE(excluded.raw_profile, auth_identities.raw_profile),
+                updated_at = excluded.updated_at
+            """,
+            (str(uuid.uuid4()), user_id, provider, subject, email_norm, profile_json, now, now),
+        )
+        conn.commit()
+
+
+def get_identity_by_provider_subject(provider: str, subject: str) -> Optional[dict]:
+    """Look up a linked identity by its durable (provider, subject) key."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM auth_identities WHERE provider = ? AND subject = ?",
+            (provider, subject),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def get_identities_by_user_id(user_id: str) -> list[dict]:
+    """All provider identities linked to a user (for account deletion / display)."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM auth_identities WHERE user_id = ?", (user_id,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def delete_identities_for_user(user_id: str) -> int:
+    """Remove all linked identities for a user. Returns the number removed."""
+    with get_db() as conn:
+        cursor = conn.execute("DELETE FROM auth_identities WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cursor.rowcount
+
+
+def _delete_identity_row(identity_id: str) -> None:
+    with get_db() as conn:
+        conn.execute("DELETE FROM auth_identities WHERE id = ?", (identity_id,))
+        conn.commit()
+
+
+def _synth_social_email(provider: str, subject: str) -> str:
+    """A non-deliverable, unique placeholder email for providers that omit one
+    (e.g. Facebook when the email permission is denied). Keeps the NOT NULL /
+    UNIQUE email invariant; such accounts are standalone and cannot be linked
+    to others by email."""
+    safe = "".join(ch for ch in subject if ch.isalnum() or ch in ".-_") or "user"
+    return f"{provider}.{safe}@noreply.seekingbeta.ai"
+
+
+def resolve_or_create_social_user(
+    provider: str,
+    subject: str,
+    email: Optional[str],
+    email_verified: bool,
+    first_name: Optional[str] = None,
+    last_name: Optional[str] = None,
+    raw_profile: Optional[dict] = None,
+) -> tuple[UserInDB, bool]:
+    """Find-or-create the user behind a verified social identity.
+
+    Resolution order (security rationale in SOCIAL_LOGIN_PLAN.md section D):
+      1. (provider, subject) already linked -> that user. Email irrelevant.
+      2. else, IF the provider asserts a VERIFIED email matching an existing
+         user -> link the identity to that user (no duplicate account).
+      3. else -> create a new password-less user + link the identity.
+
+    Refuses (SocialEmailConflict) to link onto an existing account when the
+    provider has NOT verified the email — an unverified-email token must never
+    be handed someone else's account.
+
+    Returns (user, created).
+    """
+    norm_email = (email or "").strip().lower() or None
+
+    # 1. Existing identity wins — subject is the durable join key.
+    existing = get_identity_by_provider_subject(provider, subject)
+    if existing:
+        user = get_user_by_id(existing["user_id"])
+        if user:
+            return user, False
+        # Orphaned identity (user was deleted) — drop it and fall through.
+        _delete_identity_row(existing["id"])
+
+    # 2. Link by VERIFIED email only.
+    if norm_email:
+        matching = get_user_by_email(norm_email)
+        if matching:
+            if not email_verified:
+                raise SocialEmailConflict(
+                    "An account with this email already exists. Sign in with your "
+                    "password, or use a provider that verifies your email."
+                )
+            upsert_auth_identity(matching.id, provider, subject, norm_email, raw_profile)
+            if not matching.email_verified:
+                verify_user_email(matching.id)
+                matching = get_user_by_id(matching.id) or matching
+            return matching, False
+
+    # 3. Create a new password-less user.
+    account_email = norm_email or _synth_social_email(provider, subject)
+    now = datetime.utcnow()
+    new_user = UserInDB(
+        id=str(uuid.uuid4()),
+        email=account_email,
+        # first/last are NOT NULL with min_length=1 on the model; fall back to a
+        # non-empty placeholder when the provider supplies nothing.
+        first_name=(first_name or "").strip() or "Member",
+        last_name=(last_name or "").strip() or "Member",
+        hashed_password=SOCIAL_ONLY_PASSWORD_SENTINEL,
+        tier=SubscriptionTier.FREE,
+        email_verified=bool(email_verified and norm_email),
+        verification_token=None,
+        created_at=now,
+        updated_at=now,
+    )
+    try:
+        create_user(new_user)
+    except sqlite3.IntegrityError:
+        # Race: a concurrent request created the same identity or email first.
+        existing = get_identity_by_provider_subject(provider, subject)
+        if existing:
+            raced = get_user_by_id(existing["user_id"])
+            if raced:
+                return raced, False
+        if norm_email and email_verified:
+            raced = get_user_by_email(norm_email)
+            if raced:
+                upsert_auth_identity(raced.id, provider, subject, norm_email, raw_profile)
+                return raced, False
+        raise
+    upsert_auth_identity(new_user.id, provider, subject, norm_email, raw_profile)
+    return new_user, True
 
 
 # ============================================================

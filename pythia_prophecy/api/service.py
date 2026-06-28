@@ -60,6 +60,7 @@ from .models import (
     PasswordResetConfirm,
     ChangePasswordRequest,
     DeleteAccountRequest,
+    OAuthVerifyRequest,
     ErrorResponse,
     SubscriptionTier,
     TIER_CONFIG,
@@ -117,6 +118,10 @@ from .database import (
     update_user_password,
     delete_user_account,
     list_users_by_tiers,
+    resolve_or_create_social_user,
+    get_identities_by_user_id,
+    delete_identities_for_user,
+    SocialEmailConflict,
 )
 from .price_cache_store import (
     ensure_table as ensure_price_cache_table,
@@ -164,6 +169,12 @@ from .auth import (
     decode_access_token,
     generate_verification_token,
     validate_password_strength,
+)
+from .social_auth import (
+    verify_social_credential,
+    SocialAuthError,
+    SUPPORTED_PROVIDERS,
+    revoke_apple_identity,
 )
 from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
 from .performance import get_track_record, get_track_record_curve
@@ -942,6 +953,10 @@ GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv(
 GOOGLE_RTDN_AUDIENCE = os.getenv("GOOGLE_RTDN_AUDIENCE", "").strip()
 # Treat test purchases as non-entitling in production unless explicitly allowed.
 GOOGLE_PLAY_ALLOW_TEST_PURCHASES = os.getenv("GOOGLE_PLAY_ALLOW_TEST_PURCHASES", "false").lower() == "true"
+# --- Social login (Apple + Google + Facebook) ---
+# Master gate. While false the OAuth endpoint 404s, so clients can merge before
+# the provider consoles are set up. Flip to true once verifiers are configured.
+SOCIAL_LOGIN_ENABLED = os.getenv("SOCIAL_LOGIN_ENABLED", "false").lower() == "true"
 STRIPE_LEGACY_GRACE_DAYS = int(os.getenv("STRIPE_LEGACY_GRACE_DAYS", "30"))
 STRIPE_BILLING_PORTAL_RETURN_URL = os.getenv("STRIPE_BILLING_PORTAL_RETURN_URL", "").strip()
 ALPACA_KEY_ID = os.getenv("ALPACA_KEY_ID", "").strip()
@@ -3320,6 +3335,97 @@ async def login(data: UserLogin, request: Request):
     )
 
 
+@app.post("/api/auth/oauth/{provider}", response_model=TokenResponse, tags=["Authentication"])
+async def oauth_login(provider: str, data: OAuthVerifyRequest, request: Request):
+    """Verify a third-party identity token (Apple / Google / Facebook) and issue
+    our own session JWTs.
+
+    Provider-agnostic: the response is the same TokenResponse as password login,
+    so every client decodes it unchanged. The provider token is verified
+    server-side and used once; a forged / foreign token is rejected (401) and
+    never grants. Account linking is by VERIFIED email only (see
+    resolve_or_create_social_user). Gated behind SOCIAL_LOGIN_ENABLED (404 while
+    off, so clients can ship before the provider consoles are live)."""
+    if not SOCIAL_LOGIN_ENABLED:
+        raise HTTPException(404, detail="Not found")
+
+    provider = (provider or "").lower().strip()
+    if provider not in SUPPORTED_PROVIDERS:
+        raise HTTPException(400, detail="Unsupported social provider")
+
+    client_id = _rate_limit_client_id(request)
+    _enforce_rate_limit(
+        identifier=f"auth:oauth:ip:{client_id}",
+        max_requests=AUTH_LOGIN_IP_RATE_LIMIT,
+        window_seconds=AUTH_LOGIN_IP_RATE_WINDOW_SECONDS,
+    )
+    _enforce_rate_limit(
+        identifier=f"auth:oauth:{provider}:ip:{client_id}",
+        max_requests=AUTH_LOGIN_RATE_LIMIT * 3,
+        window_seconds=AUTH_LOGIN_RATE_WINDOW_SECONDS,
+    )
+
+    # Authoritative, server-side verification — raises on any failure (never grants).
+    try:
+        identity = verify_social_credential(provider, data.credential, data.nonce)
+    except SocialAuthError as exc:
+        logger.warning("Social login verify failed provider=%s: %s", provider, exc)
+        raise HTTPException(401, detail="Could not verify social login")
+
+    # Apple sends the human name only on the FIRST authorization — prefer what the
+    # token/profile carried, then fall back to the client-forwarded name.
+    first_name = identity.first_name
+    last_name = identity.last_name
+    if data.name:
+        first_name = first_name or (data.name.first or None)
+        last_name = last_name or (data.name.last or None)
+
+    try:
+        user, created = resolve_or_create_social_user(
+            provider=identity.provider,
+            subject=identity.subject,
+            email=identity.email,
+            email_verified=identity.email_verified,
+            first_name=first_name,
+            last_name=last_name,
+            raw_profile=identity.raw or None,
+        )
+    except SocialEmailConflict as exc:
+        raise HTTPException(409, detail=str(exc))
+
+    if created:
+        logger.info("New user via %s social login: %s (id=%s)", provider, user.email, user.id)
+        if billing_store_enabled():
+            try:
+                upsert_customer_state(
+                    user.id,
+                    user.email,
+                    updates={
+                        "plan_tier": SubscriptionTier.FREE.value,
+                        "subscription_status": "none",
+                    },
+                    source=f"oauth_{provider}",
+                )
+            except Exception as e:
+                logger.warning("Failed to init billing state for social user %s: %s", user.email, e)
+
+    access_token = create_access_token(user.id, user.email, token_type="access")
+    refresh_token = create_access_token(user.id, user.email, token_type="refresh")
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            tier=user.tier,
+            email_verified=user.email_verified,
+            created_at=user.created_at,
+        ),
+    )
+
+
 @app.post("/api/auth/verify-email", response_model=TokenResponse)
 async def verify_email(data: VerifyEmailRequest, request: Request):
     """Verify email with token from email link."""
@@ -3767,6 +3873,20 @@ async def delete_account(
             delete_state_by_user_id(user.id)
         except Exception as billing_err:
             logger.warning("Billing cleanup failed for user_id=%s: %s", user.id, billing_err)
+
+    # Social login: revoke at the provider (App Store requires Apple revoke) while
+    # we still hold the identities, then clear them. delete_user_account() also
+    # removes the rows, so this is also a no-op-safe belt-and-suspenders.
+    try:
+        for ident in get_identities_by_user_id(user.id):
+            if ident.get("provider") == "apple":
+                try:
+                    revoke_apple_identity(ident.get("subject"))
+                except Exception as revoke_err:
+                    logger.warning("Apple revoke failed for user_id=%s: %s", user.id, revoke_err)
+        delete_identities_for_user(user.id)
+    except Exception as ident_err:
+        logger.warning("Auth identity cleanup failed for user_id=%s: %s", user.id, ident_err)
 
     deleted = delete_user_account(user.id)
     if not deleted:

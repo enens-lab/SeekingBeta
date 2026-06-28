@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, setToken, getToken, setOnAuthError, User, SignupData } from '../api/client';
+import { auth, setToken, getToken, setOnAuthError, User, SignupData, OAuthPayload } from '../api/client';
 import { clearAnalyticsUser, setAnalyticsUser, trackEvent } from '../lib/analytics';
 
 interface AuthContextValue {
@@ -10,6 +10,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isVerified: boolean;
   login: (email: string, password: string) => Promise<User>;
+  socialLogin: (provider: string, payload: OAuthPayload) => Promise<User>;
   signup: (data: SignupData) => Promise<{ message: string }>;
   verifyEmail: (token: string) => Promise<User>;
   resendVerification: (email: string) => Promise<{ message: string }>;
@@ -88,6 +89,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
+  const socialLogin = useCallback(
+    async (provider: string, payload: OAuthPayload): Promise<User> => {
+      setError(null);
+      try {
+        const response = await auth.oauth(provider, payload);
+        setToken(response.access_token);
+        setUser(response.user);
+        trackEvent('login', { method: provider });
+        return response.user;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Social login failed';
+        setError(message);
+        trackEvent('login_failed', { method: provider });
+        throw err;
+      }
+    },
+    [],
+  );
+
   const signup = useCallback(async (data: SignupData): Promise<{ message: string }> => {
     setError(null);
     try {
@@ -141,6 +161,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: !!user,
     isVerified: user?.email_verified ?? false,
     login,
+    socialLogin,
     signup,
     verifyEmail,
     resendVerification,

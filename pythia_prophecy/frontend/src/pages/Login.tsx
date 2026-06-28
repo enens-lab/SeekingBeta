@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
 import ThemeToggle from '../components/ThemeToggle';
+import SocialAuthButtons from '../components/SocialAuthButtons';
 import { trackEvent } from '../lib/analytics';
 
 interface LocationState {
@@ -110,6 +111,8 @@ function Login() {
           <p className="auth-subtitle">
             Log in to open your stock and sports prediction boards
           </p>
+
+          <SocialAuthButtons redirectTo={from} onError={setFormError} />
 
           <form onSubmit={handleSubmit} className="auth-form">
             {(formError || error) && (

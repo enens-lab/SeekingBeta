@@ -2,6 +2,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
+import SocialAuthButtons from '../components/SocialAuthButtons';
 import { trackEvent } from '../lib/analytics';
 
 const POLICY_VERSION = '2026-02-27';
@@ -197,6 +198,8 @@ function Signup() {
           <p className="auth-subtitle">
             Start free and unlock stock and sports prediction boards in minutes
           </p>
+
+          <SocialAuthButtons redirectTo="/dashboard" onError={setFormError} />
 
           <form onSubmit={handleSubmit} className="auth-form">
             {(formError || error) && <div className="form-error">{formError || error}</div>}

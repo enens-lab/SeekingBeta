@@ -35,6 +35,15 @@ export interface SignupData {
   marketing_opt_in?: boolean;
 }
 
+export interface OAuthPayload {
+  // The provider token: Google ID token / Apple identityToken / Facebook access token.
+  credential: string;
+  nonce?: string;
+  name?: { first?: string; last?: string };
+  // Apple only: one-time auth code, exchanged server-side so the account can be revoked.
+  authorization_code?: string;
+}
+
 export interface BetaTesterSignupData {
   full_name: string;
   email: string;
@@ -720,6 +729,13 @@ export const auth = {
     request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+
+  // Social login: verify a provider token server-side and receive our standard JWT.
+  oauth: (provider: string, payload: OAuthPayload): Promise<AuthResponse> =>
+    request(`/api/auth/oauth/${provider}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 
   verifyEmail: (token: string): Promise<AuthResponse> =>

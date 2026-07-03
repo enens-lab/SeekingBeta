@@ -178,6 +178,56 @@ if _have_jose:
 else:
     print("  (skipped apple client_secret test — jose/cryptography not in this venv)")
 
+# 12. Facebook Limited Login JWT path (guarded: needs jose + cryptography).
+if _have_jose:
+    from cryptography.hazmat.primitives.asymmetric import rsa as _rsa
+    from jose import jwk as _jose_jwk
+    import time as _time
+
+    social_auth.FACEBOOK_APP_ID = "1027261346420299"
+    social_auth.FACEBOOK_APP_SECRET = _fb_secret
+
+    check("opaque token not mistaken for JWT", social_auth._looks_like_jwt("EAAOhZBZC...opaque") is False)
+    check("fb signed_request not mistaken for JWT", social_auth._looks_like_jwt(_good_sr) is False)
+
+    _rsa_key = _rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    _rsa_pem = _rsa_key.private_bytes(_ser.Encoding.PEM, _ser.PrivateFormat.PKCS8, _ser.NoEncryption()).decode()
+    _pub_jwk = _jose_jwk.construct(_rsa_key.public_key(), algorithm="RS256").to_dict()
+    _pub_jwk["kid"] = "fbkid1"
+    social_auth._fb_keys_cache["keys"] = [_pub_jwk]
+    social_auth._fb_keys_cache["fetched_at"] = _time.time()
+
+    _now = int(_time.time())
+    _fb_claims = {
+        "iss": "https://www.facebook.com", "aud": "1027261346420299", "sub": "fb-limited-777",
+        "iat": _now, "exp": _now + 3600, "nonce": "n-1",
+        "given_name": "Lim", "family_name": "Ited", "email": "lim@example.com",
+    }
+    _fb_jwt = _jose_jwt.encode(_fb_claims, _rsa_pem, algorithm="RS256", headers={"kid": "fbkid1"})
+    check("limited-login credential detected as JWT", social_auth._looks_like_jwt(_fb_jwt) is True)
+
+    _ident = social_auth.verify_social_credential("facebook", _fb_jwt)
+    check("limited JWT verifies -> subject from sub", _ident.subject == "fb-limited-777")
+    check("limited JWT email present but NOT verified (no auto-link)",
+          _ident.email == "lim@example.com" and _ident.email_verified is False)
+    check("limited JWT name claims mapped", _ident.first_name == "Lim" and _ident.last_name == "Ited")
+
+    try:
+        social_auth.verify_social_credential("facebook", _fb_jwt, nonce="wrong-nonce")
+        check("limited JWT nonce mismatch rejected", False)
+    except social_auth.SocialAuthError:
+        check("limited JWT nonce mismatch rejected", True)
+
+    _bad_aud = dict(_fb_claims, aud="999999")
+    _bad_jwt = _jose_jwt.encode(_bad_aud, _rsa_pem, algorithm="RS256", headers={"kid": "fbkid1"})
+    try:
+        social_auth.verify_social_credential("facebook", _bad_jwt)
+        check("limited JWT wrong audience rejected", False)
+    except social_auth.SocialAuthError:
+        check("limited JWT wrong audience rejected", True)
+else:
+    print("  (skipped facebook limited-login tests — jose/cryptography not in this venv)")
+
 print(f"\nAll {len(_passed)} checks passed:")
 for _name in _passed:
     print("  PASS", _name)

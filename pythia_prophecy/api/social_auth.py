@@ -90,7 +90,7 @@ def verify_social_credential(
     if provider == "apple":
         return _verify_apple(credential, nonce)
     if provider == "facebook":
-        return _verify_facebook(credential)
+        return _verify_facebook(credential, nonce)
     raise SocialAuthError(f"Unsupported provider: {provider}")
 
 
@@ -242,11 +242,116 @@ def _verify_apple(credential: str, nonce: Optional[str]) -> SocialIdentity:
 
 
 # --------------------------------------------------------------------------- #
-# Facebook — access token, verified server-to-server via the Graph API
+# Facebook — two credential shapes, one identity:
+#  * classic access token (opaque) -> Graph debug_token + /me (web/Android/iOS-ATT)
+#  * Limited Login OIDC JWT (iOS without ATT authorization) -> RS256 vs FB JWKS
+# Both yield the same app-scoped user id (JWT `sub` == Graph `id`), so account
+# linking converges regardless of which path a platform used.
 # --------------------------------------------------------------------------- #
-def _verify_facebook(credential: str) -> SocialIdentity:
+FACEBOOK_OIDC_ISSUER = "https://www.facebook.com"
+FACEBOOK_OIDC_JWKS_URL = "https://www.facebook.com/.well-known/oauth/openid/jwks/"
+
+_fb_keys_cache: dict = {"keys": None, "fetched_at": 0.0}
+_FB_KEYS_TTL = 3600
+
+
+def _fetch_facebook_keys(force: bool = False) -> list[dict]:
+    now = time.time()
+    if (not force) and _fb_keys_cache["keys"] is not None and (
+        now - _fb_keys_cache["fetched_at"] < _FB_KEYS_TTL
+    ):
+        return _fb_keys_cache["keys"]
+    try:
+        req = urllib.request.Request(FACEBOOK_OIDC_JWKS_URL, headers={"User-Agent": "SeekingBetaAI/1.0"})
+        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        keys = data.get("keys") or []
+    except Exception as exc:
+        raise SocialAuthError(f"Could not fetch Facebook signing keys: {exc}")
+    _fb_keys_cache["keys"] = keys
+    _fb_keys_cache["fetched_at"] = now
+    return keys
+
+
+def _facebook_key_for_kid(kid: Optional[str]) -> Optional[dict]:
+    if not kid:
+        return None
+    for k in _fetch_facebook_keys():
+        if k.get("kid") == kid:
+            return k
+    for k in _fetch_facebook_keys(force=True):  # rotated keys
+        if k.get("kid") == kid:
+            return k
+    return None
+
+
+def _looks_like_jwt(credential: str) -> bool:
+    """Limited Login credentials are RS256 JWTs (three dot-separated segments with
+    a decodable JSON header); classic Graph access tokens are opaque strings."""
+    parts = credential.split(".")
+    if len(parts) != 3:
+        return False
+    try:
+        header = json.loads(base64.urlsafe_b64decode(parts[0] + "=" * (-len(parts[0]) % 4)))
+        return isinstance(header, dict) and bool(header.get("alg"))
+    except Exception:
+        return False
+
+
+def _verify_facebook_limited_jwt(credential: str, nonce: Optional[str] = None) -> SocialIdentity:
+    """Verify a Facebook Limited Login OIDC id token (iOS-without-ATT path)."""
+    try:
+        from jose import jwt as jose_jwt
+    except Exception as exc:  # pragma: no cover - dep present in container
+        raise SocialAuthError(f"Facebook verify dependency missing: {exc}")
+
+    try:
+        header = jose_jwt.get_unverified_header(credential)
+    except Exception as exc:
+        raise SocialAuthError(f"Facebook token malformed: {exc}")
+    if str(header.get("alg", "")).upper() != "RS256":
+        raise SocialAuthError("Facebook token unexpected algorithm")
+    jwk = _facebook_key_for_kid(header.get("kid"))
+    if not jwk:
+        raise SocialAuthError("Facebook signing key not found")
+
+    try:
+        claims = jose_jwt.decode(
+            credential,
+            jwk,
+            algorithms=["RS256"],
+            issuer=FACEBOOK_OIDC_ISSUER,
+            audience=FACEBOOK_APP_ID,
+        )
+    except Exception as exc:
+        raise SocialAuthError(f"Facebook token invalid: {exc}")
+
+    if nonce is not None:
+        token_nonce = claims.get("nonce")
+        if token_nonce and token_nonce != nonce:
+            raise SocialAuthError("Facebook nonce mismatch")
+    sub = claims.get("sub")
+    if not sub:
+        raise SocialAuthError("Facebook token missing subject")
+
+    # Same trust policy as the Graph path: Facebook asserts no email_verified,
+    # so the email never auto-links to an existing account (plan §D).
+    return SocialIdentity(
+        provider="facebook",
+        subject=str(sub),
+        email=(claims.get("email") or None),
+        email_verified=False,
+        first_name=claims.get("given_name"),
+        last_name=claims.get("family_name"),
+        raw={"limited_login": True},
+    )
+
+
+def _verify_facebook(credential: str, nonce: Optional[str] = None) -> SocialIdentity:
     if not (FACEBOOK_APP_ID and FACEBOOK_APP_SECRET):
         raise SocialAuthError("Facebook OAuth is not configured")
+    if _looks_like_jwt(credential):
+        return _verify_facebook_limited_jwt(credential, nonce)
     try:
         import httpx
     except Exception as exc:  # pragma: no cover - dep present in container

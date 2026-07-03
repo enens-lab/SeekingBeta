@@ -1871,6 +1871,13 @@ def _filter_upcoming_tennis(
         tour = str(item.get("tour") or "").upper()
         if (tour, event_name, item_year) in completed:
             continue
+        # An in-progress multi-day event (e.g. Wimbledon mid-fortnight) is kept, but
+        # its scheduledDate is the tournament START (ESPN's window even includes
+        # qualifying), so cards render a past date and read as stale. Its next
+        # matches are TODAY — surface that (also sorts in-progress events first).
+        if scheduled and end and scheduled < today_key <= end:
+            item = dict(item)
+            item["scheduledDate"] = today_key
         filtered.append(item)
     return sorted(
         filtered,
@@ -5723,6 +5730,34 @@ def performance_curve(model: str = Query("lstm_5d")):
     return get_track_record_curve(model=model)
 
 
+def _upcoming_board_date_key(board: Any) -> int:
+    """Latest known date on a board (scheduled or end date), tolerant of dict or
+    model boards and either naming convention. 0 when no date is present."""
+    def _get(name: str) -> Any:
+        if isinstance(board, dict):
+            return board.get(name)
+        return getattr(board, name, None)
+
+    values = [
+        _safe_int(_get(name) or 0) or 0
+        for name in ("scheduledDate", "scheduled_date", "latestDate", "latest_date")
+    ]
+    return max(values) if values else 0
+
+
+def _drop_finished_upcoming_boards(coll: SportsBoardCollection) -> SportsBoardCollection:
+    """Drop upcoming boards whose dates are entirely in the past (UTC). Dateless
+    boards are kept (some sports omit dates on purpose)."""
+    today_key = _runtime_today_key()
+    kept = [
+        board for board in (coll.upcoming or [])
+        if not _upcoming_board_date_key(board) or _upcoming_board_date_key(board) >= today_key
+    ]
+    if len(kept) == len(coll.upcoming or []):
+        return coll
+    return coll.model_copy(update={"upcoming": kept})
+
+
 _SPORTS_BOARDS_ALL = ("golf", "tennis", "basketball", "mlb", "football", "soccer", "olympics")
 
 
@@ -5841,6 +5876,11 @@ async def _assemble_sports_boards(
             sport="basketball",
             selected_date=basketball_date,
         )
+    if wants("basketball"):
+        # Daily game boards have no other BFF-side stale filter, so when the feed
+        # lags (weekly bake cadence, live-feed hiccup) yesterday's finished games
+        # linger under Upcoming. Mirror the MLB >= today (UTC) serving filter.
+        basketball = _drop_finished_upcoming_boards(basketball)
 
     if not wants("football"):
         football = _empty_sports_board_collection()

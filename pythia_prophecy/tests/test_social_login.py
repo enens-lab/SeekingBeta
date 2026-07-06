@@ -201,6 +201,9 @@ if _have_jose:
     _fb_claims = {
         "iss": "https://www.facebook.com", "aud": "1027261346420299", "sub": "fb-limited-777",
         "iat": _now, "exp": _now + 3600, "nonce": "n-1",
+        # Real FB Limited Login JWTs include at_hash (paired access-token hash we
+        # never receive) — regression guard: decode must not require it.
+        "at_hash": "qT4kFTuTEmq7669cs6IbGA",
         "given_name": "Lim", "family_name": "Ited", "email": "lim@example.com",
     }
     _fb_jwt = _jose_jwt.encode(_fb_claims, _rsa_pem, algorithm="RS256", headers={"kid": "fbkid1"})

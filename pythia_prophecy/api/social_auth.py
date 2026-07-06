@@ -322,6 +322,9 @@ def _verify_facebook_limited_jwt(credential: str, nonce: Optional[str] = None) -
             algorithms=["RS256"],
             issuer=FACEBOOK_OIDC_ISSUER,
             audience=FACEBOOK_APP_ID,
+            # Real Limited Login JWTs carry at_hash (paired to an access token we
+            # neither receive nor need); without this jose refuses to decode.
+            options={"verify_at_hash": False},
         )
     except Exception as exc:
         raise SocialAuthError(f"Facebook token invalid: {exc}")

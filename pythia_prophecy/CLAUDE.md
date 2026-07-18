@@ -70,13 +70,18 @@ pythia_prophecy/
 
 ## Subscription Tiers
 
-| Tier | Price | Stocks | Timeframes |
-|------|-------|--------|------------|
-| Free | $0 | 3 | 1d |
-| Basic | $19/mo | 10 | 1d, 1h, 30m |
-| Pro | $49/mo | Unlimited | All (1m to 1d) |
+Source of truth: `TIER_CONFIG` in `api/models.py` (keep this table in sync with it).
 
-Tier access is enforced on the `/predict/{ticker}` endpoint.
+| Tier | Price/mo | Watchlist | Analyses/day | Stocks/request | Lookback | CSV export |
+|------|----------|-----------|--------------|----------------|----------|------------|
+| Free | $0 | 5 | 10 | 5 | 30d | No |
+| Basic | $9.99 | 15 | 50 | 10 | 90d | Yes |
+| Pro | $19.99 | Unlimited | Unlimited | 50 | 365d | Yes |
+
+All tiers see the same models (`lstm_5d`, `lstm_jackpot`); tiers gate quotas, universe
+size (free = diversified subset of the full universe), lookback, and CSV — not model
+quality. Gating is enforced server-side on `/api/analyze`, `/api/universe`, and
+`/predict/{ticker}`. Sports boards are public (no tier gate).
 
 ## Key API Endpoints
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardHeader from '../../components/DashboardHeader';
+import ResponsibleGamingNote from '../../components/ResponsibleGamingNote';
 import TeamLogo from '../../components/sports/TeamLogo';
 import StarterRadarChart from '../../components/sports/StarterRadarChart';
 import PlayerProfileCard from '../../components/sports/PlayerProfileCard';
@@ -2005,6 +2006,7 @@ function SportsDashboard() {
               <p>Check back soon for live probability boards and track record views.</p>
             </div>
           )}
+          <ResponsibleGamingNote />
         </div>
       </main>
     </div>

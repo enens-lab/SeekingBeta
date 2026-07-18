@@ -163,6 +163,10 @@ function Pricing() {
         <section className="pricing-hero">
           <h1>Start free. Pay when you need more.</h1>
           <p>See the live boards for free. Upgrade if you want more names, more history, or CSV downloads.</p>
+          <p className="pricing-same-models">
+            Every tier sees the same models and the same picks — paid tiers just see more of
+            them, sooner. We don&apos;t sell &ldquo;better&rdquo; picks to bigger spenders.
+          </p>
         </section>
 
         {isAuthenticated && billingStatus?.billing_enabled && (

@@ -6316,3 +6316,142 @@ h4 {
     width: 268px;
   }
 }
+
+/* ============ Trust box ("What we are / what we aren't") ============ */
+.trust-box {
+  padding: 72px 24px;
+  background: var(--bg-secondary);
+}
+
+.trust-box-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.trust-box-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 36px;
+}
+
+.trust-box-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.trust-box-col {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 30px;
+}
+
+.trust-box-col-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.trust-box-col-title--are {
+  color: var(--accent-hover);
+}
+
+.trust-box-col-title--arent {
+  color: var(--text-muted);
+}
+
+.trust-box-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trust-box-list li {
+  position: relative;
+  padding-left: 24px;
+  color: var(--text-secondary);
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+
+.trust-box-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.trust-box-col-title--arent ~ .trust-box-list li::before,
+.trust-box-col:last-child .trust-box-list li::before {
+  background: var(--text-muted);
+}
+
+.trust-box-list a {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .trust-box {
+    padding: 56px 16px;
+  }
+  .trust-box-title {
+    font-size: 26px;
+  }
+  .trust-box-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============ Responsible-gaming note (sports surfaces) ============ */
+.responsible-gaming-note {
+  margin: 18px 0 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.responsible-gaming-strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.responsible-gaming-note a {
+  color: var(--accent-hover);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ============ Pricing: same-models trust line ============ */
+.pricing-same-models {
+  max-width: 620px;
+  margin: 14px auto 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--accent-muted);
+  color: var(--accent-hover);
+  font-size: 15px !important;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .pricing-same-models {
+    border-radius: 14px;
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import ResponsibleGamingNote from '../../components/ResponsibleGamingNote';
 import TeamLogo from '../../components/sports/TeamLogo';
 import PlayerProfileCard from '../../components/sports/PlayerProfileCard';
 import {
@@ -280,6 +281,7 @@ function SportsLanding() {
               <div className="sports-disclaimer">
                 For research only. We do not place bets.
               </div>
+              <ResponsibleGamingNote />
               {boardsError && <div className="sports-disclaimer sports-error-note">Sports feed is updating: {boardsError}</div>}
             </div>
 

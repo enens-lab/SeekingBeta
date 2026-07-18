@@ -4,6 +4,7 @@ import PredictionsCarousel from '../components/PredictionsCarousel';
 import SportsPreview from '../components/SportsPreview';
 import PerformanceComparison from '../components/PerformanceComparison';
 import Features from '../components/Features';
+import TrustBox from '../components/TrustBox';
 import AppDownload from '../components/AppDownload';
 import BetaTesterSignup from '../components/BetaTesterSignup';
 import CallToAction from '../components/CallToAction';
@@ -19,6 +20,7 @@ function Landing() {
         <PredictionsCarousel />
         <SportsPreview />
         <Features />
+        <TrustBox />
         <AppDownload />
         <BetaTesterSignup />
         <CallToAction />

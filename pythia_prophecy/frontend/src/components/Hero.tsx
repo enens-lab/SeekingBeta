@@ -13,9 +13,10 @@ function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1 className="hero-title">Stock and sports picks in one place.</h1>
+        <h1 className="hero-title">Every pick published, timestamped, and graded.</h1>
         <p className="hero-subtitle">
-          See what our models like in stocks, golf, tennis, basketball, and baseball. Check the live picks, then review the track record before you rely on them.
+          AI model signals for stocks, golf, tennis, basketball, and baseball — with the full
+          track record public, losses included. Audit us before you rely on us.
         </p>
         <div className="hero-cta">
           <Link

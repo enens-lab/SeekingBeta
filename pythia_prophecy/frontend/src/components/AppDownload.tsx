@@ -2,6 +2,9 @@ import { trackEvent } from '../lib/analytics';
 
 // Live App Store listing (app id 6761283945, EnEns LLC — verified via iTunes lookup 2026-06-22).
 const APP_STORE_URL = 'https://apps.apple.com/us/app/seekingbeta-ai/id6761283945';
+// Live Google Play listing (package com.enens.seekingbeta). Locale param omitted so
+// Play auto-localizes to the visitor's region.
+const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=com.enens.seekingbeta';
 
 function AppleLogo() {
   return (
@@ -54,13 +57,20 @@ function AppDownload() {
               </span>
             </a>
 
-            <div className="store-badge store-badge--soon" role="img" aria-label="SeekingBeta.AI is coming soon to Google Play">
+            <a
+              className="store-badge store-badge--live"
+              href={GOOGLE_PLAY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => trackEvent('app_download_click', { store: 'google_play' })}
+              aria-label="Get SeekingBeta.AI on Google Play"
+            >
               <GooglePlayLogo />
               <span className="store-badge-text">
-                <span className="store-badge-top store-badge-top--accent">COMING SOON</span>
+                <span className="store-badge-top">GET IT ON</span>
                 <span className="store-badge-name">Google Play</span>
               </span>
-            </div>
+            </a>
           </div>
 
           <p className="app-download-trust">

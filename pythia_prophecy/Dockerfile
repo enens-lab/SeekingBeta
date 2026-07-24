@@ -17,6 +17,7 @@ COPY api/ ./api/
 COPY data/ ./data/
 COPY frontend/src/data/ ./frontend_data/
 COPY templates/ ./templates/
+COPY scripts/ ./scripts/
 COPY main.py .
 
 # Create non-root user for security

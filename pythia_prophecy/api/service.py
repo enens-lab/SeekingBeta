@@ -139,12 +139,14 @@ from .compliance_store import (
     get_or_create_preferences,
     upsert_preferences,
     set_newsletter_opt_in,
+    set_daily_digest_opt_in,
     record_consent_event,
     audit_email_event,
     upsert_suppression,
     disable_newsletter_by_email,
     delete_user_records,
 )
+from . import daily_brief as daily_brief_lib
 from .billing_store import (
     ensure_tables as ensure_billing_tables,
     is_enabled as billing_store_enabled,
@@ -3558,8 +3560,9 @@ async def resend_verification(data: ResendVerificationRequest, request: Request)
 
 
 @app.get("/api/email/unsubscribe", response_model=MessageResponse, tags=["Authentication"])
-async def email_unsubscribe(token: str):
-    """One-click unsubscribe endpoint for marketing communications."""
+async def email_unsubscribe(token: str, scope: str = Query("marketing")):
+    """One-click unsubscribe. scope=marketing (newsletter) or scope=digest
+    (Daily Brief) — each flips only its own preference."""
     payload = decode_access_token(token, expected_type="unsubscribe")
     if not payload:
         raise HTTPException(400, detail="Invalid or expired unsubscribe token")
@@ -3569,17 +3572,22 @@ async def email_unsubscribe(token: str):
     if not user_id or not email:
         raise HTTPException(400, detail="Invalid unsubscribe token payload")
 
-    set_newsletter_opt_in(user_id=user_id, email=email, enabled=False)
+    if scope == "digest":
+        set_daily_digest_opt_in(user_id=user_id, email=email, enabled=False)
+        consent_type, message = "daily_digest", "You have been unsubscribed from the Daily Brief."
+    else:
+        set_newsletter_opt_in(user_id=user_id, email=email, enabled=False)
+        consent_type, message = "marketing", "You have been unsubscribed from marketing emails."
     record_consent_event(
         user_id=user_id,
         email=email,
         policy_version=POLICY_VERSION,
-        consent_type="marketing",
+        consent_type=consent_type,
         granted=False,
         ip_address=None,
         user_agent="one-click-unsubscribe",
     )
-    return MessageResponse(message="You have been unsubscribed from marketing emails.")
+    return MessageResponse(message=message)
 
 
 @app.post("/api/webhooks/ses-sns", response_model=MessageResponse, tags=["System"])
@@ -5728,6 +5736,62 @@ def performance_track_record(model: str = Query("lstm_5d")):
 def performance_curve(model: str = Query("lstm_5d")):
     """Public model-vs-benchmark curve for homepage visualization."""
     return get_track_record_curve(model=model)
+
+
+# Daily Brief (MARKET_ROADMAP Wave 1.2): one fixed-format morning summary that
+# powers the app/web landing surface AND the digest email (scripts/send_daily_brief.py
+# fetches this endpoint). Cached briefly — sources are themselves cached.
+_BRIEF_CACHE: dict[str, Any] = {"key": None, "value": None, "at": 0.0}
+BRIEF_CACHE_TTL_SECONDS = int(os.getenv("BRIEF_CACHE_TTL_SECONDS", "600"))
+
+
+@app.get("/api/brief/today", tags=["Performance"])
+async def brief_today(force_refresh: bool = False):
+    """Public Daily Brief: today's boards + strongest stock signals + yesterday's
+    graded results. Fixed shape, no auth — it's the same data the public pages show."""
+    today_key, _, _ = daily_brief_lib.utc_date_keys()
+    now = time.time()
+    if (
+        not force_refresh
+        and _BRIEF_CACHE["key"] == today_key
+        and _BRIEF_CACHE["value"] is not None
+        and now - _BRIEF_CACHE["at"] < BRIEF_CACHE_TTL_SECONDS
+    ):
+        return _BRIEF_CACHE["value"]
+
+    boards = None
+    try:
+        boards = await sports_boards(
+            mlb_date=None,
+            basketball_date=None,
+            football_date=None,
+            soccer_date=None,
+            include_backtests=True,
+            preview=False,
+            lean_backtests=True,
+            sports=None,
+        )
+    except Exception as exc:
+        logger.warning(f"Daily brief: sports boards unavailable: {exc}")
+
+    homepage_payload = None
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{DIVINATION_API_URL}/predict/homepage")
+            if response.status_code == 200:
+                homepage_payload = response.json()
+    except Exception as exc:
+        logger.warning(f"Daily brief: divination homepage unavailable: {exc}")
+
+    track_record = None
+    try:
+        track_record = get_track_record(model="lstm_5d")
+    except Exception as exc:
+        logger.warning(f"Daily brief: track record unavailable: {exc}")
+
+    brief = daily_brief_lib.build_brief(boards, homepage_payload, track_record)
+    _BRIEF_CACHE.update({"key": today_key, "value": brief, "at": now})
+    return brief
 
 
 def _upcoming_board_date_key(board: Any) -> int:

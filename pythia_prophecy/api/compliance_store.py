@@ -318,6 +318,34 @@ def upsert_preferences(
     return _row_to_preferences(dict(row), user_id)
 
 
+def list_daily_digest_recipients() -> list[dict[str, Any]]:
+    """Users who opted into the Daily Brief. Suppression is enforced separately
+    at send time (email_service._send_email), so this is just the opt-in list."""
+    if not is_enabled():
+        return []
+
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT user_id, email
+                FROM {PREFERENCES_TABLE}
+                WHERE daily_digest_enabled = TRUE
+                ORDER BY email
+                """
+            )
+            rows = cur.fetchall()
+    return [{"user_id": row["user_id"], "email": row["email"]} for row in rows]
+
+
+def set_daily_digest_opt_in(user_id: str, email: str, enabled: bool) -> dict[str, Any]:
+    return upsert_preferences(
+        user_id=user_id,
+        email=email,
+        updates={"daily_digest_enabled": bool(enabled)},
+    )
+
+
 def set_newsletter_opt_in(user_id: str, email: str, enabled: bool) -> dict[str, Any]:
     return upsert_preferences(
         user_id=user_id,

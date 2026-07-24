@@ -192,11 +192,25 @@ def _fmt_pct(value: Optional[float]) -> str:
     return f"{value:.0f}%"
 
 
+def _counts_line(counts: dict) -> str:
+    """'1 buy · 6 hold · 0 sell' plus any extra signal kinds the engine emits
+    (e.g. 'avoid') so the line never silently under-reports."""
+    known = ["buy", "hold", "sell"]
+    bits = [f"{counts.get(k, 0)} {k}" for k in known]
+    bits += [f"{v} {k}" for k, v in counts.items() if k not in known and v]
+    return " · ".join(bits)
+
+
+def _prob_up_suffix(prob_up: Optional[float]) -> str:
+    return f" ({_fmt_pct(prob_up)} up)" if prob_up is not None else ""
+
+
 def brief_subject(brief: dict) -> str:
     bits = []
     stocks = brief.get("stocks")
-    if stocks and stocks["counts"]["buy"] + stocks["counts"]["sell"] > 0:
-        bits.append(f"{stocks['counts']['buy'] + stocks['counts']['sell']} stock signals")
+    actionable = sum(v for k, v in (stocks or {}).get("counts", {}).items() if k != "hold")
+    if actionable:
+        bits.append(f"{actionable} stock signal{'s' if actionable != 1 else ''}")
     live_sports = [s["label"] for s in brief.get("sports", []) if s["today_total"]]
     if live_sports:
         bits.append(f"{', '.join(live_sports[:3])} boards live")
@@ -212,9 +226,9 @@ def render_brief_text(brief: dict, frontend_url: str) -> str:
     stocks = brief.get("stocks")
     if stocks:
         counts = stocks["counts"]
-        lines.append(f"STOCKS ({stocks['model']}): {counts['buy']} buy · {counts['hold']} hold · {counts['sell']} sell")
+        lines.append(f"STOCKS ({stocks['model']}): {_counts_line(counts)}")
         for sig in stocks["top_signals"]:
-            lines.append(f"  {sig['ticker']}: {sig['signal'].upper()} ({_fmt_pct(sig['prob_up'])} up)")
+            lines.append(f"  {sig['ticker']}: {sig['signal'].upper()}{_prob_up_suffix(sig['prob_up'])}")
         record = stocks.get("track_record")
         if record and record.get("hit_rate") is not None:
             lines.append(
@@ -249,12 +263,12 @@ def render_brief_html_body(brief: dict, frontend_url: str) -> str:
         counts = stocks["counts"]
         parts.append(
             f"<p><strong>Stocks</strong> ({escape(stocks['model'])}): "
-            f"{counts['buy']} buy · {counts['hold']} hold · {counts['sell']} sell</p>"
+            f"{escape(_counts_line(counts))}</p>"
         )
         if stocks["top_signals"]:
             rows = "".join(
                 f"<li>{escape(str(s['ticker']))}: <strong>{escape(s['signal'].upper())}</strong>"
-                f" ({_fmt_pct(s['prob_up'])} up)</li>"
+                f"{escape(_prob_up_suffix(s['prob_up']))}</li>"
                 for s in stocks["top_signals"]
             )
             parts.append(f"<ul>{rows}</ul>")

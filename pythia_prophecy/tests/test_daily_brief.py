@@ -144,6 +144,27 @@ check("html: honesty footer", "Losses are published like wins." in html)
 # Empty brief renders a subject that still makes sense.
 check("empty brief subject fallback", "your boards are ready" in daily_brief.brief_subject(empty))
 
+# --- real-world regression: engine emits 'avoid' + null prob_up ---
+AVOID_HOMEPAGE = {
+    "available": True,
+    "rows": [
+        {
+            "model": "lstm_5d",
+            "predictions": [
+                {"ticker": "AAPL", "signal": "avoid", "prob_up": None},
+                {"ticker": "MSFT", "signal": "hold", "prob_up": 0.51},
+            ],
+        }
+    ],
+}
+avoid_brief = daily_brief.build_brief(None, AVOID_HOMEPAGE, None, now=NOW)
+check("unknown signal kind counted", avoid_brief["stocks"]["counts"]["avoid"] == 1)
+avoid_text = daily_brief.render_brief_text(avoid_brief, "https://x")
+check("counts line includes avoid", "1 avoid" in avoid_text)
+check("null prob_up renders without empty parens",
+      "AAPL: AVOID\n" in avoid_text + "\n" and "( up)" not in avoid_text)
+check("avoid counts as actionable in subject", "1 stock signal" in daily_brief.brief_subject(avoid_brief))
+
 print(f"\nAll {len(_passed)} checks passed:")
 for name in _passed:
     print("  PASS", name)

@@ -131,6 +131,29 @@ def _safe_float(value: object) -> float | None:
         return None
 
 
+def _resolve_home_win(row: object) -> int | None:
+    """Ground-truth home_win label for a scored game, or None if unknowable.
+
+    This used to be read as ``int(getattr(row, "home_win", 0) or 0)``, which
+    turned an ABSENT label into "the away team won". A pandas merge between two
+    frames that both carry `home_win` suffixes it to `home_win_x`/`home_win_y`,
+    leaving no plain column and silently tripping that default -- so every
+    published basketball accuracy figure was really measuring "how often did the
+    model pick the away team". Returning None lets callers skip a game instead of
+    inventing a result.
+    """
+    for name in ("home_win", "home_win_x", "home_win_y"):
+        value = _safe_float(getattr(row, name, None))
+        if value is not None:
+            return int(value)
+
+    home_score = _safe_float(getattr(row, "home_score", None))
+    away_score = _safe_float(getattr(row, "away_score", None))
+    if home_score is not None and away_score is not None and home_score != away_score:
+        return int(home_score > away_score)
+    return None
+
+
 def _safe_int(value: object) -> int | None:
     if value is None or pd.isna(value):
         return None
@@ -625,7 +648,11 @@ def _build_live_completed_boards(calendar_year: int | None = None) -> list[dict[
         home_prob = _safe_float(getattr(row, "home_win_probability", np.nan)) or 0.5
         away_prob = 1.0 - home_prob
         predicted_winner = getattr(row, "home_team_name") if home_prob >= away_prob else getattr(row, "away_team_name")
-        actual_winner = getattr(row, "home_team_name") if int(getattr(row, "home_win", 0) or 0) == 1 else getattr(row, "away_team_name")
+        home_win = _resolve_home_win(row)
+        if home_win is None:
+            # Ungraded (missing label): never fabricate a winner.
+            continue
+        actual_winner = getattr(row, "home_team_name") if home_win == 1 else getattr(row, "away_team_name")
         lineups = _historical_lineups(player_boxscores, str(getattr(row, "game_id")))
         away_availability = {
             "ilAdds14": _safe_int(getattr(row, "away_availability_likely_inactive_core_players", np.nan)),
@@ -689,6 +716,9 @@ def _load_historical_sources() -> list[pd.DataFrame]:
             dataset.loc[dataset["league"] == league].drop_duplicates(subset=["game_id"]),
             on=["game_id", "league", "official_date", "away_team_name", "home_team_name"],
             how="left",
+            # Both frames carry `home_win`; without explicit suffixes pandas
+            # renames BOTH and no plain `home_win` survives the merge.
+            suffixes=("", "_dataset"),
         )
         if not player_boxscores.empty:
             merged = merged.merge(
@@ -762,12 +792,19 @@ def _build_backtests() -> list[dict[str, Any]]:
             dataset.loc[dataset["league"] == league].drop_duplicates(subset=["game_id"]),
             on=["game_id", "league", "official_date", "away_team_name", "home_team_name"],
             how="left",
+            # Both frames carry `home_win`; without explicit suffixes pandas
+            # renames BOTH and no plain `home_win` survives the merge.
+            suffixes=("", "_dataset"),
         )
         for row in merged.itertuples(index=False):
             home_prob = _safe_float(getattr(row, "home_win_probability", np.nan)) or 0.5
             away_prob = 1.0 - home_prob
             predicted_winner = getattr(row, "home_team_name") if home_prob >= away_prob else getattr(row, "away_team_name")
-            actual_winner = getattr(row, "home_team_name") if int(getattr(row, "home_win", 0) or 0) == 1 else getattr(row, "away_team_name")
+            home_win = _resolve_home_win(row)
+            if home_win is None:
+                # Ungraded (missing label): never fabricate a winner.
+                continue
+            actual_winner = getattr(row, "home_team_name") if home_win == 1 else getattr(row, "away_team_name")
             lineups = _historical_lineups(player_boxscores, str(getattr(row, "game_id")))
             boards.append(
                 {

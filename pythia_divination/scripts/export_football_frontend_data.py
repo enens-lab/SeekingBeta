@@ -64,6 +64,30 @@ def _safe_float(value: object) -> float | None:
         return None
 
 
+def _resolve_home_win(row: object) -> int | None:
+    """Ground-truth home_win label for a scored game, or None if unknowable.
+
+    This used to be read as ``int(getattr(row, "home_win", 0) or 0)``, which
+    turned an ABSENT label into "the away team won". Two separate conditions hit
+    that default -- a pandas merge suffixing `home_win` to `home_win_x`/`_y`, and
+    source tables that only carry scores -- so every published football and
+    basketball accuracy figure was really measuring "how often did the model
+    pick the away team". Returning None here lets callers skip a game instead of
+    inventing a result, so a broken label can never masquerade as a graded one.
+    """
+    for name in ("home_win", "home_win_x", "home_win_y"):
+        value = _safe_float(getattr(row, name, None))
+        if value is not None:
+            return int(value)
+
+    home_score = _safe_float(getattr(row, "home_score", None))
+    away_score = _safe_float(getattr(row, "away_score", None))
+    if home_score is not None and away_score is not None and home_score != away_score:
+        return int(home_score > away_score)
+    # Ties (real in the NFL) and unplayed games are genuinely ungraded.
+    return None
+
+
 def _safe_int(value: object) -> int | None:
     if value is None or pd.isna(value):
         return None
@@ -789,7 +813,11 @@ def _build_live_completed_boards(calendar_year: int | None = None) -> list[dict[
         home_prob = (_safe_float(getattr(row, "home_win_probability", None)) or 0.5)
         away_prob = 1.0 - home_prob
         predicted_winner = getattr(row, "home_team") if home_prob >= away_prob else getattr(row, "away_team")
-        actual_winner = getattr(row, "home_team") if int(getattr(row, "home_win", 0) or 0) == 1 else getattr(row, "away_team")
+        home_win = _resolve_home_win(row)
+        if home_win is None:
+            # Ungraded (missing label / tie): never fabricate a winner.
+            continue
+        actual_winner = getattr(row, "home_team") if home_win == 1 else getattr(row, "away_team")
         boards.append(
             {
                 "year": int(_to_datetime_mixed(getattr(row, "official_date")).year),
@@ -844,6 +872,11 @@ def _historical_boards() -> list[dict[str, Any]]:
         dataset,
         on=["game_id", "official_date", "season", "week", "away_team", "home_team"],
         how="left",
+        # Both frames carry `home_win`. Without explicit suffixes pandas renames
+        # BOTH to home_win_x/home_win_y, leaving no plain `home_win` at all --
+        # which silently made every game read as an away win. Keep the left
+        # (validation predictions) column names clean; they are the ground truth.
+        suffixes=("", "_dataset"),
     )
     player_week = _load_table_optional("football_player_week_stats_latest")
     if not player_week.empty:
@@ -854,7 +887,11 @@ def _historical_boards() -> list[dict[str, Any]]:
         home_prob = (_safe_float(getattr(row, "home_win_probability", None)) or 0.5)
         away_prob = 1.0 - home_prob
         predicted_winner = getattr(row, "home_team") if home_prob >= away_prob else getattr(row, "away_team")
-        actual_winner = getattr(row, "home_team") if int(getattr(row, "home_win", 0) or 0) == 1 else getattr(row, "away_team")
+        home_win = _resolve_home_win(row)
+        if home_win is None:
+            # Ungraded (missing label / tie): never fabricate a winner.
+            continue
+        actual_winner = getattr(row, "home_team") if home_win == 1 else getattr(row, "away_team")
         away_lineup, away_featured, away_starter_profile, away_starter_radar = _historical_featured_players(player_week, str(getattr(row, "game_id")), str(getattr(row, "away_team")), _optional_text(getattr(row, "away_qb_id", None)))
         home_lineup, home_featured, home_starter_profile, home_starter_radar = _historical_featured_players(player_week, str(getattr(row, "game_id")), str(getattr(row, "home_team")), _optional_text(getattr(row, "home_qb_id", None)))
         boards.append(

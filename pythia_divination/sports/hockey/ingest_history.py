@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -69,6 +70,26 @@ def _fetch_game_detail(game_id: str) -> dict[str, Any] | None:
 
 
 
+def _fetch_or_skip(fetch, *fetch_args, what: str, team_code: str, season: int):
+    """Call an NHL endpoint, returning None when the team did not exist that season.
+
+    Only 404 is treated as "not in the league yet"; every other HTTP error
+    propagates, so a genuine outage or rate-limit still fails the run loudly
+    rather than silently producing a partial backfill.
+    """
+    try:
+        return fetch(*fetch_args)
+    except requests.HTTPError as exc:
+        status = getattr(exc.response, "status_code", None)
+        if status == 404:
+            logger.warning(
+                "Skipping %s for %s in season %s: team not in the league that season (404)",
+                what, team_code, season,
+            )
+            return None
+        raise
+
+
 def run_ingestion(args: argparse.Namespace) -> dict[str, object]:
     base_dir = Path(args.output_root) if args.output_root else DEFAULT_HOCKEY_DATA_ROOT
     paths = build_ingestion_paths(base_dir=base_dir, snapshot_tag=args.snapshot_tag)
@@ -83,17 +104,36 @@ def run_ingestion(args: argparse.Namespace) -> dict[str, object]:
         season_value = season_id(start_year)
         logger.info("Downloading Hockey club schedules, rosters, and club stats for %s...", season_label(start_year))
         for team_code in TEAM_CODES:
-            schedule_payload = client.get_club_schedule_season(team_code, season_value)
+            # TEAM_CODES is the CURRENT league, but franchises expand and relocate:
+            # Seattle joined in 2021-22, Utah replaced Arizona in 2024-25, Vegas
+            # joined in 2017-18. The NHL API answers 404 for a team/season pair that
+            # never existed, which previously aborted the whole multi-season backfill
+            # on the very first such request (SEA in 2020-21). Skip those pairs and
+            # keep going; any other HTTP error still fails loudly.
+            schedule_payload = _fetch_or_skip(
+                client.get_club_schedule_season, team_code, season_value,
+                what="schedule", team_code=team_code, season=season_value,
+            )
+            if schedule_payload is None:
+                continue
             schedule_frames.append(flatten_club_schedule_payload(schedule_payload, team_code=team_code))
             write_json(paths.raw_dir / f"schedule_{team_code}_{season_value}.json", schedule_payload)
 
-            roster_payload = client.get_roster(team_code, season_value)
-            roster_frames.append(flatten_roster(roster_payload, team_code=team_code, season_id=season_value))
-            write_json(paths.raw_dir / f"roster_{team_code}_{season_value}.json", roster_payload)
+            roster_payload = _fetch_or_skip(
+                client.get_roster, team_code, season_value,
+                what="roster", team_code=team_code, season=season_value,
+            )
+            if roster_payload is not None:
+                roster_frames.append(flatten_roster(roster_payload, team_code=team_code, season_id=season_value))
+                write_json(paths.raw_dir / f"roster_{team_code}_{season_value}.json", roster_payload)
 
-            club_stats_payload = client.get_club_stats(team_code, season_value, REGULAR_SEASON_GAME_TYPE)
-            club_stat_frames.append(flatten_club_stats(club_stats_payload, team_code=team_code, season_id=season_value))
-            write_json(paths.raw_dir / f"club_stats_{team_code}_{season_value}.json", club_stats_payload)
+            club_stats_payload = _fetch_or_skip(
+                client.get_club_stats, team_code, season_value, REGULAR_SEASON_GAME_TYPE,
+                what="club stats", team_code=team_code, season=season_value,
+            )
+            if club_stats_payload is not None:
+                club_stat_frames.append(flatten_club_stats(club_stats_payload, team_code=team_code, season_id=season_value))
+                write_json(paths.raw_dir / f"club_stats_{team_code}_{season_value}.json", club_stats_payload)
 
     schedule_df = pd.concat(schedule_frames, ignore_index=True).drop_duplicates(subset=["game_id"]).sort_values(["official_date", "game_id"]).reset_index(drop=True) if schedule_frames else pd.DataFrame()
     roster_df = pd.concat(roster_frames, ignore_index=True).drop_duplicates(subset=["season_id", "team_key", "player_id"]).reset_index(drop=True) if roster_frames else pd.DataFrame()

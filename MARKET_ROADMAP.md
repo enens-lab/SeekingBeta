@@ -170,6 +170,41 @@ come from a runtime feed, not this dataset. The RunPod worker runs MLB
 > before being added to the nightly path. **Left unwired deliberately, pending a
 > decision, rather than risking the training dataset.**
 
+#### ATTEMPTED 2026-07-26 (authorized) and STOPPED: the rebuild would lose the pitchers
+
+The 2026 ingest itself worked: **2,456 scheduled games, 1,574 completed with
+details**. The rebuild then failed twice, both times upstream of the write, so the
+live dataset was never modified (verified still 12,755 rows against backup).
+
+1. `merge_starter_features` raised *"trying to merge on object and float64 columns
+   for key away_probable_pitcher_id"*. A season whose probable pitchers were never
+   announced contributes an all-null **object** column, so the concatenated frame
+   became object while `starter_logs` stayed float64. Fixed in commit a92b1ca by
+   coercing shared join keys to float64 on both sides.
+2. Then `enrich_dataset_with_statcast` raised *"No objects to concatenate"*, because
+   `groupby` drops NaN keys and the pitcher-ID column was entirely NaN, yielding zero
+   groups.
+
+**Root cause, and the reason this is stopped rather than patched through:** the
+normalized schedules on disk no longer carry probable-pitcher IDs at all. 2024 and
+2025 **lack the column entirely**; the 2026 pull returned **2,456/2,456 nulls**. The
+committed dataset, by contrast, has them populated at **12,719/12,755**. So a rebuild
+from current files would join starter features on an all-null key and silently empty
+all **90** `away_starter_*` / `home_starter_*` columns. Starting pitcher is among the
+most predictive inputs in baseball, so that is a material model regression wearing
+the costume of a successful build.
+
+`build_training_dataset` now **raises before writing** if every starter feature is
+empty (commit a92b1ca), on the same principle as the away-win tripwire: a function
+that overwrites the canonical dataset must fail loudly rather than degrade quietly.
+
+**Do this first, before retrying the rebuild:** recover starting pitchers for
+completed games from the **game details** feed rather than the schedule's
+`probable_pitcher` field. Probables are only published shortly before first pitch, so
+any historical schedule pull returns null and always will. Note that MLB **grading**
+does not depend on this: completed 2026 games already carry scores and results, so
+the backtest path needs the results, not the pitcher features.
+
 **Golf: half fixed.** `event_start_date` is now threaded into golf backtests
 (commit 6702473), which dates 53 of 172 boards locally (2024-10 to 2025-12). The
 remaining boards lack the column upstream, and nothing covers 2026 yet. Dates

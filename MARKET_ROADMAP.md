@@ -201,6 +201,45 @@ honest-numbers positioning means a model trained on thin data should not ship at
 all. October season start is the natural deadline; the ingest is the thing to
 start now because everything else waits on it.
 
+#### UPDATE 2026-07-26: data pipeline fixed and working; model does NOT earn a launch
+
+The NHL data problem is solved. Three separate defects were blocking it, all fixed:
+
+| Defect | Effect | Commit |
+|---|---|---|
+| Ingest looped the current 32 teams per season and `raise_for_status()`'d | Backfill died instantly on `roster/SEA/20202021` (Seattle joined 2021-22) | 57925ad |
+| `_LEAKY_COLUMNS` listed `home_win` | Stripped the training TARGET; 261 columns, no label | d3f9d17 |
+| `build_goalie_game_logs` looped unguarded metric list | Bare `KeyError: won` (feed carries `team_won`) | d3f9d17 |
+| Merge produced `home_score_detail` / `away_score_detail` | Final score leaked; baseline hit **ROC AUC 1.000 / 100% accuracy** | 7fe6c14 |
+
+Resulting dataset is sound: **7,428 games, 6 seasons, 257 columns**, home-win rate
+53.7% (real NHL is ~54-55%), per-season counts exactly right (868 for the
+COVID-shortened 2020-21, then 1,312 = 32x82/2 for each full season), and an
+empirical correlation audit shows max |corr| with the label of 0.192 and zero
+features above 0.5.
+
+**But both trained models fail to beat a trivial baseline**, measured on the same
+1,486-game held-out split (2025-03-26 to 2026-04-16):
+
+| Model | Accuracy | vs always-pick-home (53.1%) | ROC AUC | Log loss |
+|---|---|---|---|---|
+| HistGradientBoosting | 53.8% | **+0.7 pts** | 0.546 | 0.742 (worse than coin flip) |
+| Torch | 52.8% | **-0.3 pts** | 0.552 | 0.686 |
+| *NFL, for contrast* | *65.3%* | *+10.2 pts* | — | *0.638* |
+
+An AUC of ~0.55 is barely distinguishable from noise, and the HGB variant is worse
+calibrated than a coin flip. This is consistent with NHL being the hardest major
+North American sport to model (low scoring, high variance, goalie-dominated).
+
+**Recommendation: do not ship NHL boards.** Publishing a board whose model has no
+measurable edge would contradict the exact positioning Wave 1.1 shipped, and the
+honest presentation the ledger demands would show a coin flip. The expensive part
+(clean multi-season data) is now done and committed, so the remaining work is
+model quality, not plumbing: richer features (rest/travel, back-to-backs, goalie
+starts confirmed pregame, special-teams rates), calibration, and a target of
+roughly 57-60% before it earns a launch. The exporter, BFF field, worker entry and
+UI tab should stay unbuilt until a model clears that bar.
+
 ## 3. Roadmap
 
 ### Wave 1 — Quick wins (~2–7 days each)

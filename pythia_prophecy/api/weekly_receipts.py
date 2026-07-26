@@ -257,12 +257,29 @@ def _fmt_date_key(key: Optional[int]) -> str:
         return ""
 
 
+def _plural(count: int, singular: str, plural: Optional[str] = None) -> str:
+    return singular if count == 1 else (plural or f"{singular}s")
+
+
+def _as_of_date(value: Any) -> str:
+    """Trim an ISO timestamp to just the date. Readers want 'Jun 8, 2026', not
+    microseconds."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    stamp = text.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(stamp).strftime("%b %-d, %Y")
+    except ValueError:
+        return text.split("T", 1)[0]
+
+
 def receipts_subject(receipts: dict) -> str:
     record = receipts["week_record"]
     if record["graded"]:
         return (
             f"Your receipts: we went {record['wins']}-{record['losses']} "
-            f"on {record['graded']} graded boards"
+            f"on {record['graded']} graded {_plural(record['graded'], 'board')}"
         )
     return "Your receipts: season records, losses included"
 
@@ -287,7 +304,8 @@ def render_receipts_text(receipts: dict, frontend_url: str) -> str:
     ]
     if record["graded"]:
         lines.append(
-            f"LAST WEEK: {record['wins']}-{record['losses']} across {record['graded']} graded boards."
+            f"LAST WEEK: {record['wins']}-{record['losses']} across {record['graded']} "
+            f"graded {_plural(record['graded'], 'board')}."
         )
     else:
         lines.append("LAST WEEK: no boards finished grading in this window.")
@@ -321,7 +339,8 @@ def render_receipts_text(receipts: dict, frontend_url: str) -> str:
 
     stocks = receipts.get("stocks")
     if stocks:
-        as_of = f" (as of {stocks['as_of']})" if stocks.get("as_of") else ""
+        as_of_text = _as_of_date(stocks.get("as_of"))
+        as_of = f" (as of {as_of_text})" if as_of_text else ""
         lines.append(
             f"STOCKS: {_fmt_pct(stocks['hit_rate'])} hit rate over "
             f"{stocks['sample_size']} graded signals, net of costs{as_of}."
@@ -355,7 +374,7 @@ def render_receipts_html_body(receipts: dict, frontend_url: str) -> str:
     if record["graded"]:
         parts.append(
             f"<p><strong>Last week: {record['wins']}-{record['losses']}</strong> "
-            f"across {record['graded']} graded boards "
+            f"across {record['graded']} graded {_plural(record['graded'], 'board')} "
             f"({escape(receipts['week_start'])} to {escape(receipts['week_end'])}).</p>"
         )
     else:
@@ -398,7 +417,8 @@ def render_receipts_html_body(receipts: dict, frontend_url: str) -> str:
 
     stocks = receipts.get("stocks")
     if stocks:
-        as_of = f" (as of {escape(str(stocks['as_of']))})" if stocks.get("as_of") else ""
+        as_of_text = _as_of_date(stocks.get("as_of"))
+        as_of = f" (as of {escape(as_of_text)})" if as_of_text else ""
         parts.append(
             f"<p><strong>Stocks</strong>: {_fmt_pct(stocks['hit_rate'])} hit rate over "
             f"{stocks['sample_size']} graded signals, net of costs{as_of}. "

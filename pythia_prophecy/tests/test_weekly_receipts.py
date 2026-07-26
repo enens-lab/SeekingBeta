@@ -134,6 +134,19 @@ check("empty everything has no content", wr.has_content(wr.build_receipts({}, No
 # --- rendering ---
 subject = wr.receipts_subject(r)
 check("subject states the real record", subject == "Your receipts: we went 1-1 on 2 graded boards")
+one_graded = wr.build_receipts(
+    {"tennis": dict(BOARDS["tennis"], backtests=[BOARDS["tennis"]["backtests"][0]])}, None, now=NOW
+)
+check("subject singularizes a one-board week",
+      wr.receipts_subject(one_graded) == "Your receipts: we went 1-0 on 1 graded board")
+check("body singularizes a one-board week",
+      "across 1 graded board." in wr.render_receipts_text(one_graded, "https://x"))
+
+# --- as-of timestamps are trimmed to a readable date ---
+check("iso timestamp trimmed to date", wr._as_of_date("2026-06-08T04:45:26.462742Z") == "Jun 8, 2026")
+check("plain date passes through", wr._as_of_date("2026-05-11") == "May 11, 2026")
+check("garbage as-of degrades safely", wr._as_of_date("not-a-date") == "not-a-date")
+check("missing as-of yields empty", wr._as_of_date(None) == "")
 check("subject falls back without weekly grades",
       wr.receipts_subject(stale) == "Your receipts: season records, losses included")
 

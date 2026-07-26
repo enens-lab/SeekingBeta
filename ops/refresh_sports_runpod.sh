@@ -59,9 +59,27 @@ for i in $(seq 1 "$POLL_MAX"); do
 done
 [ "$STATUS" = "COMPLETED" ] || { echo "[runpod-sports] timed out after $((POLL_INTERVAL*POLL_MAX))s"; exit 1; }
 
+DATA_DIR="pythia_prophecy/frontend/src/data"
+
+# Snapshot the currently-serving boards so a bad sync can be rolled back. The
+# 2026-07-26 away-win bug shipped corrupt accuracy figures for months precisely
+# because a sync had no way to be refused.
+SNAPSHOT="$(mktemp -d)"
+cp "$DATA_DIR"/*.json "$SNAPSHOT"/ 2>/dev/null || true
+
 echo "[runpod-sports] syncing fresh boards: s3://$BUCKET/$BOARDS_PREFIX/ -> prophecy data dir"
-aws s3 sync "s3://$BUCKET/$BOARDS_PREFIX/" pythia_prophecy/frontend/src/data/ \
+aws s3 sync "s3://$BUCKET/$BOARDS_PREFIX/" "$DATA_DIR/" \
   --region "$REGION" --only-show-errors --exclude "*" --include "*.json"
+
+echo "[runpod-sports] validating synced boards before baking them"
+if ! python3 ops/validate_sports_boards.py "$DATA_DIR"; then
+  echo "[runpod-sports] validation FAILED -- rolling back to the previously served boards"
+  cp "$SNAPSHOT"/*.json "$DATA_DIR"/ 2>/dev/null || true
+  rm -rf "$SNAPSHOT"
+  echo "[runpod-sports] boards restored; prophecy-api NOT rebuilt (still serving good data)"
+  exit 1
+fi
+rm -rf "$SNAPSHOT"
 
 echo "[runpod-sports] rebuild prophecy-api (bake boards) + reload nginx"
 $DC build prophecy-api && $DC up -d --no-deps prophecy-api

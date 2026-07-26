@@ -134,6 +134,12 @@ def _load_meta() -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
                 "tournament_name",
                 "season_year",
                 "display_date",
+                # Real ISO event date. `display_date` is a bare human string
+                # ("Sep 30 - Oct 3") with no year, so it cannot key a date. Without
+                # this column golf backtests shipped with no scheduledDate at all,
+                # which left golf permanently invisible to every date-windowed
+                # surface (Daily Brief, weekly Receipts, the planned ledger).
+                "event_start_date",
                 "course_name",
                 "course_state_code",
                 "tour",
@@ -242,6 +248,7 @@ def _load_predictions(tournament_meta: pd.DataFrame, player_outcomes: pd.DataFra
                     "tour",
                     "season_year",
                     "display_date",
+                    "event_start_date",
                     "course_name",
                     "course_state_code",
                     "player_id",
@@ -339,6 +346,12 @@ def _build_backtests(df: pd.DataFrame, winners: dict[str, str]) -> list[dict]:
                 }
             )
 
+        event_date_key = None
+        if "event_start_date" in top_preds.columns:
+            raw_event_date = pd.to_datetime(top_preds.iloc[0]["event_start_date"], errors="coerce")
+            if pd.notna(raw_event_date):
+                event_date_key = int(raw_event_date.strftime("%Y%m%d"))
+
         backtests.append(
             {
                 "year": int(top_preds.iloc[0]["season_year"]) if pd.notna(top_preds.iloc[0]["season_year"]) else 2025,
@@ -350,6 +363,10 @@ def _build_backtests(df: pd.DataFrame, winners: dict[str, str]) -> list[dict]:
                 "actualWinner": actual_winner,
                 "hitStatus": hit_status,
                 "prob": float(top_preds.iloc[0]["winner_probability"]),
+                # Lets date-windowed surfaces (Daily Brief, weekly Receipts, ledger)
+                # see golf results at all. None stays tolerated downstream.
+                "scheduledDate": event_date_key,
+                "latestDate": event_date_key,
                 "fullField": full_field,
             }
         )

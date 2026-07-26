@@ -499,6 +499,23 @@ def merge_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -> pd.Data
     return merged
 
 
+def _coerce_merge_keys(frame: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
+    """Force shared merge keys to float64 so mixed-dtype seasons can still join.
+
+    IDs are integral but nullable, and pandas has no lossless nullable-int that
+    survives a concat of object and float columns, so float64 is the common ground.
+    Unparseable values become NaN and simply fail to match, which is the correct
+    outcome for a game whose starter was never announced.
+    """
+    out = frame
+    for key in dict.fromkeys(keys):
+        if key in out.columns:
+            if out is frame:
+                out = frame.copy()
+            out[key] = pd.to_numeric(out[key], errors="coerce").astype("float64")
+    return out
+
+
 def merge_starter_features(games: pd.DataFrame, starter_logs: pd.DataFrame) -> pd.DataFrame:
     if starter_logs.empty:
         return games
@@ -525,8 +542,21 @@ def merge_starter_features(games: pd.DataFrame, starter_logs: pd.DataFrame) -> p
     home = starter_logs.loc[starter_logs["team_side"] == "home", ["game_pk", "starter_id", "team_id", *home_cols.keys()]].rename(columns=home_cols)
     home = home.rename(columns={"starter_id": "home_probable_pitcher_id", "team_id": "home_team_id"})
 
-    merged = games.merge(away, on=["game_pk", "away_probable_pitcher_id", "away_team_id"], how="left")
-    merged = merged.merge(home, on=["game_pk", "home_probable_pitcher_id", "home_team_id"], how="left")
+    # Coerce join keys to a common numeric dtype on BOTH sides before merging.
+    # A season whose probable-pitcher IDs are entirely unannounced (the 2026 pull
+    # returned 2,456/2,456 nulls) contributes an all-null OBJECT column, so the
+    # concatenated frame lands as object while starter_logs stays float64 and pandas
+    # refuses the merge outright ("trying to merge on object and float64 columns").
+    # That aborted the whole multi-season rebuild rather than simply leaving those
+    # rows unmatched.
+    away_keys = ["game_pk", "away_probable_pitcher_id", "away_team_id"]
+    home_keys = ["game_pk", "home_probable_pitcher_id", "home_team_id"]
+    games = _coerce_merge_keys(games, away_keys + home_keys)
+    away = _coerce_merge_keys(away, away_keys)
+    home = _coerce_merge_keys(home, home_keys)
+
+    merged = games.merge(away, on=away_keys, how="left")
+    merged = merged.merge(home, on=home_keys, how="left")
     return merged
 
 

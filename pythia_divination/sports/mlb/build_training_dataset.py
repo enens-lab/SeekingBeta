@@ -395,6 +395,25 @@ def build_training_dataset(args: argparse.Namespace) -> tuple[pd.DataFrame, dict
     write_parquet(paths.normalized_dir / "lineup_features_latest.parquet", lineup_features)
     write_csv(paths.normalized_dir / "bullpen_features_latest.csv", bullpen_features)
     write_parquet(paths.normalized_dir / "bullpen_features_latest.parquet", bullpen_features)
+    # This function OVERWRITES the canonical dataset, so refuse to replace a good one
+    # with a crippled one. Discovered 2026-07-26: the normalized schedules on disk no
+    # longer carry probable-pitcher IDs (2024/2025 lack the column entirely, the 2026
+    # pull returned 2,456/2,456 nulls), so a rebuild joins starter features on an
+    # all-null key and silently empties all 90 away_starter_*/home_starter_* columns.
+    # Starting pitcher is among the most predictive inputs in baseball, so a build that
+    # loses it must fail loudly rather than quietly degrade the models.
+    starter_columns = [
+        column for column in dataset.columns
+        if column.startswith(("away_starter_", "home_starter_"))
+    ]
+    if starter_columns and not any(dataset[column].notna().any() for column in starter_columns):
+        raise ValueError(
+            f"Refusing to write the MLB training dataset: all {len(starter_columns)} "
+            "starter-pitcher features are empty, which means the probable-pitcher IDs "
+            "did not join. Recover actual starters for completed games (game details) "
+            "before rebuilding; see MARKET_ROADMAP.md."
+        )
+
     write_csv(paths.normalized_dir / "mlb_training_dataset_latest.csv", dataset)
     write_parquet(paths.normalized_dir / "mlb_training_dataset_latest.parquet", dataset)
 

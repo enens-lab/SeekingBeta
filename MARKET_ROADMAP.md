@@ -65,6 +65,44 @@ No competitor found operates in both verticals; none can copy the cross-market l
 
 ---
 
+## 2b. BLOCKER found while building Wave 1.3: grading is stale
+
+Verified against production on 2026-07-26. The platform publishes picks daily but
+does not write graded outcomes back promptly for most sports:
+
+| Sport | Live boards today | Graded history ends | Season sample |
+|---|---|---|---|
+| MLB | 15/day | **2025-09-28** (a full season behind) | 0 |
+| Golf | yes | **no dates at all** on 102 backtests | 0 |
+| Tennis | 4/day | 2026-07-19 (current) | 95 |
+| Soccer | seasonal | 2026-07-12 (current) | 90 |
+| Basketball | off-season | 2026-04-02 (season end, expected) | 475 |
+| Football | off-season | 2026-01-04 (season end, expected) | 16 |
+| Stocks | daily | backtest curve ends **2026-05-11** | 1,100 |
+
+Consequences, in priority order:
+
+1. **The positioning shipped in Wave 1.1 is not yet fully true.** "Every pick
+   published, timestamped, and graded" holds for tennis and soccer, but MLB
+   picks are published and never graded. This is the single highest-priority
+   fix on the board.
+2. **Wave 2.1 (the verifiable ledger, the flagship trust asset) cannot ship on
+   this data.** A ledger is only worth building on top of a grading pipeline
+   that closes the loop daily.
+3. The Daily Brief's "yesterday went W-L" line will read 0-0 essentially every
+   day until grading catches up, and the weekly Receipts email has almost
+   nothing to report.
+
+Also unexplained: basketball's season summary was observed at 649 samples / 471
+hits (72.6%) in one reading and 475 / 204 (43%) in later readings, which were
+themselves stable across three consecutive calls. Root-cause this before those
+figures are published as trust claims, since a number that moves is worse than
+no number.
+
+**Recommended next action:** a "close the loop" work item ahead of Wave 2.1,
+writing graded outcomes back for every sport within 24h of an event finishing,
+starting with MLB (highest volume, worst gap) and dating the golf backtests.
+
 ## 3. Roadmap
 
 ### Wave 1 — Quick wins (~2–7 days each)

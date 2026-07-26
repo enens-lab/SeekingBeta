@@ -140,6 +140,67 @@ corrupted export. The figure was never unstable.
 converts missing data into confident, wrong, publishable numbers. Grading code
 should fail loudly or mark a result ungraded; it must never guess.
 
+**Tripwire added (commit 6702473).** `ops/validate_sports_boards.py` runs inside
+`refresh_sports_runpod.sh` after the S3 boards sync and before prophecy-api is
+rebuilt. It snapshots the serving boards, and if any sport's home-win rate falls
+outside 30-80% over 30+ gradeable games it rolls back and refuses to rebuild.
+Verified both ways. It lives in the EC2 repo rather than the worker image
+specifically so it protects against a stale worker.
+
+### Grading loop, remaining state (as of 2026-07-26)
+
+**MLB is an INGEST gap, not a grading gap.** `mlb_training_dataset_latest` on the
+box contains **zero 2026 rows** (range 2020-07-23 to 2025-09-28), so the exporter
+is correct and simply has nothing 2026 to grade. Live boards work because they
+come from a runtime feed, not this dataset. The RunPod worker runs MLB
+**export-only**; only tennis has an ingest + build step in its command list
+(`runpod/sports/handler.py`).
+
+> **DANGER before wiring this up:** `sports/mlb/build_training_dataset.py`
+> **overwrites** `mlb_training_dataset_latest.{csv,parquet}` with only the seasons
+> resolved from its arguments. Running `--season 2026` would **destroy the
+> 12,755-row 2020-2025 history the models train on.** The safe invocation is a
+> full-range rebuild:
+> ```
+> python -m sports.mlb.ingest_history --season 2026
+> python -m sports.mlb.build_training_dataset --season-start 2020 --season-end 2026
+> ```
+> This is multi-season and memory-heavy (MLB export alone already needs >3 GB and
+> was moved to RunPod after an OOM outage), and it must be validated end to end
+> before being added to the nightly path. **Left unwired deliberately, pending a
+> decision, rather than risking the training dataset.**
+
+**Golf: half fixed.** `event_start_date` is now threaded into golf backtests
+(commit 6702473), which dates 53 of 172 boards locally (2024-10 to 2025-12). The
+remaining boards lack the column upstream, and nothing covers 2026 yet. Dates
+reach production on the next worker image rebuild.
+
+**Stocks:** the backtest curve still ends 2026-05-11 and needs a fresh backtest
+run to advance. Untouched.
+
+### NHL: not close to shippable (assessed 2026-07-26)
+
+The roadmap listed this as a cheap coverage win. It is not. What exists:
+`sports/hockey/` has the full module set (client, ingest_history,
+build_training_dataset, feature_engineering, torch_model, train_baseline,
+train_torch, branding, constants). What is missing:
+
+- **Data**: only **60 games ingested, 2025-10-07 to 2025-10-15** (nine days). No
+  training dataset was ever built. Nine days cannot train a credible model.
+- **No trained artifacts** (`artifacts/` has no hockey/nhl directory).
+- **No exporter** (`scripts/export_hockey_frontend_data.py` does not exist; the
+  football equivalent is ~900 lines).
+- **No BFF plumbing**: `SportsBoardsResponse` in `pythia_prophecy/api/models.py`
+  has no `hockey` field, and there is no collection assembly for it.
+- **No RunPod worker entry**, and the UI tab is deliberately disabled.
+
+Realistic order of work: full multi-season ingest -> build dataset -> train and
+validate -> exporter -> BFF field + assembly -> worker entry -> enable the tab.
+That is the "medium build" the roadmap estimated, not a finishing touch, and the
+honest-numbers positioning means a model trained on thin data should not ship at
+all. October season start is the natural deadline; the ingest is the thing to
+start now because everything else waits on it.
+
 ## 3. Roadmap
 
 ### Wave 1 — Quick wins (~2–7 days each)

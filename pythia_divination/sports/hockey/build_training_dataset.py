@@ -34,6 +34,9 @@ _LEAKY_COLUMNS = {
     "away_win",
     "goal_diff_home",
     "total_goals",
+    # This game's shot counts are post-game facts too, not pregame form.
+    "away_shots",
+    "home_shots",
     "game_state_detail",
     "game_schedule_state_detail",
     "away_goals_skaters",
@@ -101,6 +104,26 @@ def _load_table(base_dir: Path, stem: str) -> pd.DataFrame:
 
 
 
+# Merging the schedule with the boxscore details produces `_detail`-suffixed copies
+# of shared columns, so the final score survived as home_score_detail /
+# away_score_detail even though home_score / away_score were dropped. That leaked the
+# outcome outright: a baseline trained on it scored ROC AUC 1.000 and 100% accuracy on
+# NHL games, which is impossible. Strip the known merge suffixes alongside each base
+# name. Deliberately NOT a startswith() sweep -- that would also eat legitimate
+# pregame rolling features like home_points_avg_last_3.
+_LEAKY_COLUMN_SUFFIXES = ("", "_detail", "_x", "_y")
+
+
+def _leaky_columns_present(dataset: pd.DataFrame) -> list[str]:
+    """Every post-game column in the frame, including merge-suffixed duplicates."""
+    doomed = {
+        f"{base}{suffix}"
+        for base in _LEAKY_COLUMNS
+        for suffix in _LEAKY_COLUMN_SUFFIXES
+    }
+    return [column for column in dataset.columns if column in doomed]
+
+
 def build_training_dataset(args: argparse.Namespace) -> tuple[pd.DataFrame, dict[str, object]]:
     base_dir = Path(args.output_root) if args.output_root else DEFAULT_HOCKEY_DATA_ROOT
     paths = build_ingestion_paths(base_dir=base_dir, snapshot_tag=args.snapshot_tag)
@@ -137,7 +160,7 @@ def build_training_dataset(args: argparse.Namespace) -> tuple[pd.DataFrame, dict
     dataset = attach_pregame_team_features(games, team_logs)
     dataset = attach_pregame_goalie_features(dataset, goalie_logs)
     dataset = add_matchup_differentials(dataset)
-    dataset = dataset.drop(columns=[column for column in _LEAKY_COLUMNS if column in dataset.columns])
+    dataset = dataset.drop(columns=_leaky_columns_present(dataset))
     dataset = dataset.sort_values(["official_date", "game_id"]).reset_index(drop=True)
 
     write_csv(paths.normalized_dir / "hockey_training_dataset_latest.csv", dataset)

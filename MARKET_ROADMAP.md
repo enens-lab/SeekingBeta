@@ -93,15 +93,52 @@ Consequences, in priority order:
    day until grading catches up, and the weekly Receipts email has almost
    nothing to report.
 
-Also unexplained: basketball's season summary was observed at 649 samples / 471
-hits (72.6%) in one reading and 475 / 204 (43%) in later readings, which were
-themselves stable across three consecutive calls. Root-cause this before those
-figures are published as trust claims, since a number that moves is worse than
-no number.
-
 **Recommended next action:** a "close the loop" work item ahead of Wave 2.1,
 writing graded outcomes back for every sport within 24h of an event finishing,
 starting with MLB (highest volume, worst gap) and dating the golf backtests.
+
+### RESOLVED 2026-07-26: football and basketball graded every game as an away win
+
+A second, worse defect found while investigating the football accuracy figure.
+Published backtests contained **0 home wins across 323 football and 533
+basketball games**, against a realistic 54% for MLB. Both sports' accuracy
+numbers were not measuring the model at all; they were measuring how often it
+happened to pick the away team.
+
+Root cause: `actual_winner` was derived with
+`int(getattr(row, "home_win", 0) or 0)`, so an **absent** label silently became
+"the away team won" instead of raising. Two independent conditions hit that
+default: a `predictions.merge(dataset, ...)` where both frames carry `home_win`
+(pandas suffixes both to `home_win_x`/`home_win_y`, leaving no plain column), and
+source tables carrying only `home_score`/`away_score`.
+
+Fixed in `export_football_frontend_data.py` and
+`export_basketball_frontend_data.py` (commit 9c6091d) via a `_resolve_home_win()`
+resolver that returns `None` when the label is genuinely unknowable, so callers
+skip ungraded games rather than inventing results, plus explicit merge suffixes.
+Datasets regenerated and deployed (commit 207a771).
+
+| Metric | Published before | Actual |
+|---|---|---|
+| Football 2026 season | 2/16 (12.5%) | **10/16 (62.5%)** |
+| Football all graded | 12.4% | **65.3%** (vs 55.1% always-pick-home) |
+| Basketball 2026 season | 204/475 (43%) | **471/649 (72.6%)** |
+| Home-win rate, both | 0% | **55%** |
+
+The NFL model is competitive and well calibrated: Brier 0.223, log loss 0.638
+(beating the 0.693 coin-flip line), and accuracy rising with confidence (58.6%
+below 60% confidence, 82.9% at 60-70%, 90% above 70%). The HGB baseline is
+notably worse calibrated (log loss 0.757, worse than a coin flip), so the torch
+model should remain the served one. **No modelling work was needed; the metric
+was broken, not the model.**
+
+This also explains the basketball "instability" noted during Wave 1.3: the first
+reading (649/471) was correctly graded data, and later readings came from the
+corrupted export. The figure was never unstable.
+
+**Lesson worth institutionalizing:** a defaulted `getattr` on a label column
+converts missing data into confident, wrong, publishable numbers. Grading code
+should fail loudly or mark a result ungraded; it must never guess.
 
 ## 3. Roadmap
 

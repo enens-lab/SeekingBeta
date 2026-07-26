@@ -76,6 +76,25 @@ def prepare_games(
     details_unique = details_df.drop_duplicates(subset=["game_pk"]) if "game_pk" in details_df.columns else details_df
     merged = games.merge(details_unique, on="game_pk", how="left", suffixes=("", "_detail"))
 
+    # Backfill starting pitchers from the boxscore details.
+    #
+    # The schedule's `probable_pitcher` fields are only published shortly before first
+    # pitch, so a historical pull returns them empty (the 2026 schedule came back
+    # 2,456/2,456 null and the 2024/2025 files omit the column entirely). The details
+    # feed carries the same IDs at ~99% coverage, but the merge above gives the schedule
+    # the clean column name and parks the populated copy under `_detail`, so the build
+    # read the empty one and every starter feature silently came back null.
+    for side in ("away", "home"):
+        for field in ("probable_pitcher_id", "probable_pitcher_name"):
+            column = f"{side}_{field}"
+            detail_column = f"{column}_detail"
+            if detail_column not in merged.columns:
+                continue
+            if column in merged.columns:
+                merged[column] = merged[column].combine_first(merged[detail_column])
+            else:
+                merged[column] = merged[detail_column]
+
     merged["home_win"] = np.where(
         merged["winner_team_id"].notna(),
         (merged["winner_team_id"] == merged["home_team_id"]).astype(float),

@@ -338,6 +338,26 @@ def list_daily_digest_recipients() -> list[dict[str, Any]]:
     return [{"user_id": row["user_id"], "email": row["email"]} for row in rows]
 
 
+def list_newsletter_recipients() -> list[dict[str, Any]]:
+    """Users who opted into marketing email (the weekly Receipts digest).
+    Suppression is enforced separately at send time."""
+    if not is_enabled():
+        return []
+
+    with _get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                f"""
+                SELECT user_id, email
+                FROM {PREFERENCES_TABLE}
+                WHERE newsletter_enabled = TRUE
+                ORDER BY email
+                """
+            )
+            rows = cur.fetchall()
+    return [{"user_id": row["user_id"], "email": row["email"]} for row in rows]
+
+
 def set_daily_digest_opt_in(user_id: str, email: str, enabled: bool) -> dict[str, Any]:
     return upsert_preferences(
         user_id=user_id,

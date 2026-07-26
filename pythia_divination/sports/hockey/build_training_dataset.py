@@ -26,8 +26,12 @@ logger = logging.getLogger(__name__)
 _LEAKY_COLUMNS = {
     "away_score",
     "home_score",
+    # `away_win` is exactly 1 - home_win, so it leaks the target perfectly and must go.
+    # `home_win` is deliberately NOT listed: it IS the training target. Dropping it
+    # here produced a 260-column dataset with no label at all, which train_baseline
+    # then tried to dropna() on. Compare sports/football, which keeps home_win in its
+    # dataset and validation predictions.
     "away_win",
-    "home_win",
     "goal_diff_home",
     "total_goals",
     "game_state_detail",

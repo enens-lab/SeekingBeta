@@ -229,12 +229,26 @@ def build_goalie_game_logs(player_boxscores: pd.DataFrame) -> pd.DataFrame:
     frame = frame.loc[(frame["player_type"] == "goalie") & (pd.to_numeric(frame["starter"], errors="coerce") == 1)].copy()
     if frame.empty:
         return frame
-    frame = _safe_numeric(frame, [column for column in _GOALIE_BASE_METRICS if column in frame.columns])
+
+    # The NHL boxscore feed carries `team_won`, not a per-goalie `won`. This frame is
+    # already filtered to STARTING goalies, so the team result is the starter's
+    # decision in all but the pulled-goalie edge case -- close enough for a rolling
+    # form feature, and far better than dropping goalie win rate entirely. Derived
+    # explicitly rather than defaulted, so a future feed change surfaces as a missing
+    # feature instead of a silently wrong one.
+    if "won" not in frame.columns and "team_won" in frame.columns:
+        frame["won"] = pd.to_numeric(frame["team_won"], errors="coerce")
+
+    available_metrics = [column for column in _GOALIE_BASE_METRICS if column in frame.columns]
+    frame = _safe_numeric(frame, available_metrics)
     frame["official_date"] = _to_datetime_mixed(frame["official_date"])
     frame["goalie_key"] = frame["player_id"].astype(str)
     frame = frame.sort_values(["goalie_key", "official_date", "game_id"]).reset_index(drop=True)
 
-    for metric in _GOALIE_BASE_METRICS:
+    # Iterate only what is present. The previous code guarded the numeric coercion
+    # above but then looped the full metric list, so one absent column aborted the
+    # entire hockey dataset build with a bare KeyError.
+    for metric in available_metrics:
         grouped = frame.groupby("goalie_key")[metric]
         for window in (3, 5, 10):
             frame[f"{metric}_avg_last_{window}"] = grouped.transform(
@@ -243,7 +257,10 @@ def build_goalie_game_logs(player_boxscores: pd.DataFrame) -> pd.DataFrame:
 
     frame["games_started_prior"] = frame.groupby("goalie_key").cumcount()
     frame["goalie_days_rest"] = frame.groupby("goalie_key")["official_date"].transform(lambda series: series.diff().dt.days)
-    frame["goalie_win_pct_prior"] = frame.groupby("goalie_key")["won"].transform(lambda series: series.shift(1).expanding().mean())
+    if "won" in frame.columns:
+        frame["goalie_win_pct_prior"] = frame.groupby("goalie_key")["won"].transform(
+            lambda series: series.shift(1).expanding().mean()
+        )
     return frame
 
 

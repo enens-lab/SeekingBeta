@@ -309,6 +309,49 @@ starts confirmed pregame, special-teams rates), calibration, and a target of
 roughly 57-60% before it earns a launch. The exporter, BFF field, worker entry and
 UI tab should stay unbuilt until a model clears that bar.
 
+## 2c. Merge-suffix audit (2026-07-26)
+
+One pandas behaviour caused **five** distinct failures in a single day, three of them
+silent and publishing wrong numbers for months:
+
+| # | Failure | Silent? |
+|---|---|---|
+| 1 | Football + basketball graded every game as an away win | **yes** — months of wrong accuracy |
+| 2 | Hockey final score leaked into training (fake ROC AUC 1.000) | **yes** |
+| 3 | MLB starter features silently blanked | **yes** |
+| 4 | MLB rebuild died on object-vs-float64 pitcher key | no, crashed |
+| 5 | MLB export died on object-vs-int64 on the same key | no, crashed |
+
+Root shape every time: a merge renames or shadows a column, then code reads the empty
+twin (silent) or hits a dtype mismatch (loud). **The silent variety is the dangerous
+one** — it yields confident, publishable, wrong numbers.
+
+**Static scan** of `scripts/export_*_frontend_data.py` and
+`sports/*/feature_engineering.py`: **24 merge sites with no explicit `suffixes=`**,
+concentrated in `sports/mlb/feature_engineering.py` (11), `sports/football` (3),
+`sports/hockey` (3), `sports/pga` (3), `sports/basketball` (2).
+
+**Empirical scan** of every produced dataset and model artifact for collision
+fingerprints found **no active collisions**:
+
+- The `_detail` columns in the hockey (16) and MLB (12) datasets come from the
+  *correct* pattern, `suffixes=("", "_detail")`, where the left frame keeps the clean
+  name. Benign by construction.
+- `profile_has_x` in the golf dataset is a **false positive** — a real field meaning
+  "player has an X/Twitter account", sibling to `profile_has_instagram`.
+- All 21 `validation_predictions.csv` artifacts are clean.
+
+**Conclusion: current outputs are sound; the 24 sites are latent risk, not active
+harm.** They would bite when a source schema changes — which is exactly how all five
+of today's failures arose (the 2026 season arriving with different columns).
+
+**Recommended convention, cheap to adopt going forward:** pass explicit non-empty
+`suffixes=("", "_<source>")` on every merge so the left frame always keeps clean
+names, and where a column is expected to carry data, assert it is not entirely null
+rather than trusting it survived. The highest-value single guard is the one that
+catches the silent case: after a build, flag any clean column that is fully null while
+its suffixed twin holds data. That is the precise signature of the MLB starter bug.
+
 ## 3. Roadmap
 
 ### Wave 1 — Quick wins (~2–7 days each)

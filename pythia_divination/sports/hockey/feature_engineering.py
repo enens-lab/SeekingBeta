@@ -8,7 +8,18 @@ import numpy as np
 import pandas as pd
 
 
-_SAFE_TEAM_LOG_BASE_COLUMNS = {"games_played_prior", "win_pct_prior", "same_site_win_pct_last_5"}
+_SAFE_TEAM_LOG_BASE_COLUMNS = {
+    "games_played_prior",
+    "win_pct_prior",
+    "same_site_win_pct_last_5",
+    # Schedule-fatigue features (see _TEAM_SCHEDULE_FEATURES). Safe to expose directly:
+    # each is computed only from dates strictly before the current game.
+    "days_rest",
+    "is_back_to_back",
+    "is_third_in_four",
+    "games_last_7_days",
+    "road_game_streak",
+}
 _SAFE_GOALIE_LOG_BASE_COLUMNS = {"games_started_prior", "goalie_days_rest", "goalie_win_pct_prior"}
 
 
@@ -150,8 +161,23 @@ _TEAM_BASE_METRICS = [
     "blocked_shots",
     "pim",
     "power_play_goals",
+    "power_play_goals_against",
+    "pim_against",
     "giveaways",
     "takeaways",
+]
+
+# Schedule-fatigue features. These are properties of the FIXTURE, known the moment the
+# schedule is published, so unlike form metrics they are used directly rather than
+# lagged -- every one is derived purely from dates strictly before the current game.
+# Rest and back-to-backs are among the best-documented effects in hockey and were
+# entirely absent: only goalie rest existed, never the team's.
+_TEAM_SCHEDULE_FEATURES = [
+    "days_rest",
+    "is_back_to_back",
+    "is_third_in_four",
+    "games_last_7_days",
+    "road_game_streak",
 ]
 
 
@@ -184,6 +210,11 @@ def build_team_game_logs(games: pd.DataFrame) -> pd.DataFrame:
                     "blocked_shots": game.get(f"{side}_blocked_shots"),
                     "pim": game.get(f"{side}_pim"),
                     "power_play_goals": game.get(f"{side}_power_play_goals"),
+                    # Power-play goals conceded, i.e. the opponent's PP output. The feed
+                    # has no PP-opportunity count, so a true PK% is unavailable; paired
+                    # with pim below this is the closest honest special-teams proxy.
+                    "power_play_goals_against": game.get(f"{opp}_power_play_goals"),
+                    "pim_against": game.get(f"{opp}_pim"),
                     "giveaways": game.get(f"{side}_giveaways"),
                     "takeaways": game.get(f"{side}_takeaways"),
                 }
@@ -208,6 +239,51 @@ def build_team_game_logs(games: pd.DataFrame) -> pd.DataFrame:
     frame["same_site_win_pct_last_5"] = frame.groupby(["team_key", "is_home"])["won"].transform(
         lambda series: series.shift(1).rolling(5, min_periods=1).mean()
     )
+    frame = _add_schedule_fatigue(frame)
+    return frame
+
+
+def _add_schedule_fatigue(frame: pd.DataFrame) -> pd.DataFrame:
+    """Rest, back-to-backs, schedule density and road-trip length per team.
+
+    All of these read only dates STRICTLY BEFORE the current game, so none leak the
+    result. They are fixture properties rather than form, so they are used as-is
+    instead of being rolled into trailing averages.
+    """
+    grouped = frame.groupby("team_key")["official_date"]
+
+    # Days since this team's previous game. First game of a span has no prior, so NaN.
+    frame["days_rest"] = grouped.transform(lambda series: series.diff().dt.days)
+
+    # A back-to-back is the second game on consecutive calendar days.
+    frame["is_back_to_back"] = (frame["days_rest"] <= 1).astype("float64")
+    frame.loc[frame["days_rest"].isna(), "is_back_to_back"] = np.nan
+
+    # Third game in four nights: the classic compressed-schedule fatigue signal.
+    third_in_four = grouped.transform(lambda series: (series - series.shift(2)).dt.days)
+    frame["is_third_in_four"] = (third_in_four <= 3).astype("float64")
+    frame.loc[third_in_four.isna(), "is_third_in_four"] = np.nan
+
+    # Games already played in the trailing 7 days, excluding this one.
+    def _density(dates: pd.Series) -> pd.Series:
+        counts = []
+        values = dates.to_numpy()
+        for index, current in enumerate(values):
+            prior = values[:index]
+            counts.append(int(((current - prior) / np.timedelta64(1, "D") <= 7).sum()) if index else 0)
+        return pd.Series(counts, index=dates.index, dtype="float64")
+
+    frame["games_last_7_days"] = grouped.transform(_density)
+
+    # Consecutive road games including this one; long trips are a known drag.
+    def _road_streak(is_home: pd.Series) -> pd.Series:
+        streak, out = 0, []
+        for value in is_home.to_numpy():
+            streak = 0 if value == 1 else streak + 1
+            out.append(float(streak))
+        return pd.Series(out, index=is_home.index, dtype="float64")
+
+    frame["road_game_streak"] = frame.groupby("team_key")["is_home"].transform(_road_streak)
     return frame
 
 

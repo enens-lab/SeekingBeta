@@ -266,6 +266,40 @@ An AUC of ~0.55 is barely distinguishable from noise, and the HGB variant is wor
 calibrated than a coin flip. This is consistent with NHL being the hardest major
 North American sport to model (low scoring, high variance, goalie-dominated).
 
+#### FEATURE ATTEMPT 2026-07-26: the ceiling is data, not features. STOP HERE.
+
+Added the best-documented NHL predictors that were missing entirely (only *goalie*
+rest existed, never the team's): rest days, back-to-backs, third-in-four-nights,
+7-day schedule density, road-trip length, plus power-play goals conceded and PIM
+drawn as special-teams proxies. Correctly implemented and sanity-checked against
+reality (back-to-back rate 14-17%, ~2.9 games/7 days, ~4 days mean rest), leakage
+re-audited (max |corr| 0.192, none above 0.5), 216 -> 249 model-visible features.
+
+**They did not work.** Same held-out split (n=1,486), baseline 53.1%:
+
+| Model | Before | After |
+|---|---|---|
+| HistGradientBoosting | 53.8%, AUC 0.546 | 53.4%, AUC 0.553 |
+| Torch | 52.8%, AUC 0.552 | 53.6%, AUC 0.554 |
+| RandomForest | — | **54.5%, AUC 0.554** (best) |
+
+Best case is **+1.4 points** over always-picking-home against a 57-60% bar.
+Univariate correlations explain it: rest differential **+0.009**, back-to-back
+**±0.014**, strongest new feature **0.049**. The effects the hockey literature
+treats as real carry almost no signal in this data.
+
+**What would actually move it is not obtainable from the free NHL feed:**
+confirmed pregame goalie starts (the dominant factor in hockey outcomes — we hold
+only the *previous* starter's history, and the NHL doesn't confirm until ~1h before
+puck drop), and shot-quality metrics (xG, Corsi/Fenwick, high-danger chances) which
+require a paid provider or play-by-play scraping. Both violate the near-zero-cost
+constraint.
+
+**Recommendation: stop investing in NHL.** This is a data ceiling, not an effort
+problem, and further feature work is very likely to return the same result. The
+features are kept because they cost nothing and make the dataset complete; the
+negative result is recorded so it isn't rediscovered later.
+
 **Recommendation: do not ship NHL boards.** Publishing a board whose model has no
 measurable edge would contradict the exact positioning Wave 1.1 shipped, and the
 honest presentation the ledger demands would show a coin flip. The expensive part

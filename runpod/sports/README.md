@@ -123,7 +123,40 @@ ops/refresh_sports_runpod.sh '["mlb"]'
 {"input": {"type": "sports_export", "sport": "mlb"}}            // one sport
 {"input": {"type": "sports_export", "sports": ["mlb","golf"]}} // several
 {"input": {"type": "sports_export", "sports": ["all"]}}        // every sport
+{"input": {"type": "stock_predictions", "universe": "core",     // daily LSTM sweep (below)
+           "tickers": ["AAPL", "..."], "models": ["lstm_5d","lstm_jackpot","lstm_quant"],
+           "homepage_tickers": ["AAPL", "..."], "limit": 0}}
 {"input": {"type": "health"}}
 ```
 Supported sports: `mlb, soccer, golf, basketball, football, olympics, tennis`
 (tennis runs ingest + build before its export, mirroring `refresh_sports_cron.sh`).
+
+## `stock_predictions` — the daily LSTM sweep (since 2026-09-19)
+
+This is what replaced the always-on `divination-api` container on the web box.
+`pythia_divination/scripts/export_stock_predictions.py` runs the torch options
+LSTMs (`artifacts/artifacts/{lstm_5d,lstm_jackpot}/torch/` — **those bundles must
+exist in S3**, the worker refuses to run without them) over:
+
+- `universe: core` (default) = `config.yaml`'s curated ~170 names + `homepage_tickers`
+  + the `tickers` list the box passes (Free/Basic tier lists + every user watchlist,
+  collected by `ops/refresh_stock_predictions_runpod.sh`), ~200 tickers, **~3-5 min**
+  with 4 workers; the cost is dominated by Yahoo I/O (~0.5 s bars + ~2.5 s option
+  chain per ticker), not compute (~10 ms per ticker for both models).
+- `universe: full` = all ~6,700 names in `data/universe.csv`, which is **not in the
+  image** (sync it first) and is **hours of Yahoo I/O** (5-7 h sequential). Do not
+  schedule it daily; the sweep's `--deadline-seconds` (1500 s default, under the
+  1800 s endpoint timeout) will truncate it and publish a partial file.
+
+Output: `frontend-boards/stock_predictions_latest.json` (schema in
+`pythia_prophecy/api/stock_predictions_store.py`). The box pulls it, validates it
+(`ops/validate_stock_predictions.py`) and drops it into the bind-mounted
+`pythia_prophecy/data/predictions/`; prophecy-api serves `/predict/*`,
+`/api/analyze` and the Daily Brief from it. No Postgres and no Alpaca on the worker:
+bars come from Yahoo (`DATA_SOURCE=yahoo`); add `ALPACA_KEY_ID`/`ALPACA_SECRET_KEY`
++ `DATA_SOURCE=alpaca` to the endpoint env to reproduce the box's old feed exactly.
+
+Cron on the box (weekdays after the close, apart from the 21:30 options archive):
+```
+15 22 * * 1-5 cd /home/ec2-user/seekingbeta && ops/refresh_stock_predictions_runpod.sh >> logs/refresh_stock_predictions.log 2>&1
+```

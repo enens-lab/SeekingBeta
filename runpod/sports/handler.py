@@ -18,9 +18,17 @@ Job contract (RunPod `input`):
   {"input": {"type": "sports_export", "sport": "mlb"}}                  # one sport
   {"input": {"type": "sports_export", "sports": ["mlb", "golf"]}}       # several
   {"input": {"type": "sports_export", "sports": ["all"]}}               # every sport
+  {"input": {"type": "stock_predictions", "universe": "core",
+             "tickers": ["AAPL", ...], "models": ["lstm_5d", ...]}}     # daily LSTM sweep
   {"input": {"type": "health"}}                                         # readiness
 
 Returns: {"ok": bool, "results": [{"sport","ok","exit_code","boards":[...],"log_tail"}]}
+
+stock_predictions runs pythia_divination/scripts/export_stock_predictions.py (the
+torch options LSTMs over the curated universe + the extra tickers the box passes:
+homepage, tier lists, user watchlists) and uploads stock_predictions_latest.json
+to the same frontend-boards/ prefix. It is what replaced the always-on divination
+container on the web box (2026-09-19): prophecy serves this file for /predict/*.
 
 Layout in the image (see Dockerfile): code at /work/pythia_divination, output dir
 /work/pythia_prophecy/frontend/src/data (so the export scripts' PROJ_ROOT =
@@ -49,6 +57,11 @@ BOARDS_PREFIX = os.getenv("BOARDS_S3_PREFIX", "frontend-boards").strip("/")
 RUN_TIMEOUT_SEC = int(os.getenv("SPORTS_EXPORT_TIMEOUT_SEC", "1800"))
 SYNC_TIMEOUT_SEC = int(os.getenv("S3_SYNC_TIMEOUT_SEC", "1800"))
 TRAIN_TIMEOUT_SEC = int(os.getenv("TRAIN_TIMEOUT_SEC", "3600"))
+# The sweep script stops submitting tickers at its own --deadline-seconds and still
+# writes a valid partial file; this outer timeout is the hard backstop and must stay
+# below the endpoint's execution timeout (README: >= 1800s) so the upload step runs.
+STOCK_PREDICTIONS_TIMEOUT_SEC = int(os.getenv("STOCK_PREDICTIONS_TIMEOUT_SEC", "1700"))
+STOCK_PREDICTIONS_DEADLINE_SEC = int(os.getenv("STOCK_PREDICTIONS_DEADLINE_SEC", "1500"))
 
 # Per-sport: which data/sports/<dir> subtree(s) to sync from S3, and the command
 # chain to run (cwd = DIV). Mirrors ops/refresh_sports_cron.sh exactly — tennis
@@ -291,6 +304,79 @@ def _train(payload):
             "artifacts_uri": ARTIFACTS_S3_URI, "log_tail": log[-1500:]}
 
 
+def _stock_predictions(payload):
+    """Daily torch-LSTM sweep -> frontend-boards/stock_predictions_latest.json.
+
+    Runs scripts/export_stock_predictions.py with the artifacts freshly synced from
+    S3 (artifacts/artifacts/<model>/torch/). Like _train: dummy DATABASE_URL so
+    config.settings imports, Yahoo data (no Alpaca creds here; add ALPACA_KEY_ID/
+    ALPACA_SECRET_KEY + DATA_SOURCE=alpaca to the endpoint env to match the box's
+    old feed exactly). The script writes a valid partial file at its deadline, and
+    _upload_boards publishes whatever landed in OUTPUT_DIR, so a slow Yahoo day
+    still ships the tickers it finished."""
+    import json as _json
+    import tempfile
+
+    try:
+        _sync_artifacts()
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": f"artifact sync failed: {exc}"}
+    for model in ("lstm_5d", "lstm_jackpot"):
+        if not (DIV / "artifacts" / model / "torch" / "model.pt").exists():
+            return {"ok": False, "error": f"missing artifacts/{model}/torch/model.pt after sync (upload the torch bundles to {ARTIFACTS_S3_URI})"}
+
+    env = dict(os.environ)
+    env.setdefault("DATABASE_URL", "postgresql://unused:unused@127.0.0.1:5432/none")
+    env.setdefault("DATA_SOURCE", "yahoo")
+    env.setdefault("TORCH_NUM_THREADS", "1")
+    env["STOCK_PREDICTIONS_PRODUCER"] = "runpod"
+
+    tickers = payload.get("tickers") or []
+    if isinstance(tickers, str):
+        tickers = [t.strip() for t in tickers.split(",") if t.strip()]
+    models = payload.get("models") or []
+    if isinstance(models, str):
+        models = [m.strip() for m in models.split(",") if m.strip()]
+    universe = str(payload.get("universe") or "core")
+    workers = int(payload.get("workers") or os.getenv("STOCK_PREDICTIONS_WORKERS", "4"))
+    deadline = int(payload.get("deadline_seconds") or STOCK_PREDICTIONS_DEADLINE_SEC)
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    output = OUTPUT_DIR / "stock_predictions_latest.json"
+    cmd = ["python", "-u", "scripts/export_stock_predictions.py", "--universe", universe,
+           "--output", str(output), "--workers", str(workers), "--deadline-seconds", str(deadline)]
+    if models:
+        cmd += ["--models", ",".join(str(m) for m in models)]
+    if payload.get("homepage_tickers"):
+        cmd += ["--homepage-tickers", ",".join(str(t).upper() for t in payload["homepage_tickers"])]
+    if payload.get("limit"):
+        cmd += ["--limit", str(int(payload["limit"]))]
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as fh:
+        fh.write("\n".join(str(t).upper() for t in tickers))
+        tickers_file = fh.name
+    if tickers:
+        cmd += ["--tickers-file", tickers_file]
+
+    start = time.time()
+    rc, log = _run(cmd, DIV, STOCK_PREDICTIONS_TIMEOUT_SEC, env=env)
+    summary = {}
+    if output.exists():
+        try:
+            d = _json.loads(output.read_text())
+            summary = {k: d.get(k) for k in ("generated_at", "requested", "succeeded", "failed", "truncated",
+                                               "duration_seconds", "data_source", "options_source", "models")}
+        except Exception as exc:  # noqa: BLE001
+            summary = {"parse_error": str(exc)}
+    try:
+        boards = _upload_boards(start)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "exit_code": rc, "summary": summary, "boards": [],
+                "error": f"upload failed: {exc}", "log_tail": log[-1500:]}
+    ok = rc == 0 and "stock_predictions_latest.json" in boards and (summary.get("succeeded") or 0) > 0
+    return {"ok": ok, "exit_code": rc, "summary": summary, "boards": boards,
+            "extra_tickers": len(tickers), "log_tail": log[-1500:]}
+
+
 def handler(job):
     payload = job.get("input") or {}
     if not isinstance(payload, dict):
@@ -300,7 +386,11 @@ def handler(job):
     if jtype == "health":
         rc, out = _run(["aws", "--version"], REPO, 30)
         return {"ok": rc == 0, "aws_cli": out.strip()[:120], "sports": sorted(SPORTS),
-                "types": ["sports_export", "options_archive", "train", "health"], "bucket": S3_BUCKET}
+                "types": ["sports_export", "stock_predictions", "options_archive", "train", "health"],
+                "bucket": S3_BUCKET}
+
+    if jtype == "stock_predictions":
+        return _stock_predictions(payload)
 
     if jtype == "options_archive":
         return _options_archive(payload)
@@ -320,7 +410,7 @@ def handler(job):
         results = [_export_one(str(s).lower()) for s in sports]
         return {"ok": all(r.get("ok") for r in results), "results": results}
 
-    raise ValueError(f"Unsupported type: {jtype!r} (expected sports_export | options_archive | train | health)")
+    raise ValueError(f"Unsupported type: {jtype!r} (expected sports_export | stock_predictions | options_archive | train | health)")
 
 
 runpod.serverless.start({"handler": handler})

@@ -21,9 +21,12 @@ python-dotenv==1.0.1
 asyncpg==0.29.0
 
 # Deep learning
-# TensorFlow is required for .keras LSTM artifacts.
-# Torch is optional and only needed for legacy .pt artifacts/training.
-tensorflow>=2.10.0
+# TensorFlow is required for .keras LSTM artifacts (the dormant keras path + the
+# attribution endpoint + models.train). Pinned to what the last known-good image
+# shipped (2026-07-26 build, verified 2026-09-19): an unpinned ">=2.10" floated
+# across Keras-3 breaking changes between rebuilds. Torch serves the live
+# options LSTMs (lstm_5d / lstm_jackpot) and the daily stock_predictions sweep.
+tensorflow==2.21.0
 torch==2.8.0
 
 # Technical indicators (fallback in code, not required)

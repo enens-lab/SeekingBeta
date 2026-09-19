@@ -81,7 +81,18 @@ if ! python3 ops/validate_sports_boards.py "$DATA_DIR"; then
 fi
 rm -rf "$SNAPSHOT"
 
-echo "[runpod-sports] rebuild prophecy-api (bake boards) + reload nginx"
-$DC build prophecy-api && $DC up -d --no-deps prophecy-api
-$DC exec -T frontend nginx -s reload || $DC restart frontend
+# Since 2026-09-19 docker-compose bind-mounts pythia_prophecy/frontend/src/data into
+# prophecy-api as /app/frontend_data, so the synced files are live as soon as the
+# 60s board cache expires -- no image rebuild (which the 2 GB box cannot afford
+# daily). Rebuild only when running against an older compose without the mount.
+if docker inspect pythia-prophecy --format '{{range .Mounts}}{{.Destination}}{{"\n"}}{{end}}' 2>/dev/null | grep -qx '/app/frontend_data'; then
+  echo "[runpod-sports] boards bind-mounted into prophecy-api; no rebuild needed"
+  BOARDS_AS_OF=$(curl -s --max-time 60 "http://localhost:8001/api/sports/boards?include_backtests=false&sports=mlb,soccer,tennis" \
+    | python3 -c 'import sys,json;d=json.load(sys.stdin);print(" ".join("%s=%d" % (s, len((d.get(s) or {}).get("upcoming") or [])) for s in ("mlb","soccer","tennis")))' 2>/dev/null || echo "probe failed")
+  echo "[runpod-sports] prophecy upcoming counts: $BOARDS_AS_OF"
+else
+  echo "[runpod-sports] rebuild prophecy-api (bake boards) + reload nginx"
+  $DC build prophecy-api && $DC up -d --no-deps prophecy-api
+  $DC exec -T frontend nginx -s reload || $DC restart frontend
+fi
 echo "[runpod-sports] $(date -u +%FT%TZ) done"

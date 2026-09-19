@@ -22,8 +22,10 @@ if [[ -z "$ALERT_WEBHOOK_URL" && -f .env ]]; then
 fi
 
 SINCE_ARG="${WINDOW_MINUTES}m"
-SERVICES=(prophecy-api divination-api frontend)
-CONTAINERS=(pythia-prophecy pythia-divination pythia-frontend pythia-postgres)
+# divination-api left the web box on 2026-09-19 (stock predictions are a daily
+# RunPod batch that prophecy serves from a file); alert on the three that remain.
+SERVICES=(prophecy-api frontend)
+CONTAINERS=(pythia-prophecy pythia-frontend pythia-postgres)
 
 logs="$(docker compose logs --since "$SINCE_ARG" "${SERVICES[@]}" 2>/dev/null || true)"
 
@@ -69,11 +71,24 @@ if [[ "$SYNTHETIC_PROBE" == "true" ]]; then
     synthetic_failures=$((synthetic_failures + 1))
     synthetic_lines+=("${label}=${code}")
   }
-  # Critical user paths: sign-in (the App Store rejection vector) + sports boards
-  # (both via prophecy-api) and a prediction (divination, nginx-cached).
+  # Critical user paths, all via prophecy-api through nginx: sign-in (the App
+  # Store rejection vector), sports boards, a per-ticker prediction and the
+  # homepage batch (both read the daily sweep file; a 404/503 here means the
+  # sweep is missing or older than STOCK_PREDICTIONS_MAX_AGE_HOURS).
   check_endpoint login "$PROBE_BASE/api/auth/login" -X POST -H "Content-Type: application/json" -d '{}'
   check_endpoint sports "$PROBE_BASE/api/sports/boards?sports=golf&include_backtests=false"
   check_endpoint predict "$PROBE_BASE/predict/lstm_5d/AAPL"
+  check_endpoint homepage "$PROBE_BASE/predict/homepage"
+  # Freshness: the sweep runs weekdays ~22:15 UTC; flag when the served file is
+  # older than STALE_PREDICTIONS_HOURS (default 54h = a missed weekday run,
+  # while a normal weekend gap of ~48h stays quiet).
+  STALE_PREDICTIONS_HOURS="${STALE_PREDICTIONS_HOURS:-54}"
+  pred_age="$(curl -sk --max-time 15 "$PROBE_BASE/predict/cache/status" 2>/dev/null \
+    | python3 -c 'import sys,json;d=json.load(sys.stdin);a=d.get("age_hours");print(int(a) if isinstance(a,(int,float)) else -1)' 2>/dev/null || echo -1)"
+  if [[ "$pred_age" =~ ^[0-9]+$ && "$pred_age" -gt "$STALE_PREDICTIONS_HOURS" ]]; then
+    synthetic_failures=$((synthetic_failures + 1))
+    synthetic_lines+=("predictions_stale=${pred_age}h")
+  fi
 fi
 
 status="ok"

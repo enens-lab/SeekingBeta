@@ -26,9 +26,13 @@ SEASONS = {
     "mlb":    ((3, 20), (11, 5)),    # opening day -> end of postseason
     "soccer": ((1, 1),  (12, 31)),   # leagues + tournaments, effectively year-round
     "tennis": ((1, 1),  (11, 25)),   # Australian Open -> Tour Finals (coarse; tournaments cluster)
-    # basketball: EXCLUDED — NBA CDN 403s RunPod datacenter IPs, so `upcoming` can't
-    #   populate from the worker regardless of season (re-add once that's solved).
-    # football: NFL is ~weekly cadence; golf weekly; olympics static -> weekly cron handles them.
+    # basketball: WNBA May-Oct + NBA mid-Oct-June overlap into a year-round window.
+    #   (The NBA CDN 403 that excluded it was fixed with browser headers, commit 2d71c29.)
+    "basketball": ((1, 1), (12, 31)),
+    # football: NFL week 1 -> Super Bowl. Games are weekly but the runtime feed only
+    #   shows not-yet-started games, so the slate must be re-exported daily in season.
+    "football": ((9, 1), (2, 15)),
+    # golf weekly; olympics static -> the weekly cron handles them.
 }
 def in_season(s, e):
     return (s <= md <= e) if s <= e else (md >= s or md <= e)

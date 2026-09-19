@@ -45,6 +45,11 @@ from pathlib import Path
 
 import runpod
 
+# Bump on every worker-affecting change: the RunPod GitHub build is invisible from
+# the box, so ops polls {"type":"health"} until "build" reports the expected tag
+# before trusting a re-export to carry new code.
+HANDLER_BUILD = "2026-09-19.4"
+
 REPO = Path(os.getenv("PYTHIA_REPO", "/work"))
 DIV = REPO / "pythia_divination"
 OUTPUT_DIR = REPO / "pythia_prophecy" / "frontend" / "src" / "data"
@@ -71,7 +76,13 @@ SPORTS = {
     "soccer":     {"data": ["soccer"],     "cmds": [["python", "-u", "scripts/export_soccer_frontend_data.py"]]},
     "golf":       {"data": ["pga"],        "cmds": [["python", "-u", "scripts/export_frontend_data.py"]]},
     "basketball": {"data": ["basketball"], "cmds": [["python", "-u", "scripts/export_basketball_frontend_data.py"]]},
-    "football":   {"data": ["football"],   "cmds": [["python", "-u", "scripts/export_football_frontend_data.py"]]},
+    # Football: refresh the nflverse tables through the CURRENT season first (the
+    # schedule carries every remaining 2026 game, results land weekly), otherwise the
+    # export only knows the seasons seeded in June and "upcoming" stays empty all year.
+    "football":   {"data": ["football"],   "cmds": [
+        ["python", "-u", "-m", "sports.football.ingest_history", "--season-start", "2020", "--season-end", str(dt.datetime.utcnow().year)],
+        ["python", "-u", "scripts/export_football_frontend_data.py"],
+    ]},
     "olympics":   {"data": ["olympics"],   "cmds": [["python", "-u", "scripts/export_olympics_frontend_data.py"]]},
     "tennis":     {"data": ["wta"],        "cmds": [
         ["python", "-m", "sports.wta.ingest", "--start-year", "2020", "--end-year", str(dt.datetime.utcnow().year), "--force"],
@@ -392,7 +403,7 @@ def handler(job):
         rc, out = _run(["aws", "--version"], REPO, 30)
         return {"ok": rc == 0, "aws_cli": out.strip()[:120], "sports": sorted(SPORTS),
                 "types": ["sports_export", "stock_predictions", "options_archive", "train", "health"],
-                "bucket": S3_BUCKET}
+                "bucket": S3_BUCKET, "build": HANDLER_BUILD}
 
     if jtype == "stock_predictions":
         return _stock_predictions(payload)

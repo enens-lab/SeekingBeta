@@ -165,11 +165,52 @@ def fetch_international_results(since_year: int | None = None) -> pd.DataFrame:
 
 
 # --- ESPN (live/upcoming fixtures) ------------------------------------------
+def _espn_session() -> requests.Session:
+    """ESPN's edge (Akamai) answers 403 to a browser-like User-Agent -- and to any
+    custom token -- when the request comes from a datacenter IP (RunPod, Lightsail,
+    EC2), but 200 to requests' own default UA. Verified 2026-09-19 from the web box:
+    Chrome UA / "SeekingBeta/1.0" -> 403, "python-requests/2.32" / "curl" -> 200. So
+    ESPN calls deliberately do NOT set the browser UA the rest of this client uses
+    for football-data.co.uk."""
+    return requests.Session()
+
+
+def _month_keys(start: str, end: str) -> list[str]:
+    """YYYYMM keys covering [start, end] (both YYYYMMDD)."""
+    y, m = int(start[:4]), int(start[4:6])
+    ey, em = int(end[:4]), int(end[4:6])
+    keys = []
+    while (y, m) <= (ey, em):
+        keys.append(f"{y:04d}{m:02d}")
+        m += 1
+        if m == 13:
+            y, m = y + 1, 1
+    return keys
+
+
 def fetch_espn_scoreboard(espn_slug: str, dates: str | None = None) -> dict[str, Any]:
-    """Raw ESPN scoreboard JSON. ``dates`` is YYYYMMDD or YYYYMMDD-YYYYMMDD."""
+    """Raw ESPN scoreboard JSON. ``dates`` is YYYYMMDD, YYYYMM or YYYYMMDD-YYYYMMDD.
+
+    ESPN stopped accepting the YYYYMMDD-YYYYMMDD range form (HTTP 400 from every
+    network, 2026-09), which is what silently emptied the soccer upcoming boards.
+    A range is now served by querying each covering month (YYYYMM, still accepted)
+    and filtering events to the range client-side; the returned payload keeps the
+    {"events": [...]} shape parse_espn_fixtures expects."""
     url = f"{ESPN_BASE_URL}/{espn_slug}/scoreboard"
+    session = _espn_session()
+    if dates and "-" in dates:
+        start, end = dates.split("-", 1)
+        events: dict[str, dict[str, Any]] = {}
+        for month in _month_keys(start, end):
+            resp = session.get(url, params={"dates": month}, timeout=DEFAULT_TIMEOUT_SECONDS)
+            resp.raise_for_status()
+            for event in resp.json().get("events", []) or []:
+                day = str(event.get("date") or "")[:10].replace("-", "")
+                if start <= day <= end:
+                    events[str(event.get("id") or f"{day}-{len(events)}")] = event
+        return {"events": list(events.values()), "range": [start, end], "months": _month_keys(start, end)}
     params = {"dates": dates} if dates else None
-    resp = _session().get(url, params=params, timeout=DEFAULT_TIMEOUT_SECONDS)
+    resp = session.get(url, params=params, timeout=DEFAULT_TIMEOUT_SECONDS)
     resp.raise_for_status()
     return resp.json()
 
@@ -177,7 +218,7 @@ def fetch_espn_scoreboard(espn_slug: str, dates: str | None = None) -> dict[str,
 def fetch_espn_team_index(espn_slug: str) -> dict[str, str]:
     """Map canonical national-team name -> ESPN team id, for the given league."""
     url = f"{ESPN_BASE_URL}/{espn_slug}/teams"
-    resp = _session().get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
+    resp = _espn_session().get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
     resp.raise_for_status()
     data = resp.json()
     index: dict[str, str] = {}
@@ -198,7 +239,7 @@ def fetch_espn_roster(espn_slug: str, team_id: str) -> list[dict[str, Any]]:
     """Squad list for a team: [{name, position, age, number}]. Empty on failure."""
     url = f"{ESPN_BASE_URL}/{espn_slug}/teams/{team_id}/roster"
     try:
-        resp = _session().get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
+        resp = _espn_session().get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
         resp.raise_for_status()
         athletes = resp.json().get("athletes", []) or []
     except Exception as exc:  # pragma: no cover - network

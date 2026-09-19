@@ -23,7 +23,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-set -a; [ -f .env ] && . ./.env; set +a
+# Import ONLY the AWS credentials from .env. Sourcing the whole file clobbered the
+# S3_BUCKET the cron passes in (the .env S3_BUCKET is the ML-artifacts bucket), so
+# the first run tried to write backups into pythia-ml-artifacts and was denied.
+if [ -f .env ]; then
+  for k in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION; do
+    v="$(grep -E "^${k}=" .env | tail -1 | cut -d= -f2- | tr -d '"' || true)"
+    [ -n "$v" ] && export "$k=$v"
+  done
+fi
 
 S3_BUCKET="${S3_BUCKET:?S3_BUCKET is required}"
 S3_PREFIX="${S3_PREFIX:-postgres}"

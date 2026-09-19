@@ -70,7 +70,9 @@ aws s3 sync "$BACKUP_DIR" "s3://$S3_BUCKET/$S3_PREFIX/" \
 NEWEST="$(ls -t "$BACKUP_DIR"/pythia_*.dump.gz 2>/dev/null | head -1 || true)"
 if [ -n "$NEWEST" ]; then
   KEY="$S3_PREFIX/$(basename "$NEWEST")"
-  if aws s3api head-object --bucket "$S3_BUCKET" --key "$KEY" --region "$AWS_REGION" >/dev/null 2>&1; then
+  # ListBucket is granted to pythia-app; HeadObject (GetObject) is not, so verify
+  # presence via a listing of the exact key rather than head-object.
+  if aws s3 ls "s3://$S3_BUCKET/$KEY" --region "$AWS_REGION" 2>/dev/null | grep -q "$(basename "$NEWEST")"; then
     echo "[upload] ok: newest dump present in S3 ($KEY)"
   else
     echo "[upload] ERROR: newest dump not found in S3 after sync ($KEY)" >&2

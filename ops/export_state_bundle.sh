@@ -13,8 +13,12 @@ set -euo pipefail
 #   pythia_prophecy/secrets/               Play service account, Apple .p8
 #   pythia_prophecy/frontend/src/data/     sports boards (118 MB; or re-sync from S3)
 #   pythia_prophecy/data/predictions/      today's stock sweep
-#   pythia_divination/artifacts/           model artifacts (393 MB; only needed for
-#                                          on-box one-offs; the web path no longer reads them)
+#   pythia_divination/artifacts/           model artifacts, ONLY with INCLUDE_ARTIFACTS=true
+#                                          (393 MB; the web path no longer reads them)
+#   images.tgz                             docker save of seekingbeta-prophecy-api,
+#                                          seekingbeta-frontend, postgres:16-alpine, so the
+#                                          2 GB target never has to `docker compose build`
+#                                          (INCLUDE_IMAGES=false to skip)
 #   volumes/postgres_data.tgz              docker volume seekingbeta_postgres_data (users' compliance
 #                                          prefs, price cache, billing events, ...)
 #   volumes/prophecy_data.tgz              docker volume seekingbeta_prophecy_data (SQLite users DB)
@@ -46,8 +50,21 @@ cp .env "$WORK/bundle/.env"
 [ -d pythia_prophecy/secrets ] && cp -a pythia_prophecy/secrets "$WORK/bundle/secrets"
 [ -d pythia_prophecy/data/predictions ] && cp -a pythia_prophecy/data/predictions "$WORK/bundle/predictions"
 mkdir -p "$WORK/bundle/boards" && cp pythia_prophecy/frontend/src/data/*.json "$WORK/bundle/boards/" 2>/dev/null || true
-if [ "${INCLUDE_ARTIFACTS:-true}" = "true" ] && [ -d pythia_divination/artifacts ]; then
+if [ "${INCLUDE_ARTIFACTS:-false}" = "true" ] && [ -d pythia_divination/artifacts ]; then
   tar czf "$WORK/bundle/artifacts.tgz" -C pythia_divination artifacts
+fi
+if [ "${INCLUDE_IMAGES:-true}" = "true" ]; then
+  # Ship the images that are actually running so the target does not build
+  # anything: the tags compose would otherwise build (<project>-prophecy-api,
+  # <project>-frontend) plus the pinned postgres. `up -d` reuses a present tag.
+  IMAGES=()
+  for img in "${PROJECT}-prophecy-api:latest" "${PROJECT}-frontend:latest" "postgres:16-alpine"; do
+    docker image inspect "$img" >/dev/null 2>&1 && IMAGES+=("$img") || log "image $img not present; skipping"
+  done
+  if [ "${#IMAGES[@]}" -gt 0 ]; then
+    log "docker save ${IMAGES[*]}"
+    docker save "${IMAGES[@]}" | gzip -1 > "$WORK/bundle/images.tgz"
+  fi
 fi
 crontab -l > "$WORK/bundle/crontab.txt" 2>/dev/null || true
 [ -d /home/ec2-user/archive ] && cp -a /home/ec2-user/archive "$WORK/bundle/home/archive"

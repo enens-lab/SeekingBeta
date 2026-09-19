@@ -58,3 +58,6 @@ jackpot_trade_log.csv
 # Daily stock-prediction sweep pulled from S3 by ops/refresh_stock_predictions_runpod.sh
 # and bind-mounted into prophecy-api: data, not code.
 pythia_prophecy/data/predictions/
+
+# Server SSH keys (never commit)
+*.pem

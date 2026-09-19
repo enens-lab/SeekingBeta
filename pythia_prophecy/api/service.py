@@ -914,6 +914,13 @@ DIVINATION_LSTM_TIMEOUT_SECONDS = float(os.getenv("DIVINATION_LSTM_TIMEOUT_SECON
 # fails over reasonably. soccer is now static (not on-demand), so the old
 # thundering-herd reason for a very short timeout is gone. 30s.
 SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_SECONDS", "30"))
+# Basketball live boards come from divination building the NBA/WNBA slate in-process.
+# The NBA CDN returns 403 to this box (and to RunPod), so every call falls back to
+# loading the full normalized nba+wnba tables (~1GB, not released) -- polled every
+# 45s by the warmer, that OOM-killed divination every ~4 minutes for two months
+# (34,070 restarts), for a sport that was off-season and produced zero boards.
+# false => serve the weekly RunPod static files instead (same data users saw anyway).
+SPORTS_BASKETBALL_LIVE_ENABLED = os.getenv("SPORTS_BASKETBALL_LIVE_ENABLED", "true").lower() == "true"
 TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
 TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
@@ -5929,6 +5936,8 @@ async def _assemble_sports_boards(
     async def _basketball_or_none() -> Optional[SportsBoardCollection]:
         if not wants("basketball"):
             return None
+        if not SPORTS_BASKETBALL_LIVE_ENABLED:
+            return None  # -> static basketball_*.json below, no divination call
         return await _live_basketball_board_collection(basketball_date=basketball_date)
 
     async def _football_or_none() -> Optional[SportsBoardCollection]:

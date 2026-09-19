@@ -4253,6 +4253,36 @@ def _is_stripe_resource_missing_error(exc: Exception) -> bool:
     )
 
 
+def _stripe_to_dict(obj: Any) -> dict:
+    """Plain, recursively-plain dict from whatever the Stripe SDK returned.
+
+    Every billing endpoint and the webhook 500'd after the 2026-07-26 image
+    rebuild pulled stripe 15.3.0 (requirements said only ``stripe>=11.6.0``).
+    In v15 ``StripeObject`` is no longer a dict subclass: it has no ``.get()``,
+    ``to_dict_recursive`` is gone, and ``dict(obj)`` raises ``KeyError: 0``. The
+    code relied on all three, so successful Stripe calls crashed on their own
+    results -- silently breaking checkout for every user for eight weeks and
+    dropping every webhook, which is why cancellations never reached the DB.
+
+    Normalize at the call site so downstream code can use dict access safely on
+    any SDK version. Handles: plain dicts, v15 (``to_dict``), pre-v15
+    (``to_dict_recursive``), and generic mappings.
+    """
+    if obj is None:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    for method in ("to_dict", "to_dict_recursive"):
+        fn = getattr(obj, method, None)
+        if callable(fn):
+            result = fn()
+            if isinstance(result, dict):
+                return result
+    if hasattr(obj, "keys") and hasattr(obj, "__getitem__"):
+        return {key: obj[key] for key in obj.keys()}
+    return dict(obj)
+
+
 def _apple_verify_runtime_enabled() -> bool:
     return billing_store_enabled()
 
@@ -4508,7 +4538,7 @@ def _ensure_stripe_customer(user: UserInDB, state: Optional[dict]) -> str:
         name=f"{user.first_name} {user.last_name}".strip(),
         metadata={"user_id": user.id},
     )
-    customer_id = str(customer.get("id"))
+    customer_id = str(_stripe_to_dict(customer).get("id"))
 
     upsert_customer_state(
         user.id,
@@ -4549,6 +4579,7 @@ def _create_checkout_session_for_tier(
         logger.error("Failed creating Stripe checkout session for %s: %s", user.email, e)
         raise HTTPException(502, detail="Could not create checkout session")
 
+    session = _stripe_to_dict(session)
     session_id = str(session.get("id"))
     checkout_url = str(session.get("url") or "")
     if not checkout_url:
@@ -4687,7 +4718,7 @@ async def create_billing_portal_session(user: UserInDB = Depends(require_verifie
         logger.error("Failed creating Stripe billing portal session for %s: %s", user.email, e)
         raise HTTPException(502, detail="Could not create billing portal session")
 
-    return BillingPortalSessionResponse(portal_url=str(session.get("url")))
+    return BillingPortalSessionResponse(portal_url=str(_stripe_to_dict(session).get("url")))
 
 
 def _resolve_subscription_id_for_customer(customer_id: str, state: Optional[dict]) -> Optional[str]:
@@ -4696,7 +4727,7 @@ def _resolve_subscription_id_for_customer(customer_id: str, state: Optional[dict
         try:
             sub = stripe.Subscription.retrieve(subscription_id)
             payload = (
-                sub.to_dict_recursive() if hasattr(sub, "to_dict_recursive") else dict(sub)
+                _stripe_to_dict(sub)
             )
             status = str(payload.get("status") or "").lower()
             if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
@@ -4732,8 +4763,9 @@ def _resolve_subscription_id_for_customer(customer_id: str, state: Optional[dict
 
     try:
         subscriptions = stripe.Subscription.list(customer=customer_id, status="all", limit=25)
-        records = subscriptions.get("data", []) if isinstance(subscriptions, dict) else getattr(subscriptions, "data", [])
+        records = _stripe_to_dict(subscriptions).get("data") or []
         for sub in records or []:
+            sub = _stripe_to_dict(sub)
             status = str(sub.get("status") or "").lower()
             if status in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
                 return str(sub.get("id") or "").strip() or None
@@ -4780,9 +4812,7 @@ async def change_billing_subscription(
         raise HTTPException(502, detail="Could not load current subscription")
 
     payload = (
-        subscription.to_dict_recursive()
-        if hasattr(subscription, "to_dict_recursive")
-        else dict(subscription)
+        _stripe_to_dict(subscription)
     )
     status = str(payload.get("status") or "").lower()
     if status not in ACTIVE_STRIPE_SUBSCRIPTION_STATUSES:
@@ -4818,9 +4848,7 @@ async def change_billing_subscription(
             cancel_at_period_end=False,
         )
         modified_payload = (
-            modified.to_dict_recursive()
-            if hasattr(modified, "to_dict_recursive")
-            else dict(modified)
+            _stripe_to_dict(modified)
         )
         _process_subscription_event(modified_payload, source="stripe_change_subscription")
     except Exception as e:
@@ -4851,9 +4879,7 @@ async def cancel_billing_subscription(user: UserInDB = Depends(require_verified_
             cancel_at_period_end=True,
         )
         payload = (
-            subscription.to_dict_recursive()
-            if hasattr(subscription, "to_dict_recursive")
-            else dict(subscription)
+            _stripe_to_dict(subscription)
         )
         _process_subscription_event(payload, source="stripe_cancel_at_period_end")
     except Exception as e:
@@ -4936,9 +4962,7 @@ def _process_checkout_completed(event_payload: dict) -> None:
                 expand=["items.data.price"],
             )
             payload = (
-                subscription.to_dict_recursive()
-                if hasattr(subscription, "to_dict_recursive")
-                else dict(subscription)
+                _stripe_to_dict(subscription)
             )
             _process_subscription_event(payload, source="stripe_checkout_completed")
             return
@@ -5006,7 +5030,7 @@ async def stripe_webhook(request: Request):
         raise HTTPException(403, detail="Invalid Stripe webhook signature")
 
     event_payload = (
-        event.to_dict_recursive() if hasattr(event, "to_dict_recursive") else dict(event)
+        _stripe_to_dict(event)
     )
 
     event_id = str(event_payload.get("id") or "")

@@ -11,7 +11,7 @@ psycopg2-binary>=2.9.9
 # requests from AWS IPs, which froze company news/profiles at their seed date.
 yfinance==1.2.0
 PyYAML>=6.0.2
-stripe>=11.6.0
+stripe>=15.3.0,<16
 
 # Google Play Developer API (subscription verification + RTDN)
 google-api-python-client>=2.120.0

@@ -921,6 +921,13 @@ SPORTS_MLB_BOARDS_TIMEOUT_SECONDS = float(os.getenv("SPORTS_MLB_BOARDS_TIMEOUT_S
 # (34,070 restarts), for a sport that was off-season and produced zero boards.
 # false => serve the weekly RunPod static files instead (same data users saw anyway).
 SPORTS_BASKETBALL_LIVE_ENABLED = os.getenv("SPORTS_BASKETBALL_LIVE_ENABLED", "true").lower() == "true"
+# Same switch for the other live feeds. Every one of these builds its slate in-process
+# inside divination (MLB needs >3GB on its own); with several reachable at once under a
+# 5GB cap the container cannot stay up. false => the static files the RunPod worker
+# refreshes -- which is exactly what prophecy already serves each time divination dies.
+SPORTS_MLB_LIVE_ENABLED = os.getenv("SPORTS_MLB_LIVE_ENABLED", "true").lower() == "true"
+SPORTS_FOOTBALL_LIVE_ENABLED = os.getenv("SPORTS_FOOTBALL_LIVE_ENABLED", "true").lower() == "true"
+SPORTS_OLYMPICS_LIVE_ENABLED = os.getenv("SPORTS_OLYMPICS_LIVE_ENABLED", "true").lower() == "true"
 TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
 TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
@@ -5943,16 +5950,22 @@ async def _assemble_sports_boards(
     async def _football_or_none() -> Optional[SportsBoardCollection]:
         if not wants("football"):
             return None
+        if not SPORTS_FOOTBALL_LIVE_ENABLED:
+            return None  # -> static football_*.json
         return await _live_football_board_collection(football_date=football_date)
 
     async def _mlb_or_none() -> Optional[SportsBoardCollection]:
         if not wants("mlb"):
             return None
+        if not SPORTS_MLB_LIVE_ENABLED:
+            return None  # -> static mlb_*.json
         return await _live_mlb_board_collection(mlb_date=mlb_date)
 
     async def _olympics_or_none() -> Optional[SportsBoardCollection]:
         if not wants("olympics"):
             return None
+        if not SPORTS_OLYMPICS_LIVE_ENABLED:
+            return None  # -> static olympics_*.json
         return await _live_olympics_board_collection()
 
     basketball_live, football_live, mlb_live, olympics_live = await asyncio.gather(

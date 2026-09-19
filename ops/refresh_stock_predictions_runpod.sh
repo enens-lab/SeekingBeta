@@ -39,6 +39,7 @@ BUCKET="${S3_BUCKET:-pythia-ml-artifacts}"
 REGION="${AWS_REGION:-us-east-1}"
 BOARDS_PREFIX="${BOARDS_S3_PREFIX:-frontend-boards}"
 FILE_NAME="stock_predictions_latest.json"
+[ -n "${STOCK_SWEEP_LIMIT:-}" ] && FILE_NAME="stock_predictions_smoke.json"
 DEST_DIR="pythia_prophecy/data/predictions"
 POLL_INTERVAL="${RUNPOD_POLL_INTERVAL_SEC:-30}"
 POLL_MAX="${RUNPOD_POLL_MAX:-80}"          # 80 * 30s = 40 min ceiling (sweep deadline is 25 min)
@@ -93,7 +94,9 @@ PY
   log "extra tickers (homepage + tiers + watchlists): $EXTRA_COUNT"
 
   # --- 2. submit + poll ---
-  LIMIT_JSON=""; [ -n "${STOCK_SWEEP_LIMIT:-}" ] && LIMIT_JSON=",\"limit\":${STOCK_SWEEP_LIMIT}"
+  # A smoke run (STOCK_SWEEP_LIMIT) writes stock_predictions_smoke.json on the worker
+  # and in S3, is validated with relaxed thresholds, and is NEVER installed.
+  LIMIT_JSON=""; [ -n "${STOCK_SWEEP_LIMIT:-}" ] && LIMIT_JSON=",\"limit\":${STOCK_SWEEP_LIMIT},\"output_name\":\"$FILE_NAME\""
   MODELS_JSON=$(printf '%s' "$MODELS" | python3 -c 'import sys,json;print(json.dumps([m for m in sys.stdin.read().strip().split(",") if m]))')
   HOME_JSON=$(printf '%s' "$HOMEPAGE" | python3 -c 'import sys,json;print(json.dumps([t.strip().upper() for t in sys.stdin.read().strip().split(",") if t.strip()]))')
   BODY="{\"input\":{\"type\":\"stock_predictions\",\"universe\":\"$UNIVERSE\",\"models\":$MODELS_JSON,\"homepage_tickers\":$HOME_JSON,\"tickers\":$EXTRA_JSON$LIMIT_JSON}}"
@@ -129,6 +132,10 @@ aws s3 cp "s3://$BUCKET/$BOARDS_PREFIX/$FILE_NAME" "$TMP/$FILE_NAME" --region "$
 if ! python3 ops/validate_stock_predictions.py "$TMP/$FILE_NAME" ${STOCK_SWEEP_LIMIT:+--min-tickers 1 --min-homepage 0}; then
   log "validation REFUSED the sweep; previous file left in place"
   exit 1
+fi
+if [ -n "${STOCK_SWEEP_LIMIT:-}" ]; then
+  log "smoke run OK ($FILE_NAME validated); NOT installed -- the served file is untouched"
+  exit 0
 fi
 mkdir -p "$DEST_DIR"
 cp "$TMP/$FILE_NAME" "$DEST_DIR/.$FILE_NAME.tmp" && mv -f "$DEST_DIR/.$FILE_NAME.tmp" "$DEST_DIR/$FILE_NAME"

@@ -342,7 +342,12 @@ def _stock_predictions(payload):
     deadline = int(payload.get("deadline_seconds") or STOCK_PREDICTIONS_DEADLINE_SEC)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    output = OUTPUT_DIR / "stock_predictions_latest.json"
+    # Smoke runs (payload.limit) write a differently named file so they never
+    # overwrite the served stock_predictions_latest.json in S3.
+    out_name = os.path.basename(str(payload.get("output_name") or "stock_predictions_latest.json"))
+    if not out_name.endswith(".json"):
+        out_name += ".json"
+    output = OUTPUT_DIR / out_name
     cmd = ["python", "-u", "scripts/export_stock_predictions.py", "--universe", universe,
            "--output", str(output), "--workers", str(workers), "--deadline-seconds", str(deadline)]
     if models:
@@ -372,8 +377,8 @@ def _stock_predictions(payload):
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "exit_code": rc, "summary": summary, "boards": [],
                 "error": f"upload failed: {exc}", "log_tail": log[-1500:]}
-    ok = rc == 0 and "stock_predictions_latest.json" in boards and (summary.get("succeeded") or 0) > 0
-    return {"ok": ok, "exit_code": rc, "summary": summary, "boards": boards,
+    ok = rc == 0 and out_name in boards and (summary.get("succeeded") or 0) > 0
+    return {"ok": ok, "exit_code": rc, "summary": summary, "boards": boards, "output_name": out_name,
             "extra_tickers": len(tickers), "log_tail": log[-1500:]}
 
 

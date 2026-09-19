@@ -352,6 +352,39 @@ rather than trusting it survived. The highest-value single guard is the one that
 catches the silent case: after a build, flag any clean column that is fully null while
 its suffixed twin holds data. That is the precise signature of the MLB starter bug.
 
+## 2d. Ops incident review (2026-09-19)
+
+Two months unattended surfaced five silent failures, none of which raised an alert a
+human read. Full detail in `.claude/logs/2026-09-19.md`; the product-relevant ones:
+
+- **Unpinned `stripe` dependency broke every billing endpoint and the webhook for
+  eight weeks** after an image rebuild pulled a new major version. No web subscription
+  was possible in that window. Fixed and pinned. `tensorflow>=2.10.0` in divination is
+  the same hazard and must be pinned before that image is next rebuilt.
+- **The sports exporters replace graded history instead of appending to it.** The
+  soccer export emits only the current 90-board window, so when the World Cup ended the
+  site's best soccer record (64/90 top picks, 71.1%) vanished and was replaced by an
+  EPL end-of-season slate at 37.8%. That is a direct violation of the ledger principle
+  in Wave 2.1 and must be fixed in the exporters before the ledger ships: every graded
+  board, once published, stays published. The WC record is archived in
+  `archive/soccer_worldcup2026_historical_backtests_20260712.json`.
+- **The degenerate-board tripwire worked exactly as designed, and that was the
+  problem**: a stale corrupt football file left in S3 tripped it daily, so it rolled
+  back *every* sport for 55 days and nobody noticed because rollback is silent. A guard
+  that refuses bad data needs a loud channel when it fires repeatedly.
+- **The model server is gone from the web box (2026-09-19).** Stock predictions are
+  now a weekday batch on RunPod (`stock_predictions` job, ~200 tickers, minutes) that
+  prophecy serves from one file, the same way it serves sports boards; nginx no longer
+  proxies to divination at all. Consequences for the roadmap: (1) a prediction is as
+  fresh as the last close, never intraday, which is honest for 5d/20d horizons and
+  should be stated on the cards ("as of <date> close"); (2) Pro-tier analysis of an
+  arbitrary ticker outside the sweep returns "not in today's sweep, watchlist it for
+  tomorrow" rather than a live number, which is fine while Pro has no subscribers but
+  must be revisited if Pro ever sells; (3) the box drops from ~4.3 GB to ~0.9 GB RSS, so
+  the $70/mo instance becomes a $12 Lightsail (`LIGHTSAIL_MIGRATION.md`); (4) the
+  per-ticker payload shape is frozen (web, iOS and Android parse it loosely), so keep
+  new fields additive.
+
 ## 3. Roadmap
 
 ### Wave 1 — Quick wins (~2–7 days each)

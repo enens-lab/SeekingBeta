@@ -191,6 +191,7 @@ from .social_auth import (
 )
 from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
 from .performance import get_track_record, get_track_record_curve
+from .stock_predictions_store import STORE as STOCK_PREDICTIONS
 from .models import UserInDB
 
 
@@ -951,6 +952,20 @@ PGA_NORMALIZED_DIR = _resolve_pga_normalized_dir()
 LSTM_PROXY_DISABLE_LOCAL_FALLBACK = (
     os.getenv("LSTM_PROXY_DISABLE_LOCAL_FALLBACK", "true").lower() == "true"
 )
+# Stock predictions source. "precomputed" (production since 2026-09-19): every
+# /predict/* route, /api/analyze and the Daily Brief read the daily RunPod sweep file
+# through stock_predictions_store -- there is no divination container on the web box
+# any more. "divination": proxy a live model server at PYTHIA_API_URL (local dev with
+# `docker compose --profile ml`).
+STOCK_PREDICTIONS_MODE = os.getenv("STOCK_PREDICTIONS_MODE", "precomputed").strip().lower()
+STOCK_PREDICTIONS_PRECOMPUTED = STOCK_PREDICTIONS_MODE == "precomputed"
+# /api/market/history (mobile charts + the iOS on-device fallback): "yfinance" fetches
+# the daily bars here and caches them; "divination" proxies the model server.
+MARKET_HISTORY_SOURCE = os.getenv(
+    "MARKET_HISTORY_SOURCE", "yfinance" if STOCK_PREDICTIONS_PRECOMPUTED else "divination"
+).strip().lower()
+MARKET_HISTORY_CACHE_TTL_SECONDS = int(os.getenv("MARKET_HISTORY_CACHE_TTL_SECONDS", "900"))
+_MARKET_HISTORY_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 POLICY_VERSION = os.getenv("POLICY_VERSION", "2026-02-27")
 STRIPE_ENABLED = os.getenv("STRIPE_ENABLED", "false").lower() == "true"
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
@@ -5396,6 +5411,66 @@ def check_tier_access(user: Optional[UserInDB], ticker: str, horizon: str) -> bo
     return ticker.upper() in allowed_stocks_upper
 
 
+def _precomputed_unavailable_detail(model_name: str, ticker: str) -> str:
+    status = STOCK_PREDICTIONS.status()
+    if not status["loaded"]:
+        return f"{model_name} predictions are not available yet (no sweep file on this host)"
+    if not status["available"]:
+        return f"{model_name} predictions are too old to serve (generated {status['generated_at']})"
+    return f"{ticker.upper()} is not in the latest {model_name} sweep (watchlist tickers are added to the next run)"
+
+
+def _serve_precomputed(model_name: str, ticker: str, horizon: str) -> JSONResponse:
+    """Precomputed mode for the per-ticker routes: the sweep's dict verbatim (the
+    shape divination returned, which web/iOS/Android parse), or an honest 404/503.
+    No neutral 0.5 stand-in: a missing ticker should read as missing, and the iOS
+    app uses the error to switch to its on-device model."""
+    row = STOCK_PREDICTIONS.get(model_name, ticker)
+    if row:
+        _cache_last_close_for_dashboard(
+            ticker=ticker.upper(),
+            horizon=horizon,
+            last_close=_sanitize_last_close(row.get("last_close"), default=0.0),
+            source=f"precomputed:{model_name}",
+        )
+        return JSONResponse(row)
+    detail = _precomputed_unavailable_detail(model_name, ticker)
+    raise HTTPException(404 if STOCK_PREDICTIONS.available() else 503, detail=detail)
+
+
+# Declared BEFORE /predict/{ticker}: Starlette matches routes in order and the
+# single-segment catch-all would otherwise swallow "homepage" as a ticker.
+@app.get("/predict/homepage", tags=["Predictions"])
+async def predict_homepage(tickers: Optional[str] = None, models: Optional[str] = None):
+    """Batch endpoint for the homepage cards, in divination's /predict/homepage shape
+    ({available, as_of, data_source, cache_only, rows[{model, predictions[], failures[]}]})."""
+    requested_tickers = [t.strip().upper() for t in tickers.split(",") if t.strip()] if tickers else None
+    requested_models = [m.strip() for m in models.split(",") if m.strip()] if models else None
+    if STOCK_PREDICTIONS_PRECOMPUTED:
+        return JSONResponse(STOCK_PREDICTIONS.homepage(requested_tickers, requested_models))
+    try:
+        params = {k: v for k, v in (("tickers", tickers), ("models", models)) if v}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{DIVINATION_API_URL}/predict/homepage", params=params)
+            return JSONResponse(response.json(), status_code=response.status_code)
+    except Exception as exc:
+        raise HTTPException(503, detail=f"Homepage predictions unavailable: {exc}") from exc
+
+
+@app.get("/predict/cache/status", tags=["Predictions"])
+async def predict_cache_status():
+    """Freshness of the served sweep (ops probe; mirrors divination's old cache status)."""
+    return JSONResponse({"mode": STOCK_PREDICTIONS_MODE, **STOCK_PREDICTIONS.status()})
+
+
+@app.get("/predict/lstm/{model_name}/{ticker}/attribution", tags=["Predictions"])
+async def predict_lstm_attribution(model_name: str, ticker: str):
+    """Integrated-gradients attribution needs the TensorFlow model in-process. The
+    torch options models never supported it (divination answered 501 as well) and
+    there is no model server on the box; the web card already renders the 501."""
+    raise HTTPException(501, detail=f"Attribution is not available for {model_name}")
+
+
 @app.get("/predict/{ticker}", response_model=PredictResponse, tags=["Predictions"])
 async def predict(
     ticker: str,
@@ -5424,6 +5499,11 @@ async def predict(
             403,
             detail=f"Your {tier_name} tier doesn't include access to this ticker/horizon. Please upgrade.",
         )
+
+    # Precomputed mode: the sklearn/keras model zoo is gone with divination; the
+    # horizon picks the torch model that covers it (5d -> lstm_5d, 20d -> lstm_jackpot).
+    if STOCK_PREDICTIONS_PRECOMPUTED:
+        return _serve_precomputed("lstm_jackpot" if canonical_horizon == "20d" else "lstm_5d", ticker, canonical_horizon)
 
     try:
         # Use divination backend for model-specific predictions
@@ -5493,7 +5573,9 @@ async def predict(
 
 @app.get("/predict/lstm_5d/{ticker}", response_model=PredictResponse)
 async def predict_lstm_5d(ticker: str):
-    """Proxy LSTM 5-Day predictions from divination backend, or use fallback."""
+    """LSTM 5-Day prediction: the daily sweep file (precomputed mode) or the divination proxy."""
+    if STOCK_PREDICTIONS_PRECOMPUTED:
+        return _serve_precomputed("lstm_5d", ticker, "5d")
     upstream_error = "unknown upstream error"
     try:
         async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
@@ -5567,7 +5649,9 @@ async def predict_lstm_5d(ticker: str):
 
 @app.get("/predict/lstm_jackpot/{ticker}", response_model=PredictResponse)
 async def predict_lstm_jackpot(ticker: str):
-    """Proxy LSTM Jackpot predictions from divination backend, or use fallback."""
+    """LSTM Jackpot prediction: the daily sweep file (precomputed mode) or the divination proxy."""
+    if STOCK_PREDICTIONS_PRECOMPUTED:
+        return _serve_precomputed("lstm_jackpot", ticker, "20d")
     upstream_error = "unknown upstream error"
     try:
         async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
@@ -5639,9 +5723,11 @@ async def predict_lstm_jackpot(ticker: str):
 
 @app.get("/predict/lstm_quant/{ticker}", response_model=PredictResponse)
 async def predict_lstm_quant(ticker: str):
-    """Proxy the options-flow quant LSTM (5-day) from divination. No local fallback
-    (it's a torch model with no sklearn/keras equivalent here); on upstream failure
-    use the cached-price fallback or 503."""
+    """Options-flow quant LSTM (5-day; byte-identical to lstm_5d): the daily sweep file
+    (precomputed mode) or the divination proxy. No local fallback (torch model with no
+    sklearn/keras equivalent here); on upstream failure use the cached-price fallback or 503."""
+    if STOCK_PREDICTIONS_PRECOMPUTED:
+        return _serve_precomputed("lstm_quant", ticker, "5d")
     upstream_error = "unknown upstream error"
     try:
         async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
@@ -5680,13 +5766,72 @@ async def predict_lstm_quant(ticker: str):
     raise HTTPException(503, detail=f"LSTM Quant upstream unavailable: {upstream_error}")
 
 
+def _fetch_daily_bars_yfinance(ticker: str, limit: int) -> list[dict[str, Any]]:
+    """Last `limit` daily bars for a ticker via yfinance (auto-adjusted, like divination's
+    Yahoo path). Runs in a worker thread; raises on no data."""
+    import yfinance as yf
+
+    symbol = ticker.strip().upper()
+    # Calendar-day window with headroom for weekends/holidays (~252 trading days/yr).
+    start = (datetime.utcnow() - timedelta(days=int(limit * 1.6) + 14)).date()
+    frame = yf.download(symbol, start=start.isoformat(), interval="1d", auto_adjust=True,
+                        progress=False, threads=False)
+    if frame is None or len(frame) == 0:
+        raise ValueError(f"No daily bars returned for {symbol}")
+    if getattr(frame.columns, "nlevels", 1) > 1:  # yfinance>=0.2.5x returns (field, ticker) columns
+        frame = frame.droplevel(1, axis=1)
+    frame = frame.dropna(subset=["Close"]).sort_index().tail(limit)
+    bars = []
+    for index, row in frame.iterrows():
+        stamp = index.to_pydatetime()
+        stamp = stamp.replace(tzinfo=timezone.utc) if stamp.tzinfo is None else stamp.astimezone(timezone.utc)
+        bars.append({
+            "date": stamp.isoformat().replace("+00:00", "Z"),
+            "open": float(row["Open"]),
+            "high": float(row["High"]),
+            "low": float(row["Low"]),
+            "close": float(row["Close"]),
+            "volume": float(row.get("Volume", 0.0) or 0.0),
+        })
+    return bars
+
+
+async def _market_history_from_yfinance(ticker: str, limit: int) -> MarketHistoryResponse:
+    import asyncio
+
+    symbol = ticker.strip().upper()
+    key = f"{symbol}:{limit}"
+    now = time.time()
+    cached = _MARKET_HISTORY_CACHE.get(key)
+    if cached and now - cached[0] < MARKET_HISTORY_CACHE_TTL_SECONDS:
+        return MarketHistoryResponse(ticker=symbol, bars=cached[1], supplemental_context=None)
+    try:
+        loop = asyncio.get_running_loop()
+        bars = await loop.run_in_executor(None, _fetch_daily_bars_yfinance, symbol, limit)
+    except Exception as exc:
+        logger.warning("Market history (yfinance) failed for %s: %s", symbol, exc)
+        if cached:  # serve stale rather than nothing
+            return MarketHistoryResponse(ticker=symbol, bars=cached[1], supplemental_context=None)
+        raise HTTPException(503, detail=f"Market history unavailable: {exc}") from exc
+    if len(_MARKET_HISTORY_CACHE) > 512:
+        _MARKET_HISTORY_CACHE.clear()
+    _MARKET_HISTORY_CACHE[key] = (now, bars)
+    return MarketHistoryResponse(ticker=symbol, bars=bars, supplemental_context=None)
+
+
 @app.get("/api/market/history/{ticker}", response_model=MarketHistoryResponse, tags=["Market"])
 async def market_history(
     ticker: str,
     interval: str = Query(default="1d"),
     limit: int = Query(default=252, ge=60, le=1000),
 ):
-    """Proxy mobile-ready daily OHLCV history from divination while preserving one public base URL."""
+    """Mobile-ready daily OHLCV history (oldest -> newest): fetched here from Yahoo
+    (MARKET_HISTORY_SOURCE=yfinance, the production default now that no model server
+    runs on the box) or proxied from divination while preserving one public base URL."""
+    if interval != "1d":
+        raise HTTPException(400, detail="Only 1d interval is supported for mobile LSTM inference")
+    if MARKET_HISTORY_SOURCE == "yfinance":
+        return await _market_history_from_yfinance(ticker, limit)
     try:
         async with httpx.AsyncClient(timeout=DIVINATION_LSTM_TIMEOUT_SECONDS) as client:
             response = await client.get(
@@ -5738,7 +5883,8 @@ def healthz():
         "version": "0.1.0",
         "universe": UNIVERSE,
         "data_source": DATA_SOURCE if PYTHIA_AVAILABLE else "demo",
-        "ml_models_available": PYTHIA_AVAILABLE,
+        "ml_models_available": PYTHIA_AVAILABLE or (STOCK_PREDICTIONS_PRECOMPUTED and STOCK_PREDICTIONS.available()),
+        "stock_predictions": {"mode": STOCK_PREDICTIONS_MODE, **STOCK_PREDICTIONS.status()},
     })
 
 
@@ -5753,7 +5899,7 @@ def status():
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "components": {
             "auth": "operational",
-            "predictions": "operational" if PYTHIA_AVAILABLE else "degraded",
+            "predictions": "operational" if (PYTHIA_AVAILABLE or (STOCK_PREDICTIONS_PRECOMPUTED and STOCK_PREDICTIONS.available())) else "degraded",
             "database": "operational",
             "email": "operational",
         },
@@ -5813,13 +5959,19 @@ async def brief_today(force_refresh: bool = False):
         logger.warning(f"Daily brief: sports boards unavailable: {exc}")
 
     homepage_payload = None
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{DIVINATION_API_URL}/predict/homepage")
-            if response.status_code == 200:
-                homepage_payload = response.json()
-    except Exception as exc:
-        logger.warning(f"Daily brief: divination homepage unavailable: {exc}")
+    if STOCK_PREDICTIONS_PRECOMPUTED:
+        try:
+            homepage_payload = STOCK_PREDICTIONS.homepage()
+        except Exception as exc:
+            logger.warning(f"Daily brief: precomputed homepage unavailable: {exc}")
+    else:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{DIVINATION_API_URL}/predict/homepage")
+                if response.status_code == 200:
+                    homepage_payload = response.json()
+        except Exception as exc:
+            logger.warning(f"Daily brief: divination homepage unavailable: {exc}")
 
     track_record = None
     try:
@@ -6797,17 +6949,26 @@ async def run_analysis(
             detail=f"Tickers not available in your tier: {', '.join(invalid_tickers)}",
         )
 
-    # Run analysis for each ticker against divination so selected model/task are respected.
+    # Run analysis for each ticker. Precomputed mode reads the daily sweep (the only
+    # models any tier exposes are the torch LSTMs); divination mode proxies per model.
     results = []
     async with httpx.AsyncClient(timeout=30.0) as client:
         for ticker in data.tickers:
             try:
-                if data.model in ("lstm_5d", "lstm_jackpot", "lstm_quant"):
+                if STOCK_PREDICTIONS_PRECOMPUTED:
+                    model_name = data.model if data.model in ("lstm_5d", "lstm_jackpot", "lstm_quant") else (
+                        "lstm_jackpot" if canonical_horizon == "20d" else "lstm_5d")
+                    payload = STOCK_PREDICTIONS.get(model_name, ticker)
+                    if not payload:
+                        raise HTTPException(404, detail=_precomputed_unavailable_detail(model_name, ticker))
+                elif data.model in ("lstm_5d", "lstm_jackpot", "lstm_quant"):
                     # Torch options models: served by their dedicated endpoints, not the
                     # generic /predict/{ticker} (keras-registry) path.
                     response = await client.get(
                         f"{DIVINATION_API_URL}/predict/{data.model}/{ticker.upper()}",
                     )
+                    response.raise_for_status()
+                    payload = response.json()
                 else:
                     response = await client.get(
                         f"{DIVINATION_API_URL}/predict/{ticker.upper()}",
@@ -6818,8 +6979,8 @@ async def run_analysis(
                             "period": data.period,
                         },
                     )
-                response.raise_for_status()
-                payload = response.json()
+                    response.raise_for_status()
+                    payload = response.json()
 
                 results.append(AnalyzeResultItem(
                     ticker=ticker.upper(),

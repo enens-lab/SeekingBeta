@@ -138,11 +138,17 @@ def summarize_stocks(homepage_payload: Any, track_record: Any, model: str = "lst
             for pred in _get(row, "predictions") or []:
                 signal = str(_get(pred, "signal") or "hold").lower()
                 counts[signal] = counts.get(signal, 0) + 1
+                # The torch models report `probability` as a 0-100 percent and no
+                # `prob_up`; normalize so the conviction sort below actually sorts.
+                prob_up = _get(pred, "prob_up")
+                if prob_up is None:
+                    pct = _get(pred, "probability")
+                    prob_up = (float(pct) / 100.0) if isinstance(pct, (int, float)) else None
                 signals.append(
                     {
                         "ticker": _get(pred, "ticker"),
                         "signal": signal,
-                        "prob_up": _get(pred, "prob_up"),
+                        "prob_up": prob_up,
                     }
                 )
     # Strongest conviction first (distance from coin-flip), tolerant of nulls.

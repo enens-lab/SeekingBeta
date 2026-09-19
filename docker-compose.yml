@@ -18,8 +18,15 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # ML Predictions Backend (pythia_divination)
+  # ML Predictions Backend (pythia_divination).
+  # NOT started by default since 2026-09-19 (profile "ml"). Stock predictions come
+  # from the daily RunPod sweep (runpod/sports/handler.py `stock_predictions`) and
+  # the live sports slates from the RunPod exports; prophecy-api serves both from
+  # files. Keeping the definition lets local dev run `docker compose --profile ml up`
+  # against a live model server, and lets the box run one-off exports via
+  # `docker compose run --rm divination-api ...` (ops/refresh_options_runpod.sh).
   divination-api:
+    profiles: ["ml"]
     build:
       context: ./pythia_divination
       dockerfile: Dockerfile
@@ -224,6 +231,17 @@ services:
       # Public base for the Facebook data-deletion status URL Meta shows users.
       DATA_DELETION_STATUS_BASE_URL: ${DATA_DELETION_STATUS_BASE_URL:-https://seekingbeta.ai}
       PYTHIA_API_URL: http://divination-api:8000
+      # Stock predictions: "precomputed" serves /predict/*, /api/analyze and the
+      # Daily Brief from the daily RunPod sweep file (bind-mounted below, refreshed
+      # by ops/refresh_stock_predictions_runpod.sh, no rebuild); "divination"
+      # proxies a live model server at PYTHIA_API_URL (local dev with --profile ml).
+      STOCK_PREDICTIONS_MODE: ${STOCK_PREDICTIONS_MODE:-precomputed}
+      STOCK_PREDICTIONS_PATH: /app/data/predictions/stock_predictions_latest.json
+      STOCK_PREDICTIONS_MAX_AGE_HOURS: ${STOCK_PREDICTIONS_MAX_AGE_HOURS:-96}
+      STOCK_PREDICTIONS_STALE_AFTER_HOURS: ${STOCK_PREDICTIONS_STALE_AFTER_HOURS:-30}
+      # /api/market/history for the mobile apps: "yfinance" fetches bars here
+      # (cached), "divination" proxies the model server.
+      MARKET_HISTORY_SOURCE: ${MARKET_HISTORY_SOURCE:-yfinance}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-pythia_secret}@postgres:5432/${POSTGRES_DB:-pythia}
       ALPACA_KEY_ID: ${ALPACA_KEY_ID:-}
       ALPACA_SECRET_KEY: ${ALPACA_SECRET_KEY:-}
@@ -246,10 +264,19 @@ services:
     volumes:
       - prophecy_data:/app/data
       - ./pythia_prophecy/data/backtests:/app/data/backtests:ro
+      # Daily stock-prediction sweep from RunPod (ops/refresh_stock_predictions_runpod.sh
+      # drops the validated file here; the store re-reads it on mtime change).
+      - ./pythia_prophecy/data/predictions:/app/data/predictions:ro
+      # Sports boards. The Dockerfile also bakes this dir at build time; mounting it
+      # on top means a board refresh is a file sync, not a `docker compose build`
+      # (which the 2 GB Lightsail box cannot afford daily). ops/refresh_sports_runpod.sh
+      # detects the mount and skips the rebuild.
+      - ./pythia_prophecy/frontend/src/data:/app/frontend_data:ro
       # Google Play service-account JSON (gitignored, placed on the host only).
       - ./pythia_prophecy/secrets:/app/secrets:ro
     depends_on:
-      - divination-api
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8001/healthz', timeout=5)"]
       interval: 30s
@@ -284,7 +311,6 @@ services:
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - divination-api
       - prophecy-api
     healthcheck:
       # Probe HTTPS directly: nginx 301-redirects http->https, and wget follows

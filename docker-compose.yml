@@ -133,6 +133,10 @@ services:
       dockerfile: Dockerfile
     container_name: pythia-prophecy
     environment:
+      # Set false on hosts the NBA CDN 403s (this box, RunPod): serves basketball
+      # from the weekly static files instead of divination's in-process live builder,
+      # which OOM-killed divination every ~4 min for two months (see .claude/logs/2026-09-19.md).
+      SPORTS_BASKETBALL_LIVE_ENABLED: ${SPORTS_BASKETBALL_LIVE_ENABLED:-true}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change_me_in_production}
       EMAIL_DEV_MODE: ${EMAIL_DEV_MODE:-true}

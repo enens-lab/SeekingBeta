@@ -43,6 +43,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import socket
 import sys
 import threading
@@ -97,12 +98,17 @@ _FORWARD_LOCK = threading.Lock()
 
 # ── universe ──────────────────────────────────────────────────────────────────
 
+_TICKER_RE = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
+
+
 def _clean_tickers(values) -> List[str]:
+    """Upper-case, de-duplicate, and drop anything that is not ticker-shaped (a
+    stray log line in a --tickers-file must not turn into six failed fetches)."""
     out: List[str] = []
     seen = set()
     for raw in values or []:
         t = str(raw or "").strip().upper()
-        if not t or t in seen or len(t) > 12:
+        if not t or t in seen or not _TICKER_RE.match(t):
             continue
         seen.add(t)
         out.append(t)

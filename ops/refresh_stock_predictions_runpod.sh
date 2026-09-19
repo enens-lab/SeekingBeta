@@ -56,7 +56,9 @@ if [ "$SYNC_ONLY" -eq 0 ]; then
   BASE="https://api.runpod.ai/v2/${RUNPOD_SPORTS_ENDPOINT_ID}"
 
   # --- 1. extra tickers: homepage + tier lists + user watchlists (SQLite in prophecy) ---
-  EXTRA_JSON=$($DC exec -T prophecy-api python - "$HOMEPAGE" <<'PY' 2>/dev/null || echo '[]'
+  # Importing api.service emits JSON log lines on stdout, so keep only the LAST
+  # line (the ticker list) and let everything else go to stderr/the log.
+  EXTRA_JSON=$($DC exec -T prophecy-api python - "$HOMEPAGE" <<'PY' 2>/dev/null | tail -1 || echo '[]'
 import json, sqlite3, sys
 tickers = [t.strip().upper() for t in sys.argv[1].split(",") if t.strip()]
 try:
@@ -83,7 +85,11 @@ for t in tickers:
 print(json.dumps(out))
 PY
 )
-  EXTRA_COUNT=$(printf '%s' "$EXTRA_JSON" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)))' 2>/dev/null || echo 0)
+  if ! printf '%s' "$EXTRA_JSON" | python3 -c 'import sys,json; v=json.load(sys.stdin); assert isinstance(v, list)' 2>/dev/null; then
+    log "WARN: extra-ticker collection returned non-JSON (${EXTRA_JSON:0:80}); continuing with the homepage list only"
+    EXTRA_JSON=$(printf '%s' "$HOMEPAGE" | python3 -c 'import sys,json;print(json.dumps([t.strip().upper() for t in sys.stdin.read().split(",") if t.strip()]))')
+  fi
+  EXTRA_COUNT=$(printf '%s' "$EXTRA_JSON" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)))')
   log "extra tickers (homepage + tiers + watchlists): $EXTRA_COUNT"
 
   # --- 2. submit + poll ---

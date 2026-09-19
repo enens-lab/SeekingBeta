@@ -83,6 +83,17 @@ Key capabilities:
 └─────────────────────────────────────────────────────────────┘
 ```
 
+**Production topology (since 2026-09-19):** the diagram above is the local-dev
+shape (`docker compose --profile ml up`). In production `pythia_divination` does
+NOT run as a service. Its work is done in batch on the RunPod serverless worker
+(`runpod/sports/`): the daily `stock_predictions` LSTM sweep and the sports
+exports, both published as JSON to S3. `pythia_prophecy` serves `/predict/*`,
+`/api/analyze`, the Daily Brief and the sports boards from those files
+(`api/stock_predictions_store.py`, bind-mounted `data/predictions/` and
+`frontend/src/data/`), and fetches `/api/market/history` from Yahoo itself. The
+web box is therefore nginx + prophecy-api + postgres (~1 GB RSS), sized for a
+2 GB Lightsail (`LIGHTSAIL_MIGRATION.md`).
+
 ## Quick Start
 
 ```bash

@@ -95,6 +95,16 @@ def prepare_games(
             else:
                 merged[column] = merged[detail_column]
 
+    # Normalize the pitcher-ID dtype ONCE, here, rather than at each downstream join.
+    # An all-null column arrives as object, and pandas refuses object-to-int64 merges
+    # outright ("You are trying to merge on object and int64 columns"), which broke the
+    # pitcher-profile joins further down this same function. float64 merges cleanly
+    # against both int64 and float64, so fixing it at the source covers every consumer.
+    for side in ("away", "home"):
+        column = f"{side}_probable_pitcher_id"
+        if column in merged.columns:
+            merged[column] = pd.to_numeric(merged[column], errors="coerce").astype("float64")
+
     merged["home_win"] = np.where(
         merged["winner_team_id"].notna(),
         (merged["winner_team_id"] == merged["home_team_id"]).astype(float),

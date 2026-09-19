@@ -49,6 +49,14 @@ if [ -n "$S3_KMS_KEY_ARN" ]; then
   SSE_ARGS=(--sse aws:kms --sse-kms-key-id "$S3_KMS_KEY_ARN")
 fi
 
+# The pythia-app IAM user is allowed a plain PutObject but not the multipart
+# upload flow, so anything above the CLI's 8MB default threshold (the ~13MB
+# postgres dumps) was denied while the ~4MB SQLite copies went through. Raise the
+# threshold via a throwaway CLI config rather than touching ~/.aws on the host.
+AWS_CLI_TMP="$(mktemp -d)"; trap 'rm -rf "$AWS_CLI_TMP"' EXIT
+printf '[default]\ns3 =\n  multipart_threshold = 256MB\n' > "$AWS_CLI_TMP/config"
+export AWS_CONFIG_FILE="$AWS_CLI_TMP/config"
+
 # sync is incremental: only files not yet in S3 are transferred, so this stays
 # cheap even though it runs hourly. Deletions are never propagated (the IAM user
 # cannot delete anyway), so S3 keeps history beyond local retention.

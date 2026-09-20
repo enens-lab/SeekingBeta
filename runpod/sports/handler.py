@@ -48,7 +48,7 @@ import runpod
 # Bump on every worker-affecting change: the RunPod GitHub build is invisible from
 # the box, so ops polls {"type":"health"} until "build" reports the expected tag
 # before trusting a re-export to carry new code.
-HANDLER_BUILD = "2026-09-19.5"
+HANDLER_BUILD = "2026-09-19.6"
 
 REPO = Path(os.getenv("PYTHIA_REPO", "/work"))
 DIV = REPO / "pythia_divination"
@@ -79,8 +79,13 @@ SPORTS = {
     # Football: refresh the nflverse tables through the CURRENT season first (the
     # schedule carries every remaining 2026 game, results land weekly), otherwise the
     # export only knows the seasons seeded in June and "upcoming" stays empty all year.
+    # The export reads DERIVED tables (football_team_game_logs / qb_week_logs /
+    # roster_week_summaries _latest) that only build_training_dataset writes, so the
+    # chain is ingest -> build -> export like tennis; without the build step every
+    # 2026 board shipped with "Record pending" and all-zero QB radars (2026-09-20).
     "football":   {"data": ["football"],   "cmds": [
         ["python", "-u", "-m", "sports.football.ingest_history", "--season-start", "2020", "--season-end", str(dt.datetime.utcnow().year)],
+        ["python", "-u", "-m", "sports.football.build_training_dataset", "--season-start", "2020", "--season-end", str(dt.datetime.utcnow().year)],
         ["python", "-u", "scripts/export_football_frontend_data.py"],
     ]},
     "olympics":   {"data": ["olympics"],   "cmds": [["python", "-u", "scripts/export_olympics_frontend_data.py"]]},

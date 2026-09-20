@@ -28,6 +28,8 @@ from sports.football.feature_engineering import (
     attach_pregame_qb_features,
     attach_pregame_roster_features,
     attach_pregame_team_features,
+    build_qb_week_logs,
+    build_team_game_logs,
     prepare_games,
 )
 from sports.pga.storage import read_preferred_table
@@ -351,7 +353,12 @@ def _build_roster_history_map(weekly_rosters: pd.DataFrame, player_trends: pd.Da
     roster = roster.sort_values(["player_id", "sort_key", "team"]).reset_index(drop=True)
 
     if not player_trends.empty:
-        history = player_trends.sort_values(["player_id", "sort_key", "game_id"]).copy()
+        # merge_asof needs BOTH frames globally sorted on the `on` key (sort_key),
+        # not grouped by player: sorting by player_id first raised "left keys must be
+        # sorted", the map came back empty, and every board showed "Projected skill
+        # players are still populating."
+        roster = roster.sort_values(["sort_key", "player_id", "team"], kind="mergesort").reset_index(drop=True)
+        history = player_trends.sort_values(["sort_key", "player_id", "game_id"], kind="mergesort").copy()
         keep_columns = [
             "player_id", "sort_key", "player_name", "headshot_url", "position", "team",
             "passing_yards_avg_last_3", "passing_tds_avg_last_3", "passing_epa_avg_last_3", "passing_cpoe_avg_last_3",
@@ -570,6 +577,9 @@ def _build_live_team_details(row: Any, side: str) -> dict[str, Any]:
         record = f"{wins}-{losses}"
     else:
         record = None
+    # Prefer the season-to-date record computed by _attach_season_records (live boards);
+    # the cumulative figure above is the model's feature, not what a fan expects to read.
+    record = _optional_text(getattr(row, f"{side}_season_record", None)) or record
 
     recent_form_parts: list[str] = []
     win_last_5 = _value(row, f"{side}_team_won_avg_last_5")
@@ -679,13 +689,114 @@ def _build_live_predictions(row: Any) -> list[dict[str, Any]]:
     ]
 
 
+def _with_upcoming_qb_rows(player_week: pd.DataFrame, schedule: pd.DataFrame) -> pd.DataFrame:
+    """Seed the QB week stats with one empty row per (upcoming game, side) for the
+    listed starter, so build_qb_week_logs' shift(1).rolling() lands the QB's PRIOR
+    form on the upcoming game_id and attach_pregame_qb_features (a game_id join)
+    finds it. Unplayed games have no stats row otherwise, and the join returned
+    NaN for every QB feature (all-zero radars, "QB EPA +0.0")."""
+    if player_week.empty or schedule.empty:
+        return player_week
+    existing = set(zip(player_week["game_id"].astype(str), player_week["player_id"].astype(str)))
+    rows = []
+    for game in schedule.to_dict(orient="records"):
+        for side in ("away", "home"):
+            qb_id = game.get(f"{side}_qb_id")
+            if qb_id is None or (isinstance(qb_id, float) and np.isnan(qb_id)) or not str(qb_id).strip():
+                continue
+            if (str(game["game_id"]), str(qb_id)) in existing:
+                continue
+            rows.append({
+                "season": game["season"], "week": game["week"], "game_id": game["game_id"],
+                "player_id": str(qb_id), "player_name": game.get(f"{side}_qb_name"), "team": game[f"{side}_team"],
+                "position": "QB", "position_group": "QB", "season_type": "REG",
+            })
+    if not rows:
+        return player_week
+    return pd.concat([player_week, pd.DataFrame(rows)], ignore_index=True, sort=False)
+
+
+def _fill_roster_features_asof(games: pd.DataFrame, roster_summaries: pd.DataFrame) -> pd.DataFrame:
+    """nflverse publishes a week's rosters shortly before it is played, so games one
+    or two weeks out have no (season, week, team) summary yet. Fill those sides from
+    the team's latest earlier week instead of reporting "0 inactive | 0 reserve"."""
+    if games.empty or roster_summaries.empty:
+        return games
+    feature_columns = [c for c in roster_summaries.columns if c not in {"season", "week", "team"}]
+    summaries = roster_summaries.copy()
+    summaries["season"] = pd.to_numeric(summaries["season"], errors="coerce")
+    summaries["week"] = pd.to_numeric(summaries["week"], errors="coerce")
+    summaries = summaries.sort_values(["team", "season", "week"])
+    out = games.copy()
+    for side in ("away", "home"):
+        cols = [f"{side}_roster_{c}" for c in feature_columns if f"{side}_roster_{c}" in out.columns]
+        if not cols:
+            continue
+        for idx, row in out.iterrows():
+            if not out.loc[idx, cols].isna().all():
+                continue
+            team = str(row.get(f"{side}_team"))
+            season, week = pd.to_numeric(row.get("season"), errors="coerce"), pd.to_numeric(row.get("week"), errors="coerce")
+            candidates = summaries.loc[(summaries["team"].astype(str) == team)
+                                       & ((summaries["season"] < season) | ((summaries["season"] == season) & (summaries["week"] < week)))]
+            if candidates.empty:
+                continue
+            latest = candidates.iloc[-1]
+            for c in feature_columns:
+                col = f"{side}_roster_{c}"
+                if col in out.columns:
+                    out.loc[idx, col] = latest[c]
+    return out
+
+
+def _attach_season_records(games: pd.DataFrame, team_logs: pd.DataFrame) -> pd.DataFrame:
+    """Season-to-date W-L per side for DISPLAY. The model feature win_pct_prior is
+    cumulative since 2020 (so a week-2 card read "32-70"); the card should say the
+    current season's record before this game."""
+    if games.empty or team_logs.empty or "won" not in team_logs.columns:
+        return games
+    logs = team_logs.loc[team_logs["won"].notna(), ["team_key", "season", "official_date", "won"]].copy()
+    logs["season"] = pd.to_numeric(logs["season"], errors="coerce")
+    out = games.copy()
+    for side in ("away", "home"):
+        records = []
+        for row in out.itertuples(index=False):
+            season = pd.to_numeric(getattr(row, "season"), errors="coerce")
+            date = getattr(row, "official_date")
+            team = str(getattr(row, f"{side}_team"))
+            sub = logs.loc[(logs["team_key"] == team) & (logs["season"] == season) & (logs["official_date"] < date)]
+            wins = int(pd.to_numeric(sub["won"], errors="coerce").fillna(0).sum())
+            records.append(f"{wins}-{len(sub) - wins}")
+        out[f"{side}_season_record"] = records
+    return out
+
+
+def _lineup_asof(lineup_map: dict[tuple[int, int, str], list[dict[str, Any]]], season: int, week: int, team: str) -> list[dict[str, Any]]:
+    """Exact (season, week, team) lineup, else the team's latest earlier week."""
+    exact = lineup_map.get((season, week, team))
+    if exact:
+        return exact
+    earlier = [key for key in lineup_map if key[2] == team and (key[0], key[1]) < (season, week) and lineup_map[key]]
+    if not earlier:
+        return []
+    return lineup_map[max(earlier)]
+
+
 def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
     games_df = _load_table_optional("football_games_latest")
-    team_logs = _load_table_optional("football_team_game_logs_latest")
-    qb_logs = _load_table_optional("football_qb_week_logs_latest")
+    team_week = _load_table_optional("football_team_week_stats_latest")
     roster_summaries = _load_table_optional("football_roster_week_summaries_latest")
     player_week = _load_table_optional("football_player_week_stats_latest")
     weekly_rosters = _load_table_optional("football_weekly_rosters_latest")
+
+    # Team form for an UNPLAYED game: build the game logs from the whole schedule
+    # (played + upcoming) rather than loading the training-time table, which only
+    # holds completed games. build_team_game_logs' shift(1).rolling() then puts each
+    # team's prior-N form on the upcoming game_id, exactly the training semantics;
+    # the old game_id join against completed-only logs returned NaN for every team
+    # feature ("Record pending", "Recent form Pending", Win % 0%).
+    all_games = prepare_games(games_df, require_completed=False)
+    team_logs = build_team_game_logs(all_games, team_week) if not all_games.empty else pd.DataFrame()
 
     full_schedule = prepare_games(games_df, require_completed=False)
     if not full_schedule.empty:
@@ -713,10 +824,13 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
     board_days = max(1, int(os.getenv("FOOTBALL_UPCOMING_BOARD_DAYS", "5")))
     target_dates = set(ordered_keys[start_idx : start_idx + board_days])
     schedule = full_schedule.loc[full_schedule["official_date"].map(_date_key).isin(target_dates)].copy()
+    qb_logs = build_qb_week_logs(_with_upcoming_qb_rows(player_week, schedule)) if not player_week.empty else pd.DataFrame()
     games = attach_pregame_team_features(schedule, team_logs)
     games = attach_pregame_qb_features(games, qb_logs)
     games = attach_pregame_roster_features(games, roster_summaries)
+    games = _fill_roster_features_asof(games, roster_summaries)
     games = add_matchup_differentials(games)
+    games = _attach_season_records(games, team_logs)
     scored_games = _predict_games(games)
 
     player_trends = _build_player_trends(player_week)
@@ -729,8 +843,8 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
     boards: list[dict[str, Any]] = []
     for row in scored_games.itertuples(index=False):
         scheduled_date = _date_key_int(getattr(row, "official_date", None))
-        away_lineup = roster_history_map.get((int(getattr(row, "season")), int(getattr(row, "week")), str(getattr(row, "away_team"))), [])
-        home_lineup = roster_history_map.get((int(getattr(row, "season")), int(getattr(row, "week")), str(getattr(row, "home_team"))), [])
+        away_lineup = _lineup_asof(roster_history_map, int(getattr(row, "season")), int(getattr(row, "week")), str(getattr(row, "away_team")))
+        home_lineup = _lineup_asof(roster_history_map, int(getattr(row, "season")), int(getattr(row, "week")), str(getattr(row, "home_team")))
         away_featured = next((entry for entry in away_lineup if entry.get("position") == "QB"), away_lineup[0] if away_lineup else None)
         home_featured = next((entry for entry in home_lineup if entry.get("position") == "QB"), home_lineup[0] if home_lineup else None)
         home_prob = (_value(row, "home_win_probability") or 0.5) * 100.0

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import sys
 import asyncio
+import threading
 import time
 import uuid
 import os
@@ -1118,6 +1119,77 @@ def _load_sports_json(filename: str) -> list[dict[str, Any]]:
     return []
 
 
+# Parsed-backtests cache, keyed by file version (path, mtime, size).
+#
+# The historical files are the memory and CPU hog of this process: mlb alone is
+# 71 MB of JSON that parses into ~184 MB of Python objects, and every board
+# assemble (each cache key, plus the 45s warmer) re-read and re-parsed all of it
+# only to keep the newest SPORTS_BACKTESTS_RESPONSE_CAP boards. Parse once per
+# file version instead and keep only what is served: the newest boards (with
+# headroom for the tennis/golf runtime merges) plus a compact (key, year,
+# hitStatus) row per board so the season summary is still computed over the FULL
+# history. Measured on the 2 GB box: 306 MB of transient objects per assemble
+# cycle gone; the resident set is a few MB per sport.
+_SPORTS_BACKTESTS_CACHE: dict[str, tuple[tuple[float, int], list[dict[str, Any]], list[dict[str, Any]]]] = {}
+_SPORTS_BACKTESTS_CACHE_LOCK = threading.Lock()
+
+
+def _backtests_cache_headroom() -> int:
+    # Newest CAP boards plus room for the tennis/golf runtime merges (a handful of
+    # freshly graded events). Measured: mlb boards are ~60 KB of Python objects
+    # each, so the headroom is the resident cost -- keep it small.
+    cap = SPORTS_BACKTESTS_RESPONSE_CAP
+    return cap + 50 if cap > 0 else 0  # 0 = uncapped (keep everything)
+
+
+def _summary_row(item: dict[str, Any]) -> dict[str, Any]:
+    return {"key": _sports_backtest_key(item), "year": item.get("year"), "hitStatus": item.get("hitStatus")}
+
+
+def _load_sports_backtests(filename: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """(newest boards, compact summary rows for ALL boards) for a historical file,
+    parsed once per file version. The board list is sorted newest-first and
+    trimmed to _backtests_cache_headroom(); callers sort/cap again after any
+    runtime merge, and the top-N of (static top-N ∪ runtime) equals the top-N of
+    (static all ∪ runtime), so responses are byte-identical to the uncached path."""
+    path = _sports_data_path(filename)
+    try:
+        stat = path.stat()
+        version = (stat.st_mtime, stat.st_size)
+    except FileNotFoundError:
+        return [], []
+    cached = _SPORTS_BACKTESTS_CACHE.get(filename)
+    if cached is not None and cached[0] == version:
+        return list(cached[1]), list(cached[2])
+    with _SPORTS_BACKTESTS_CACHE_LOCK:
+        cached = _SPORTS_BACKTESTS_CACHE.get(filename)
+        if cached is not None and cached[0] == version:
+            return list(cached[1]), list(cached[2])
+        full = _load_sports_json(filename)
+        summary_rows = [_summary_row(item) for item in full]
+        boards = _sort_sports_backtests(full)
+        headroom = _backtests_cache_headroom()
+        if headroom > 0:
+            boards = boards[:headroom]
+        _SPORTS_BACKTESTS_CACHE[filename] = (version, boards, summary_rows)
+        logger.info("sports backtests cached: %s -> %d of %d boards kept (%d summary rows)",
+                    filename, len(boards), len(full), len(summary_rows))
+        del full
+        return list(boards), list(summary_rows)
+
+
+def _merge_summary_rows(base_rows: list[dict[str, Any]], runtime_backtests: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Summary rows for a static history plus runtime-graded boards (same replace-by-key
+    rule as _merge_runtime_backtests), so the season summary matches the merged list."""
+    if not runtime_backtests:
+        return base_rows
+    merged = {row["key"]: row for row in base_rows}
+    for item in runtime_backtests:
+        row = _summary_row(item)
+        merged[row["key"]] = row
+    return list(merged.values())
+
+
 def _sports_data_updated_at(filenames: list[str]) -> datetime:
     mtimes: list[float] = []
     for filename in filenames:
@@ -1625,10 +1697,13 @@ def _build_sports_board_collection(
     source: str,
     selected_date: str | None = None,
     available_dates: list[dict[str, Any]] | None = None,
+    summary_rows: list[dict[str, Any]] | None = None,
 ) -> SportsBoardCollection:
     upcoming = _annotate_event_state(upcoming)
-    # Compute the season summary from the full history BEFORE capping.
-    season_summary = _build_sports_season_summary(backtests)
+    # Compute the season summary from the FULL history BEFORE capping. When the
+    # caller loaded the history through _load_sports_backtests, `backtests` is
+    # already trimmed and the full history is represented by `summary_rows`.
+    season_summary = _build_sports_season_summary(summary_rows if summary_rows is not None else backtests)
     sorted_backtests = _sort_sports_backtests(backtests)
     if SPORTS_BACKTESTS_RESPONSE_CAP > 0:
         sorted_backtests = sorted_backtests[:SPORTS_BACKTESTS_RESPONSE_CAP]
@@ -1650,6 +1725,7 @@ def _build_dated_collection_from_upcoming(
     selected_date: str | None,
     updated_at: datetime,
     source: str,
+    summary_rows: list[dict[str, Any]] | None = None,
 ) -> SportsBoardCollection:
     today_key = _runtime_today_key()
     filtered = sorted(
@@ -1682,6 +1758,7 @@ def _build_dated_collection_from_upcoming(
         source=source,
         selected_date=resolved_selected,
         available_dates=available_dates,
+        summary_rows=summary_rows,
     )
 
 
@@ -2042,16 +2119,20 @@ def _sports_board_collection(
     selected_date: str | None = None,
 ) -> SportsBoardCollection:
     upcoming = _load_sports_json(upcoming_filename)
-    backtests = _load_sports_json(backtests_filename)
+    # Newest boards + compact full-history rows, parsed once per file version
+    # (see _load_sports_backtests) instead of re-parsing the whole file here.
+    backtests, summary_rows = _load_sports_backtests(backtests_filename)
 
     if sport == "tennis":
         upcoming = _apply_live_tennis_schedule(upcoming)
         runtime_backtests = _build_runtime_tennis_backtests(upcoming, backtests)
         backtests = _merge_runtime_backtests(backtests, runtime_backtests)
+        summary_rows = _merge_summary_rows(summary_rows, runtime_backtests)
         upcoming = _filter_upcoming_tennis(upcoming, backtests)
     elif sport == "golf":
         runtime_backtests = _build_runtime_golf_backtests(upcoming, backtests)
         backtests = _merge_runtime_backtests(backtests, runtime_backtests)
+        summary_rows = _merge_summary_rows(summary_rows, runtime_backtests)
         upcoming = _filter_upcoming_golf(upcoming, backtests)
         upcoming = _apply_live_golf_schedule(upcoming)
 
@@ -2064,12 +2145,14 @@ def _sports_board_collection(
             selected_date=selected_date,
             updated_at=updated_at,
             source="runtime_filtered_sports_feed",
+            summary_rows=summary_rows,
         )
     return _build_sports_board_collection(
         upcoming=upcoming,
         backtests=backtests,
         updated_at=updated_at,
         source="runtime_filtered_sports_feed",
+        summary_rows=summary_rows,
     )
 
 

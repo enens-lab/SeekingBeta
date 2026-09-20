@@ -23,6 +23,7 @@ if str(DIV_ROOT) not in sys.path:
 
 from sports.basketball.build_training_dataset import DEFAULT_BASKETBALL_DATA_ROOT
 from sports.basketball.client import BasketballStatsClient, flatten_schedule
+from sports.table_dtypes import coerce_table_dtypes
 from sports.basketball.constants import LEAGUE_CONFIGS
 from sports.basketball.feature_engineering import (
     add_matchup_differentials,
@@ -86,7 +87,9 @@ def _load_table_optional(*candidates: Path) -> pd.DataFrame:
         frame["official_date"] = _to_datetime_mixed(frame["official_date"])
     if "season_display" in frame.columns:
         frame["season_display"] = frame["season_display"].astype(str)
-    return frame
+    # Normalize the remaining key/id/date dtypes once at load so joins never hit a
+    # dtype clash (see sports/table_dtypes.py).
+    return coerce_table_dtypes(frame, table=existing[0].stem)
 
 
 def _load_league_table(stem: str, leagues: list[str]) -> pd.DataFrame:

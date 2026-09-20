@@ -44,6 +44,7 @@ from sports.mlb.roster_features import (
 )
 from sports.mlb.statcast_enrichment import enrich_dataset_with_statcast
 from sports.pga.storage import read_preferred_table
+from sports.table_dtypes import coerce_table_dtypes
 
 PROJ_ROOT = Path(__file__).resolve().parents[2]
 MLB_DATA_ROOT = DEFAULT_MLB_DATA_ROOT
@@ -76,11 +77,15 @@ def _load_table(stem: str) -> pd.DataFrame:
     parquet_path = NORMALIZED_DIR / f"{stem}.parquet"
     csv_path = NORMALIZED_DIR / f"{stem}.csv"
     try:
-        return read_preferred_table(parquet_path, csv_path)
+        frame = read_preferred_table(parquet_path, csv_path)
     except ImportError:
         if csv_path.exists():
-            return pd.read_csv(csv_path)
-        raise
+            frame = pd.read_csv(csv_path)
+        else:
+            raise
+    # Normalize key/id/date dtypes once here so every downstream merge sees the same
+    # types (an all-null pitcher id arriving as object broke prepare_games for weeks).
+    return coerce_table_dtypes(frame, table=stem)
 
 
 def _load_table_optional(stem: str) -> pd.DataFrame:

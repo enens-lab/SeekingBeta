@@ -33,6 +33,7 @@ from sports.football.feature_engineering import (
     prepare_games,
 )
 from sports.pga.storage import read_preferred_table
+from sports.table_dtypes import coerce_table_dtypes
 
 if torch is not None:
     from sports.football.torch_model import FootballTorchModel
@@ -116,7 +117,9 @@ def _load_table_optional(stem: str) -> pd.DataFrame:
         frame["game_id"] = frame["game_id"].astype(str)
     if "official_date" in frame.columns:
         frame["official_date"] = _to_datetime_mixed(frame["official_date"])
-    return frame
+    # Normalize the remaining key/id/date dtypes once at load (season/week -> Int64,
+    # numeric ids -> float64, string ids stay str) so joins never hit a dtype clash.
+    return coerce_table_dtypes(frame, table=stem)
 
 
 def _date_key(value: object) -> str | None:

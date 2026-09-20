@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import logging
 import sys
 from datetime import datetime, timedelta, timezone
@@ -602,7 +603,16 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
             "source": "divination_live_basketball_feed",
         }
 
-    schedule = full_schedule.loc[full_schedule["official_date"].map(_date_key) == resolved_selected_date].copy()
+    # Bake the next BASKETBALL_UPCOMING_BOARD_DAYS game-days, not one: a single baked
+    # date empties as soon as UTC rolls past it (the 2026-09-19 export carried two
+    # WNBA boards for that day and showed nothing the next morning). Same fix as
+    # MLB's UPCOMING_BOARD_DAYS (edec4da); the BFF derives availableDates from the
+    # surviving boards, so a multi-day bake gives the picker its dates too.
+    ordered_keys = [str(option["dateKey"]) for option in available_dates]
+    start_idx = ordered_keys.index(resolved_selected_date) if resolved_selected_date in ordered_keys else 0
+    board_days = max(1, int(os.getenv("BASKETBALL_UPCOMING_BOARD_DAYS", "4")))
+    target_dates = set(ordered_keys[start_idx : start_idx + board_days])
+    schedule = full_schedule.loc[full_schedule["official_date"].map(_date_key).isin(target_dates)].copy()
     schedule["game_id"] = schedule["game_id"].astype(str)
     team_logs = _load_league_table("team_game_logs", ["nba", "wnba"])
     expected_logs = _load_league_table("expected_rotation_game_logs", ["nba", "wnba"])

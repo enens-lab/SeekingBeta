@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import logging
 import sys
 from datetime import datetime, timezone
@@ -255,19 +256,41 @@ def _predict_games(frame: pd.DataFrame) -> pd.DataFrame:
         output["prediction_source"] = "nfl_heuristic_fallback"
         return output
 
-    feature_columns = [column for column in predictor["feature_columns"] if column in output.columns]
-    features = output[feature_columns].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    # Reindex to the predictor's FULL training schema (missing columns -> NaN, which
+    # the imputer/HGB handle) instead of dropping absent ones: the 2026-09-20 export
+    # died with "feature names seen at fit time, yet now missing:
+    # qb_diff_fantasy_points_*" because the current nflverse player-stats files no
+    # longer carry the fantasy columns the June model was fit on. Try torch, then the
+    # baseline, then the heuristic, the way the basketball exporter does.
+    def _features_for(pred: dict[str, Any]) -> pd.DataFrame:
+        missing = [c for c in pred["feature_columns"] if c not in output.columns]
+        if missing:
+            logger.warning("Football %s: %d/%d feature columns absent from the schedule frame (imputed): %s",
+                           pred["source"], len(missing), len(pred["feature_columns"]), missing[:6])
+        return (output.reindex(columns=pred["feature_columns"])
+                .apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan))
+
+    candidates = [predictor]
     if predictor["source"] == "nfl_torch_model":
-        imputer = predictor["imputer"]
-        scaler = predictor["scaler"]
-        transformed = scaler.transform(imputer.transform(features)).astype(np.float32)
-        with torch.no_grad():
-            tensor = torch.from_numpy(transformed)
-            probabilities = torch.sigmoid(predictor["model"](tensor)).detach().cpu().numpy()
-    else:
-        probabilities = predictor["model"].predict_proba(features)[:, 1]
-    output["home_win_probability"] = probabilities
-    output["prediction_source"] = predictor["source"]
+        baseline = _load_baseline_predictor()
+        if baseline is not None:
+            candidates.append(baseline)
+    for pred in candidates:
+        try:
+            features = _features_for(pred)
+            if pred["source"] == "nfl_torch_model":
+                transformed = pred["scaler"].transform(pred["imputer"].transform(features)).astype(np.float32)
+                with torch.no_grad():
+                    probabilities = torch.sigmoid(pred["model"](torch.from_numpy(transformed))).detach().cpu().numpy()
+            else:
+                probabilities = pred["model"].predict_proba(features)[:, 1]
+            output["home_win_probability"] = probabilities
+            output["prediction_source"] = pred["source"]
+            return output
+        except Exception:
+            logger.exception("Football %s inference failed; trying the next predictor", pred["source"])
+    output["home_win_probability"] = _heuristic_probabilities(output)
+    output["prediction_source"] = "nfl_heuristic_fallback"
     return output
 
 
@@ -682,7 +705,14 @@ def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, A
             "source": "divination_live_football_feed",
         }
 
-    schedule = full_schedule.loc[full_schedule["official_date"].map(_date_key) == resolved_selected_date].copy()
+    # Bake the next FOOTBALL_UPCOMING_BOARD_DAYS game-days (an NFL week runs Thu to
+    # Mon), not one: a single baked date empties as soon as UTC rolls past it. Same
+    # fix as MLB's UPCOMING_BOARD_DAYS (edec4da).
+    ordered_keys = [str(option["dateKey"]) for option in available_dates]
+    start_idx = ordered_keys.index(resolved_selected_date) if resolved_selected_date in ordered_keys else 0
+    board_days = max(1, int(os.getenv("FOOTBALL_UPCOMING_BOARD_DAYS", "5")))
+    target_dates = set(ordered_keys[start_idx : start_idx + board_days])
+    schedule = full_schedule.loc[full_schedule["official_date"].map(_date_key).isin(target_dates)].copy()
     games = attach_pregame_team_features(schedule, team_logs)
     games = attach_pregame_qb_features(games, qb_logs)
     games = attach_pregame_roster_features(games, roster_summaries)

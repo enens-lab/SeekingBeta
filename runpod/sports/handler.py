@@ -48,7 +48,7 @@ import runpod
 # Bump on every worker-affecting change: the RunPod GitHub build is invisible from
 # the box, so ops polls {"type":"health"} until "build" reports the expected tag
 # before trusting a re-export to carry new code.
-HANDLER_BUILD = "2026-09-19.4"
+HANDLER_BUILD = "2026-09-19.5"
 
 REPO = Path(os.getenv("PYTHIA_REPO", "/work"))
 DIV = REPO / "pythia_divination"

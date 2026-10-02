@@ -70,7 +70,9 @@ def test_tennis_alphanumeric_player_ids_survive_processing() -> None:
 
     assert not history.empty
     assert not player_events.empty
-    assert set(player_events["player_key"]) == {"ATP:AB12", "ATP:CD85"}
+    # New-scheme (alphanumeric) ATP ids are keyed on the normalised name, so a player
+    # keeps one identity across the 2025 id change (sports/wta/elo.py resolve()).
+    assert set(player_events["player_key"]) == {"ATP:name:atploser", "ATP:name:atpwinner"}
 
 
 def test_pga_partition_result_frames_splits_team_events() -> None:

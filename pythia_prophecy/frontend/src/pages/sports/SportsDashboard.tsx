@@ -112,26 +112,28 @@ type SeasonSummaryCardsProps = {
 function SeasonSummaryCards({ summary, isTeamSport }: SeasonSummaryCardsProps) {
   if (!summary) return null;
 
+  const seasonName = summary.label || String(summary.year);
   if (summary.sampleSize === 0) {
     return (
       <div className="season-summary-empty">
-        <strong>{summary.year} so far</strong>
-        <span>No finished boards have been logged yet this year.</span>
+        <strong>{seasonName} so far</strong>
+        <span>No finished boards have been logged yet this season.</span>
       </div>
     );
   }
 
   return (
+    <>
     <div className="season-summary-grid">
       <div className="season-summary-card highlight">
-        <span className="season-summary-label">{summary.year} so far</span>
+        <span className="season-summary-label">{seasonName} so far</span>
         <strong>{formatAccuracy(summary.topPickAccuracy)}</strong>
-        <p>Top pick accuracy</p>
+        <p>{summary.basis === 'market' ? 'Betting favourite accuracy' : 'Top pick accuracy'}</p>
       </div>
       <div className="season-summary-card">
         <span className="season-summary-label">Finished boards</span>
         <strong>{summary.sampleSize}</strong>
-        <p>Counted in the current year</p>
+        <p>Counted this season</p>
       </div>
       <div className="season-summary-card">
         <span className="season-summary-label">Top pick hits</span>
@@ -153,14 +155,26 @@ function SeasonSummaryCards({ summary, isTeamSport }: SeasonSummaryCardsProps) {
         </div>
       ) : null}
     </div>
+    {summary.baselineNote ? <p className="season-summary-baselines">Same games: {summary.baselineNote}</p> : null}
+    </>
   );
 }
 
 function predictionSourceLabel(source?: string): string {
   if (!source) return 'Live model';
+  if (source.startsWith('market_devig')) return 'Market (de-vigged line, nflverse)';
   if (source.includes('heuristic_fallback')) return 'Fallback scorer';
   if (source.includes('torch_model')) return 'Torch model';
   return 'Baseline model';
+}
+
+/** The headline is the sportsbook's favourite, not our model's pick (NFL with a posted line). */
+function isMarketHeadline(board: SportsUpcomingBoard): boolean {
+  return board.basis === 'market' || Boolean(board.predictionSource?.startsWith('market_devig'));
+}
+
+function headlinePickLabel(board: SportsUpcomingBoard, team?: string): string {
+  return `${isMarketHeadline(board) ? 'Market favourite' : 'Model pick'}: ${team || 'TBD'}`;
 }
 
 function predictionBarWidth(prediction: SportsBoardPrediction, maxProb: number): string {
@@ -1029,7 +1043,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">{headlinePickLabel(board, predictedTeam)}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1283,7 +1297,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">{headlinePickLabel(board, predictedTeam)}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1517,7 +1531,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">{headlinePickLabel(board, predictedTeam)}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1868,12 +1882,12 @@ function SportsDashboard() {
                             <div className="top-picks-col">
                               {isTeamSport ? (
                                 <>
-                                  <strong>{backtest.predictedWinner}</strong> <small>({((backtest.prob || 0) * 100).toFixed(1)}%)</small><br />
+                                  <strong>{backtest.predictedWinner}</strong>{typeof backtest.prob === 'number' ? <small> ({(backtest.prob * 100).toFixed(1)}%)</small> : null}<br />
                                   <small>{backtest.awayTeam} at {backtest.homeTeam}</small>
                                 </>
                               ) : (
                                 <>
-                                  <strong>1. {backtest.predictedWinner}</strong> <small>({((backtest.prob || 0) * 100).toFixed(1)}%)</small><br />
+                                  <strong>1. {backtest.predictedWinner}</strong>{typeof backtest.prob === 'number' ? <small> ({(backtest.prob * 100).toFixed(1)}%)</small> : null}<br />
                                   <small>2. {backtest.predictedTop3?.[1]} | 3. {backtest.predictedTop3?.[2]}</small><br />
                                   <small>4. {backtest.predictedTop5?.[3]} | 5. {backtest.predictedTop5?.[4]}</small>
                                 </>
@@ -1898,7 +1912,11 @@ function SportsDashboard() {
                                     <div className="mlb-backtest-summary-column">
                                       <span className="mlb-summary-label">Predicted side</span>
                                       <strong>{backtest.predictedWinner}</strong>
-                                      <span>{((backtest.prob || 0) * 100).toFixed(1)}% top-side confidence</span>
+                                      {typeof backtest.prob === 'number' ? (
+                                        <span>{(backtest.prob * 100).toFixed(1)}% top-side confidence</span>
+                                      ) : backtest.basis === 'market' ? (
+                                        <span>Closing betting favourite</span>
+                                      ) : null}
                                     </div>
                                     <div className="mlb-backtest-summary-column">
                                       <span className="mlb-summary-label">Actual winner</span>

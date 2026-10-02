@@ -132,8 +132,16 @@ export function marketSecondaryLine(pick: SportsMarketPick): string {
     }
     if (price.length) parts.push(`Line ${price.join(' ')}`);
   }
-  parts.push(pick.basis?.trim().toLowerCase() === 'market' ? 'Market' : 'Model view');
+  parts.push(marketBasisLabel(pick.basis));
   return parts.join(' · ');
+}
+
+/** "Market" (the de-vigged line), "Market-implied" (derived from lines, e.g. NFL alt ladders and team totals), else "Model view". */
+export function marketBasisLabel(basis?: string | null): string {
+  const key = basis?.trim().toLowerCase();
+  if (key === 'market') return 'Market';
+  if (key === 'market_implied') return 'Market-implied';
+  return 'Model view';
 }
 
 /** Distinct attributions across the rows, in first-seen order. */

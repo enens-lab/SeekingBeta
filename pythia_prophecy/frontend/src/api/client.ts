@@ -352,6 +352,10 @@ export interface SportsBoardSeasonSummary {
   top3Accuracy?: number | null;
   top5Hits?: number | null;
   top5Accuracy?: number | null;
+  /** "NBA 2025-26", "NFL 2026-27"; whose pick it scores; baselines on the same games. */
+  label?: string | null;
+  basis?: string | null;
+  baselineNote?: string | null;
 }
 
 export interface SportsTeamDetails {
@@ -537,6 +541,9 @@ export interface SportsUpcomingBoard {
   homeAvailability?: SportsAvailabilitySummary;
   projectedLineupContext?: SportsProjectedLineupContext;
   predictionSource?: string;
+  /** "market" when the headline probability is the de-vigged sportsbook line (NFL). */
+  basis?: string | null;
+  attribution?: string | null;
   awayLineup?: SportsLineupPlayer[];
   homeLineup?: SportsLineupPlayer[];
   awayFeaturedPlayer?: SportsLineupPlayer;
@@ -592,6 +599,10 @@ export interface SportsHistoricalBoard {
   markets?: SportsMarketPick[];
   homeScore?: number;
   awayScore?: number;
+  /** "market" when the row scores the closing betting favourite (NFL), else the model. */
+  basis?: string | null;
+  recordBasis?: string | null;
+  predictionSource?: string | null;
 }
 
 export interface SportsBoardCollection {

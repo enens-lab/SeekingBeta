@@ -1083,6 +1083,12 @@
   gap: 1rem;
 }
 
+.season-summary-baselines {
+  margin: 0.6rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
 .season-summary-grid {
   margin-top: 1rem;
   display: grid;

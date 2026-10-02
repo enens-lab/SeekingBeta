@@ -214,3 +214,10 @@ test('no banned terms in any rendered market string', () => {
   }
   for (const text of strings) assert.doesNotMatch(text, banned, text);
 });
+
+test('basis labels: market, market-implied, model view', () => {
+  assert.equal(m.marketBasisLabel('market'), 'Market');
+  assert.equal(m.marketBasisLabel(' Market_Implied '), 'Market-implied');
+  assert.equal(m.marketBasisLabel('model'), 'Model view');
+  assert.equal(m.marketBasisLabel(undefined), 'Model view');
+});

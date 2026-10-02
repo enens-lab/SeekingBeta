@@ -8,7 +8,12 @@ Data sources (all free, matching the existing scrape/public-API posture):
 
 from __future__ import annotations
 
+import json
 import re
+import unicodedata
+from datetime import date, datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
 
 DEFAULT_TIMEOUT_SECONDS = 20
 DEFAULT_USER_AGENT = (
@@ -22,10 +27,38 @@ SPORT_KEY = "soccer"
 FOOTBALL_DATA_BASE_URL = "https://www.football-data.co.uk/mmz4281"
 ESPN_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer"
 
-# Current European season start year (2025/26). football-data season codes are
-# the last two digits of each year, e.g. 2025/26 -> "2526".
-CURRENT_SEASON_START = 2025
-DEFAULT_HISTORY_SEASONS = 3  # seasons of history to fit Dixon-Coles on
+# European seasons run August -> May; the new season starts in July, when the
+# football-data per-season CSV for it appears. football-data season codes are the
+# last two digits of each year, e.g. 2025/26 -> "2526".
+SEASON_START_MONTH = 7
+
+
+def current_season_start(today: date | datetime | None = None, start_month: int = SEASON_START_MONTH) -> int:
+    """Start year of the European season that `today` falls in (July rollover):
+    2026-06-30 -> 2025 (2025/26), 2026-07-01 -> 2026 (2026/27).
+
+    Derived from the date rather than hard-coded: a fixed 2025 meant the 2026/27
+    results were never loaded and every promoted team was predicted blind."""
+    today = today or datetime.now(timezone.utc).date()
+    return today.year if today.month >= start_month else today.year - 1
+
+
+def season_label(start_year: int) -> str:
+    """2025 -> '2025-26' (same convention as sports/market_log.season_cross_year)."""
+    return f"{int(start_year)}-{str(int(start_year) + 1)[-2:]}"
+
+
+# Evaluated at import (each export run is a fresh process). Prefer calling
+# current_season_start() in new code.
+CURRENT_SEASON_START = current_season_start()
+DEFAULT_HISTORY_SEASONS = 6  # current season + the 5-season fitting window behind the 2025-26 record
+
+MODEL_PARAMS_PATH = Path(__file__).resolve().with_name("model_params.json")
+
+
+def load_model_params(path: Path | None = None) -> dict[str, Any]:
+    """Tuned Dixon-Coles hyper-parameters + measured acceptance (committed JSON)."""
+    return json.loads(Path(path or MODEL_PARAMS_PATH).read_text())
 
 
 def football_data_season_code(start_year: int) -> str:
@@ -74,7 +107,8 @@ _TEAM_ALIASES: dict[str, str] = {
     "west ham united": "west ham",
     "brighton hove albion": "brighton",
     "brighton and hove albion": "brighton",
-    "nottingham forest": "nottm forest",
+    "nottingham forest": "nott'm forest",
+    "nottm forest": "nott'm forest",
     "afc bournemouth": "bournemouth",
     "leicester city": "leicester",
     "leeds united": "leeds",
@@ -91,6 +125,12 @@ _TEAM_ALIASES: dict[str, str] = {
     "deportivo alaves": "alaves",
     "rayo vallecano": "vallecano",
     "real valladolid": "valladolid",
+    "espanyol": "espanol",
+    "rcd espanyol": "espanol",
+    "deportivo": "la coruna",
+    "deportivo la coruna": "la coruna",
+    "racing santander": "santander",
+    "real oviedo": "oviedo",
     # Italy
     "internazionale": "inter",
     "inter milan": "inter",
@@ -108,6 +148,9 @@ _TEAM_ALIASES: dict[str, str] = {
     "rb leipzig": "rb leipzig",
     "fc koln": "fc koln",
     "1 fc koln": "fc koln",
+    "fc cologne": "fc koln",
+    "cologne": "fc koln",
+    "koln": "fc koln",
     # France
     "paris saint germain": "paris sg",
     "paris saint-germain": "paris sg",
@@ -116,6 +159,8 @@ _TEAM_ALIASES: dict[str, str] = {
     "olympique lyonnais": "lyon",
     "as monaco": "monaco",
     "lille osc": "lille",
+    "stade rennais": "rennes",
+    "saint etienne": "st etienne",
 }
 
 _STRIP_TOKENS = {
@@ -124,11 +169,17 @@ _STRIP_TOKENS = {
 }
 
 
+def _ascii_fold(text: str) -> str:
+    """'Alavés' -> 'Alaves', 'Mönchengladbach' -> 'Monchengladbach' (ESPN uses
+    accents, football-data does not; the old regex turned 'é' into a space)."""
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+
+
 def canonical_team_name(name: str | None) -> str:
     """Normalize a club name to a comparable key across data sources."""
-    if not name:
+    if not isinstance(name, str) or not name:
         return ""
-    text = name.strip().lower()
+    text = _ascii_fold(name).strip().lower()
     text = text.replace("&", "and").replace(".", " ").replace("-", " ")
     text = re.sub(r"[^a-z0-9' ]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -138,6 +189,24 @@ def canonical_team_name(name: str | None) -> str:
     tokens = [t for t in text.split(" ") if t and t not in _STRIP_TOKENS]
     stripped = " ".join(tokens)
     return _TEAM_ALIASES.get(stripped, stripped or text)
+
+
+def resolve_team(name: str | None, known: Iterable[str]) -> str:
+    """Map a fixture team name (ESPN) onto the names the model was fitted on
+    (football-data, canonicalised). Falls back to a unique token-subset match
+    ('Coventry City' -> 'coventry', 'SC Paderborn 07' -> 'paderborn'); returns the
+    canonical name unchanged when nothing matches uniquely, which the model then
+    treats as an unseen, league-average team."""
+    canon = canonical_team_name(name)
+    known_set = set(known)
+    if not canon or canon in known_set:
+        return canon
+    tokens = set(canon.split())
+    # Only "every token of the known name appears in the fixture name": the fixture
+    # side carries the longer official name. The reverse direction would map an
+    # unseen 'Paris' onto 'paris sg'.
+    matches = [k for k in known_set if set(k.split()) and set(k.split()) <= tokens]
+    return matches[0] if len(matches) == 1 else canon
 
 
 # --- National-team normalization (World Cup / internationals) ---------------
@@ -163,9 +232,9 @@ _NATION_ALIASES: dict[str, str] = {
 
 def canonical_national_name(name: str | None) -> str:
     """Normalize a national-team name to a comparable key across sources."""
-    if not name:
+    if not isinstance(name, str) or not name:
         return ""
-    text = name.strip().lower()
+    text = _ascii_fold(name).strip().lower()
     text = text.replace("&", "and").replace(".", " ").replace("-", " ")
     text = re.sub(r"[^a-z0-9' ]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()

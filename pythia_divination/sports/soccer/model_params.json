@@ -1,0 +1,38 @@
+{
+  "modelVersion": "soccer-dc-2026.10-icpt-l2_2-w5",
+  "description": "Dixon-Coles per league with a goal intercept, L2 shrinkage of attack/defense toward the league mean, a 5-season window and exponential time decay. Settings picked on the 2019-20..2022-23 walk-forward (TUNE) and confirmed on 2023-24..2026-27 (TEST); plan item P1-2. Reproduce: python scripts/eval_soccer_walkforward.py --raw-dir <football-data CSV dir> --test-start 2023 --test-end 2026 --check",
+  "l2": 2.0,
+  "windowSeasons": 5,
+  "timeDecayXiPerDay": 0.0018,
+  "maxGoals": 10,
+  "refitWeekdays": [0, 4],
+  "recordStartSeason": 2025,
+  "seasonStartMonth": 7,
+  "totalsLines": [1.5, 2.5, 3.5],
+  "handicapMainLines": [-0.5, -1.5],
+  "measured": {
+    "note": "Walk-forward, refit Mon+Fri on matches strictly before the cut-off; big-5 leagues; football-data.co.uk results to 2026-09-20. Market = football-data closing average, de-vigged, same matches. The model does not beat the market on any measure.",
+    "test_2023_24_to_2026_27": {
+      "n": 5506,
+      "x12": {"accuracy": 0.5271, "logLoss": 0.9853, "rps": 0.1994, "brier": 0.5871},
+      "overUnder25LogLoss": 0.676,
+      "bttsLogLoss": 0.6855,
+      "correctScoreTop3HitRate": 0.3271,
+      "naiveCorrectScoreTop3HitRate": 0.2935,
+      "meanGoals": {"predicted": 2.7911, "actual": 2.8355},
+      "season_2026_27": {"n": 250, "accuracy": 0.532, "logLoss": 0.9832, "marketLogLoss": 0.9745},
+      "market": {"favouriteWinRate": 0.5456, "logLoss": 0.9643, "rps": 0.1931, "brier": 0.5733, "overUnder25LogLoss": 0.6645},
+      "alwaysHomeAccuracy": 0.4304,
+      "previousProductionConfig": {"x12LogLoss": 1.0031, "rps": 0.2019, "accuracy": 0.5171, "overUnder25LogLoss": 0.7337, "bttsLogLoss": 0.7189, "meanGoalsPredicted": 2.553, "season_2026_27_logLoss": 1.109, "source": "analyst walk-forward of the pre-fix code, same split"}
+    },
+    "tune_2019_20_to_2022_23": {
+      "n": 7203,
+      "x12": {"accuracy": 0.5208, "logLoss": 0.9937, "rps": 0.2036},
+      "overUnder25LogLoss": 0.6817,
+      "bttsLogLoss": 0.6883,
+      "correctScoreTop3HitRate": 0.325,
+      "meanGoals": {"predicted": 2.7903, "actual": 2.7923},
+      "market": {"favouriteWinRate": 0.5342, "logLoss": 0.9754, "rps": 0.1977}
+    }
+  }
+}

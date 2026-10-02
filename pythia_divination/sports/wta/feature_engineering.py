@@ -1,22 +1,31 @@
-"""Feature engineering for ATP/WTA tennis prediction models."""
+"""Feature engineering for ATP/WTA tennis prediction models.
+
+Ratings come from ``sports.wta.elo`` (stable player identity across the 2025 ATP
+id-scheme change, FiveThirtyEight-style decaying K, overall/surface blend). All
+per-match and per-event numbers are pre-match: they use only earlier matches.
+"""
 
 from __future__ import annotations
 
 import logging
-import re
-from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from sports.wta.elo import (
+    display_names,
+    load_params,
+    normalize_identifier,
+    prepare_matches,
+    run_elo,
+)
+
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class EloConfig:
-    k_factor: float = 32
-    initial_elo: float = 1500.0
+ROLLING_WINDOW = 10
+DEFAULT_SERVE_WON = 0.60
+DEFAULT_RETURN_WON = 0.40
 
 
 def calculate_elo_updates(
@@ -24,245 +33,172 @@ def calculate_elo_updates(
     loser_elo: float,
     k: float = 32,
 ) -> tuple[float, float]:
-    """Calculate the new Elo ratings after a match."""
+    """Single fixed-K Elo update (kept for callers outside the tennis pipeline)."""
     expected_winner = 1 / (1 + 10 ** ((loser_elo - winner_elo) / 400))
     expected_loser = 1 - expected_winner
-
-    new_winner_elo = winner_elo + k * (1 - expected_winner)
-    new_loser_elo = loser_elo + k * (0 - expected_loser)
-
-    return new_winner_elo, new_loser_elo
+    return winner_elo + k * (1 - expected_winner), loser_elo + k * (0 - expected_loser)
 
 
-def _normalize_identifier(value: Any) -> str | None:
-    if pd.isna(value):
-        return None
-
-    identifier = str(value).strip()
-    if not identifier or identifier.lower() in {"nan", "none"}:
-        return None
-    if identifier.endswith(".0") and identifier[:-2].isdigit():
-        return identifier[:-2]
-    return identifier
+def _to_float_array(frame: pd.DataFrame, column: str) -> np.ndarray:
+    if column not in frame.columns:
+        return np.full(len(frame), np.nan)
+    return pd.to_numeric(frame[column], errors="coerce").to_numpy(dtype=float)
 
 
-def _to_float(value: Any, default: float) -> float:
-    if pd.isna(value) or value == "":
-        return default
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
+def _numeric_column(frame: pd.DataFrame, column: str) -> np.ndarray:
+    return _to_float_array(frame, column)
 
 
-def _canonical_tournament_id(tour: str, raw_tourney_id: str | None) -> str | None:
-    tournament_id = _normalize_identifier(raw_tourney_id)
-    if tournament_id is None:
-        return None
-    return f"{tour}:{tournament_id}"
+def _serve_return_shares(frame: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Per-match serve-points-won and return-points-won shares for winner and loser."""
+    w_svpt = _to_float_array(frame, "w_svpt")
+    l_svpt = _to_float_array(frame, "l_svpt")
+    w_won = _to_float_array(frame, "w_1stWon") + _to_float_array(frame, "w_2ndWon")
+    l_won = _to_float_array(frame, "l_1stWon") + _to_float_array(frame, "l_2ndWon")
+    with np.errstate(divide="ignore", invalid="ignore"):
+        w_serve = np.where(w_svpt > 0, w_won / w_svpt, DEFAULT_SERVE_WON)
+        l_serve = np.where(l_svpt > 0, l_won / l_svpt, DEFAULT_SERVE_WON)
+        w_return = np.where(l_svpt > 0, (l_svpt - l_won) / l_svpt, DEFAULT_RETURN_WON)
+        l_return = np.where(w_svpt > 0, (w_svpt - w_won) / w_svpt, DEFAULT_RETURN_WON)
+    w_serve = np.where(np.isfinite(w_serve), w_serve, DEFAULT_SERVE_WON)
+    l_serve = np.where(np.isfinite(l_serve), l_serve, DEFAULT_SERVE_WON)
+    w_return = np.where(np.isfinite(w_return), w_return, DEFAULT_RETURN_WON)
+    l_return = np.where(np.isfinite(l_return), l_return, DEFAULT_RETURN_WON)
+    return w_serve, w_return, l_serve, l_return
 
 
-def _canonical_player_key(tour: str, raw_player_id: str | None) -> str | None:
-    player_id = _normalize_identifier(raw_player_id)
-    if player_id is None:
-        return None
-    return f"{tour}:{player_id}"
+def process_match_history(matches: pd.DataFrame, params: dict[str, Any] | None = None) -> pd.DataFrame:
+    """Chronological pass: stable player keys, pre-match Elo and rolling serve/return form.
+
+    Output keeps the original match columns plus ``winner_key``/``loser_key``,
+    ``w_pre_match_elo``/``l_pre_match_elo`` (overall), ``*_surf_elo``,
+    ``*_blend_elo`` (what the match probability uses), ``p_winner_elo`` and
+    ``w_/l_rolling_serve_won``/``return_won`` (mean of the previous 10 matches).
+    """
+    params = params or load_params()
+    prepared = prepare_matches(matches, params)
+    values, _, _ = run_elo(prepared, params)
+    df = pd.concat([prepared, values], axis=1)
+    df["winner_id"] = df["winner_id"].map(normalize_identifier)
+    df["loser_id"] = df["loser_id"].map(normalize_identifier)
+    df["w_pre_match_elo"] = df["w_elo"]
+    df["l_pre_match_elo"] = df["l_elo"]
+    df["w_pre_match_surf_elo"] = df["w_surf_elo"]
+    df["l_pre_match_surf_elo"] = df["l_surf_elo"]
+    df["w_pre_match_blend_elo"] = df["w_blend_elo"]
+    df["l_pre_match_blend_elo"] = df["l_blend_elo"]
+    df["p_winner_elo"] = df["p_winner"]
+
+    w_serve, w_return, l_serve, l_return = _serve_return_shares(df)
+    history: dict[str, list[tuple[float, float]]] = {}
+    out = {name: np.empty(len(df)) for name in ("w_serve", "w_return", "l_serve", "l_return")}
+
+    def rolling(key: str) -> tuple[float, float]:
+        past = history.get(key)
+        if not past:
+            return 0.5, 0.5
+        recent = past[-ROLLING_WINDOW:]
+        return float(np.mean([item[0] for item in recent])), float(np.mean([item[1] for item in recent]))
+
+    for index, (winner, loser) in enumerate(zip(df["winner_key"].values, df["loser_key"].values)):
+        out["w_serve"][index], out["w_return"][index] = rolling(winner)
+        out["l_serve"][index], out["l_return"][index] = rolling(loser)
+        history.setdefault(winner, []).append((w_serve[index], w_return[index]))
+        history.setdefault(loser, []).append((l_serve[index], l_return[index]))
+
+    df["w_serve_share"] = w_serve
+    df["w_return_share"] = w_return
+    df["l_serve_share"] = l_serve
+    df["l_return_share"] = l_return
+    df["w_rolling_serve_won"] = out["w_serve"]
+    df["w_rolling_return_won"] = out["w_return"]
+    df["l_rolling_serve_won"] = out["l_serve"]
+    df["l_rolling_return_won"] = out["l_return"]
+    return df
 
 
-def process_match_history(matches: pd.DataFrame) -> pd.DataFrame:
-    """Iterate through matches chronologically to calculate rolling stats and Elo."""
-    df = matches.sort_values(["tourney_date", "tour", "tourney_id", "match_num"]).copy()
+def event_champions(history: pd.DataFrame) -> dict[str, str]:
+    """Champion per event: the winner of the final (round == "F").
 
-    player_elos: dict[str, dict[str, float]] = {}
-    surface_elos: dict[str, dict[str, dict[str, float]]] = {}
-    player_stats: dict[tuple[str, str], list[dict[str, float]]] = {}
+    Events without round labels (tennis-data conversions) fall back to the one
+    player with at least one win and no loss in the event; anything else (round
+    robins without a final, incomplete data) has no champion and is never graded.
+    """
+    champions: dict[str, str] = {}
+    rounds = history.get("round", pd.Series("", index=history.index)).astype(str).str.strip().str.upper()
+    finals = history[rounds == "F"]
+    for event_id, group in finals.groupby("event_id", sort=False):
+        champions[event_id] = str(group["winner_key"].iloc[-1])
 
-    rows: list[dict[str, Any]] = []
-
-    for _, row in df.iterrows():
-        try:
-            tour = str(row.get("tour", "")).strip().upper()
-            if not tour:
-                continue
-
-            winner_id = _normalize_identifier(row.get("winner_id"))
-            loser_id = _normalize_identifier(row.get("loser_id"))
-            if winner_id is None or loser_id is None:
-                continue
-
-            surface = str(row.get("surface", "Unknown") or "Unknown").strip() or "Unknown"
-
-            player_elos.setdefault(tour, {})
-            surface_elos.setdefault(tour, {})
-            surface_elos[tour].setdefault(surface, {})
-
-            winner_key = (tour, winner_id)
-            loser_key = (tour, loser_id)
-
-            winner_elo = player_elos[tour].get(winner_id, 1500.0)
-            loser_elo = player_elos[tour].get(loser_id, 1500.0)
-            winner_surface_elo = surface_elos[tour][surface].get(winner_id, 1500.0)
-            loser_surface_elo = surface_elos[tour][surface].get(loser_id, 1500.0)
-
-            winner_svpt = _to_float(row.get("w_svpt"), 0.0)
-            loser_svpt = _to_float(row.get("l_svpt"), 0.0)
-            winner_first_won = _to_float(row.get("w_1stWon"), 0.0)
-            winner_second_won = _to_float(row.get("w_2ndWon"), 0.0)
-            loser_first_won = _to_float(row.get("l_1stWon"), 0.0)
-            loser_second_won = _to_float(row.get("l_2ndWon"), 0.0)
-
-            if winner_svpt > 0:
-                winner_serve_won = (winner_first_won + winner_second_won) / winner_svpt
-            else:
-                winner_serve_won = 0.60
-
-            if loser_svpt > 0:
-                winner_return_won = (loser_svpt - (loser_first_won + loser_second_won)) / loser_svpt
-            else:
-                winner_return_won = 0.40
-
-            def get_rolling_avg(player_state_key: tuple[str, str], metric: str, window: int = 10) -> float:
-                history = player_stats.get(player_state_key, [])
-                if not history:
-                    return 0.5
-                values = [entry[metric] for entry in history[-window:]]
-                return float(sum(values) / len(values))
-
-            match_features = row.to_dict()
-            match_features["winner_id"] = winner_id
-            match_features["loser_id"] = loser_id
-            match_features["tour"] = tour
-            match_features["w_pre_match_elo"] = winner_elo
-            match_features["l_pre_match_elo"] = loser_elo
-            match_features["w_pre_match_surf_elo"] = winner_surface_elo
-            match_features["l_pre_match_surf_elo"] = loser_surface_elo
-            match_features["w_rolling_serve_won"] = get_rolling_avg(winner_key, "serve_won")
-            match_features["w_rolling_return_won"] = get_rolling_avg(winner_key, "return_won")
-            match_features["l_rolling_serve_won"] = get_rolling_avg(loser_key, "serve_won")
-            match_features["l_rolling_return_won"] = get_rolling_avg(loser_key, "return_won")
-            rows.append(match_features)
-
-            new_winner_elo, new_loser_elo = calculate_elo_updates(winner_elo, loser_elo)
-            player_elos[tour][winner_id] = new_winner_elo
-            player_elos[tour][loser_id] = new_loser_elo
-
-            new_winner_surface_elo, new_loser_surface_elo = calculate_elo_updates(
-                winner_surface_elo,
-                loser_surface_elo,
-                k=16,
-            )
-            surface_elos[tour][surface][winner_id] = new_winner_surface_elo
-            surface_elos[tour][surface][loser_id] = new_loser_surface_elo
-
-            player_stats.setdefault(winner_key, [])
-            player_stats.setdefault(loser_key, [])
-            player_stats[winner_key].append(
-                {"serve_won": winner_serve_won, "return_won": winner_return_won},
-            )
-
-            if winner_svpt > 0:
-                loser_return_won = (winner_svpt - (winner_first_won + winner_second_won)) / winner_svpt
-            else:
-                loser_return_won = 0.40
-            if loser_svpt > 0:
-                loser_serve_won = (loser_first_won + loser_second_won) / loser_svpt
-            else:
-                loser_serve_won = 0.60
-
-            player_stats[loser_key].append(
-                {"serve_won": loser_serve_won, "return_won": loser_return_won},
-            )
-        except Exception as exc:  # pragma: no cover - defensive path for malformed rows
-            logger.debug("Skipping malformed tennis row: %s", exc)
+    remaining = history[~history["event_id"].isin(champions.keys())]
+    for event_id, group in remaining.groupby("event_id", sort=False):
+        if (rounds.loc[group.index] == "RR").all():
             continue
-
-    return pd.DataFrame(rows)
-
-
-def _player_event_frame(match_history: pd.DataFrame, *, prefix: str) -> pd.DataFrame:
-    columns = [
-        "tourney_id",
-        "tourney_name",
-        "surface",
-        "tourney_level",
-        "tourney_date",
-        f"{prefix}_id",
-        f"{prefix}_name",
-        f"{prefix[0]}_pre_match_elo",
-        f"{prefix[0]}_pre_match_surf_elo",
-        f"{prefix[0]}_rolling_serve_won",
-        f"{prefix[0]}_rolling_return_won",
-        f"{prefix}_age",
-        f"{prefix}_ht",
-        "tour",
-    ]
-    frame = match_history.reindex(columns=columns).copy()
-    frame.columns = [
-        "source_tournament_id",
-        "tournament_name",
-        "surface",
-        "level",
-        "date",
-        "player_id",
-        "player_name",
-        "elo",
-        "surf_elo",
-        "serve_won",
-        "return_won",
-        "age",
-        "height",
-        "tour",
-    ]
-    frame["tour"] = frame["tour"].astype(str).str.upper()
-    frame["source_tournament_id"] = frame["source_tournament_id"].map(_normalize_identifier)
-    frame["player_id"] = frame["player_id"].map(_normalize_identifier)
-    frame = frame.dropna(subset=["source_tournament_id", "player_id", "tour"])
-    frame["tournament_id"] = frame.apply(
-        lambda entry: _canonical_tournament_id(entry["tour"], entry["source_tournament_id"]),
-        axis=1,
-    )
-    frame["player_key"] = frame.apply(
-        lambda entry: _canonical_player_key(entry["tour"], entry["player_id"]),
-        axis=1,
-    )
-    return frame
+        winners = set(group["winner_key"])
+        losers = set(group["loser_key"])
+        unbeaten = winners - losers
+        if len(unbeaten) == 1:
+            champions[event_id] = next(iter(unbeaten))
+    return champions
 
 
 def build_player_event_features(match_history: pd.DataFrame) -> pd.DataFrame:
-    """Transform match-level data into player-event-level features."""
-    history = match_history.copy()
-    history["tour"] = history["tour"].astype(str).str.upper()
-    history["source_tournament_id"] = history["tourney_id"].map(_normalize_identifier)
-    history["event_id"] = history.apply(
-        lambda entry: _canonical_tournament_id(entry["tour"], entry["source_tournament_id"]),
-        axis=1,
-    )
-    history["winner_id"] = history["winner_id"].map(_normalize_identifier)
-    history["loser_id"] = history["loser_id"].map(_normalize_identifier)
-    history["winner_key"] = history.apply(
-        lambda entry: _canonical_player_key(entry["tour"], entry["winner_id"]),
-        axis=1,
-    )
-    history["loser_key"] = history.apply(
-        lambda entry: _canonical_player_key(entry["tour"], entry["loser_id"]),
-        axis=1,
-    )
+    """One row per (event, player): pre-event ratings, form, rank and the label.
 
-    winners = _player_event_frame(history, prefix="winner")
-    losers = _player_event_frame(history, prefix="loser")
+    Team competitions (Davis Cup, BJK Cup, United Cup, Laver Cup, ...) are
+    dropped: their "events" are ties or group stages, not individual fields.
+    """
+    history = match_history[~match_history["is_team_event"]].copy()
+    if history.empty:
+        return pd.DataFrame()
+    names = display_names(history)
+    champions = event_champions(history)
 
-    player_events = pd.concat([winners, losers], ignore_index=True)
-    player_events = player_events.drop_duplicates(subset=["tournament_id", "player_key"], keep="first")
+    def side_frame(prefix: str, short: str) -> pd.DataFrame:
+        frame = pd.DataFrame(
+            {
+                "tournament_id": history["event_id"].values,
+                "source_tournament_id": history["tourney_id"].astype(str).values,
+                "tournament_name": history["tourney_name"].values,
+                "surface": history["surface"].values if "surface" in history.columns else "Unknown",
+                "level": history["tourney_level"].values if "tourney_level" in history.columns else "",
+                "match_date": history["tourney_date"].values,
+                "player_key": history[f"{prefix}_key"].values,
+                "player_id": history[f"{prefix}_id"].values,
+                "raw_name": history[f"{prefix}_name"].values,
+                "elo": history[f"{short}_pre_match_elo"].values,
+                "surf_elo": history[f"{short}_pre_match_surf_elo"].values,
+                "blend_elo": history[f"{short}_pre_match_blend_elo"].values,
+                "serve_won": history[f"{short}_rolling_serve_won"].values,
+                "return_won": history[f"{short}_rolling_return_won"].values,
+                "age": _numeric_column(history, f"{prefix}_age"),
+                "height": _numeric_column(history, f"{prefix}_ht"),
+                "rank": _numeric_column(history, f"{prefix}_rank"),
+                # Draw seed; ESPN-sourced seasons have seeds but no rankings.
+                "seed": _numeric_column(history, f"{prefix}_seed"),
+                "matches_played": history[f"{short}_matches"].values,
+                "tour": history["tour"].values,
+                "_order": np.arange(len(history)),
+            }
+        )
+        return frame
 
-    finals = history.sort_values(["tourney_date", "event_id", "match_num"]).groupby("event_id", sort=False).tail(1)
-    champions = dict(zip(finals["event_id"], finals["winner_key"]))
-    player_events["won_tournament"] = player_events.apply(
-        lambda entry: 1 if champions.get(entry["tournament_id"]) == entry["player_key"] else 0,
-        axis=1,
-    )
-    player_events["elo_field_percentile"] = player_events.groupby("tournament_id")["elo"].rank(pct=True)
-
-    return player_events
+    events = pd.concat([side_frame("winner", "w"), side_frame("loser", "l")], ignore_index=True)
+    # A player's first match in an event carries their pre-event numbers.
+    events = events.sort_values("_order", kind="mergesort")
+    bounds = events.groupby("tournament_id")["match_date"].agg(["min", "max"])
+    events = events.drop_duplicates(subset=["tournament_id", "player_key"], keep="first").copy()
+    events["date"] = events["tournament_id"].map(bounds["min"]).astype(int)
+    events["end_date"] = events["tournament_id"].map(bounds["max"]).astype(int)
+    events["player_name"] = [names.get(key, raw) for key, raw in zip(events["player_key"], events["raw_name"])]
+    events["won_tournament"] = [
+        1 if champions.get(event_id) == key else 0
+        for event_id, key in zip(events["tournament_id"], events["player_key"])
+    ]
+    events["has_champion"] = events["tournament_id"].isin(champions.keys())
+    events["field_size"] = events.groupby("tournament_id")["player_key"].transform("count")
+    events["elo_field_percentile"] = events.groupby("tournament_id")["blend_elo"].rank(pct=True)
+    return events.drop(columns=["_order", "raw_name", "match_date"]).reset_index(drop=True)
 
 
 def add_rolling_features(player_events: pd.DataFrame) -> pd.DataFrame:

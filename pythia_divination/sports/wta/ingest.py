@@ -6,6 +6,7 @@ import argparse
 import logging
 import re
 import sys
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -25,6 +26,19 @@ logger = logging.getLogger(__name__)
 
 BASE_URL_WTA = "https://raw.githubusercontent.com/JeffSackmann/tennis_wta/master"
 BASE_URL_ATP = "https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master"
+# Sackmann-format ATP files that keep updating during the season (the BFF already
+# reads the same feed for live ATP champions). The Sackmann repos return 404 as of
+# 2026-10, so without this the ATP ratings freeze at whatever S3 last held. Only
+# used for seasons where the local files already come from this source (2025+,
+# ATP's alphanumeric player codes) or when no local file exists at all.
+ATP_CURRENT_SEASON_URL = "https://stats.tennismylife.org/data/{year}.csv"
+ATP_CURRENT_SEASON_MIN_YEAR = 2025
+# The WTA has no Sackmann-format feed left at all; from this season on its results
+# come from ESPN's scoreboard (sports/wta/espn_results.py), rebuilt on every
+# --force run. Earlier seasons keep their files (2025 = tennis-data conversion),
+# so the 2023-25 evaluation in model_params.json is unaffected.
+WTA_ESPN_RESULTS_MIN_YEAR = 2026
+SACKMANN_COLUMNS = {"tourney_id", "tourney_name", "tourney_date", "winner_name", "loser_name", "winner_id", "loser_id"}
 
 XML_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
 REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
@@ -309,6 +323,51 @@ def _load_fallback_matches(year: int, tour: str) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def _download_sackmann_format(url: str, dest: Path) -> bool:
+    """Download a Sackmann-format CSV, replacing ``dest`` only if the payload parses
+    and carries the expected columns (an HTML error page never overwrites data)."""
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        frame = pd.read_csv(StringIO(response.text), low_memory=False)
+    except Exception as exc:
+        logger.warning("Current-season download failed for %s: %s", url, exc)
+        return False
+    if frame.empty or not SACKMANN_COLUMNS.issubset(frame.columns):
+        logger.warning("Ignoring %s: unexpected columns %s", url, list(frame.columns)[:12])
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    frame.to_csv(tmp, index=False)
+    tmp.replace(dest)
+    logger.info("Saved %s rows from %s to %s", len(frame), url, dest)
+    return True
+
+
+def _write_espn_season(tour: str, year: int, dest: Path, prior: list[pd.DataFrame]) -> bool:
+    """Rebuild ``dest`` from ESPN results (sports/wta/espn_results.py). Leaves the
+    existing file alone when ESPN is off, unreachable or returns nothing."""
+    from sports.wta.espn_results import season_matches
+
+    if not prior:
+        logger.warning("No earlier %s seasons loaded; cannot cross-walk ESPN %s results.", tour.upper(), year)
+        return False
+    try:
+        frame = season_matches(tour.upper(), year, pd.concat(prior, ignore_index=True))
+    except Exception as exc:  # never let a results source break the ingest
+        logger.warning("ESPN %s %s results failed: %s", tour.upper(), year, exc)
+        return False
+    if frame is None or frame.empty:
+        logger.warning("ESPN %s %s results unavailable; keeping %s as it is.", tour.upper(), year, dest)
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    frame.to_csv(tmp, index=False)
+    tmp.replace(dest)
+    logger.info("Saved %s ESPN %s %s match rows to %s", len(frame), tour.upper(), year, dest)
+    return True
+
+
 def ingest_matches(years: list[int], tour: str = "wta", force: bool = False) -> pd.DataFrame:
     """Download and merge match data for the requested years and tour."""
     all_matches: list[pd.DataFrame] = []
@@ -322,7 +381,11 @@ def ingest_matches(years: list[int], tour: str = "wta", force: bool = False) -> 
 
         if not dest.exists() or force:
             logger.info("Downloading %s match data for year %s...", tour.upper(), year)
-            _download_file(url, dest)
+            downloaded = _download_file(url, dest)
+            if not downloaded and tour == "atp" and (year >= ATP_CURRENT_SEASON_MIN_YEAR or not dest.exists()):
+                _download_sackmann_format(ATP_CURRENT_SEASON_URL.format(year=year), dest)
+            elif not downloaded and tour == "wta" and year >= WTA_ESPN_RESULTS_MIN_YEAR:
+                _write_espn_season(tour, year, dest, all_matches)
         else:
             logger.info("Using cached %s match data for year %s.", tour.upper(), year)
 
@@ -350,6 +413,29 @@ def ingest_matches(years: list[int], tour: str = "wta", force: bool = False) -> 
         return pd.DataFrame()
 
     return pd.concat(all_matches, ignore_index=True)
+
+
+def load_combined_matches(normalized_dir: Path | None = None) -> pd.DataFrame:
+    """Read the combined ATP+WTA match table written by ``main``.
+
+    Prefers the newer of the parquet and CSV copies (both are rewritten on every
+    ingest; a stale parquet next to a fresh CSV happens when pyarrow is missing).
+    """
+    normalized_dir = normalized_dir or (DEFAULT_WTA_DATA_ROOT / "normalized")
+    parquet_path = normalized_dir / "tennis_matches_combined.parquet"
+    csv_path = normalized_dir / "tennis_matches_combined.csv"
+    candidates = [path for path in (parquet_path, csv_path) if path.exists()]
+    if not candidates:
+        raise FileNotFoundError(f"No combined tennis matches under {normalized_dir}; run sports.wta.ingest first.")
+    candidates.sort(key=lambda path: (path.stat().st_mtime, path.suffix == ".parquet"), reverse=True)
+    for path in candidates:
+        try:
+            if path.suffix == ".parquet":
+                return pd.read_parquet(path)
+            return pd.read_csv(path, low_memory=False)
+        except Exception as exc:  # pragma: no cover - engine/corruption fallbacks
+            logger.warning("Could not read %s: %s", path, exc)
+    raise FileNotFoundError(f"Combined tennis matches under {normalized_dir} are unreadable.")
 
 
 def main() -> None:

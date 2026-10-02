@@ -19,7 +19,9 @@ Measured facts this module is built around (season walk-forward 2022-2025, nflve
 
 Nothing here is a pick: market_pick(..., show_edge=False) always, and confidence tiers
 are dropped (no sport-specific calibrated cut points exist; never on a market-anchored
-probability). The ridge "model fair spread" appears only as modelLine.
+probability). The ridge "model fair spread" appears only as modelLine. The logged
+record keeps a W-L only for the one-sided model-view moneyline (RECORD_TYPES); every
+market-anchored type is summarized as calibration.
 """
 from __future__ import annotations
 
@@ -389,14 +391,30 @@ def restore_labels(record: dict[str, Any]) -> dict[str, Any]:
         record["attribution"] = ATTRIBUTION
     return record
 
+# Summary types that carry a W-L record (market_log recordKind "record"): only a type
+# where build_board_markets publishes exactly ONE side per game, chosen by the product.
+# The model-view moneyline qualifies: one entry per game, on the side our model makes
+# the favourite ("Model view: BUF"). Everything else is published on both sides near
+# 50% (spread, total, team totals) or as a fixed-side ladder of 4 correlated rungs
+# (alt_spread on the market favourite, alt_total over): no pick was made there, so
+# those rows are calibration only (hits vs expectedHits, Brier vs base rate; no W-L,
+# rate, units or ROI).
+RECORD_TYPES = frozenset({"moneyline"})
+
+
 def summary_type(record: dict[str, Any]) -> Optional[str]:
     """Summary bucket for one graded record, or None to leave it out of the summary.
 
-    Calibration-type markets are logged for both sides (that is what users saw) but
-    the two sides of one line mirror each other exactly (home win = away loss), so the
-    summary keeps one canonical side and separates alt-ladder rungs from posted lines:
-      moneyline (model view) | spread (home side, posted line) | alt_spread | total
-      (over, posted line) | alt_total | team_total_home / team_total_away (over)."""
+      moneyline (model view, one side per game) | spread | alt_spread | total |
+      alt_total | team_total_home | team_total_away
+
+    Two-sided markets are logged on both sides (that is what users saw), but the two
+    sides of one line are exact mirrors (P(home covers) + P(away covers) = 1 ex-push,
+    and exactly one of them wins), so pooling both would make hits == expectedHits and
+    baseRateBrier == 0.25 by construction. The calibration bucket therefore keeps one
+    reference side per line (home for the spread, over for totals and team totals):
+    that is a de-duplication for calibration, not a pick, and the bucket carries no
+    W-L record (see RECORD_TYPES)."""
     mid = str(record.get("marketId") or "")
     rtype = str(record.get("type") or "")
     side = str(record.get("side") or "")
@@ -417,9 +435,11 @@ def summary_type(record: dict[str, Any]) -> Optional[str]:
 
 
 def summarize_graded(graded: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Per (summary type, season) rows: a W-L record for RECORD_TYPES only, every other
+    type recordKind "calibration" (market_log.summarize)."""
     rows = []
     for g in graded:
         bucket = summary_type(g)
         if bucket:
             rows.append({**g, "type": bucket})
-    return market_log.summarize(rows)
+    return market_log.summarize(rows, record_types=RECORD_TYPES)

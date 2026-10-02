@@ -156,9 +156,26 @@ def test_log_grade_and_summary_roundtrip():
         assert all(g["unitReturn"] is None for g in graded if not g.get("market"))   # no invented -110 ROI
         summary = {s["type"]: s for s in nfl.summarize_graded(graded)}
         assert set(summary) == {"moneyline", "spread", "alt_spread", "total", "alt_total", "team_total_home", "team_total_away"}
-        assert summary["spread"]["graded"] == 1 and summary["spread"]["pushes"] == 1   # canonical (home) side only
+        assert summary["spread"]["graded"] == 1 and summary["spread"]["pushes"] == 1   # one reference side per line
         assert summary["alt_spread"]["graded"] == 4 and summary["team_total_home"]["graded"] == 1
         assert all(s["season"] == "2026-27" for s in summary.values())
+        # Only the one-sided model-view moneyline is a W-L record (priced at its logged -298).
+        assert nfl.RECORD_TYPES == {"moneyline"}
+        mlr = summary["moneyline"]
+        assert mlr["recordKind"] == "record" and mlr["wins"] == 1 and mlr["losses"] == 0
+        assert abs(mlr["unitsAtStatedPrice"] - round(100 / 298, 2)) < 1e-9 and mlr["breakEvenRate"] is not None
+        # Both-sides-near-50% markets and the fixed-side ladders are calibration only.
+        for t in ("spread", "alt_spread", "total", "alt_total", "team_total_home", "team_total_away"):
+            s = summary[t]
+            assert s["recordKind"] == "calibration", t
+            for k in ("wins", "losses", "winRateExPush", "breakEvenRate", "unitsAtStatedPrice", "roi"):
+                assert s[k] is None, (t, k)
+            assert s["hits"] is not None and s["expectedHits"] is not None, t
+        over = next(g for g in graded if g["marketId"].endswith(":total:full_game:over"))
+        tot = summary["total"]                                   # 47 < 48.5: the reference (over) side missed
+        assert tot["hits"] == 0 and tot["expectedHits"] == round(over["modelProbability"], 2)
+        assert tot["brier"] == round(over["modelProbability"] ** 2, 4) and tot["baseRateBrier"] == 0.0
+        assert summary["spread"]["brier"] is None                # a push is not a binary outcome
 
 
 def test_model_view_params_and_allowlist():
@@ -239,6 +256,31 @@ def test_ratings_have_no_lookahead():
     assert a.loc[early, "rt_margin"].notna().any()
     assert np.allclose(a.loc[early, "rt_margin"].fillna(0), b.loc[early, "rt_margin"].fillna(0))
     assert not np.allclose(a.loc[frame["week"] >= 26, "rt_margin"], b.loc[frame["week"] >= 26, "rt_margin"])
+
+
+def test_history_prob_is_null_on_market_basis_rows():
+    """Shipped apps render history `prob` as "Model confidence": never the sportsbook price."""
+    import scripts.export_football_frontend_data as ex
+    frame = pd.DataFrame({
+        "game_id": ["g_mkt", "g_model"], "season": [2025, 2025], "official_date": pd.to_datetime(["2025-10-05", "2025-10-12"]),
+        "home_team": ["BUF", "KC"], "away_team": ["NE", "LV"], "home_score": [27.0, 17.0], "away_score": [20.0, 24.0],
+        "home_win": [1.0, 0.0], "home_win_probability": [0.74, 0.61], "model_home_win_probability": [0.69, 0.61],
+        "headline_basis": ["market", "model"],
+    })
+    player_week = pd.DataFrame(columns=["game_id", "team", "position", "player_id", "fantasy_points", "targets", "carries"])
+    saved = ex._history_frame, ex._load_table_optional
+    try:
+        ex._history_frame = lambda games_df, params, seasons: frame.copy()
+        ex._load_table_optional = lambda stem: player_week.copy()
+        boards = {b["gameId"]: b for b in ex._historical_boards(games_df=frame, params={})}
+    finally:
+        ex._history_frame, ex._load_table_optional = saved
+    mkt, model = boards["g_mkt"], boards["g_model"]
+    assert mkt["basis"] == "market" and mkt["prob"] is None
+    assert mkt["homeWinProbability"] == 0.74 and mkt["predictedWinner"] == "BUF" and mkt["modelHomeWinProbability"] == 0.69
+    assert mkt["predictionSource"] == "market_devig_nflverse_close" and mkt["attribution"].startswith("Lines: nflverse")
+    assert model["basis"] == "model" and model["prob"] == 0.61 and model["attribution"] is None
+    assert all(b["recordBasis"] == "simulated" for b in boards.values())
 
 
 def test_game_start_utc():

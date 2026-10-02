@@ -19,9 +19,11 @@ known before first pitch:
     correlation -0.014 / 0.005), which gives a full score matrix: run line +/-1.5,
     game total and team totals at any line.
 
-Data sources, all pregame: results/schedule (MLB Stats API, with local normalized
-tables as fallback), starter pitching lines (local starter_game_logs topped up live
-from the Stats API people gameLog hydrate for starts the local tables do not have).
+Data sources, all pregame: results/schedule (MLB Stats API; the local normalized tables
+are a fallback only for seasons the caller does not mark require_live -- the exporter
+requires the current and every published season), starter pitching lines (local
+starter_game_logs topped up live from the Stats API people gameLog hydrate for starts
+the local tables do not have).
 
 Evaluation is MONTHLY WALK-FORWARD: for every month, both models are refit on all
 completed games before the first day of that month and predict every game in it. The
@@ -37,9 +39,11 @@ from __future__ import annotations
 import json
 import logging
 import math
-from dataclasses import dataclass
+import os
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import numpy as np
 import pandas as pd
@@ -136,6 +140,30 @@ def wind_out_mph(wind: Any, condition: Any) -> float:
 # ── results / schedule ───────────────────────────────────────────────────────
 
 _SCHEDULE_HYDRATE = "probablePitcher,weather"
+
+# Live Stats API calls the caller marks as required are retried this many times (with a
+# linear backoff) before LiveDataError is raised. Optional ones fall back after the same.
+LIVE_FETCH_ATTEMPTS = max(1, int(os.getenv("MLB_LIVE_FETCH_ATTEMPTS", "3")))
+LIVE_FETCH_BACKOFF_SECONDS = float(os.getenv("MLB_LIVE_FETCH_BACKOFF_SECONDS", "3"))
+
+
+class LiveDataError(RuntimeError):
+    """A live Stats API fetch the caller requires (the current season's results, a
+    published season's results, their starter-line top-up) failed after retries. Raised
+    instead of falling back to the local tables, which stop at the last S3 sync and have
+    no postseason: publishing from them truncates the history and empties the board."""
+
+
+def _with_retries(fn: Callable[[], Any], what: str) -> Any:
+    for attempt in range(1, LIVE_FETCH_ATTEMPTS + 1):
+        try:
+            return fn()
+        except Exception as exc:
+            if attempt >= LIVE_FETCH_ATTEMPTS:
+                raise
+            logger.warning("%s: attempt %d/%d failed (%r); retrying", what, attempt, LIVE_FETCH_ATTEMPTS, exc)
+            time.sleep(LIVE_FETCH_BACKOFF_SECONDS * attempt)
+    raise AssertionError("unreachable")
 
 
 def _to_float(value: Any) -> Optional[float]:
@@ -266,24 +294,54 @@ def _normalize_results(frame: pd.DataFrame) -> pd.DataFrame:
     return g
 
 
+# Raw live listings kept for the market grader (every row, "Postponed" duplicates included):
+# the only positive evidence that a logged game was postponed, cancelled or never listed.
+LIVE_SCHEDULE_COLUMNS = ["game_pk", "season", "game_type", "official_date", "game_date", "status_abstract",
+                         "status_detailed", "home_score", "away_score"]
+
+
 def load_results(seasons: Iterable[int], *, client: Any = None, normalized_dir: Path = NORMALIZED_DIR,
-                 allow_network: bool = True) -> pd.DataFrame:
+                 allow_network: bool = True, require_live: Iterable[int] = (),
+                 schedule_sink: Optional[list] = None) -> pd.DataFrame:
     """All games (completed and scheduled) for `seasons`, live from the Stats API when
     reachable, else from the local normalized tables. Local probable-pitcher IDs and
-    weather fill gaps in the live rows (the live schedule occasionally drops them)."""
+    weather fill gaps in the live rows (the live schedule occasionally drops them).
+
+    Seasons in `require_live` never fall back: a failed live fetch (after retries), or an
+    empty live payload for a season the local tables do have, raises LiveDataError. The
+    local tables end at the last S3 sync and carry no postseason, so a fallback there
+    publishes a truncated history and an empty board. Every successful, non-empty live
+    season is appended to `schedule_sink` (LIVE_SCHEDULE_COLUMNS + fetched_season)."""
+    required = {int(s) for s in require_live}
+    live_possible = allow_network and client is not None
+    if required and not live_possible:
+        raise LiveDataError(f"MLB results: live data required for seasons {sorted(required)} but the network is "
+                            "disabled or no client was given")
     frames = []
     for season in seasons:
         live = None
-        if allow_network and client is not None:
+        if live_possible:
             try:
-                live = fetch_season_results(client, season)
-            except Exception as exc:  # network variability; the local table is the fallback
+                live = _with_retries(lambda: fetch_season_results(client, season), f"MLB results {season}")
+            except Exception as exc:
+                if int(season) in required:
+                    raise LiveDataError(f"MLB results {season}: live Stats API fetch failed after "
+                                        f"{LIVE_FETCH_ATTEMPTS} attempts ({exc!r}); refusing to fall back to the "
+                                        "local tables (no postseason, stale since the last S3 sync)") from exc
+                # Training-only season: its regular season is complete in the local tables.
                 logger.warning("MLB results %s: live fetch failed (%s); using local tables", season, exc)
         local = None
         try:
             local = load_local_season(season, normalized_dir)
         except FileNotFoundError:
             pass
+        if int(season) in required and (live is None or live.empty) and local is not None and not local.empty:
+            raise LiveDataError(f"MLB results {season}: the live Stats API returned no games while the local "
+                                f"tables have {len(local)}; refusing to publish from the local tables")
+        if live is not None and not live.empty and schedule_sink is not None:
+            listing = live.reindex(columns=LIVE_SCHEDULE_COLUMNS).copy()
+            listing["fetched_season"] = int(season)
+            schedule_sink.append(listing)
         if live is not None and not live.empty:
             if local is not None and not local.empty:
                 fill_cols = ["away_probable_pitcher_id", "away_probable_pitcher_name", "home_probable_pitcher_id",
@@ -390,21 +448,29 @@ def flatten_pitcher_game_logs(payload: dict[str, Any]) -> pd.DataFrame:
 
 
 def fetch_starter_lines(client: Any, pitcher_seasons: dict[int, set[int]], *, chunk: int = 40,
-                        profiles_sink: Optional[list] = None) -> pd.DataFrame:
+                        profiles_sink: Optional[list] = None, require_live: Iterable[int] = ()) -> pd.DataFrame:
     """Live starts for each (season -> pitcher ids), in bulk: one people call per chunk.
-    Pitcher profile rows from the same payloads are appended to `profiles_sink`."""
+    Pitcher profile rows from the same payloads are appended to `profiles_sink`. A chunk
+    that still fails after retries raises LiveDataError for a season in `require_live`
+    (its starter features would silently go stale); other seasons log and continue."""
+    required = {int(s) for s in require_live}
     frames = []
     types = ",".join(GAME_TYPES)
     for season, ids in sorted(pitcher_seasons.items()):
         ids = sorted(int(i) for i in ids if i is not None and not pd.isna(i))
         for start in range(0, len(ids), chunk):
             part = ids[start:start + chunk]
+            params = {
+                "personIds": ",".join(str(i) for i in part),
+                "hydrate": f"stats(group=[pitching],type=[gameLog],season={int(season)},gameType=[{types}])",
+            }
             try:
-                payload = client._get_json("/api/v1/people", params={
-                    "personIds": ",".join(str(i) for i in part),
-                    "hydrate": f"stats(group=[pitching],type=[gameLog],season={int(season)},gameType=[{types}])",
-                })
+                payload = _with_retries(lambda: client._get_json("/api/v1/people", params=params),
+                                        f"MLB starter logs {season}")
             except Exception as exc:
+                if int(season) in required:
+                    raise LiveDataError(f"MLB starter logs {season} ({len(part)} pitchers): live fetch failed after "
+                                        f"{LIVE_FETCH_ATTEMPTS} attempts ({exc!r})") from exc
                 logger.warning("MLB starter logs %s (%d ids): fetch failed (%s)", season, len(part), exc)
                 continue
             frames.append(flatten_pitcher_game_logs(payload))
@@ -417,9 +483,14 @@ def fetch_starter_lines(client: Any, pitcher_seasons: dict[int, set[int]], *, ch
 
 def assemble_starter_lines(games: pd.DataFrame, *, client: Any = None, normalized_dir: Path = NORMALIZED_DIR,
                            allow_network: bool = True, local: Optional[pd.DataFrame] = None,
-                           profiles_sink: Optional[list] = None) -> pd.DataFrame:
+                           profiles_sink: Optional[list] = None, require_live: Iterable[int] = ()) -> pd.DataFrame:
     """Local starter lines + live top-up for completed games the local tables lack
-    (everything after the last S3 sync, and every postseason game)."""
+    (everything after the last S3 sync, and every postseason game). The top-up for a
+    season in `require_live` must succeed (LiveDataError otherwise)."""
+    required = {int(s) for s in require_live}
+    if required and not (allow_network and client is not None):
+        raise LiveDataError(f"MLB starter logs: live top-up required for seasons {sorted(required)} but the "
+                            "network is disabled or no client was given")
     local = load_local_starter_lines(normalized_dir) if local is None else local
     lines = local[local["game_pk"].isin(games["game_pk"])].copy()
     if allow_network and client is not None:
@@ -441,7 +512,7 @@ def assemble_starter_lines(games: pd.DataFrame, *, client: Any = None, normalize
         if need:
             logger.info("MLB starter logs: fetching %d pitcher-seasons live",
                         sum(len(v) for v in need.values()))
-            live = fetch_starter_lines(client, need, profiles_sink=profiles_sink)
+            live = fetch_starter_lines(client, need, profiles_sink=profiles_sink, require_live=required)
             live = live[live["game_pk"].isin(games["game_pk"])]
             lines = pd.concat([lines, live], ignore_index=True)
     return lines.drop_duplicates(["game_pk", "team_id"], keep="last").reset_index(drop=True)
@@ -834,6 +905,11 @@ class PregameInputs:
     frame: pd.DataFrame       # build_features output: one row per game, completed and scheduled
     lines: pd.DataFrame       # starter pitching lines (local + live top-up)
     profiles: pd.DataFrame    # pitcher display profiles (local table + live people payloads)
+    # Raw live schedule listings (LIVE_SCHEDULE_COLUMNS + fetched_season) of every season
+    # fetched live in this run, and those seasons. Empty when everything came from local.
+    live_schedule: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(
+        columns=LIVE_SCHEDULE_COLUMNS + ["fetched_season"]))
+    live_seasons: frozenset = frozenset()
 
 
 def load_pitcher_profiles(normalized_dir: Path = NORMALIZED_DIR) -> pd.DataFrame:
@@ -847,19 +923,29 @@ def load_pitcher_profiles(normalized_dir: Path = NORMALIZED_DIR) -> pd.DataFrame
 
 
 def prepare_inputs(seasons: Iterable[int], *, client: Any = None, params: Optional[dict[str, Any]] = None,
-                   normalized_dir: Path = NORMALIZED_DIR, allow_network: bool = True) -> PregameInputs:
-    """Results + starter lines + features in one call (what the exporter needs)."""
+                   normalized_dir: Path = NORMALIZED_DIR, allow_network: bool = True,
+                   require_live: Iterable[int] = ()) -> PregameInputs:
+    """Results + starter lines + features in one call (what the exporter needs).
+    `require_live`: seasons whose results and starter top-up must come from the live API
+    (LiveDataError otherwise); see load_results."""
     params = params or load_params()
-    games = load_results(seasons, client=client, normalized_dir=normalized_dir, allow_network=allow_network)
+    required = sorted({int(s) for s in require_live})
+    schedule_sink: list[pd.DataFrame] = []
+    games = load_results(seasons, client=client, normalized_dir=normalized_dir, allow_network=allow_network,
+                         require_live=required, schedule_sink=schedule_sink)
     sink: list[pd.DataFrame] = []
     lines = assemble_starter_lines(games, client=client, normalized_dir=normalized_dir,
-                                   allow_network=allow_network, profiles_sink=sink)
+                                   allow_network=allow_network, profiles_sink=sink, require_live=required)
     profiles = pd.concat([load_pitcher_profiles(normalized_dir), *sink], ignore_index=True)
     profiles["player_id"] = pd.to_numeric(profiles["player_id"], errors="coerce")
     profiles = profiles.dropna(subset=["player_id"]).drop_duplicates("player_id", keep="last")
     logger.info("MLB pregame frame: %d games (%d final), %d starter lines", len(games),
                 int(games["is_final"].sum()), len(lines))
-    return PregameInputs(build_features(games, lines, params), lines, profiles)
+    live_schedule = (pd.concat(schedule_sink, ignore_index=True) if schedule_sink
+                     else pd.DataFrame(columns=LIVE_SCHEDULE_COLUMNS + ["fetched_season"]))
+    live_seasons = frozenset(int(s) for s in live_schedule["fetched_season"].unique())
+    return PregameInputs(build_features(games, lines, params), lines, profiles,
+                         live_schedule=live_schedule, live_seasons=live_seasons)
 
 
 # ── display context (pregame, for board cards; never model inputs) ───────────

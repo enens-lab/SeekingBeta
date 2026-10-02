@@ -15,7 +15,11 @@ Outputs (FRONTEND_DATA_DIR):
                                       probability replayed out of sample (closing line,
                                       or the walk-forward model view where no line)
   football_market_history.json        graded market picks exactly as logged pre-game
-  football_market_summary.json        per (market type, season) record of those picks
+  football_market_summary.json        per (market type, season) summary of those picks:
+                                      recordKind "record" (W-L) only for the one-sided
+                                      model-view moneyline, "calibration" otherwise
+History rows whose headline is the market carry "prob": null (shipped apps label prob
+as model confidence); model-basis rows keep it.
 Every bake appends the published markets to data/sports/market_picks/football/ (an
 append-only log, see sports/market_log.py); history is only ever graded from that log.
 """
@@ -1018,7 +1022,11 @@ def _historical_boards(graded_by_game: dict[str, list[dict[str, Any]]] | None = 
                 "hitStatus": "Top Pick" if predicted_winner == actual_winner else "Miss",
                 "predictedWinner": predicted_winner,
                 "actualWinner": actual_winner,
-                "prob": max(home_prob, away_prob),
+                # Shipped iOS/Android builds render `prob` as "Model confidence: x%".
+                # On a market-basis row it would be the de-vigged closing sportsbook
+                # price, not our model, so it is withheld (null); the home/away
+                # probabilities and predictedWinner still carry the headline.
+                "prob": max(home_prob, away_prob) if basis != "market" else None,
                 "homeWinProbability": round(home_prob, 4),
                 "awayWinProbability": round(away_prob, 4),
                 # The record is a replay, not a live log: "simulated" (closing line or

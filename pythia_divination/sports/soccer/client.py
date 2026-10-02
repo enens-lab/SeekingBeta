@@ -10,9 +10,10 @@ from __future__ import annotations
 import io
 import logging
 import os
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import pandas as pd
 import requests
@@ -136,6 +137,83 @@ def normalize_football_data(raw: pd.DataFrame, season_start: int | None = None, 
     return frame[(frame["home"] != "") & (frame["away"] != "")]
 
 
+@dataclass(frozen=True)
+class HistoryLoad:
+    """A league's match history plus what happened to every requested season.
+
+    A failed season download used to be skipped with a warning, and the model was
+    silently refitted on whatever was left; that rewrote the published walk-forward
+    record (a simulated E0 2021-22 + 2022-23 failure flipped 18 hitStatus values).
+    Callers now see exactly which seasons are missing and refuse to fit on a window
+    with a hole in it (scripts/export_soccer_frontend_data.py)."""
+
+    frame: pd.DataFrame
+    requested: tuple[int, ...]
+    loaded: tuple[int, ...]          # at least one usable match row
+    not_published: tuple[int, ...] = ()   # football-data answered HTTP 404 (no file yet)
+    empty: tuple[int, ...] = ()           # downloaded, but no usable match rows
+    failed: dict[int, str] = field(default_factory=dict)  # download / parse error
+
+    def missing(self, seasons: Iterable[int]) -> list[int]:
+        """Seasons of `seasons` with no usable match in the frame, oldest first."""
+        have = set(self.loaded)
+        return sorted(int(s) for s in seasons if int(s) not in have)
+
+
+def _is_not_found(exc: BaseException) -> bool:
+    response = getattr(exc, "response", None)
+    return isinstance(exc, requests.HTTPError) and response is not None and response.status_code == 404
+
+
+def load_history_report(league_key: str, seasons: int = 3, current_season_start: int | None = None,
+                        keep_odds: bool = False) -> HistoryLoad:
+    """Like load_history, but also reports, per requested season, whether it loaded,
+    was not published yet (HTTP 404), came back without usable rows, or failed."""
+    cfg = LEAGUE_CONFIGS.get(league_key)
+    if not cfg or not cfg.get("fd_code"):
+        raise ValueError(f"league {league_key!r} has no football-data history source")
+    fd_code = str(cfg["fd_code"])
+    base = current_season_start if current_season_start is not None else current_season_start_fn()
+
+    requested = tuple(base - offset for offset in range(seasons))
+    frames: list[pd.DataFrame] = []
+    not_published: list[int] = []
+    failed: dict[int, str] = {}
+    for offset, start in enumerate(requested):
+        try:
+            # Always re-fetch the current (in-progress) season; cache older ones.
+            raw = fetch_football_data_csv(fd_code, start, cache=(offset > 0))
+        except Exception as exc:  # network / season gaps: reported, never papered over
+            if _is_not_found(exc):
+                not_published.append(start)
+            else:
+                failed[start] = f"{type(exc).__name__}: {exc}"
+            logger.warning("soccer history fetch failed for %s %s: %s", fd_code, start, exc)
+            continue
+        try:
+            frame = normalize_football_data(raw, season_start=start, keep_odds=keep_odds)
+        except Exception as exc:  # malformed CSV
+            failed[start] = f"{type(exc).__name__}: {exc}"
+            logger.warning("soccer history parse failed for %s %s: %s", fd_code, start, exc)
+            continue
+        if not frame.empty:
+            frames.append(frame)
+
+    if frames:
+        out = pd.concat(frames, ignore_index=True)
+        out["season_start"] = out["season_start"].astype(int)
+        out = out.dropna(subset=["date"])
+        out = out.sort_values(["date", "home"], kind="mergesort").reset_index(drop=True)
+    else:
+        out = pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "season_start"])
+
+    loaded = tuple(sorted({int(s) for s in out["season_start"].unique()})) if not out.empty else ()
+    gone = set(loaded) | set(not_published) | set(failed)
+    empty = tuple(s for s in sorted(requested) if s not in gone)
+    return HistoryLoad(frame=out, requested=requested, loaded=loaded,
+                       not_published=tuple(sorted(not_published)), empty=empty, failed=failed)
+
+
 def load_history(league_key: str, seasons: int = 3, current_season_start: int | None = None,
                  keep_odds: bool = False) -> pd.DataFrame:
     """Concatenated, normalized match history for a league.
@@ -143,33 +221,11 @@ def load_history(league_key: str, seasons: int = 3, current_season_start: int | 
     Returns columns: date (datetime), home, away (canonical), home_goals,
     away_goals, season_start (int) [+ closing odds when keep_odds], sorted by date.
     The current season is derived from today's date (July rollover) unless given.
+    A season that fails to download is left out (see load_history_report for a
+    caller that must know which seasons are missing).
     """
-    cfg = LEAGUE_CONFIGS.get(league_key)
-    if not cfg or not cfg.get("fd_code"):
-        raise ValueError(f"league {league_key!r} has no football-data history source")
-    fd_code = str(cfg["fd_code"])
-    base = current_season_start if current_season_start is not None else current_season_start_fn()
-
-    frames: list[pd.DataFrame] = []
-    for offset in range(seasons):
-        start = base - offset
-        try:
-            # Always re-fetch the current (in-progress) season; cache older ones.
-            raw = fetch_football_data_csv(fd_code, start, cache=(offset > 0))
-        except Exception as exc:  # pragma: no cover - network/season gaps
-            logger.warning("soccer history fetch failed for %s %s: %s", fd_code, start, exc)
-            continue
-        frame = normalize_football_data(raw, season_start=start, keep_odds=keep_odds)
-        if not frame.empty:
-            frames.append(frame)
-
-    if not frames:
-        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "season_start"])
-
-    out = pd.concat(frames, ignore_index=True)
-    out["season_start"] = out["season_start"].astype(int)
-    out = out.dropna(subset=["date"])
-    return out.sort_values(["date", "home"], kind="mergesort").reset_index(drop=True)
+    return load_history_report(league_key, seasons=seasons, current_season_start=current_season_start,
+                               keep_odds=keep_odds).frame
 
 
 current_season_start_fn = current_season_start

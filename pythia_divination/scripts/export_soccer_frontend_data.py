@@ -24,7 +24,14 @@ Pipeline per league (sports/soccer/model_params.json holds the settings):
      (sports/market_log.py); picks published before kick-off are graded against the
      final score into soccer_market_history.json / soccer_market_summary.json. Those
      results never touch hitStatus / seasonSummary (clients count any non-"Miss" as a
-     hit and those numbers are emailed).
+     hit and those numbers are emailed). Every summary row is "calibration" (no
+     declared one-sided lean, so no W-L / ROI): hits vs expectedHits and Brier.
+
+COMPLETE WINDOWS ONLY: a league is refitted only when every football-data season its
+fits read has loaded. A failed season download freezes that league's record (its
+published boards and track-record rows are carried unchanged, nothing regenerated) and,
+if the gap is inside the current 5-season window, withholds its upcoming boards. The
+run exits non-zero when no league could be priced from a complete window.
 
 The World Cup keeps its own record: the boards as published (sports/soccer/archive/,
 100 matches 2026-06-11..07-12) plus any later finished match scored by the
@@ -41,9 +48,9 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import numpy as np
 import pandas as pd
@@ -92,6 +99,13 @@ TOTALS_LINES = [float(x) for x in MODEL_PARAMS.get("totalsLines", [1.5, 2.5, 3.5
 HANDICAP_MAIN_LINES = [float(x) for x in MODEL_PARAMS.get("handicapMainLines", [-0.5, -1.5])]
 SEASON_OF = market_log.season_cross_year(SEASON_START_MONTH)
 MARKET_PICKS_ROOT_ENV = "SPORTS_MARKET_PICKS_ROOT"
+# Where the static JSON is written (default: the prophecy frontend data dir). A scratch
+# dir for dev runs and tests, so a run never overwrites the published files.
+OUTPUT_DIR_ENV = "SOCCER_EXPORT_OUTPUT_DIR"
+# The current season's football-data file only appears once its first round is played.
+# Until this (month, day) of the season's start year a 404 / row-less current-season
+# file means "not started yet" (nothing to miss); after it, it is a missing season.
+CURRENT_SEASON_UNPUBLISHED_UNTIL = (9, 1)
 
 WORLD_CUP_ENABLED = True
 # 2000 sims gives the same top-team title odds as 10000 (verified: ±0.5pp) at a
@@ -422,14 +436,34 @@ def _compact_scores(block: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def build_track_record_summary(preds: pd.DataFrame, world_cup_boards: list[dict[str, Any]]) -> dict[str, Any]:
+def build_track_record_summary(preds: pd.DataFrame, world_cup_boards: list[dict[str, Any]], *,
+                               previous: Optional[dict[str, Any]] = None,
+                               frozen_tours: Iterable[str] = ()) -> dict[str, Any]:
+    """The soccer_track_record.json payload.
+
+    `frozen_tours`: leagues whose record was not regenerated this run (incomplete
+    history). Their rows are carried from the `previous` summary unchanged, and so are
+    the pooled "Top 5 leagues" rows, which cannot be recomputed without them. A
+    previous summary of another recordVersion is not carried (rows omitted instead)."""
+    frozen = {str(t) for t in frozen_tours}
+    carry = previous if (previous and previous.get("recordVersion") == RECORD_VERSION) else None
+    if frozen and carry is None:
+        logger.error("soccer track record: no previous %s summary to carry for %s; their rows are omitted",
+                     RECORD_VERSION, ", ".join(sorted(frozen)))
     leagues: list[dict[str, Any]] = []
     overall: list[dict[str, Any]] = []
     if not preds.empty:
         for (tour, season), g in preds.groupby(["tour", "season_start"], sort=True):
+            if tour in frozen:
+                continue
             leagues.append({"tour": tour, "season": season_label(int(season)), **_compact_scores(wf.score_predictions(g, MAX_GOALS))})
-        for season, g in preds.groupby("season_start", sort=True):
-            overall.append({"tour": "Top 5 leagues", "season": season_label(int(season)), **_compact_scores(wf.score_predictions(g, MAX_GOALS))})
+        if not frozen:
+            for season, g in preds.groupby("season_start", sort=True):
+                overall.append({"tour": "Top 5 leagues", "season": season_label(int(season)), **_compact_scores(wf.score_predictions(g, MAX_GOALS))})
+    if frozen and carry is not None:
+        leagues.extend(row for row in carry.get("leagues") or [] if isinstance(row, dict) and row.get("tour") in frozen)
+        leagues.sort(key=lambda row: (str(row.get("tour")), str(row.get("season"))))
+        overall = [row for row in carry.get("allLeagues") or [] if isinstance(row, dict)]
     wc_hits = sum(1 for b in world_cup_boards if b.get("hitStatus") == "Top Pick")
     world_cup = {
         "tour": wc.TOUR_NAME,
@@ -477,9 +511,9 @@ def _fetch_league_fixtures(league_key: str, today) -> list[dict[str, Any]]:
 
 
 def _build_upcoming_for_league(league_key: str, model: DixonColesModel, fixtures: list[dict[str, Any]],
-                               published_at: str) -> list[dict[str, Any]]:
+                               published_at: str, today: Optional[date] = None) -> list[dict[str, Any]]:
     tour = tour_for_league(league_key)
-    today_key = int(datetime.now(timezone.utc).strftime("%Y%m%d"))
+    today_key = int((today or datetime.now(timezone.utc).date()).strftime("%Y%m%d"))
     boards: list[dict[str, Any]] = []
     unknown: set[str] = set()
     for fx in fixtures:
@@ -736,28 +770,35 @@ def _board_key(board: dict[str, Any]) -> tuple[str, str, int]:
 
 
 def merge_history(new_boards: list[dict[str, Any]], *, archive: list[dict[str, Any]],
-                  previous: list[dict[str, Any]]) -> list[dict[str, Any]]:
+                  previous: list[dict[str, Any]], frozen_tours: Iterable[str] = ()) -> list[dict[str, Any]]:
     """Union of the regenerated record, the World Cup archive and the previously
     exported file, newest first, one board per (tour, match, date).
 
     * World Cup boards: archive first (as published), then the previous file, then
       newly scored matches -- an already-published WC board is never re-scored.
-    * League boards: the regenerated walk-forward wins; boards from the previous
-      file are kept only if they carry the same recordVersion (so a source hiccup
-      cannot shrink the record), while legacy static-fit boards are dropped once.
+    * Frozen leagues (`frozen_tours`: history incomplete this run, so the record was
+      not regenerated): every previously published board is carried verbatim, whatever
+      its recordVersion, and nothing regenerated for that league can replace it.
+    * Other league boards: the regenerated walk-forward wins (it is only regenerated
+      from a complete history window); boards from the previous file are kept only if
+      they carry the same recordVersion (so a source hiccup cannot shrink the record),
+      while legacy static-fit boards are dropped once.
     """
     merged: dict[tuple[str, str, int], dict[str, Any]] = {}
     wc_upper = wc.TOUR_NAME.upper()
+    frozen = {str(t).upper() for t in frozen_tours}
     for board in archive:
         merged.setdefault(_board_key(board), board)
     for board in previous:
         key = _board_key(board)
-        if key[0] == wc_upper:
+        if key[0] == wc_upper or key[0] in frozen:
             merged.setdefault(key, board)
     for board in new_boards:
         key = _board_key(board)
         if key[0] == wc_upper:
             merged.setdefault(key, board)
+        elif key[0] in frozen:
+            continue
         else:
             merged[key] = board
     for board in previous:
@@ -823,6 +864,11 @@ def log_and_grade_markets(upcoming: list[dict[str, Any]], espn_results: dict[str
     results = collect_results(chosen, espn_results, histories)
     graded = market_log.grade_picks(chosen, results)
     graded.sort(key=lambda g: (str(g.get("gameStart") or ""), str(g.get("marketId") or "")), reverse=True)
+    # No record_types: soccer publishes no declared one-sided lean. Every type (totals
+    # 1.5/2.5/3.5, BTTS, Asian handicap -0.5/-1.5/fair, double chance, draw no bet,
+    # correct score) is a fixed rule over the score matrix, several lines pooled per
+    # type, so each row is "calibration" (hits vs expectedHits, Brier vs base rate)
+    # with wins/losses/win rate/units/ROI left null.
     summary = market_log.summarize(graded)
     return graded[:MARKET_HISTORY_CAP], summary
 
@@ -846,54 +892,142 @@ def _history_seasons(season: int) -> int:
     return max(window + 1, season - RECORD_START_SEASON + window)
 
 
+def _fit_window_seasons(season: int) -> list[int]:
+    """The seasons the current (upcoming-board) fit reads: the 5-season window."""
+    window = int(MODEL_PARAMS["windowSeasons"])
+    return list(range(season - window + 1, season + 1))
+
+
+def _record_window_seasons(season: int) -> list[int]:
+    """Every season some walk-forward fit behind the record reads: the window of the
+    record's first season through the current season."""
+    window = int(MODEL_PARAMS["windowSeasons"])
+    return list(range(min(RECORD_START_SEASON, season) - window + 1, season + 1))
+
+
+def _missing_seasons(load: Optional[client.HistoryLoad], seasons: Iterable[int], *, season: int,
+                     today: date) -> list[int]:
+    """Seasons of `seasons` the league's loaded history lacks (oldest first).
+
+    The one allowed gap is a current season that has not started: football-data
+    answered 404 (or a file with no rows) before CURRENT_SEASON_UNPUBLISHED_UNTIL, so
+    there is nothing to miss. Any other gap -- a failed download, a timeout, a 404
+    for a past season -- is missing."""
+    seasons = sorted(int(s) for s in seasons)
+    if load is None:
+        return seasons
+    grace = date(int(season), *CURRENT_SEASON_UNPUBLISHED_UNTIL)
+    missing = []
+    for s in load.missing(seasons):
+        if s == int(season) and today < grace and (s in load.not_published or s in load.empty):
+            continue
+        missing.append(s)
+    return missing
+
+
+def _describe_gaps(load: Optional[client.HistoryLoad], seasons: list[int]) -> str:
+    """'2021-22 (ConnectionError: ...), 2022-23 (not published)' for an ERROR log."""
+    parts = []
+    for s in seasons:
+        if load is None:
+            why = "history load failed"
+        elif s in load.failed:
+            why = load.failed[s][:160]
+        elif s in load.not_published:
+            why = "HTTP 404, not published"
+        elif s in load.empty:
+            why = "no usable match rows"
+        else:
+            why = "not requested"
+        parts.append(f"{season_label(s)} ({why})")
+    return ", ".join(parts)
+
+
 def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
     """Return the soccer board payload across all predictable leagues (JSON-able;
     used by the divination /api/sports/soccer/boards fallback). Nothing is logged."""
-    payload, _, _ = _build_payload(selected_date)
+    payload, _, _, _ = _build_payload(selected_date)
     return payload
 
 
 def _build_payload(selected_date: str | None = None, previous_history: Optional[list[dict[str, Any]]] = None,
-                   published_at: Optional[str] = None
-                   ) -> tuple[dict[str, Any], dict[str, tuple[int, int]], dict[str, pd.DataFrame]]:
-    """(payload, ESPN final scores by gameId, league histories). The last two feed
-    the market-log grading in export_soccer_frontend_data."""
+                   published_at: Optional[str] = None, *,
+                   previous_track_record: Optional[dict[str, Any]] = None,
+                   today: Optional[date] = None,
+                   ) -> tuple[dict[str, Any], dict[str, tuple[int, int]], dict[str, pd.DataFrame], dict[str, Any]]:
+    """(payload, ESPN final scores by gameId, league histories, health). The middle
+    two feed the market-log grading in export_soccer_frontend_data.
+
+    A league is only refitted from a COMPLETE history window:
+      * record: every season in _record_window_seasons must have loaded, else the
+        league is "frozen" -- its previously published walk-forward boards (and its
+        track-record rows) are carried unchanged and nothing is regenerated for it;
+      * upcoming: every season in _fit_window_seasons must have loaded, else none of
+        its upcoming boards are published (no board from a degraded fit).
+    health = {"season", "frozenRecord": {league: [missing seasons]},
+              "unpricedUpcoming": {league: [missing seasons]}, "pricedLeagues": [...]}."""
     published_at = published_at or _published_now()
-    today = datetime.now(timezone.utc).date()
+    today = today or datetime.now(timezone.utc).date()
     season = current_season_start(today)
+    record_seasons = _record_window_seasons(season)
+    fit_seasons = _fit_window_seasons(season)
     upcoming: list[dict[str, Any]] = []
     record_boards: list[dict[str, Any]] = []
     record_preds: list[pd.DataFrame] = []
     espn_results: dict[str, tuple[int, int]] = {}
     histories: dict[str, pd.DataFrame] = {}
+    frozen: dict[str, list[int]] = {}
+    unpriced: dict[str, list[int]] = {}
+    priced: list[str] = []
 
     for league_key in PREDICTABLE_LEAGUE_KEYS:
+        tour = tour_for_league(league_key)
+        load: Optional[client.HistoryLoad]
         try:
-            history = client.load_history(league_key, seasons=_history_seasons(season),
-                                          current_season_start=season, keep_odds=True)
-        except Exception as exc:  # pragma: no cover
-            logger.warning("soccer history load failed for %s: %s", league_key, exc)
-            continue
-        if history.empty:
-            continue
-        histories[league_key] = history
+            load = client.load_history_report(league_key, seasons=_history_seasons(season),
+                                              current_season_start=season, keep_odds=True)
+        except Exception as exc:  # pragma: no cover - unexpected; treated as a full gap
+            logger.error("soccer history load failed for %s: %s", league_key, exc)
+            load = None
+        history = load.frame if load is not None else pd.DataFrame()
+        if not history.empty:
+            histories[league_key] = history   # result look-ups for grading only
+
+        record_missing = _missing_seasons(load, record_seasons, season=season, today=today)
+        if record_missing:
+            frozen[league_key] = record_missing
+            logger.error("soccer %s (%s): football-data history incomplete, missing %s -- keeping its previously "
+                         "published walk-forward boards unchanged and NOT regenerating its record",
+                         tour, league_key, _describe_gaps(load, record_missing))
+        else:
+            try:
+                boards, preds = _build_track_record_for_league(league_key, history)
+                record_boards.extend(boards)
+                if not preds.empty:
+                    record_preds.append(preds)
+            except Exception as exc:  # pragma: no cover
+                frozen[league_key] = []
+                logger.error("soccer %s (%s): walk-forward failed (%s) -- keeping its previously published "
+                             "boards unchanged", tour, league_key, exc)
+
+        model: Optional[DixonColesModel] = None
+        fit_missing = _missing_seasons(load, fit_seasons, season=season, today=today)
+        if fit_missing:
+            unpriced[league_key] = fit_missing
+            logger.error("soccer %s (%s): fit window %s..%s incomplete, missing %s -- NOT publishing its upcoming "
+                         "boards from a degraded fit", tour, league_key, season_label(fit_seasons[0]),
+                         season_label(fit_seasons[-1]), _describe_gaps(load, fit_missing))
+        else:
+            try:
+                model = _fit_current_model(history, season)
+            except Exception as exc:  # pragma: no cover
+                logger.error("Dixon-Coles fit failed for %s: %s", league_key, exc)
+            if model is None:
+                unpriced[league_key] = []
+                logger.error("soccer %s (%s): no current fit -- no upcoming boards", tour, league_key)
 
         try:
-            boards, preds = _build_track_record_for_league(league_key, history)
-            record_boards.extend(boards)
-            if not preds.empty:
-                record_preds.append(preds)
-        except Exception as exc:  # pragma: no cover
-            logger.warning("soccer track record failed for %s: %s", league_key, exc)
-
-        try:
-            model = _fit_current_model(history, season)
-        except Exception as exc:  # pragma: no cover
-            logger.warning("Dixon-Coles fit failed for %s: %s", league_key, exc)
-            model = None
-        if model is None:
-            continue
-        try:
+            # Fetched even for an unpriced league: finished fixtures grade the pick log.
             fixtures = _fetch_league_fixtures(league_key, today)
         except Exception as exc:  # pragma: no cover - network
             logger.warning("soccer fixtures fetch failed for %s: %s", league_key, exc)
@@ -902,7 +1036,9 @@ def _build_payload(selected_date: str | None = None, previous_history: Optional[
             if fx.get("state") == "post" and fx.get("completed") and fx.get("home_score") is not None \
                     and fx.get("away_score") is not None:
                 espn_results[f"{league_key}-{fx.get('id')}"] = (int(fx["home_score"]), int(fx["away_score"]))
-        upcoming.extend(_build_upcoming_for_league(league_key, model, fixtures, published_at))
+        if model is not None:
+            priced.append(league_key)
+            upcoming.extend(_build_upcoming_for_league(league_key, model, fixtures, published_at, today=today))
 
     world_cup_completed: list[dict[str, Any]] = []
     if WORLD_CUP_ENABLED:
@@ -914,8 +1050,9 @@ def _build_payload(selected_date: str | None = None, previous_history: Optional[
         except Exception as exc:  # pragma: no cover
             logger.warning("World Cup board build failed: %s", exc)
 
+    frozen_tours = {tour_for_league(k) for k in frozen}
     completed = merge_history(record_boards + world_cup_completed, archive=load_world_cup_archive(),
-                              previous=previous_history or [])
+                              previous=previous_history or [], frozen_tours=frozen_tours)
     upcoming.sort(key=lambda b: (b.get("scheduledDate") or 99999999, str(b.get("gameStart") or "")))
 
     preds_all = pd.concat(record_preds, ignore_index=True) if record_preds else pd.DataFrame()
@@ -925,19 +1062,21 @@ def _build_payload(selected_date: str | None = None, previous_history: Optional[
         "availableDates": [],
         "upcoming": upcoming,
         "completed": completed,
-        "trackRecord": build_track_record_summary(preds_all, wc_boards),
+        "trackRecord": build_track_record_summary(preds_all, wc_boards, previous=previous_track_record,
+                                                  frozen_tours=frozen_tours),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "source": LIVE_SOURCE,
     }
-    return payload, espn_results, histories
+    health = {"season": season, "frozenRecord": frozen, "unpricedUpcoming": unpriced, "pricedLeagues": priced}
+    return payload, espn_results, histories, health
 
 
-def _read_json_list(path: Path) -> list[dict[str, Any]]:
+def _read_json(path: Path) -> Any:
+    """Parsed JSON, or None when the file is absent or unreadable."""
     try:
-        data = json.loads(path.read_text())
+        return json.loads(path.read_text())
     except (OSError, ValueError):
-        return []
-    return [b for b in data if isinstance(b, dict)] if isinstance(data, list) else []
+        return None
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -946,17 +1085,41 @@ def _write_json(path: Path, payload: Any) -> None:
     os.replace(tmp, path)
 
 
-def export_soccer_frontend_data() -> None:
+def _output_dir() -> Path:
+    override = os.getenv(OUTPUT_DIR_ENV)
+    return Path(override) if override else FRONTEND_DATA_DIR
+
+
+def export_soccer_frontend_data(output_dir: Optional[Path] = None, *, today: Optional[date] = None) -> int:
     """Write the precomputed static soccer JSON the BFF serves (like tennis/golf),
-    append this bake's market picks to the log and grade the log."""
-    FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    history_path = FRONTEND_DATA_DIR / "soccer_historical_backtests.json"
+    append this bake's market picks to the log and grade the log.
+
+    Returns the process exit code: 1 when no league could be priced from a complete
+    history window (nothing honest to publish as upcoming), else 0. A league with an
+    incomplete window keeps its published record and loses only its upcoming boards
+    (ERROR logged). When a league's record is frozen but no previously exported
+    record file exists in `output_dir` (e.g. a fresh RunPod worker), the record files
+    are NOT rewritten, so the published copies are left untouched."""
+    out_dir = Path(output_dir) if output_dir else _output_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    history_path = out_dir / "soccer_historical_backtests.json"
+    record_path = out_dir / "soccer_track_record.json"
     published_at = _published_now()
 
-    payload, espn_results, histories = _build_payload(previous_history=_read_json_list(history_path),
-                                                      published_at=published_at)
+    previous_history_raw = _read_json(history_path)
+    previous_history = ([b for b in previous_history_raw if isinstance(b, dict)]
+                        if isinstance(previous_history_raw, list) else None)
+    previous_record_raw = _read_json(record_path)
+    # Only a summary of the same recordVersion can carry a frozen league's rows.
+    previous_record = (previous_record_raw if isinstance(previous_record_raw, dict)
+                       and previous_record_raw.get("recordVersion") == RECORD_VERSION else None)
+
+    payload, espn_results, histories, health = _build_payload(
+        previous_history=previous_history or [], published_at=published_at,
+        previous_track_record=previous_record, today=today)
     upcoming = payload.get("upcoming", [])
     completed = payload.get("completed", [])
+    frozen = health["frozenRecord"]
 
     graded, summary = [], []
     try:
@@ -964,18 +1127,42 @@ def export_soccer_frontend_data() -> None:
     except Exception as exc:  # pragma: no cover - the boards still ship without the log
         logger.warning("soccer market log/grade failed: %s", exc)
 
-    _write_json(FRONTEND_DATA_DIR / "soccer_upcoming_tournaments.json", upcoming)
-    _write_json(history_path, completed)
-    _write_json(FRONTEND_DATA_DIR / "soccer_track_record.json", payload.get("trackRecord", {}))
-    _write_json(FRONTEND_DATA_DIR / f"{SPORT_KEY}_market_history.json", graded)
-    _write_json(FRONTEND_DATA_DIR / f"{SPORT_KEY}_market_summary.json", summary)
+    _write_json(out_dir / "soccer_upcoming_tournaments.json", upcoming)
+    for path, previous, body in ((history_path, previous_history, completed),
+                                 (record_path, previous_record, payload.get("trackRecord", {}))):
+        if frozen and previous is None:
+            logger.error("soccer: %s NOT written -- record frozen for %s and no previously exported copy (of this "
+                         "recordVersion) in %s to carry it from; the published file is left untouched",
+                         path.name, ", ".join(sorted(frozen)), out_dir)
+            continue
+        _write_json(path, body)
+    _write_json(out_dir / f"{SPORT_KEY}_market_history.json", graded)
+    _write_json(out_dir / f"{SPORT_KEY}_market_summary.json", summary)
 
     n_markets = sum(len(b.get("markets") or []) for b in upcoming)
     print(f"Exported {len(upcoming)} soccer upcoming boards ({n_markets} market picks)")
     print(f"Exported {len(completed)} soccer historical boards")
     print(f"Graded {len(graded)} soccer market picks; {len(summary)} summary rows")
+    if frozen:
+        print(f"Record kept as published (history incomplete): {', '.join(sorted(frozen))}")
+    if health["unpricedUpcoming"]:
+        print(f"Upcoming boards withheld (fit window incomplete): {', '.join(sorted(health['unpricedUpcoming']))}")
+    if not health["pricedLeagues"]:
+        logger.error("soccer: no league could be priced from a complete history window -- exiting non-zero")
+        return 1
+    return 0
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Export the static soccer board JSON")
+    parser.add_argument("--output-dir", type=Path, default=None,
+                        help=f"where to write the JSON (default: ${OUTPUT_DIR_ENV} or {FRONTEND_DATA_DIR})")
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    return export_soccer_frontend_data(args.output_dir)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    export_soccer_frontend_data()
+    sys.exit(main())

@@ -112,6 +112,7 @@ def _winner_block(g: pd.DataFrame, *, with_market: bool) -> dict[str, Any]:
                 "market": {k: _r(v) for k, v in hm.win_metrics(ym, m["p_home_mkt"].to_numpy(float)).items()},
                 "model": {k: _r(v) for k, v in hm.win_metrics(ym, m["p_home"].to_numpy(float)).items()},
                 "elo": {k: _r(v) for k, v in hm.win_metrics(ym, m["p_elo"].to_numpy(float)).items()},
+                "always_home_accuracy": _r(float(np.mean(ym == 1))),
                 "model_minus_market_brier": {k: (_r(v) if not isinstance(v, list) else [_r(x) for x in v])
                                              for k, v in diff.items()},
                 "market_calibration": _calib(ym, m["p_home_mkt"].to_numpy(float)),
@@ -171,6 +172,7 @@ def evaluate_league(league: str, params: dict[str, Any], *, today: pd.Timestamp,
         "trained_through": str(run.trained_through.date()) if run.trained_through is not None else None,
         "current_sigmas": {k: _r(v, 2) for k, v in run.sigmas.items()},
         "served_calibration": run.calibration,
+        "served_win_model": hm.served_win_model(params, league),
         "warmup_seasons": sorted(warmup["season"].astype(str).unique().tolist()),
         "cutoff_violations": int((H["local_date"] <= H["train_cutoff"]).sum()),
         "winner": {}, "first_block": {}, "regression": {},
@@ -193,6 +195,9 @@ def evaluate_league(league: str, params: dict[str, Any], *, today: pd.Timestamp,
     for season, g in list(reg.groupby("season")) + [("pooled", reg)]:
         report["regression"][str(season)] = _regression_block(g, with_market=with_market)
         report["regression"][str(season) + "_regular_season"] = _regression_block(g.loc[g["kind"] == "regular"], with_market=with_market)
+    # Play-in + playoffs: the exporter publishes no total / team-total markets there.
+    report["regression"]["pooled_postseason"] = _regression_block(reg.loc[reg["kind"].isin(["play_in", "playoff"])],
+                                                                  with_market=with_market)
     return report, H
 
 
@@ -217,6 +222,7 @@ def _calibration_check(y: np.ndarray, p: np.ndarray) -> dict[str, Any]:
 def _winner_check(frame: pd.DataFrame) -> dict[str, Any]:
     y = frame["home_win"].to_numpy(float)
     out: dict[str, Any] = {"n": int(len(frame)),
+                           "always_home_accuracy": _r(float(np.mean(y == 1))) if len(y) else None,
                            "model": _rl(hm.win_metrics(y, frame["p_home"].to_numpy(float))),
                            "elo": _rl(hm.win_metrics(y, frame["p_elo"].to_numpy(float))),
                            "model_minus_elo_brier": _rl(hm.paired_brier_diff(y, frame["p_home"].to_numpy(float),
@@ -227,6 +233,8 @@ def _winner_check(frame: pd.DataFrame) -> dict[str, Any]:
         out["market_n"] = int(len(mk))
         out["market"] = _rl(hm.win_metrics(ym, mk["p_home_mkt"].to_numpy(float)))
         out["model_on_market_games"] = _rl(hm.win_metrics(ym, mk["p_home"].to_numpy(float)))
+        out["elo_on_market_games"] = _rl(hm.win_metrics(ym, mk["p_elo"].to_numpy(float)))
+        out["always_home_on_market_games"] = _r(float(np.mean(ym == 1)))
         out["model_minus_market_brier"] = _rl(hm.paired_brier_diff(ym, mk["p_home"].to_numpy(float),
                                                                     mk["p_home_mkt"].to_numpy(float)))
     return out

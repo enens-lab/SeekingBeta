@@ -1,5 +1,5 @@
 {
-  "version": "bb-honest-2026.10.02",
+  "version": "bb-honest-2026.10.02.2",
   "notes": [
     "Small fitted parameters for the served NBA/WNBA model, committed so the RunPod export needs no new artifact.",
     "Every value was chosen on EARLY seasons only, before the reported walk-forward seasons (NBA 2024-25 on, WNBA 2025 on):",
@@ -8,7 +8,9 @@
     "Win-model C: walk-forward on NBA 2022-23 + 2023-24 (C=0.02 Brier 0.2196 vs 0.2205 at C=0.01 and C=0.05); the WNBA reuses it.",
     "The L1 logistic regression itself is refit at every export on all completed games before the bake (and per 14-day block for the walk-forward history), so it has no stored coefficients.",
     "sigma_defaults are cold-start values only; once 100 out-of-sample residuals exist the rolling out-of-sample sigma is used.",
-    "calibration: Platt map fitted only on EARLIER walk-forward predictions (warm-up seasons included), shrunk toward the identity (prior_strength in units of summed log-loss; identity below min_oos predictions). Fixed a priori, not tuned on the reported seasons."
+    "calibration: Platt map fitted only on EARLIER walk-forward predictions (warm-up seasons included), shrunk toward the identity (prior_strength in units of summed log-loss; identity below min_oos predictions). Fixed a priori, not tuned on the reported seasons.",
+    "leagues.<league>.win_model overrides the global win_model for that league. WNBA serves calibrated Elo-MOV (type elo): on the WNBA acceptance subset the L1 model minus Elo Brier was +0.0013, 95% CI [-0.0015, 0.0041], and the binding review rule prefers Elo where that CI includes 0. NBA keeps the L1 model (pooled 2024-26 regular season: -0.0020, CI [-0.0039, -0.0002]).",
+    "data_guard: a league whose tables lack a season from margin_warmup_from_season through the current one, whose complete season has fewer than min_season_share x the median complete-season game count, or whose season has box scores for fewer than min_boxscore_share of its finals keeps its previously published record and gets no upcoming boards. season_started_by_mmdd: the date by which the current season has surely started (zero games after it = missing data)."
   ],
   "rest_cap_days": 4,
   "walk_forward": {"block_days": 14},
@@ -26,6 +28,7 @@
   },
   "sigma": {"window": 400, "min_residuals": 100},
   "calibration": {"method": "platt_shrunk_to_identity", "prior_strength": 20.0, "min_oos": 200, "window": 1500},
+  "data_guard": {"min_season_share": 0.6, "min_boxscore_share": 0.6},
   "leagues": {
     "nba": {
       "elo": {"k": 16.0, "hca": 60.0, "carry": 0.75, "init": 1500.0, "mov": true},
@@ -33,6 +36,7 @@
       "sigma_defaults": {"margin": 14.2, "total": 20.1, "team_total": 12.5},
       "history_from_season": "2024-25",
       "margin_warmup_from_season": "2022-23",
+      "season_started_by_mmdd": "11-15",
       "min_train_games": 300
     },
     "wnba": {
@@ -41,7 +45,9 @@
       "sigma_defaults": {"margin": 13.1, "total": 18.2, "team_total": 11.3},
       "history_from_season": "2025",
       "margin_warmup_from_season": "2024",
-      "min_train_games": 100
+      "season_started_by_mmdd": "06-01",
+      "min_train_games": 100,
+      "win_model": {"type": "elo"}
     }
   }
 }

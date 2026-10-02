@@ -49,6 +49,7 @@ from sklearn.preprocessing import StandardScaler
 from sports.basketball import feature_engineering as fe
 from sports.basketball import rotation_features as rf
 from sports.basketball.backfill_history import canonical_game_id
+from sports.basketball.constants import normalize_season_label, season_start_year_from_label
 from sports.basketball.elo import EloParams, run_elo
 from sports.basketball.ratings import RatingsParams, predict_points
 from sports.basketball.results import add_rest_features, build_results, season_record_before
@@ -56,6 +57,17 @@ from sports.basketball.results import add_rest_features, build_results, season_r
 logger = logging.getLogger(__name__)
 
 PARAMS_PATH = Path(__file__).with_name("model_params.json")
+
+# A win probability within this distance of 0.5 is NO pick. Boards show whole
+# percentages, so 0.4950 < p < 0.5050 reads as 50% / 50%; grading such a game as a
+# hit or a miss would score a pick the user never saw. Used by win_metrics, the
+# published walk-forward history and the moneyline market alike.
+NO_PICK_BAND = 0.005
+
+
+def is_pick(p: Any) -> Any:
+    """True where the probability is a pick (|p - 0.5| >= NO_PICK_BAND)."""
+    return np.abs(np.asarray(p, dtype=float) - 0.5) >= NO_PICK_BAND
 
 _BOX_STAT_COLUMNS = [
     "points", "assists", "rebounds_total", "rebounds_offensive", "rebounds_defensive", "turnovers", "steals",
@@ -315,8 +327,40 @@ class OffsetL1Logistic:
         return {c: float(v) for c, v in zip(self.columns_, self.coef_) if v != 0.0}
 
 
-def win_estimator(params: dict[str, Any]) -> Any:
-    wm = params["win_model"]
+class EloWinModel:
+    """Serve the pregame Elo-MOV probability itself: nothing is fitted, so the
+    walk-forward and the served path only add the shared shrunk-Platt calibration.
+    Used where the fitted model does not beat Elo on paired Brier (review rule:
+    prefer Elo when the model-minus-Elo CI includes 0)."""
+
+    input_columns = ["p_elo"]
+
+    def fit(self, X: pd.DataFrame, y: np.ndarray) -> "EloWinModel":
+        return self
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        p = np.clip(pd.to_numeric(X["p_elo"], errors="coerce").fillna(0.5).to_numpy(float), 1e-6, 1 - 1e-6)
+        return np.column_stack([1.0 - p, p])
+
+
+def win_model_config(params: dict[str, Any], league: str | None = None) -> dict[str, Any]:
+    """Global win_model block with the league's `win_model` override merged on top."""
+    wm = dict(params["win_model"])
+    if league:
+        wm.update((params.get("leagues", {}).get(league) or {}).get("win_model") or {})
+    return wm
+
+
+def served_win_model(params: dict[str, Any], league: str) -> str:
+    """Short label of the win model a league serves (boards' predictionSource)."""
+    kind = win_model_config(params, league).get("type", "logistic_l1")
+    return "elo_mov_calibrated" if kind == "elo" else "elo_l1_logistic"
+
+
+def win_estimator(params: dict[str, Any], league: str | None = None) -> Any:
+    wm = win_model_config(params, league)
+    if wm.get("type") == "elo":
+        return EloWinModel()
     if wm.get("type", "logistic_l1") == "elo_offset_l1":
         return OffsetL1Logistic(C=float(wm.get("C", 0.05)), offset_col="elo_diff",
                                 penalty_factors={c: float(wm.get("extra_penalty_factor", 1.0)) for c in wm["extra_features"]})
@@ -340,10 +384,18 @@ def _xy(design: pd.DataFrame, rows: pd.Index, cols: list[str]) -> pd.DataFrame:
     return design.loc[rows, cols].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
 
 
-def fit_win_model(design: pd.DataFrame, train_rows: pd.Index, feature_cols: list[str], params: dict[str, Any]) -> Pipeline:
-    model = win_estimator(params)
-    model.fit(_xy(design, train_rows, feature_cols), design.loc[train_rows, "home_win"].astype(int).values)
+def fit_win_model(design: pd.DataFrame, train_rows: pd.Index, feature_cols: list[str], params: dict[str, Any],
+                  league: str | None = None) -> Any:
+    model = win_estimator(params, league)
+    cols = list(getattr(model, "input_columns", None) or feature_cols)
+    model.fit(_xy(design, train_rows, cols), design.loc[train_rows, "home_win"].astype(int).values)
+    model.serving_columns_ = cols
     return model
+
+
+def predict_win(model: Any, design: pd.DataFrame, rows: pd.Index) -> np.ndarray:
+    """Raw (uncalibrated) home-win probability of a model from fit_win_model."""
+    return model.predict_proba(_xy(design, rows, model.serving_columns_))[:, 1]
 
 
 class ShrunkPlatt:
@@ -450,6 +502,86 @@ def load_league_tables(normalized_dir: Path, league: str, *, extra_schedules: li
     return LeagueTables(league=league, schedules=[schedule, *(extra_schedules or [])], details=details, players=players)
 
 
+def season_label_for_date(league: str, date: pd.Timestamp) -> str:
+    """The league season a calendar date belongs to: NBA seasons run September ->
+    August ('2026-27' from 2026-09-01, as market_log.season_cross_year(9)); WNBA
+    seasons are calendar years ('2026')."""
+    d = pd.Timestamp(date)
+    start = (d.year if d.month >= 9 else d.year - 1) if league == "nba" else d.year
+    return normalize_season_label(league, start)
+
+
+def data_coverage(tables: LeagueTables, params: dict[str, Any], *, today: pd.Timestamp) -> dict[str, Any]:
+    """Missing-season guard for the published record (verifier finding 1).
+
+    Required seasons: every season from the league's ``margin_warmup_from_season``
+    through the current one. The current season (``season_label_for_date(today)``)
+    counts once it has started: a final competitive game of it before today, or
+    today on/after its ``season_started_by_mmdd`` (by then it has surely begun, so
+    zero games means the data is missing). Until then the previous season is the
+    current one.
+
+    A league is degraded when a required season has no final game, when a COMPLETE
+    season (every required one except the in-progress season) has fewer final games
+    than ``data_guard.min_season_share`` (0.6) x the median of the complete seasons,
+    or when fewer than ``data_guard.min_boxscore_share`` (0.6) of a season's final
+    games have team box scores / player box scores (the model's form features).
+    Degraded leagues keep their previously published record and get no upcoming
+    boards (exporter)."""
+    league = tables.league
+    lp = params["leagues"][league]
+    guard = params.get("data_guard") or {}
+    min_share = float(guard.get("min_season_share", 0.6))
+    min_box_share = float(guard.get("min_boxscore_share", 0.6))
+    today_local = pd.Timestamp(today).normalize()
+    results = build_results(league, tables.schedules, today=today_local)
+    finals = results.loc[results["final"] & (results["local_date"] < today_local)] if not results.empty else results
+    current = season_label_for_date(league, today_local)
+    current_start = season_start_year_from_label(league, current)
+    started_by = lp.get("season_started_by_mmdd")
+    started = bool((finals["season"].astype(str) == current).any()) if not finals.empty else False
+    if not started and started_by:
+        started = today_local >= pd.Timestamp(f"{current_start}-{started_by}")
+    last_start = current_start if started else current_start - 1
+    first = lp.get("margin_warmup_from_season")
+    first_start = season_start_year_from_label(league, first) if first else last_start
+    required = [normalize_season_label(league, y) for y in range(first_start, last_start + 1)]
+    in_progress = current if started else None
+
+    def game_ids(frame: pd.DataFrame) -> set[str]:
+        if frame is None or frame.empty or "game_id" not in frame.columns:
+            return set()
+        return set(frame["game_id"].dropna().map(canonical_game_id).dropna())
+
+    with_box, with_players = game_ids(tables.details), game_ids(tables.players)
+    seasons: dict[str, dict[str, int]] = {}
+    for season in required:
+        ids = finals.loc[finals["season"].astype(str) == season, "game_id"] if not finals.empty else pd.Series(dtype=object)
+        seasons[season] = {"games": int(len(ids)), "teamBoxscores": int(ids.isin(with_box).sum()),
+                           "playerBoxscores": int(ids.isin(with_players).sum())}
+    problems: list[str] = []
+    for season, c in seasons.items():
+        if c["games"] == 0:
+            problems.append(f"{season}: no final games (season missing from the tables)")
+    complete = [s for s in required if s != in_progress and seasons[s]["games"] > 0]
+    median = float(np.median([seasons[s]["games"] for s in complete])) if complete else None
+    min_games = min_share * median if median is not None else None
+    for season in complete:
+        if seasons[season]["games"] < min_games:
+            problems.append(f"{season}: {seasons[season]['games']} final games < {min_games:.0f} "
+                            f"({min_share:.0%} of the {median:.0f}-game median of complete seasons)")
+    for season, c in seasons.items():
+        if c["games"] == 0:
+            continue
+        for key in ("teamBoxscores", "playerBoxscores"):
+            if c[key] < min_box_share * c["games"]:
+                problems.append(f"{season}: {key} for {c[key]} of {c['games']} final games "
+                                f"(< {min_box_share:.0%})")
+    return {"league": league, "ok": not problems, "problems": problems, "required": required,
+            "inProgress": in_progress, "medianCompleteGames": median,
+            "minGames": round(min_games, 1) if min_games is not None else None, "seasons": seasons}
+
+
 def walk_forward(design: pd.DataFrame, feature_cols: list[str], params: dict[str, Any], league: str, *,
                  win_seasons: list[str], margin_seasons: list[str]) -> pd.DataFrame:
     """14-day expanding-window walk-forward over FINAL games.
@@ -485,8 +617,8 @@ def walk_forward(design: pd.DataFrame, feature_cols: list[str], params: dict[str
                 cutoff = finals.loc[train, "local_date"].max()
                 part["n_train"] = len(train)
                 if season in win_seasons:
-                    model = fit_win_model(design, train, feature_cols, params)
-                    raw = model.predict_proba(_xy(design, test, feature_cols))[:, 1]
+                    model = fit_win_model(design, train, feature_cols, params, league)
+                    raw = predict_win(model, design, test)
                     calibrator = ShrunkPlatt.from_params(params)
                     if oos_raw:
                         calibrator.fit(np.concatenate(oos_raw), np.concatenate(oos_y))
@@ -637,10 +769,10 @@ def run_league(tables: LeagueTables, params: dict[str, Any], *, today: pd.Timest
         oos = history.dropna(subset=["p_raw", "home_win"]).sort_values(["local_date", "game_id"])
         calibrator.fit(oos["p_raw"].to_numpy(float), oos["home_win"].to_numpy(float))
     if not scheduled.empty and len(finals) >= int(lp.get("min_train_games", 100)):
-        win = fit_win_model(design, finals.index, feature_cols, params)
+        win = fit_win_model(design, finals.index, feature_cols, params, league)
         mm = fit_margin_model(design, finals.index, params)
         upcoming = pd.DataFrame({"game_id": scheduled["game_id"].values}, index=scheduled.index)
-        upcoming["p_raw"] = win.predict_proba(_xy(design, scheduled.index, feature_cols))[:, 1]
+        upcoming["p_raw"] = predict_win(win, design, scheduled.index)
         upcoming["p_home"] = calibrator.transform(upcoming["p_raw"].to_numpy(float))
         upcoming["m_elorest"] = mm.predict(_xy(design, scheduled.index, list(params["margin_model"]["elo_rest_features"])))
         points = predict_points(design, rp, only_ids=set(upcoming["game_id"]))
@@ -669,16 +801,16 @@ def log_loss(y: np.ndarray, p: np.ndarray) -> float:
 
 
 def win_metrics(y: np.ndarray, p: np.ndarray) -> dict[str, float]:
-    """n / accuracy / Brier / log-loss. A probability of exactly 0.5 is NO pick: it is
-    left out of accuracy (n_picks counts the rest) but kept in Brier and log-loss.
-    Counting 0.5 as a home pick is what inflated the WNBA cold-start claim."""
+    """n / accuracy / Brier / log-loss. A probability within NO_PICK_BAND of 0.5 is NO
+    pick: it is left out of accuracy (n_picks counts the rest) but kept in Brier and
+    log-loss. Counting 0.5 as a home pick is what inflated the WNBA cold-start claim."""
     y = np.asarray(y, dtype=float)
     p = np.asarray(p, dtype=float)
     ok = ~np.isnan(p) & ~np.isnan(y)
     y, p = y[ok], p[ok]
     if not len(y):
         return {"n": 0}
-    pick = np.abs(p - 0.5) > 1e-9
+    pick = is_pick(p)
     accuracy = float(np.mean((p[pick] > 0.5) == (y[pick] == 1))) if pick.any() else float("nan")
     return {"n": int(len(y)), "n_picks": int(pick.sum()), "accuracy": accuracy,
             "brier": float(np.mean((p - y) ** 2)), "log_loss": log_loss(y, p)}

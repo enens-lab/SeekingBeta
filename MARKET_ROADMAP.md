@@ -427,6 +427,28 @@ probabilities anchored on the market where we have a line, with our model as a
 labelled "model view", graded from an append-only publish log, and never as an
 "edge" or "value bet" until a logged record earns it.
 
+**Shipped 2026-10-02 (Phase 1, branch feature/sports-prediction-market, worker build
+2026-10-02.3).** Walk-forward, scored on the same games as each baseline:
+
+| Sport | Served model now | Model | Baselines (same games) |
+|---|---|---|---|
+| MLB | LR on Elo + starters + park/weather (leak removed) | 2024 57.3% / 2025 55.7% / 2026 56.2%, Brier ~0.243 | always-home 52-54%; 2025 betting favourite 56.4% (model 55.5% on those games) |
+| NFL | headline = de-vigged closing line (nflverse); ridge+Platt model view | model view Brier 0.2212 (torch 0.2271 retired) | the headline IS the market; labelled as such everywhere |
+| NBA | L1 logistic + Elo, calibrated | 2024-25 67.3% / 2025-26 69.3% on matched games | Elo 66.6/68.7%; closing favourite 69.7/69.4% |
+| WNBA | calibrated Elo-MOV (L1 model was no better than Elo) | 2025 69.4% / 2026 65.3% | closing favourite 66.9% / 70.4% |
+| Soccer | Dixon-Coles, fixed centering, 5-season window | 1X2 log-loss 0.985, O/U 2.5 0.676 (was 0.734), goals bias -0.04 | closing market log-loss 0.964 |
+| Tennis | Elo with stable identity, decaying K, surface blend | 64.2% match accuracy 2023-25, ATP 2026 64.4% | ranking favourite 63.7% |
+| Golf | calibrated top-10 / made-cut | top-10 Brier 0.0825 (constant 0.0897) | OWGR favourite 9/51 wins vs model 7/51 |
+
+Markets live: NFL spread/total/team totals (market-centred) + alt ladders; MLB run line,
+total, team totals; NBA/WNBA fair spread/total (no totals on playoff boards); soccer
+O/U 1.5/2.5/3.5, BTTS, Asian handicap, double chance, draw no bet, top-3 scores. Every
+pick is logged at publish and graded; a W-L record is shown only for one-sided leans
+(today: NFL model-view moneyline), everything else is kept as calibration (hits vs
+expected, Brier vs base rate) until clients render it. Season accuracy everywhere names
+the league season, whose pick it scores and the baselines. Open: licensed odds feed for
+real prices (The Odds API), calibration display in the apps, NBA 2026-27 data refresh.
+
 ## 3. Roadmap
 
 ### Wave 1 — Quick wins (~2–7 days each)

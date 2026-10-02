@@ -6,6 +6,7 @@ No network and no data files: every check runs on synthetic games/payloads.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import math
 import os
@@ -272,11 +273,46 @@ def test_completed_states_and_result_status():
     assert raw.iloc[1]["game_pk"] not in set(norm["game_pk"])
 
 
-def _market_engine(rows: list[dict]):
+def _market_engine(rows: list[dict], *, listings: list[dict] | None = None, live_seasons=()):
+    """Engine stub: `rows` is engine.frame; `listings` the raw live schedule rows
+    (game_pk, status_detailed, game_date, home_score, away_score) of `live_seasons`."""
     from scripts.export_mlb_frontend_data import PregameEngine
     frame = pd.DataFrame(rows)
     frame["dt"] = pd.to_datetime(frame["dt"])
-    return PregameEngine(frame=frame, params={"version": "mlb-pregame-v1"}, built_at=0.0)
+    sched = pd.DataFrame(listings or [], columns=pm.LIVE_SCHEDULE_COLUMNS + ["fetched_season"])
+    return PregameEngine(frame=frame, params={"version": "mlb-pregame-v1"}, built_at=0.0,
+                         live_schedule=sched, live_seasons=frozenset(live_seasons))
+
+
+def _listing(pk: int, state: str, when: str, home=None, away=None, season: int = 2026) -> dict:
+    return {"game_pk": pk, "season": season, "game_type": "R", "official_date": when[:10], "game_date": when,
+            "status_abstract": "Final" if state != "Scheduled" else "Preview", "status_detailed": state,
+            "home_score": home, "away_score": away, "fetched_season": season}
+
+
+def _market_records(pks, *, start: str = "2026-09-20T23:05:00Z", date_key: int = 20260920) -> list[dict]:
+    boards = [{"id": f"mlb-{pk}", "gameId": str(pk), "scheduledDate": date_key, "gameStart": start,
+               "homeTeam": "H", "awayTeam": "A",
+               "markets": mlb_market_picks(board_id=f"mlb-{pk}", home_label="H", away_label="A", p_home=0.55,
+                                           mu_home=4.6, mu_away=4.1, nb_r=3.7,
+                                           published_at="2026-09-20T07:10:00+00:00", model_version="v")}
+              for pk in pks]
+    return ml.picks_from_boards("mlb", boards, season_of=ml.season_calendar, model_version="v")
+
+
+@contextlib.contextmanager
+def _patched(*patches):
+    """(obj, attr, value) monkeypatches, restored on exit (keeps tests zero-arg so the
+    __main__ runner and pytest both work)."""
+    saved = []
+    try:
+        for obj, name, value in patches:
+            saved.append((obj, name, getattr(obj, name)))
+            setattr(obj, name, value)
+        yield
+    finally:
+        for obj, name, value in reversed(saved):
+            setattr(obj, name, value)
 
 
 def test_market_results_void_rules_and_grading():
@@ -292,7 +328,15 @@ def test_market_results_void_rules_and_grading():
         {"game_pk": 3, "is_final": True, "home_score": 6.0, "away_score": 0.0, "dt": "2026-09-22 17:10", "status_detailed": "Final"},
         # still to be played (after `now`)
         {"game_pk": 5, "is_final": False, "home_score": None, "away_score": None, "dt": "2026-09-24 23:05", "status_detailed": "Scheduled"},
-    ])
+    ], listings=[
+        _listing(1, "Final", "2026-09-20T23:05:00Z", 5, 2),
+        _listing(2, "Completed Early: Rain", "2026-09-20T23:05:00Z", 4, 1),
+        _listing(3, "Postponed", "2026-09-20T23:05:00Z"),
+        _listing(3, "Final", "2026-09-22T17:10:00Z", 6, 0),
+        # game 4: rained out, no make-up date yet (the engine frame drops it)
+        _listing(4, "Postponed", "2026-09-20T23:05:00Z"),
+        _listing(5, "Scheduled", "2026-09-24T23:05:00Z"),
+    ], live_seasons={2026})
     boards = []
     for pk in (1, 2, 3, 4, 5):
         boards.append({"id": f"mlb-{pk}", "gameId": str(pk), "scheduledDate": 20260920 if pk != 5 else 20260924,
@@ -306,7 +350,7 @@ def test_market_results_void_rules_and_grading():
     assert results["1"] == {"home": 5.0, "away": 2.0, "status": "final"}
     assert results["2"]["status"] == "shortened"
     assert results["3"]["status"] == "postponed"          # made up > 24 h after the listed start
-    assert results["4"] == {"home": None, "away": None, "status": "postponed"}  # never played
+    assert results["4"] == {"home": None, "away": None, "status": "postponed"}  # live "Postponed", never played
     assert "5" not in results                               # not started yet: stays ungraded
     # before the 24 h window passes an unplayed game is not voided yet
     assert "4" not in ex._market_results(engine, records, now=pd.Timestamp("2026-09-21T12:00:00Z"))
@@ -328,6 +372,255 @@ def test_market_results_void_rules_and_grading():
         assert not ({"2", "3", "4"} & set(by_game))
     summary = ml.summarize(graded)
     assert all(s["roi"] is None for s in summary)
+    # every MLB type is calibration-only (fixed-side run lines, fair-line totals): no W-L
+    assert summary and all(s["recordKind"] == "calibration" for s in summary)
+    assert all(s["wins"] is None and s["losses"] is None and s["winRateExPush"] is None for s in summary)
+    assert all(s["hits"] is not None and s["expectedHits"] is not None for s in summary)
+
+
+def test_market_results_need_positive_evidence_to_void():
+    import scripts.export_mlb_frontend_data as ex
+
+    now = pd.Timestamp("2026-09-23T12:00:00Z")   # > 24 h after every listed start
+    records = _market_records((11, 12, 13, 14, 15, 16))
+    engine = _market_engine(
+        # the engine frame knows none of these games (e.g. outside its prediction window)
+        [{"game_pk": 99, "is_final": True, "home_score": 1.0, "away_score": 0.0, "dt": "2026-09-19 23:05",
+          "status_detailed": "Final"}],
+        listings=[
+            _listing(11, "Final", "2026-09-20T23:05:00Z", 3, 7),      # final in the live schedule
+            _listing(12, "Postponed", "2026-09-20T23:05:00Z"),         # live postponement
+            _listing(13, "Cancelled", "2026-09-20T23:05:00Z"),
+            _listing(14, "Suspended: Rain", "2026-09-20T23:05:00Z"),
+            # 15: absent from the live 2026 schedule (an unneeded "if necessary" game)
+            _listing(16, "Postponed", "2026-09-20T23:05:00Z"),         # ... made up inside the window,
+            _listing(16, "In Progress", "2026-09-21T20:05:00Z"),      # not final yet: wait
+        ], live_seasons={2026})
+    results = ex._market_results(engine, records, now=now)
+    assert results["11"] == {"home": 3.0, "away": 7.0, "status": "final"}   # graded, never voided
+    assert results["12"]["status"] == "postponed" and results["12"]["home"] is None
+    assert results["13"]["status"] == "cancelled"
+    assert results["14"]["status"] == "postponed"
+    assert results["15"]["status"] == "postponed"
+    assert "16" not in results
+    graded = ex._grade_market_picks(ml.pregame_picks(records), results)
+    by_game: dict[str, set] = {}
+    for g in graded:
+        by_game.setdefault(g["gameId"], set()).add(g["result"])
+    assert by_game["11"] <= {"win", "loss"}
+    assert all(by_game[gid] == {"void"} for gid in ("12", "13", "14", "15"))
+    # inside the 24 h window nothing is voided yet, even with a live "Postponed"
+    early = ex._market_results(engine, records, now=pd.Timestamp("2026-09-21T12:00:00Z"))
+    assert set(early) == {"11"}
+
+
+def test_market_results_fetch_failure_voids_nothing():
+    """The verifier's case: the live schedule was not fetched (failure / local fallback),
+    so every logged game is missing from engine.frame. None may be voided."""
+    import scripts.export_mlb_frontend_data as ex
+
+    records = _market_records(range(100, 140))
+    engine = _market_engine([{"game_pk": 1, "is_final": True, "home_score": 1.0, "away_score": 0.0,
+                              "dt": "2026-07-20 23:05", "status_detailed": "Final"}])   # no listings, no live seasons
+    assert ex._market_results(engine, records, now=pd.Timestamp("2026-10-01T12:00:00Z")) == {}
+    # a live schedule fetched for ANOTHER season is no evidence about 2026 games either
+    engine_2025 = _market_engine([{"game_pk": 1, "is_final": True, "home_score": 1.0, "away_score": 0.0,
+                                   "dt": "2026-07-20 23:05", "status_detailed": "Final"}],
+                                 listings=[_listing(7, "Final", "2025-07-01T23:05:00Z", 1, 0, season=2025)],
+                                 live_seasons={2025})
+    assert ex._market_results(engine_2025, records, now=pd.Timestamp("2026-10-01T12:00:00Z")) == {}
+
+
+def _raw_results(seasons) -> pd.DataFrame:
+    """Synthetic games in flatten_results shape for the given seasons."""
+    games, _ = _synthetic_games(40)
+    raw = games.drop(columns=["dt", "is_final", "home_win", "is_postseason", "order"])
+    raw["official_date"] = raw["official_date"].dt.strftime("%Y-%m-%d")
+    return raw[raw["season"].isin(list(seasons))].reset_index(drop=True)
+
+
+def test_load_results_requires_live_for_required_seasons():
+    import requests
+
+    calls: list[int] = []
+
+    def fake_fetch(client, season, **_):
+        calls.append(int(season))
+        if season in (2021, 2026):
+            raise requests.Timeout("read timed out")
+        return _raw_results([season]) if season in (2024, 2025) else pd.DataFrame()
+
+    def fake_local(season, normalized_dir=None):
+        if season == 2026:   # the stale S3 table the old code silently fell back to
+            stale = _raw_results([2025])
+            return stale.assign(season=2026, game_pk=stale["game_pk"] + 100_000)
+        raise FileNotFoundError(str(season))
+
+    with _patched((pm, "fetch_season_results", fake_fetch), (pm, "load_local_season", fake_local),
+                  (pm, "LIVE_FETCH_BACKOFF_SECONDS", 0.0)):
+        try:
+            pm.load_results(range(2020, 2027), client=object(), require_live=[2024, 2025, 2026])
+        except pm.LiveDataError as exc:
+            assert "2026" in str(exc)
+        else:
+            raise AssertionError("a failed current-season fetch must raise, not fall back to local tables")
+        # retried, and the failing training-only season (2021) fell back without raising
+        assert calls.count(2026) == pm.LIVE_FETCH_ATTEMPTS and calls.count(2021) == pm.LIVE_FETCH_ATTEMPTS
+        # not required -> the old fallback (used by the offline fit script) still works
+        sink: list = []
+        games = pm.load_results(range(2024, 2027), client=object(), schedule_sink=sink)
+        assert set(games["season"]) == {2024, 2025, 2026}
+        assert {int(s) for f in sink for s in f["fetched_season"]} == {2024, 2025}   # only live seasons
+        # required + an EMPTY live payload while the local table has games -> raise too
+        with _patched((pm, "fetch_season_results", lambda client, season, **_: pd.DataFrame())):
+            try:
+                pm.load_results([2026], client=object(), require_live=[2026])
+            except pm.LiveDataError:
+                pass
+            else:
+                raise AssertionError("an empty live payload for a required season must raise")
+        # required but no network at all -> raise
+        try:
+            pm.load_results([2026], client=None, require_live=[2026])
+        except pm.LiveDataError:
+            pass
+        else:
+            raise AssertionError("require_live without a client must raise")
+
+
+def test_starter_top_up_failure_raises_for_required_seasons():
+    import requests
+
+    class TimeoutClient:
+        def _get_json(self, path, params=None):
+            raise requests.Timeout("read timed out")
+
+    with _patched((pm, "LIVE_FETCH_BACKOFF_SECONDS", 0.0)):
+        try:
+            pm.fetch_starter_lines(TimeoutClient(), {2026: {1, 2}}, require_live=[2026])
+        except pm.LiveDataError as exc:
+            assert "2026" in str(exc)
+        else:
+            raise AssertionError("a failed starter top-up for a required season must raise")
+        assert pm.fetch_starter_lines(TimeoutClient(), {2022: {1, 2}}, require_live=[2026]).empty
+
+
+def test_export_raises_and_writes_nothing_when_current_season_fetch_times_out():
+    import requests
+    import scripts.export_mlb_frontend_data as ex
+
+    current = pd.Timestamp.utcnow().year
+
+    def fake_fetch(client, season, **_):
+        if season == current:
+            raise requests.Timeout("statsapi.mlb.com read timed out")
+        return _raw_results([season]) if season in (2024, 2025) else pd.DataFrame()
+
+    def fake_local(season, normalized_dir=None):
+        if season == current:   # stale local table: ends in July, no postseason
+            return _raw_results([2025]).assign(season=current)
+        raise FileNotFoundError(str(season))
+
+    class NoNetworkClient:
+        def _get_json(self, *a, **k):
+            raise AssertionError("unexpected network call")
+
+    with tempfile.TemporaryDirectory() as d:
+        out, log = Path(d, "out"), Path(d, "picks")
+        with _patched((pm, "fetch_season_results", fake_fetch), (pm, "load_local_season", fake_local),
+                      (pm, "load_local_starter_lines", lambda *a, **k: pd.DataFrame(columns=pm.LINE_COLUMNS)),
+                      (pm, "LIVE_FETCH_BACKOFF_SECONDS", 0.0),
+                      (ex, "FRONTEND_DATA_DIR", out), (ex, "MARKET_LOG_ROOT", log),
+                      (ex, "MLBStatsClient", NoNetworkClient), (ex, "_ENGINE_CACHE", {})):
+            try:
+                ex.export_mlb_frontend_data()
+            except pm.LiveDataError as exc:
+                assert str(current) in str(exc)
+            else:
+                raise AssertionError("export must fail when the current season cannot be fetched live")
+        assert not any(out.rglob("*")), sorted(out.rglob("*"))   # no board, no summary, no temp file
+        assert not log.exists() or not any(log.rglob("*"))
+
+
+def test_apply_engine_predictions_fails_loudly_on_missing_game():
+    import scripts.export_mlb_frontend_data as ex
+
+    engine = _market_engine([{"game_pk": 1, "is_final": False, "home_score": None, "away_score": None,
+                              "dt": "2026-10-03 20:08", "status_detailed": "Scheduled", "home_win_probability": 0.56,
+                              "away_win_probability": 0.44, "p_home": 0.56, "mu_home": 4.4, "mu_away": 4.0,
+                              "nb_r": 3.7, "elo_p": 0.55, "train_cutoff": "2026-10-01",
+                              "model_version": "mlb-pregame-v1@2026-10-01", "home_team_abbreviation": "LAD",
+                              "away_team_abbreviation": "ATL"}])
+    upcoming = pd.DataFrame({"game_pk": [1, 2], "home_team_name": ["Dodgers", "Brewers"],
+                             "away_team_name": ["Braves", "Padres"]})
+    try:
+        ex._apply_engine_predictions(upcoming, engine)
+    except ex.MissingPredictionError as exc:
+        assert "[2]" in str(exc)
+    else:
+        raise AssertionError("an upcoming game without a prediction must not be dropped silently")
+    out = ex._apply_engine_predictions(upcoming.iloc[:1], engine)
+    assert len(out) == 1 and out["home_win_probability"].iloc[0] == 0.56
+
+
+def test_upcoming_schedule_skips_only_undecided_postseason_slots():
+    import scripts.export_mlb_frontend_data as ex
+
+    today = pd.Timestamp.utcnow().normalize()
+
+    def game(pk, away, home, state="Scheduled", abstract="Preview"):
+        return {"gamePk": pk, "gameType": "L", "season": str(today.year),
+                "gameDate": (today + pd.Timedelta(days=1, hours=20)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "officialDate": (today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                "status": {"abstractGameState": abstract, "detailedState": state},
+                "teams": {"away": {"team": {"id": away[0], "name": away[1]}},
+                          "home": {"team": {"id": home[0], "name": home[1]}}}}
+
+    payload = {"dates": [{"games": [
+        game(1, (144, "Atlanta Braves"), (119, "Los Angeles Dodgers")),
+        game(2, (5525, "NL Lower Seed"), (5517, "NL Higher Seed")),
+        game(3, (147, "New York Yankees"), (139, "Tampa Bay Rays"), state="Postponed", abstract="Final"),
+    ]}]}
+
+    class FakeClient:
+        def get_schedule(self, **kwargs):
+            return payload
+
+    upcoming = ex._load_upcoming_schedule(FakeClient())
+    assert upcoming["game_pk"].tolist() == [1]
+
+
+def test_market_summary_file_is_calibration_only():
+    import scripts.export_mlb_frontend_data as ex
+
+    engine = _market_engine(
+        [{"game_pk": pk, "is_final": True, "home_score": float(3 + pk % 4), "away_score": float(2 + pk % 3),
+          "dt": "2026-09-20 23:05", "status_detailed": "Final"} for pk in range(200, 230)],
+        listings=[_listing(pk, "Final", "2026-09-20T23:05:00Z", 3 + pk % 4, 2 + pk % 3) for pk in range(200, 230)],
+        live_seasons={2026})
+    old_boards = [{"id": f"mlb-{pk}", "gameId": str(pk), "scheduledDate": 20260920, "gameStart": "2026-09-20T23:05:00Z",
+                   "homeTeam": "H", "awayTeam": "A", "modelVersion": "v",
+                   "markets": mlb_market_picks(board_id=f"mlb-{pk}", home_label="H", away_label="A", p_home=0.55,
+                                               mu_home=4.6, mu_away=4.1, nb_r=3.7,
+                                               published_at="2026-09-20T07:10:00+00:00", model_version="v")}
+                  for pk in range(200, 230)]
+    with tempfile.TemporaryDirectory() as d:
+        out, log = Path(d, "out"), Path(d, "picks")
+        out.mkdir()
+        with _patched((ex, "FRONTEND_DATA_DIR", out), (ex, "MARKET_LOG_ROOT", log)):
+            ml.write_snapshot("mlb", ml.picks_from_boards("mlb", old_boards, season_of=ml.season_calendar,
+                                                          model_version="v",
+                                                          published_at="2026-09-20T07:10:00+00:00"), root=log)
+            info = ex._write_market_log(engine, [])
+        summary = json.loads(Path(out, "mlb_market_summary.json").read_text())
+        history = json.loads(Path(out, "mlb_market_history.json").read_text())
+    assert info["graded"] == 150 and len(history) == 150
+    assert {s["type"] for s in summary} == {"run_line", "total", "team_total_home", "team_total_away"}
+    for s in summary:
+        assert s["recordKind"] == "calibration", s
+        assert s["wins"] is None and s["losses"] is None and s["winRateExPush"] is None and s["roi"] is None
+        assert s["hits"] is not None and s["expectedHits"] > 0 and s["brier"] is not None
+    assert not list(out.glob("*.tmp"))
 
 
 def test_record_summary_baselines_and_label():

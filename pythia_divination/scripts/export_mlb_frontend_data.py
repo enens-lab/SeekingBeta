@@ -7,7 +7,7 @@ import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -629,6 +629,11 @@ class PregameEngine:
     frame: pd.DataFrame          # every game from HISTORY_START with a walk-forward prediction + display context
     params: dict[str, Any]
     built_at: float
+    # Raw live schedule listings fetched in this build (Postponed duplicates included) and
+    # the seasons they cover: the market grader's only evidence that a game was postponed,
+    # cancelled or dropped from the schedule.
+    live_schedule: pd.DataFrame = field(default_factory=pd.DataFrame)
+    live_seasons: frozenset = frozenset()
 
     @property
     def version(self) -> str:
@@ -638,17 +643,30 @@ class PregameEngine:
 _ENGINE_CACHE: dict[str, PregameEngine] = {}
 
 
+def _required_live_seasons(today: pd.Timestamp) -> list[int]:
+    """Seasons that must come from the live Stats API: the current one and every season
+    the in-app history publishes (HISTORY_START on). The local tables stop at the last S3
+    sync and have no postseason, so a fallback there truncates what users see. Earlier
+    seasons only train the model and may fall back to their (complete) regular seasons."""
+    return list(range(min(HISTORY_START.year, today.year), today.year + 1))
+
+
 def _pregame_engine(client: MLBStatsClient | None = None, *, force: bool = False) -> PregameEngine:
-    """Results (live Stats API, local tables as fallback) -> pregame features -> monthly
-    walk-forward predictions for every game from HISTORY_START through the upcoming
-    window. Cached for ENGINE_CACHE_SECONDS so the live API path does not refetch."""
+    """Results (live Stats API) -> pregame features -> monthly walk-forward predictions for
+    every game from HISTORY_START through the upcoming window. Cached for
+    ENGINE_CACHE_SECONDS so the live API path does not refetch.
+
+    Raises pm.LiveDataError when the current or a published season's results, or their
+    starter-line top-up, cannot be fetched live (after retries): the export must exit
+    non-zero before writing anything rather than publish from stale local tables."""
     cached = _ENGINE_CACHE.get("engine")
     if cached is not None and not force and time.time() - cached.built_at < ENGINE_CACHE_SECONDS:
         return cached
     params = pm.load_params()
     today = pd.Timestamp.utcnow().tz_localize(None).normalize()
     seasons = range(pm.FIRST_SEASON, today.year + 1)
-    inputs = pm.prepare_inputs(seasons, client=client or MLBStatsClient(), params=params)
+    inputs = pm.prepare_inputs(seasons, client=client or MLBStatsClient(), params=params,
+                               require_live=_required_live_seasons(today))
     end = today + pd.Timedelta(days=UPCOMING_LOOKAHEAD_DAYS + 1)
     predictions, _ = pm.walk_forward(inputs.frame, params, start=HISTORY_START, end=end)
     frame = inputs.frame.merge(predictions, on="game_pk", how="inner")
@@ -661,7 +679,8 @@ def _pregame_engine(client: MLBStatsClient | None = None, *, force: bool = False
     for side in ("home", "away"):
         frame[f"{side}_team_abbreviation"] = frame[f"{side}_team_id"].map(
             lambda tid: MLB_TEAM_BRANDING.get(int(tid), {}).get("abbreviation") if pd.notna(tid) else None)
-    engine = PregameEngine(frame=frame.reset_index(drop=True), params=params, built_at=time.time())
+    engine = PregameEngine(frame=frame.reset_index(drop=True), params=params, built_at=time.time(),
+                           live_schedule=inputs.live_schedule, live_seasons=inputs.live_seasons)
     _ENGINE_CACHE["engine"] = engine
     logger.info("pregame engine: %d games with predictions (%d final)", len(frame), int(frame["is_final"].sum()))
     return engine
@@ -913,7 +932,19 @@ def _load_upcoming_schedule(client: MLBStatsClient) -> pd.DataFrame:
     schedule["official_date"] = pd.to_datetime(schedule["official_date"], errors="coerce")
     preview_mask = ~schedule["status_abstract"].isin(["Final", "Completed Early", "Cancelled", "Postponed"])
     probable_mask = schedule["away_team_name"].notna() & schedule["home_team_name"].notna()
-    upcoming = schedule.loc[preview_mask & probable_mask].copy()
+    # The one documented case of an upcoming game without a usable prediction: a postseason
+    # slot whose clubs are not decided yet. The Stats API lists it with placeholder teams
+    # ("NL Lower Seed", "Higher Seed League Champion", ids 2710/5517/...); its "prediction"
+    # would be Elo 1500 vs 1500 for teams that do not exist. Skip it, loudly.
+    real_club = (pd.to_numeric(schedule["away_team_id"], errors="coerce").isin(list(MLB_TEAM_BRANDING))
+                 & pd.to_numeric(schedule["home_team_id"], errors="coerce").isin(list(MLB_TEAM_BRANDING)))
+    tbd = preview_mask & probable_mask & ~real_club
+    if tbd.any():
+        logger.warning("MLB upcoming: skipping %d game(s) whose clubs are not decided yet (postseason slots): %s",
+                       int(tbd.sum()), [f"{a} at {h} ({d})" for a, h, d in zip(
+                           schedule.loc[tbd, "away_team_name"], schedule.loc[tbd, "home_team_name"],
+                           schedule.loc[tbd, "official_date"].dt.strftime("%Y-%m-%d"))])
+    upcoming = schedule.loc[preview_mask & probable_mask & real_club].copy()
     return upcoming.sort_values(["official_date", "game_date", "game_pk"]).reset_index(drop=True)
 
 
@@ -1163,19 +1194,37 @@ _DISPLAY_CONTEXT_PREFIXES = (
 )
 
 
+class MissingPredictionError(RuntimeError):
+    """An upcoming game reached the board builder without a walk-forward prediction."""
+
+
+def _missing_prediction_pks(frame: pd.DataFrame, engine: PregameEngine) -> list[int | None]:
+    if frame.empty:
+        return []
+    pks = pd.to_numeric(frame["game_pk"], errors="coerce")
+    eng = engine.frame.loc[engine.frame["home_win_probability"].notna(), "game_pk"]
+    missing = pks[~pks.isin(set(eng))]
+    return [None if pd.isna(pk) else int(pk) for pk in missing]
+
+
 def _apply_engine_predictions(frame: pd.DataFrame, engine: PregameEngine) -> pd.DataFrame:
     """Attach the honest walk-forward prediction (and the runs-model means the markets use)
     to the upcoming display frame, and refresh the card context (records, starter recent
-    form) from the live results so boards do not show a months-old S3 snapshot."""
+    form) from the live results so boards do not show a months-old S3 snapshot.
+
+    Every game here must have a prediction: a game the engine does not know means the
+    engine's live results and the upcoming schedule disagree, and silently dropping it
+    publishes a board with games missing. Raises MissingPredictionError instead. The one
+    legitimate gap (a postseason slot whose clubs are not decided) never gets this far:
+    _load_upcoming_schedule skips it with a warning."""
     if frame.empty:
         return frame
+    missing = _missing_prediction_pks(frame, engine)
+    if missing:
+        raise MissingPredictionError(f"no pregame prediction for {len(missing)} of {len(frame)} upcoming MLB "
+                                     f"games: {missing}")
     eng = engine.frame.drop_duplicates("game_pk").set_index("game_pk")
-    pks = pd.to_numeric(frame["game_pk"], errors="coerce")
-    known = pks.isin(eng.index)
-    if (~known).any():
-        logger.warning("no pregame prediction for %d upcoming games: %s", int((~known).sum()),
-                       pks[~known].astype("Int64").tolist())
-    inference = frame.loc[known].copy()
+    inference = frame.copy()
     keys = pd.to_numeric(inference["game_pk"], errors="coerce").astype(int)
     context_cols = [c for c in eng.columns if c.startswith(_DISPLAY_CONTEXT_PREFIXES)
                     or (c.startswith(("home_starter_", "away_starter_")) and c not in ("home_starter_id", "away_starter_id"))]
@@ -1314,8 +1363,13 @@ def build_live_upcoming_payload(
     published_at: str | None = None,
     include_completed: bool = True,
 ) -> dict[str, Any]:
+    own_engine = engine is None
     engine = engine or _pregame_engine()
     dataset, resolved_selected_date, available_dates, lineup_map = _build_upcoming_dataset(selected_date=selected_date)
+    if own_engine and _missing_prediction_pks(dataset, engine):
+        # The API path reuses a cached engine (ENGINE_CACHE_SECONDS); a game added to the
+        # schedule since (a make-up date) is not in it yet. Rebuild once before failing.
+        engine = _pregame_engine(force=True)
     dataset = _apply_engine_predictions(dataset, engine)
     upcoming = _build_upcoming_boards(dataset, lineup_map, published_at=published_at)
     return {
@@ -1349,38 +1403,108 @@ MARKET_VOID_AFTER_HOURS = float(os.getenv("MLB_MARKET_VOID_AFTER_HOURS", "24"))
 _GRADER_TAKES_STATUS = getattr(market_log, "_normalize_result", None) is not None
 
 
+# Live detailedState prefixes that are positive evidence a listed game was not played at
+# its listed time ("Postponed", "Cancelled", "Suspended: Rain", ...).
+_VOID_STATE_PREFIXES = ("Postponed", "Cancelled", "Canceled", "Suspended")
+
+
+def _utc(value: Any) -> pd.Timestamp | None:
+    ts = pd.to_datetime(value, utc=True, errors="coerce")
+    return None if pd.isna(ts) else ts
+
+
+def _record_season(record: dict[str, Any], start: pd.Timestamp | None) -> int | None:
+    """MLB seasons are calendar years: the logged season, else the game date's year."""
+    try:
+        return int(record.get("season"))
+    except (TypeError, ValueError):
+        pass
+    try:
+        return int(record.get("gameDate")) // 10000
+    except (TypeError, ValueError):
+        return int(start.year) if start is not None else None
+
+
 def _market_results(engine: PregameEngine, records: list[dict[str, Any]], *,
                     now: pd.Timestamp | None = None) -> dict[str, dict[str, Any]]:
     """gameId -> {home, away, status} for every logged game that is decided.
 
-    status: "final"; "shortened" (official but called before 9 innings); "postponed"
-    (played more than MARKET_VOID_AFTER_HOURS after the earliest listed start, or not
-    played at all by then). Games still to be played are absent (picks stay ungraded)."""
+    status: "final"; "shortened" (official but called before 9 innings); "postponed" /
+    "cancelled" (void). A game is voided only on POSITIVE evidence from this run's live
+    Stats API data, once MARKET_VOID_AFTER_HOURS have passed since the earliest start any
+    snapshot listed for it:
+      * it was played, but more than the window after that start (made up later);
+      * its live listing says Postponed / Cancelled / Suspended and it has no final;
+      * it is absent from a season schedule fetched live (and non-empty) in this run,
+        e.g. an unneeded "if necessary" postseason game the API removed.
+    A game merely missing from engine.frame is never voided: a final in the live listing
+    is graded from it, and anything else without evidence stays ungraded (logged)."""
     window = pd.Timedelta(hours=MARKET_VOID_AFTER_HOURS)
     now = now if now is not None else pd.Timestamp.now(tz="UTC")
     earliest: dict[str, pd.Timestamp] = {}
+    season_of: dict[str, int | None] = {}
     for record in records:
         gid = str(record.get("gameId") or "")
-        start = pd.to_datetime(record.get("gameStart"), utc=True, errors="coerce")
-        if gid and pd.notna(start) and (gid not in earliest or start < earliest[gid]):
+        if not gid:
+            continue
+        start = _utc(record.get("gameStart"))
+        if start is not None and (gid not in earliest or start < earliest[gid]):
             earliest[gid] = start
-    finals = engine.frame.loc[engine.frame["is_final"]]
-    played = {
-        str(int(pk)): (float(h), float(a), pd.Timestamp(dt).tz_localize("UTC") if pd.notna(dt) else None,
-                       pm.result_status(state))
+        if season_of.get(gid) is None:
+            season_of[gid] = _record_season(record, start)
+    played: dict[str, tuple[float, float, pd.Timestamp | None, str]] = {}
+    finals = engine.frame.loc[engine.frame["is_final"].fillna(False).astype(bool)] if not engine.frame.empty else engine.frame
+    if not finals.empty:
         for pk, h, a, dt, state in zip(finals["game_pk"], finals["home_score"], finals["away_score"],
-                                       finals["dt"], finals["status_detailed"])
-    }
+                                       finals["dt"], finals["status_detailed"]):
+            played[str(int(pk))] = (float(h), float(a), _utc(dt), pm.result_status(state))
+    listed: dict[str, list[tuple[str, pd.Timestamp | None]]] = {}
+    sched = engine.live_schedule
+    if sched is not None and not sched.empty:
+        for pk, state, h, a, dt in zip(sched["game_pk"], sched["status_detailed"], sched["home_score"],
+                                       sched["away_score"], sched["game_date"]):
+            if pd.isna(pk):
+                continue
+            gid = str(int(pk))
+            listed.setdefault(gid, []).append((str(state or ""), _utc(dt)))
+            # A final the engine frame lacks (e.g. outside its game types / prediction
+            # window) is still a result: grade it from the live listing.
+            if (gid not in played and pm.is_completed_state(state)
+                    and pd.notna(pd.to_numeric(h, errors="coerce")) and pd.notna(pd.to_numeric(a, errors="coerce"))):
+                played[gid] = (float(h), float(a), _utc(dt), pm.result_status(state))
+    live_seasons = {int(s) for s in (engine.live_seasons or ())}
+
     results: dict[str, dict[str, Any]] = {}
-    for gid in {str(r.get("gameId")) for r in records if r.get("gameId")}:
+    no_evidence: list[str] = []
+    for gid in sorted(season_of):
         start = earliest.get(gid)
         if gid in played:
             home, away, played_at, status = played[gid]
             if start is not None and played_at is not None and played_at - start > window:
                 status = "postponed"
             results[gid] = {"home": home, "away": away, "status": status}
-        elif start is not None and now - start > window:
-            results[gid] = {"home": None, "away": None, "status": "postponed"}
+            continue
+        if start is None or now - start <= window:
+            continue  # not due yet: stays ungraded
+        listings = listed.get(gid)
+        if listings is not None:
+            void_states = [s for s, _ in listings if s.startswith(_VOID_STATE_PREFIXES)]
+            # A make-up listing still inside the window (not final yet) may still count.
+            pending = any(not s.startswith(_VOID_STATE_PREFIXES) and at is not None and at - start <= window
+                          for s, at in listings)
+            if void_states and not pending:
+                cancelled = all(s.startswith(("Cancelled", "Canceled")) for s in void_states)
+                results[gid] = {"home": None, "away": None, "status": "cancelled" if cancelled else "postponed"}
+            else:
+                no_evidence.append(gid)  # listed live, not final, no postponement: e.g. still in progress
+        elif season_of.get(gid) in live_seasons:
+            results[gid] = {"home": None, "away": None, "status": "postponed"}  # dropped from the live schedule
+        else:
+            no_evidence.append(gid)  # this run has no live schedule for its season: no evidence either way
+    if no_evidence:
+        logger.warning("MLB market log: %d logged game(s) past the %.0f h window have no final and no live "
+                       "postponement evidence; left ungraded: %s", len(no_evidence), MARKET_VOID_AFTER_HOURS,
+                       no_evidence[:20])
     return results
 
 
@@ -1406,19 +1530,34 @@ def _write_market_log(engine: PregameEngine, upcoming: list[dict[str, Any]]) -> 
     graded = _grade_market_picks(chosen, _market_results(engine, logged))
     graded.sort(key=lambda g: (int(g.get("gameDate") or 0), str(g.get("gameStart") or ""), str(g.get("marketId"))),
                 reverse=True)
+    # Default record_types=(): every MLB market is calibration-only. The two -1.5 run-line
+    # entries are fixed-side model views (~30-40% each, both sides of the game logged),
+    # totals and team totals are fair-line model views; none is a one-sided lean, so a
+    # W-L record would describe the pick rule, not skill. Rows carry recordKind
+    # "calibration" with wins/losses/rate/units/ROI null and hits vs expectedHits + Brier.
     summary = market_log.summarize(graded)
-    (FRONTEND_DATA_DIR / "mlb_market_history.json").write_text(json.dumps(graded[:MARKET_HISTORY_CAP], indent=2, default=str))
-    (FRONTEND_DATA_DIR / "mlb_market_summary.json").write_text(json.dumps(summary, indent=2))
+    _write_atomic(FRONTEND_DATA_DIR / "mlb_market_history.json", json.dumps(graded[:MARKET_HISTORY_CAP], indent=2, default=str))
+    _write_atomic(FRONTEND_DATA_DIR / "mlb_market_summary.json", json.dumps(summary, indent=2))
     return {"logged": len(records), "snapshot": str(snapshot) if snapshot else None,
             "pregame_picks": len(chosen), "graded": len(graded)}
+
+
+def _write_atomic(path: Path, text: str) -> None:
+    """Write via a sibling temp file + rename, so a killed export (OOM, timeout) never
+    leaves a truncated board for the uploader (which picks up *.json, not *.json.tmp)."""
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
 
 
 def export_mlb_frontend_data() -> None:
     FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Phase 0 — the honest pregame engine: results + starter lines (live, local tables as
-    # fallback) -> features -> monthly walk-forward predictions. Small (tens of MB) and
-    # shared by every later phase.
+    # Phase 0 — the honest pregame engine: results + starter lines -> features -> monthly
+    # walk-forward predictions. Small (tens of MB) and shared by every later phase. The
+    # current and every published season must come from the live Stats API: if that (or
+    # the starter-line top-up) fails, pm.LiveDataError propagates here and the export
+    # exits non-zero before any file is written (no stale-local-table fallback).
     print("[mlb-export] phase 0/3: building pregame engine (walk-forward predictions)...", flush=True)
     engine = _pregame_engine(force=True)
 
@@ -1428,11 +1567,11 @@ def export_mlb_frontend_data() -> None:
     print("[mlb-export] phase 1/3: building historical backtests...", flush=True)
     backtests = _build_history_boards(engine)
     historical_count = len(backtests)
-    (FRONTEND_DATA_DIR / "mlb_historical_backtests.json").write_text(json.dumps(backtests, separators=(",", ":")))
+    _write_atomic(FRONTEND_DATA_DIR / "mlb_historical_backtests.json", json.dumps(backtests, separators=(",", ":")))
     del backtests
     gc.collect()
     record = _record_summary(engine)
-    (FRONTEND_DATA_DIR / "mlb_record_summary.json").write_text(json.dumps(record, indent=2))
+    _write_atomic(FRONTEND_DATA_DIR / "mlb_record_summary.json", json.dumps(record, indent=2))
     print(f"[mlb-export] phase 1/3 done: wrote {historical_count} historical boards; record "
           + ", ".join(f"{s['season']}: {s['modelAccuracy']} (home {s['alwaysHomeAccuracy']}, n={s['games']})"
                       for s in record["seasons"]), flush=True)
@@ -1442,7 +1581,7 @@ def export_mlb_frontend_data() -> None:
     published_at = datetime.now(timezone.utc).isoformat()
     upcoming_payload = build_live_upcoming_payload(engine=engine, published_at=published_at, include_completed=False)
     upcoming = upcoming_payload["upcoming"]
-    (FRONTEND_DATA_DIR / "mlb_upcoming_tournaments.json").write_text(json.dumps(upcoming, indent=2))
+    _write_atomic(FRONTEND_DATA_DIR / "mlb_upcoming_tournaments.json", json.dumps(upcoming, indent=2))
 
     # Phase 3 — append this bake's picks to the log and grade every pregame snapshot.
     # Separate files on purpose: market results never touch hitStatus/seasonSummary.

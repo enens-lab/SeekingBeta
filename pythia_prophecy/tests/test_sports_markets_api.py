@@ -129,6 +129,15 @@ def test_season_summary_scope_and_labels():
         if cur == 2026:
             check(soc["sampleSize"] == 3 and soc["topPickHits"] == 2, f"World Cup kept out of the league season: {soc}")
             check(soc["label"] == "Top 5 leagues 2026-27" and "Closing favourite 52.0% (n=3)" in soc["baselineNote"], f"{soc}")
+        (data / "basketball_model_record.json").write_text(json.dumps({"records": [
+            {"league": "wnba", "season": "2026", "seasonType": "postseason", "alwaysHome": {"accuracy": 0.9}},
+            {"league": "wnba", "season": "2026", "seasonType": "regular", "alwaysHome": {"accuracy": 0.5471},
+             "elo": {"accuracy": 0.6677},
+             "marketMatched": {"games": 331, "model": {"accuracy": 0.6534}, "market": {"accuracy": 0.7043}}}]}))
+        s._SPORTS_MARKET_FILES_CACHE.clear()
+        check(s._basketball_baseline_note(s._load_market_file("basketball_model_record.json"), "WNBA", "2026")
+              == "Always home 54.7% · Elo 66.8% · On 331 games with a closing line: model 65.3% vs closing favourite 70.4%",
+              "basketball baselines: regular season row, market on matched games only")
         bb_rows = [row(20260410, "Top Pick", "Basketball"), row(20260612, "Miss", "Basketball"),
                    row(20260820, "Top Pick", "Women's Basketball"), row(20260928, "Top Pick", "Women's Basketball")]
         bb = s._sport_season_summary("basketball", bb_rows)

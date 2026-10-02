@@ -1796,17 +1796,23 @@ def _basketball_baseline_note(record: Any, league: str, season: str) -> str | No
         return None
     row = None
     for item in record.get("records") or []:
-        if str(item.get("league", "")).lower() == league.lower() and str(item.get("season")) == season:
+        if (str(item.get("league", "")).lower() == league.lower() and str(item.get("season")) == season
+                and str(item.get("seasonType") or "regular").lower() != "postseason"):
             row = item
             break
     if row is not None:
-        market = row.get("market") or {}
-        return _join_baselines([
+        parts = [
             f"Always home {_pct((row.get('alwaysHome') or {}).get('accuracy'))}" if (row.get("alwaysHome") or {}).get("accuracy") is not None else None,
             f"Elo {_pct((row.get('elo') or {}).get('accuracy'))}" if (row.get("elo") or {}).get("accuracy") is not None else None,
-            f"Closing favourite {_pct(market.get('accuracy'))} (n={market.get('games') or market.get('n')})"
-            if market.get("accuracy") is not None else None,
-        ])
+        ]
+        # vs the market only on the games that have a closing line, model scored on the same games
+        matched = row.get("marketMatched") or {}
+        market = matched.get("market") or {}
+        model = matched.get("model") or {}
+        if market.get("accuracy") is not None:
+            same = f"model {_pct(model.get('accuracy'))} vs " if model.get("accuracy") is not None else ""
+            parts.append(f"On {matched.get('games')} games with a closing line: {same}closing favourite {_pct(market['accuracy'])}")
+        return _join_baselines(parts)
     seasons = ((record.get("leagues") or {}).get(league.lower()) or {}).get("seasons") or {}
     base = (seasons.get(season) or {}).get("baselines") or {}
     market = base.get("closingMarket") or {}

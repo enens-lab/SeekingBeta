@@ -334,8 +334,11 @@ def _today_local() -> pd.Timestamp:
 
 
 def _cached_schedule_payload(league: str) -> dict[str, Any] | None:
-    pattern = f"schedule_{league}_{LEAGUE_CONFIGS[league].current_season}.json"
-    for candidate in sorted((BASKETBALL_DATA_ROOT / "raw").glob(f"*/{pattern}"), reverse=True):
+    # Raw snapshots are named schedule_<league>.json (older ones carry the season);
+    # newest snapshot directory first.
+    raw = BASKETBALL_DATA_ROOT / "raw"
+    candidates = list(raw.glob(f"*/schedule_{league}.json")) + list(raw.glob(f"*/schedule_{league}_*.json"))
+    for candidate in sorted(candidates, key=lambda path: (path.parent.name, path.name), reverse=True):
         try:
             payload = json.loads(candidate.read_text())
         except Exception:

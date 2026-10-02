@@ -188,7 +188,10 @@ PREVIOUS_BOARD_FILES = {
 }
 # Input caches worth keeping between cold workers (finished football-data seasons
 # never change; re-downloading ~30 CSVs a run is where partial failures came from).
-PERSIST_INPUT_DIRS = {"soccer": ["soccer/raw"]}
+# Basketball: the export appends boxscores of newly finished games to its normalized
+# tables; without the upload every cold worker refetches the whole season from the
+# CDN, and once that outgrows the refresh budget the season guard withholds the NBA.
+PERSIST_INPUT_DIRS = {"soccer": ["soccer/raw"], "basketball": ["basketball/normalized"]}
 
 
 def _seed_previous_boards(sport):

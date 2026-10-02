@@ -1,0 +1,235 @@
+"""Append-only log of published market picks, and grading from that log only.
+
+Why a log: the existing history boards are rebuilt at serve time by running the
+CURRENT model over completed games. That is fine for a win-probability demo but
+cannot honestly grade a spread or total pick: the line moves, the model changes,
+and hindsight leaks in. A market pick is graded against exactly what was shown to
+users before the game.
+
+Layout (written by the RunPod worker at every bake, synced to/from S3 under
+sports-data/market_picks/<sport>/ -- a prefix the worker may already write):
+
+    data/sports/market_picks/<sport>/picks_<YYYYMMDDTHHMMSSZ>.jsonl
+
+One file per bake, never rewritten; one JSON object per pick:
+    {marketId, boardId, sport, type, period, side, label, line, modelLine,
+     modelProbability, outcomeProbabilities, market{...}, publishedAt,
+     gameId, gameDate (YYYYMMDD), gameStart (ISO, optional), homeTeam, awayTeam,
+     season, modelVersion}
+
+Grading picks, per marketId, the LAST snapshot published before the game started
+(gameStart if known, else 12:00 UTC on gameDate -- the daily bake runs at 07:10 UTC,
+before any US or European slate), joins the final score, and grades with
+sports/markets.py::grade_pick. Summaries are per (type, season) with half results
+counted half, pushes excluded from the win rate, units at the stated price.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Callable, Iterable, Optional
+
+from . import markets as mk
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "data" / "sports" / "market_picks"
+STANDARD_DECIMAL = 1.0 + 100.0 / 110.0  # -110, the conventional price when none is logged
+BREAK_EVEN_STANDARD = 110.0 / 210.0     # 0.5238
+MIN_GRADED_FOR_RATE = int(os.getenv("MARKET_SUMMARY_MIN_GRADED", "30"))
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _stamp(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+# ── writing ───────────────────────────────────────────────────────────────────
+
+def picks_from_boards(sport: str, boards: Iterable[dict], *, season_of: Callable[[int], str],
+                      model_version: str = "", published_at: Optional[str] = None) -> list[dict]:
+    """Flatten the `markets` blocks of upcoming boards into log records."""
+    published_at = published_at or _utc_now().isoformat()
+    out = []
+    for board in boards:
+        game_date = board.get("scheduledDate")
+        for m in board.get("markets") or []:
+            out.append({
+                **{k: m.get(k) for k in ("marketId", "type", "period", "side", "label", "line", "modelLine",
+                                          "modelProbability", "outcomeProbabilities", "market", "confidenceTier")},
+                "boardId": board.get("id"),
+                "sport": sport,
+                "publishedAt": m.get("publishedAt") or published_at,
+                "gameId": board.get("gameId") or board.get("id"),
+                "gameDate": game_date,
+                "gameStart": board.get("gameStart"),
+                "homeTeam": board.get("homeTeam"),
+                "awayTeam": board.get("awayTeam"),
+                "season": season_of(int(game_date)) if game_date else None,
+                "modelVersion": model_version,
+            })
+    return out
+
+
+def write_snapshot(sport: str, records: list[dict], *, root: Path = DEFAULT_ROOT, now: Optional[datetime] = None) -> Optional[Path]:
+    """Write one immutable snapshot file; returns its path (None when nothing to log).
+    Refuses to overwrite: a second bake in the same second gets a suffix."""
+    if not records:
+        return None
+    directory = Path(root) / sport
+    directory.mkdir(parents=True, exist_ok=True)
+    base = f"picks_{_stamp(now or _utc_now())}"
+    path = directory / f"{base}.jsonl"
+    n = 1
+    while path.exists():
+        path = directory / f"{base}_{n}.jsonl"; n += 1
+    tmp = path.with_suffix(".jsonl.tmp")
+    tmp.write_text("".join(json.dumps(r, separators=(",", ":"), default=str) + "\n" for r in records))
+    os.replace(tmp, path)
+    logger.info("market pick log: wrote %d picks to %s", len(records), path)
+    return path
+
+
+# ── reading + selecting the pick users saw ───────────────────────────────────
+
+def load_snapshots(sport: str, *, root: Path = DEFAULT_ROOT) -> list[dict]:
+    directory = Path(root) / sport
+    records: list[dict] = []
+    for path in sorted(directory.glob("picks_*.jsonl")):
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                logger.warning("market pick log: skipping corrupt line in %s", path.name)
+    return records
+
+
+def _game_cutoff(record: dict) -> Optional[datetime]:
+    start = record.get("gameStart")
+    if start:
+        try:
+            ts = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
+            return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    gd = record.get("gameDate")
+    if not gd:
+        return None
+    try:
+        day = datetime.strptime(str(int(gd)), "%Y%m%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return day + timedelta(hours=12)
+
+
+def pregame_picks(records: Iterable[dict]) -> dict[str, dict]:
+    """marketId -> the last snapshot published strictly before the game cutoff."""
+    chosen: dict[str, dict] = {}
+    for r in records:
+        mid = r.get("marketId")
+        cutoff = _game_cutoff(r)
+        try:
+            published = datetime.fromisoformat(str(r.get("publishedAt")).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if published.tzinfo is None:
+            published = published.replace(tzinfo=timezone.utc)
+        if not mid or cutoff is None or published >= cutoff:
+            continue
+        prev = chosen.get(mid)
+        if prev is None or published > prev["_published"]:
+            chosen[mid] = {**r, "_published": published}
+    for v in chosen.values():
+        v.pop("_published", None)
+    return chosen
+
+
+# ── grading + summaries ───────────────────────────────────────────────────────
+
+def grade_picks(picks: dict[str, dict], results: dict[str, tuple[float, float]]) -> list[dict]:
+    """Grade pre-game picks whose game has a final score. `results` maps gameId ->
+    (home_score, away_score). Picks without a result stay ungraded (not voided)."""
+    graded = []
+    for mid, p in picks.items():
+        score = results.get(str(p.get("gameId")))
+        if score is None:
+            continue
+        price = ((p.get("market") or {}).get("decimalOdds")) or STANDARD_DECIMAL
+        try:
+            result, unit = mk.grade_pick(p["type"], p["side"], p.get("line"), score[0], score[1], decimal_odds=float(price))
+        except (ValueError, KeyError, TypeError) as exc:
+            logger.warning("market pick %s not gradable: %s", mid, exc)
+            result, unit = "void", 0.0
+        graded.append({**p, "result": result, "unitReturn": unit, "homeScore": score[0], "awayScore": score[1]})
+    return graded
+
+
+def summarize(graded: Iterable[dict]) -> list[dict]:
+    """Per (type, season) record. Brier is on the binary 'picked side won' outcome
+    for full win/loss grades; market Brier uses the logged de-vigged probability."""
+    buckets: dict[tuple[str, str], dict[str, Any]] = {}
+    for g in graded:
+        if g.get("result") == "void":
+            continue
+        key = (str(g.get("type")), str(g.get("season") or "unknown"))
+        b = buckets.setdefault(key, {"type": key[0], "season": key[1], "graded": 0, "wins": 0.0, "losses": 0.0, "pushes": 0,
+                                     "units": 0.0, "stake": 0.0, "brier": [], "mbrier": [], "prices": []})
+        r = g["result"]
+        b["graded"] += 1
+        b["wins"] += {"win": 1, "half_win": 0.5}.get(r, 0)
+        b["losses"] += {"loss": 1, "half_loss": 0.5}.get(r, 0)
+        b["pushes"] += 1 if r == "push" else 0
+        b["units"] += float(g.get("unitReturn") or 0.0)
+        b["stake"] += 0.0 if r == "push" else (0.5 if r in ("half_win", "half_loss") else 1.0)
+        price = ((g.get("market") or {}).get("decimalOdds")) or STANDARD_DECIMAL
+        b["prices"].append(float(price))
+        if r in ("win", "loss"):
+            y = 1.0 if r == "win" else 0.0
+            p = g.get("modelProbability")
+            if p is not None:
+                b["brier"].append((float(p) - y) ** 2)
+            mp = (g.get("market") or {}).get("impliedProbability")
+            if mp is not None:
+                b["mbrier"].append((float(mp) - y) ** 2)
+    out = []
+    for b in buckets.values():
+        decided = b["wins"] + b["losses"]
+        avg_price = sum(b["prices"]) / len(b["prices"]) if b["prices"] else STANDARD_DECIMAL
+        out.append({
+            "type": b["type"], "season": b["season"], "graded": b["graded"],
+            "wins": b["wins"], "losses": b["losses"], "pushes": b["pushes"],
+            # Hide the rate on small samples: a 7-3 start is not a record.
+            "winRateExPush": round(b["wins"] / decided, 4) if decided >= MIN_GRADED_FOR_RATE else None,
+            "breakEvenRate": round(1.0 / avg_price, 4),
+            "unitsAtStatedPrice": round(b["units"], 2),
+            "roi": round(b["units"] / b["stake"], 4) if b["stake"] >= MIN_GRADED_FOR_RATE else None,
+            "brier": round(sum(b["brier"]) / len(b["brier"]), 4) if b["brier"] else None,
+            "marketBrier": round(sum(b["mbrier"]) / len(b["mbrier"]), 4) if b["mbrier"] else None,
+        })
+    return sorted(out, key=lambda s: (s["season"], s["type"]), reverse=True)
+
+
+# ── season keys ───────────────────────────────────────────────────────────────
+
+def season_cross_year(start_month: int) -> Callable[[int], str]:
+    """Season label for leagues that span the new year (NFL Sep->Feb: start_month=8;
+    NBA Oct->Jun: 9; European soccer Aug->May: 7). Returns e.g. '2025-26'."""
+    def _season(date_key: int) -> str:
+        y, m = date_key // 10000, (date_key // 100) % 100
+        start = y if m >= start_month else y - 1
+        return f"{start}-{str(start + 1)[-2:]}"
+    return _season
+
+
+def season_calendar(date_key: int) -> str:
+    """Single-calendar-year seasons (MLB, WNBA, tennis, golf)."""
+    return str(date_key // 10000)

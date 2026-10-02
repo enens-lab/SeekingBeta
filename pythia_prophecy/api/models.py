@@ -639,6 +639,62 @@ class SportsOlympicDiscipline(BaseModel):
     medalists: List[SportsMedalist] = []
 
 
+class SportsMarketPrice(BaseModel):
+    """A sportsbook line/price snapshot the model's market pick is compared with.
+    Frozen at publish time (capturedAt); never updated in place."""
+    line: Optional[float] = None
+    americanOdds: Optional[int] = None
+    decimalOdds: Optional[float] = None
+    impliedProbability: Optional[float] = None   # de-vigged, 0..1
+    source: Optional[str] = None                 # e.g. "nflverse_close", "football-data_avg_close", "espn"
+    capturedAt: Optional[str] = None
+
+
+class SportsMarketPick(BaseModel):
+    """One market on a board beyond the win probability: spread, total, Asian
+    handicap, BTTS, double chance, run line... Built by pythia_divination/sports/
+    markets.py::market_pick. `type`, `side` and `result` are plain strings on
+    purpose: clients must skip unknown values rather than fail to decode (a strict
+    Swift enum would throw and take the whole sports response down)."""
+    marketId: str
+    type: str
+    period: str = "full_game"
+    label: str
+    side: str
+    line: Optional[float] = None                  # graded line, picked side's view
+    modelLine: Optional[float] = None             # model fair line
+    modelProbability: float                       # P(picked side wins | line), pushes excluded
+    pushProbability: Optional[float] = None
+    outcomeProbabilities: Optional[Dict[str, float]] = None   # win/half_win/push/half_loss/loss
+    market: Optional[SportsMarketPrice] = None
+    edge: Optional[float] = None                  # only when the market type's logged record earns it
+    confidenceTier: Optional[str] = None          # low | medium | high (never "lock")
+    publishedAt: Optional[str] = None
+    # history only
+    result: Optional[str] = None                  # win | half_win | push | half_loss | loss | void
+    unitReturn: Optional[float] = None
+    closingLine: Optional[float] = None
+
+
+class SportsMarketSummary(BaseModel):
+    """Graded record of one market type for one sport season. Separate from
+    seasonSummary/hitStatus on purpose: those feed in-app accuracy and emails, and
+    every client treats any non-"Miss" hitStatus as a hit."""
+    type: str
+    season: str
+    graded: int = 0
+    wins: float = 0.0          # half wins count 0.5
+    losses: float = 0.0
+    pushes: int = 0
+    winRateExPush: Optional[float] = None
+    breakEvenRate: Optional[float] = None       # e.g. 0.5238 at -110
+    unitsAtStatedPrice: Optional[float] = None
+    roi: Optional[float] = None
+    marketBaselineWinRate: Optional[float] = None
+    brier: Optional[float] = None
+    marketBrier: Optional[float] = None
+
+
 class SportsUpcomingBoard(BaseModel):
     id: str
     name: str
@@ -688,6 +744,9 @@ class SportsUpcomingBoard(BaseModel):
     teamHistory: List[SportsTeamHistory] = []          # [home, away] for WC matches
     rosters: List[SportsTeamRoster] = []               # [home, away] squads
     disciplines: List[SportsOlympicDiscipline] = []    # Olympics: events under a sport
+    # Markets beyond the win probability (spread, total, handicap, ...). Additive:
+    # empty for sports/boards that do not publish them; old app builds ignore it.
+    markets: List[SportsMarketPick] = []
 
 
 class SportsHistoricalBoard(BaseModel):
@@ -724,6 +783,11 @@ class SportsHistoricalBoard(BaseModel):
     homeLineup: List[SportsLineupPlayer] = []
     awayFeaturedPlayer: Optional[SportsLineupPlayer] = None
     homeFeaturedPlayer: Optional[SportsLineupPlayer] = None
+    # Graded market picks as published before the game (from the pick log, never
+    # re-scored with a newer model). Final score kept so clients can show it.
+    markets: List[SportsMarketPick] = []
+    homeScore: Optional[float] = None
+    awayScore: Optional[float] = None
 
 
 class SportsBoardCollection(BaseModel):
@@ -734,6 +798,8 @@ class SportsBoardCollection(BaseModel):
     selectedDate: Optional[str] = None
     availableDates: List[SportsBoardDateOption] = []
     seasonSummary: Optional[SportsBoardSeasonSummary] = None
+    # Per market type and sport season; empty until enough picks are graded.
+    marketSummary: List[SportsMarketSummary] = []
 
 
 class SportsBoardsResponse(BaseModel):

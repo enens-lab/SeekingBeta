@@ -39,7 +39,12 @@ logger = logging.getLogger(__name__)
 DEFAULT_ROOT = Path(__file__).resolve().parents[1] / "data" / "sports" / "market_picks"
 STANDARD_DECIMAL = 1.0 + 100.0 / 110.0  # -110, the conventional price when none is logged
 BREAK_EVEN_STANDARD = 110.0 / 210.0     # 0.5238
-MIN_GRADED_FOR_RATE = int(os.getenv("MARKET_SUMMARY_MIN_GRADED", "30"))
+# A 50% rate has a standard error of ~9 pts at n=30 and ~5 pts at n=100: below 100
+# graded picks we show the W-L-P record but not a percentage or ROI.
+MIN_GRADED_FOR_RATE = int(os.getenv("MARKET_SUMMARY_MIN_GRADED", "100"))
+# Sports whose events start at varied times of day: a pick is only gradable with an
+# explicit gameStart, because a noon fallback can be after an early match began.
+REQUIRE_GAME_START = {"tennis", "golf", "soccer"}
 
 
 def _utc_now() -> datetime:
@@ -115,6 +120,8 @@ def load_snapshots(sport: str, *, root: Path = DEFAULT_ROOT) -> list[dict]:
 
 def _game_cutoff(record: dict) -> Optional[datetime]:
     start = record.get("gameStart")
+    if not start and str(record.get("sport") or "").lower() in REQUIRE_GAME_START:
+        return None
     if start:
         try:
             ts = datetime.fromisoformat(str(start).replace("Z", "+00:00"))
@@ -163,35 +170,53 @@ def grade_picks(picks: dict[str, dict], results: dict[str, tuple[float, float]])
         score = results.get(str(p.get("gameId")))
         if score is None:
             continue
-        price = ((p.get("market") or {}).get("decimalOdds")) or STANDARD_DECIMAL
+        price = (p.get("market") or {}).get("decimalOdds")
         try:
-            result, unit = mk.grade_pick(p["type"], p["side"], p.get("line"), score[0], score[1], decimal_odds=float(price))
+            result, unit = mk.grade_pick(p["type"], p["side"], p.get("line"), score[0], score[1],
+                                         decimal_odds=float(price or STANDARD_DECIMAL))
         except (ValueError, KeyError, TypeError) as exc:
             logger.warning("market pick %s not gradable: %s", mid, exc)
             result, unit = "void", 0.0
-        graded.append({**p, "result": result, "unitReturn": unit, "homeScore": score[0], "awayScore": score[1]})
+        # Units only exist at a real, logged price. A model-only market (no line
+        # snapshot) gets a result but no invented -110 return.
+        graded.append({**p, "result": result, "unitReturn": unit if price else None,
+                       "homeScore": score[0], "awayScore": score[1]})
     return graded
 
 
 def summarize(graded: Iterable[dict]) -> list[dict]:
-    """Per (type, season) record. Brier is on the binary 'picked side won' outcome
-    for full win/loss grades; market Brier uses the logged de-vigged probability."""
+    """Per (type, season) record.
+
+    * wins/losses count half results as 0.5; pushes are excluded from the win rate.
+    * Units and ROI use only PRICED picks (a logged market price). ROI denominator =
+      units staked on priced picks that were not pushes (a half result stakes 0.5 on
+      the decided half). Unpriced (model-only) picks contribute W-L-P but no units.
+    * marketBaselineWinRate = mean de-vigged market probability of the picked side, i.e.
+      the hit rate the market itself expected for these exact picks.
+    * Brier is on the binary 'picked side won' outcome for full win/loss grades;
+      market Brier uses the logged de-vigged probability."""
     buckets: dict[tuple[str, str], dict[str, Any]] = {}
     for g in graded:
         if g.get("result") == "void":
             continue
         key = (str(g.get("type")), str(g.get("season") or "unknown"))
         b = buckets.setdefault(key, {"type": key[0], "season": key[1], "graded": 0, "wins": 0.0, "losses": 0.0, "pushes": 0,
-                                     "units": 0.0, "stake": 0.0, "brier": [], "mbrier": [], "prices": []})
+                                     "units": 0.0, "stake": 0.0, "priced": 0, "brier": [], "mbrier": [],
+                                     "prices": [], "implied": []})
         r = g["result"]
         b["graded"] += 1
         b["wins"] += {"win": 1, "half_win": 0.5}.get(r, 0)
         b["losses"] += {"loss": 1, "half_loss": 0.5}.get(r, 0)
         b["pushes"] += 1 if r == "push" else 0
-        b["units"] += float(g.get("unitReturn") or 0.0)
-        b["stake"] += 0.0 if r == "push" else (0.5 if r in ("half_win", "half_loss") else 1.0)
-        price = ((g.get("market") or {}).get("decimalOdds")) or STANDARD_DECIMAL
-        b["prices"].append(float(price))
+        price = (g.get("market") or {}).get("decimalOdds")
+        if price and g.get("unitReturn") is not None:
+            b["priced"] += 1
+            b["units"] += float(g["unitReturn"])
+            b["stake"] += 0.0 if r == "push" else (0.5 if r in ("half_win", "half_loss") else 1.0)
+            b["prices"].append(float(price))
+        implied = (g.get("market") or {}).get("impliedProbability")
+        if implied is not None:
+            b["implied"].append(float(implied))
         if r in ("win", "loss"):
             y = 1.0 if r == "win" else 0.0
             p = g.get("modelProbability")
@@ -203,15 +228,17 @@ def summarize(graded: Iterable[dict]) -> list[dict]:
     out = []
     for b in buckets.values():
         decided = b["wins"] + b["losses"]
-        avg_price = sum(b["prices"]) / len(b["prices"]) if b["prices"] else STANDARD_DECIMAL
+        priced = b["priced"] > 0
+        avg_price = sum(b["prices"]) / len(b["prices"]) if b["prices"] else None
         out.append({
             "type": b["type"], "season": b["season"], "graded": b["graded"],
             "wins": b["wins"], "losses": b["losses"], "pushes": b["pushes"],
             # Hide the rate on small samples: a 7-3 start is not a record.
             "winRateExPush": round(b["wins"] / decided, 4) if decided >= MIN_GRADED_FOR_RATE else None,
-            "breakEvenRate": round(1.0 / avg_price, 4),
-            "unitsAtStatedPrice": round(b["units"], 2),
-            "roi": round(b["units"] / b["stake"], 4) if b["stake"] >= MIN_GRADED_FOR_RATE else None,
+            "breakEvenRate": round(1.0 / avg_price, 4) if avg_price else None,
+            "unitsAtStatedPrice": round(b["units"], 2) if priced else None,
+            "roi": round(b["units"] / b["stake"], 4) if priced and b["stake"] >= MIN_GRADED_FOR_RATE else None,
+            "marketBaselineWinRate": round(sum(b["implied"]) / len(b["implied"]), 4) if b["implied"] else None,
             "brier": round(sum(b["brier"]) / len(b["brier"]), 4) if b["brier"] else None,
             "marketBrier": round(sum(b["mbrier"]) / len(b["mbrier"]), 4) if b["mbrier"] else None,
         })

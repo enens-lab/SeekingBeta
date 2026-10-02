@@ -58,20 +58,36 @@ def test_log_select_grade_summarize():
 
 def test_summary_math_and_small_sample_hiding():
     graded = []
-    for r in ["win"] * 20 + ["loss"] * 15 + ["push"] * 3 + ["half_win"] * 2 + ["half_loss"] * 2:
+    for r in (["win"] * 20 + ["loss"] * 15 + ["push"] * 3 + ["half_win"] * 2 + ["half_loss"] * 2) * 3:
         unit = {"win": 0.9091, "half_win": 0.4545, "push": 0.0, "half_loss": -0.5, "loss": -1.0}[r]
         graded.append({"type": "spread", "season": "2026-27", "result": r, "unitReturn": unit, "modelProbability": 0.55,
                        "market": {"impliedProbability": 0.5, "decimalOdds": 1.9091}})
     graded += [{"type": "total", "season": "2026-27", "result": "win", "unitReturn": 0.9091, "modelProbability": 0.6}] * 5
     s = {x["type"]: x for x in ml.summarize(graded)}
     sp = s["spread"]
-    assert sp["graded"] == 42 and sp["wins"] == 21.0 and sp["losses"] == 16.0 and sp["pushes"] == 3
-    assert abs(sp["winRateExPush"] - 21 / 37) < 1e-3
+    assert sp["graded"] == 126 and sp["wins"] == 63.0 and sp["losses"] == 48.0 and sp["pushes"] == 9
+    assert abs(sp["winRateExPush"] - 63 / 111) < 1e-3
     assert abs(sp["breakEvenRate"] - 0.5238) < 1e-3
-    assert abs(sp["unitsAtStatedPrice"] - (20 * 0.9091 - 15 + 2 * 0.4545 - 1.0)) < 0.02
+    assert abs(sp["unitsAtStatedPrice"] - 3 * (20 * 0.9091 - 15 + 2 * 0.4545 - 1.0)) < 0.05
+    assert sp["roi"] is not None and sp["marketBaselineWinRate"] == 0.5
     assert sp["brier"] is not None and sp["marketBrier"] == 0.25
-    # 5 graded totals: below the minimum sample -> no rate, no ROI shown
-    assert s["total"]["winRateExPush"] is None and s["total"]["roi"] is None and s["total"]["graded"] == 5
+    # 5 graded, unpriced totals: no rate (n<100), no invented units/ROI, no break-even
+    tot = s["total"]
+    assert tot["winRateExPush"] is None and tot["roi"] is None and tot["graded"] == 5
+    assert tot["unitsAtStatedPrice"] is None and tot["breakEvenRate"] is None
+
+
+def test_unpriced_pick_gets_no_units_and_start_time_rules():
+    pick = {"marketId": "m1", "type": "total", "side": "over", "line": 2.5, "gameId": "g1", "sport": "soccer",
+            "publishedAt": "2026-10-03T07:10:00+00:00", "gameDate": 20261003, "modelProbability": 0.55}
+    # soccer without gameStart is never selected (noon fallback could be after kickoff)
+    assert ml.pregame_picks([pick]) == {}
+    pick["gameStart"] = "2026-10-03T11:30:00Z"
+    chosen = ml.pregame_picks([pick])
+    g = ml.grade_picks(chosen, {"g1": (2, 1)})[0]
+    assert g["result"] == "win" and g["unitReturn"] is None   # model-only: result yes, units no
+    late = dict(pick, publishedAt="2026-10-03T11:31:00+00:00")
+    assert ml.pregame_picks([late]) == {}                      # published after kickoff -> never graded
 
 
 def test_season_keys():

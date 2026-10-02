@@ -63,8 +63,9 @@ def test_summary_math_and_small_sample_hiding():
         graded.append({"type": "spread", "season": "2026-27", "result": r, "unitReturn": unit, "modelProbability": 0.55,
                        "market": {"impliedProbability": 0.5, "decimalOdds": 1.9091}})
     graded += [{"type": "total", "season": "2026-27", "result": "win", "unitReturn": 0.9091, "modelProbability": 0.6}] * 5
-    s = {x["type"]: x for x in ml.summarize(graded)}
+    s = {x["type"]: x for x in ml.summarize(graded, record_types={"spread"})}
     sp = s["spread"]
+    assert sp["recordKind"] == "record"
     assert sp["graded"] == 126 and sp["wins"] == 63.0 and sp["losses"] == 48.0 and sp["pushes"] == 9
     assert abs(sp["winRateExPush"] - 63 / 111) < 1e-3
     assert abs(sp["breakEvenRate"] - 0.5238) < 1e-3
@@ -75,6 +76,13 @@ def test_summary_math_and_small_sample_hiding():
     tot = s["total"]
     assert tot["winRateExPush"] is None and tot["roi"] is None and tot["graded"] == 5
     assert tot["unitsAtStatedPrice"] is None and tot["breakEvenRate"] is None
+    # not a declared lean -> calibration only: no W-L, hits vs expected and Brier instead
+    assert tot["recordKind"] == "calibration" and tot["wins"] is None and tot["losses"] is None
+    assert tot["hits"] == 5 and tot["expectedHits"] == 3.0 and tot["baseRateBrier"] == 0.0
+    # default (no record types): even a priced spread is calibration only
+    dflt = {x["type"]: x for x in ml.summarize(graded)}["spread"]
+    assert dflt["recordKind"] == "calibration" and dflt["winRateExPush"] is None and dflt["unitsAtStatedPrice"] is None
+    assert dflt["hits"] == 63.0 and dflt["graded"] == 126
 
 
 def test_unpriced_pick_gets_no_units_and_start_time_rules():

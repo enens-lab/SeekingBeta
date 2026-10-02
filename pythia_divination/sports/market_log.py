@@ -30,7 +30,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional
+from typing import Collection, Any, Callable, Iterable, Optional
 
 from . import markets as mk
 
@@ -227,8 +227,15 @@ def grade_picks(picks: dict[str, dict], results: dict[str, Any]) -> list[dict]:
     return graded
 
 
-def summarize(graded: Iterable[dict]) -> list[dict]:
-    """Per (type, season) record.
+def summarize(graded: Iterable[dict], *, record_types: Collection[str] = ()) -> list[dict]:
+    """Per (type, season) summary.
+
+    A W-L record only means something when each pick was a one-sided choice the
+    product actually made (a lean). Types listed in `record_types` get recordKind
+    "record". Every other type gets recordKind "calibration": wins/losses/rate/units/
+    ROI are None (both sides of a market, a fixed side, or several pooled lines would
+    make the hit rate a product of the pick rule, not skill), and the row carries
+    hits vs expectedHits plus Brier against the bucket's base rate instead.
 
     * wins/losses count half results as 0.5; pushes are excluded from the win rate.
     * Units and ROI use only PRICED picks (a logged market price). ROI denominator =
@@ -244,7 +251,7 @@ def summarize(graded: Iterable[dict]) -> list[dict]:
         b = buckets.setdefault(key, {"type": key[0], "season": key[1], "graded": 0, "wins": 0.0, "losses": 0.0, "pushes": 0,
                                      "voids": 0, "ungradable": 0,
                                      "units": 0.0, "stake": 0.0, "priced": 0, "brier": [], "mbrier": [],
-                                     "prices": [], "implied": []})
+                                     "prices": [], "implied": [], "expected": 0.0, "outcomes": []})
         r = g["result"]
         if r in ("void", "ungradable"):
             b["voids" if r == "void" else "ungradable"] += 1
@@ -262,30 +269,42 @@ def summarize(graded: Iterable[dict]) -> list[dict]:
         implied = (g.get("market") or {}).get("impliedProbability")
         if implied is not None:
             b["implied"].append(float(implied))
+        p = g.get("modelProbability")
+        if p is not None and r != "push":
+            b["expected"] += float(p)
         if r in ("win", "loss"):
             y = 1.0 if r == "win" else 0.0
-            p = g.get("modelProbability")
+            b["outcomes"].append(y)
             if p is not None:
                 b["brier"].append((float(p) - y) ** 2)
             mp = (g.get("market") or {}).get("impliedProbability")
             if mp is not None:
                 b["mbrier"].append((float(mp) - y) ** 2)
+    record_set = set(record_types)
     out = []
     for b in buckets.values():
         decided = b["wins"] + b["losses"]
         priced = b["priced"] > 0
         avg_price = sum(b["prices"]) / len(b["prices"]) if b["prices"] else None
+        is_record = b["type"] in record_set
+        ys = b["outcomes"]
+        base = sum(ys) / len(ys) if ys else None
         out.append({
             "type": b["type"], "season": b["season"], "graded": b["graded"],
-            "wins": b["wins"], "losses": b["losses"], "pushes": b["pushes"],
+            "recordKind": "record" if is_record else "calibration",
+            "wins": b["wins"] if is_record else None, "losses": b["losses"] if is_record else None,
+            "pushes": b["pushes"],
             "voids": b["voids"], "ungradable": b["ungradable"],
             # Hide the rate on small samples: a 7-3 start is not a record.
-            "winRateExPush": round(b["wins"] / decided, 4) if decided >= MIN_GRADED_FOR_RATE else None,
-            "breakEvenRate": round(1.0 / avg_price, 4) if avg_price else None,
-            "unitsAtStatedPrice": round(b["units"], 2) if priced else None,
-            "roi": round(b["units"] / b["stake"], 4) if priced and b["stake"] >= MIN_GRADED_FOR_RATE else None,
+            "winRateExPush": round(b["wins"] / decided, 4) if is_record and decided >= MIN_GRADED_FOR_RATE else None,
+            "breakEvenRate": round(1.0 / avg_price, 4) if is_record and avg_price else None,
+            "unitsAtStatedPrice": round(b["units"], 2) if is_record and priced else None,
+            "roi": round(b["units"] / b["stake"], 4) if is_record and priced and b["stake"] >= MIN_GRADED_FOR_RATE else None,
             "marketBaselineWinRate": round(sum(b["implied"]) / len(b["implied"]), 4) if b["implied"] else None,
+            "hits": b["wins"],
+            "expectedHits": round(b["expected"], 2),
             "brier": round(sum(b["brier"]) / len(b["brier"]), 4) if b["brier"] else None,
+            "baseRateBrier": round(base * (1 - base), 4) if base is not None else None,
             "marketBrier": round(sum(b["mbrier"]) / len(b["mbrier"]), 4) if b["mbrier"] else None,
         })
     return sorted(out, key=lambda s: (s["season"], s["type"]), reverse=True)

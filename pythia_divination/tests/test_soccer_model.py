@@ -323,6 +323,16 @@ def test_market_log_round_trip_and_grading():
         assert {"total", "btts", "asian_handicap", "draw_no_bet", "double_chance", "correct_score"} <= types
         assert all(s["roi"] is None and s["unitsAtStatedPrice"] is None for s in summary)
         assert all(s["season"] == "2026-27" for s in summary)
+        # No declared lean: every soccer type is a calibration row, never a W-L record
+        # (totals at three lines and handicap at -0.5/-1.5/fair are pooled per type).
+        assert all(s["recordKind"] == "calibration" for s in summary), {s["type"]: s["recordKind"] for s in summary}
+        for s in summary:
+            assert s["wins"] is None and s["losses"] is None and s["winRateExPush"] is None, s
+            assert s["breakEvenRate"] is None, s
+            assert s["graded"] > 0 and s["hits"] >= 0 and s["expectedHits"] > 0 and s["brier"] is not None, s
+        totals = next(s for s in summary if s["type"] == "total")
+        assert totals["graded"] == 2 * 3                     # two games x three lines, one row
+        assert abs(totals["expectedHits"] - sum(g["modelProbability"] for g in graded if g["type"] == "total")) < 0.01
         assert len(list((root / "soccer").glob("picks_*.jsonl"))) == 2
 
 
@@ -360,6 +370,220 @@ def test_world_cup_archive_is_the_published_record():
 def test_history_season_count():
     assert exp._history_seasons(2026) == 6      # 2021-22 .. 2026-27
     assert exp._history_seasons(2027) == 7
+    assert exp._record_window_seasons(2026) == [2021, 2022, 2023, 2024, 2025, 2026]
+    assert exp._fit_window_seasons(2026) == [2022, 2023, 2024, 2025, 2026]
+
+
+# ── incomplete football-data history (partial downloads) ─────────────────────
+
+TODAY = date(2026, 10, 2)
+SEASONS = (2021, 2022, 2023, 2024, 2025, 2026)
+LEAGUES = {"eng.1": ("E0", 11), "esp.1": ("SP1", 12)}     # league -> (fd code, synthetic seed)
+
+
+class _patched:
+    """Temporarily set attributes (plain-function tests, no pytest fixtures)."""
+
+    def __init__(self, *triples):
+        self.triples = triples
+        self.saved = []
+
+    def __enter__(self):
+        for obj, name, value in self.triples:
+            self.saved.append((obj, name, getattr(obj, name)))
+            setattr(obj, name, value)
+        return self
+
+    def __exit__(self, *exc):
+        for obj, name, value in reversed(self.saved):
+            setattr(obj, name, value)
+
+
+def _raw_seasons() -> dict[tuple[str, int], pd.DataFrame]:
+    """football-data shaped CSV frames per (fd code, season) for two synthetic leagues."""
+    out = {}
+    for fd_code, seed in LEAGUES.values():
+        df, _ = _league(n_teams=8, seasons=SEASONS, seed=seed)
+        df = df[df.date < pd.Timestamp(TODAY)]
+        for s, g in df.groupby("season_start"):
+            out[(fd_code, int(s))] = pd.DataFrame({
+                "Date": g.date.dt.strftime("%d/%m/%Y"), "HomeTeam": g.home_display, "AwayTeam": g.away_display,
+                "FTHG": g.home_goals, "FTAG": g.away_goals})
+    return out
+
+
+def _fake_fixtures(league_key, today):
+    return [{"id": f"{league_key}-fx{i}", "name": "", "date_int": 20261010, "venue": None, "completed": False,
+             "state": "pre", "home_team": {}, "away_team": {}, "home_name": home, "away_name": away,
+             "home_score": None, "away_score": None, "start_iso": "2026-10-10T14:00:00+00:00",
+             "neutral_site": False, "status_name": "STATUS_SCHEDULED"}
+            for i, (home, away) in enumerate((("Team 01", "Team 02"), ("Team 03", "Team 04")))]
+
+
+def _soccer_env(fail: set, calls: dict):
+    """Patch the exporter onto the synthetic leagues; `fail` = {(fd code, season)} whose
+    download raises, `calls` collects which leagues were walked forward / refitted."""
+    import requests
+    from sports.soccer import client as soccer_client
+
+    raw = _raw_seasons()
+
+    def fetch(fd_code, season_start, cache_dir=None, cache=True):
+        if (fd_code, int(season_start)) in fail:
+            raise requests.ConnectionError(f"simulated outage {fd_code} {season_start}")
+        return raw[(fd_code, int(season_start))].copy()
+
+    real_record, real_fit = exp._build_track_record_for_league, exp._fit_current_model
+
+    def record(league_key, history):
+        calls.setdefault("record", []).append(league_key)
+        return real_record(league_key, history)
+
+    def fit(history, season):
+        calls.setdefault("fit", []).append(int(history["season_start"].nunique()))
+        return real_fit(history, season)
+
+    return _patched((soccer_client, "fetch_football_data_csv", fetch),
+                    (exp, "PREDICTABLE_LEAGUE_KEYS", tuple(LEAGUES)),
+                    (exp, "WORLD_CUP_ENABLED", False),
+                    (exp, "_fetch_league_fixtures", _fake_fixtures),
+                    (exp, "_build_track_record_for_league", record),
+                    (exp, "_fit_current_model", fit))
+
+
+def _league_boards(boards, tour):
+    return [b for b in boards if b.get("tour") == tour]
+
+
+def _published(fail=frozenset()):
+    """One clean bake, round-tripped through JSON like the file on disk, with every
+    league board stamped so a regenerated board is distinguishable from a carried one."""
+    calls: dict = {}
+    with _soccer_env(set(fail), calls):
+        payload, _, _, health = exp._build_payload(published_at="2026-10-02T07:00:00+00:00", today=TODAY)
+    assert not health["frozenRecord"] and sorted(health["pricedLeagues"]) == sorted(LEAGUES)
+    history = json.loads(json.dumps(payload["completed"], default=str))
+    for b in history:
+        if b.get("tour") in ("Premier League", "La Liga"):
+            b["publishedRun"] = "previous"
+    return history, json.loads(json.dumps(payload["trackRecord"], default=str))
+
+
+def test_failed_old_season_download_keeps_that_leagues_published_record():
+    """E0 2022-23 fails to download: the Premier League is not refitted, its published
+    boards stay byte-identical, its upcoming boards are withheld (2022-23 is inside the
+    current 5-season window); La Liga still regenerates and prices normally."""
+    previous, previous_record = _published()
+    prev_pl = _league_boards(previous, "Premier League")
+    assert len(prev_pl) > 50 and len(_league_boards(previous, "La Liga")) > 50
+
+    calls: dict = {}
+    with _soccer_env({("E0", 2022)}, calls):
+        payload, _, histories, health = exp._build_payload(previous_history=previous, previous_track_record=previous_record,
+                                                           published_at="2026-10-02T07:10:00+00:00", today=TODAY)
+        # the hazard being guarded: a refit on the partial history moves the record
+        partial = histories["eng.1"]
+        assert 2022 not in set(partial.season_start)
+        moved, _ = exp._build_track_record_for_league("eng.1", partial)
+    calls["record"].pop()   # the explicit call above
+
+    assert health["frozenRecord"] == {"eng.1": [2022]}
+    assert health["unpricedUpcoming"] == {"eng.1": [2022]}
+    assert health["pricedLeagues"] == ["esp.1"]
+    assert calls["record"] == ["esp.1"] and len(calls["fit"]) == 1          # eng.1 never refitted
+
+    out_pl = _league_boards(payload["completed"], "Premier League")
+    assert [json.dumps(b, sort_keys=True) for b in out_pl] == [json.dumps(b, sort_keys=True) for b in prev_pl]
+    assert all(b.get("publishedRun") == "previous" for b in out_pl)
+    prev_probs = {(b["tournament"], b["scheduledDate"]): b["prob"] for b in prev_pl}
+    assert any(prev_probs.get((b["tournament"], b["scheduledDate"])) != b["prob"] for b in moved)
+
+    out_liga = _league_boards(payload["completed"], "La Liga")
+    assert len(out_liga) == len(_league_boards(previous, "La Liga"))
+    assert all("publishedRun" not in b for b in out_liga)                   # regenerated
+
+    tours = {b["tour"] for b in payload["upcoming"]}
+    assert tours == {"La Liga"}, tours
+    tr = payload["trackRecord"]
+    assert [r for r in tr["leagues"] if r["tour"] == "Premier League"] == \
+        [r for r in previous_record["leagues"] if r["tour"] == "Premier League"]
+    assert tr["allLeagues"] == previous_record["allLeagues"]
+    assert {r["tour"] for r in tr["leagues"]} == {"Premier League", "La Liga"}
+
+
+def test_gap_outside_the_current_window_freezes_the_record_but_still_prices():
+    """2021-22 only feeds the 2025-26 walk-forward, not today's 2022..2026 fit."""
+    previous, previous_record = _published()
+    calls: dict = {}
+    with _soccer_env({("E0", 2021)}, calls):
+        payload, _, _, health = exp._build_payload(previous_history=previous, previous_track_record=previous_record,
+                                                   published_at="2026-10-02T07:10:00+00:00", today=TODAY)
+    assert health["frozenRecord"] == {"eng.1": [2021]} and health["unpricedUpcoming"] == {}
+    assert calls["record"] == ["esp.1"] and len(calls["fit"]) == 2
+    assert {b["tour"] for b in payload["upcoming"]} == {"Premier League", "La Liga"}
+    assert _league_boards(payload["completed"], "Premier League") == _league_boards(previous, "Premier League")
+
+
+def test_full_outage_keeps_every_record_and_exits_non_zero():
+    previous, previous_record = _published()
+    outage = {(code, s) for code, _ in LEAGUES.values() for s in SEASONS}
+    with tempfile.TemporaryDirectory() as d:
+        out, picks = Path(d) / "out", Path(d) / "picks"
+        out.mkdir()
+        (out / "soccer_historical_backtests.json").write_text(json.dumps(previous, indent=2))
+        (out / "soccer_track_record.json").write_text(json.dumps(previous_record, indent=2))
+        before = (out / "soccer_historical_backtests.json").read_text()
+        with _soccer_env(outage, {}), _patched((exp, "_market_picks_root", lambda: picks)):
+            rc = exp.export_soccer_frontend_data(out, today=TODAY)
+        assert rc == 1
+        after = json.loads((out / "soccer_historical_backtests.json").read_text())
+        assert json.loads(before) == after
+        assert json.loads((out / "soccer_track_record.json").read_text())["leagues"] == previous_record["leagues"]
+        assert json.loads((out / "soccer_upcoming_tournaments.json").read_text()) == []
+
+
+def test_frozen_league_without_a_previous_file_leaves_the_published_record_untouched():
+    """A fresh RunPod worker has no previous export on disk: rewriting the record files
+    there would drop the frozen league, so they are not written at all."""
+    with tempfile.TemporaryDirectory() as d:
+        out, picks = Path(d) / "out", Path(d) / "picks"
+        with _soccer_env({("E0", 2023)}, {}), _patched((exp, "_market_picks_root", lambda: picks)):
+            rc = exp.export_soccer_frontend_data(out, today=TODAY)
+        assert rc == 0                                   # La Liga priced honestly
+        assert not (out / "soccer_historical_backtests.json").exists()
+        assert not (out / "soccer_track_record.json").exists()
+        upcoming = json.loads((out / "soccer_upcoming_tournaments.json").read_text())
+        assert upcoming and {b["tour"] for b in upcoming} == {"La Liga"}
+        summary = json.loads((out / "soccer_market_summary.json").read_text())
+        assert summary == []                             # nothing graded yet on a fresh log
+
+
+def test_current_season_not_published_is_only_a_gap_after_the_grace_date():
+    import requests
+    from sports.soccer import client as soccer_client
+
+    frame = pd.DataFrame({"Date": ["16/08/2025"], "HomeTeam": ["Arsenal"], "AwayTeam": ["Leeds"], "FTHG": [1], "FTAG": [0]})
+
+    def fetch(fd_code, season_start, cache_dir=None, cache=True):
+        if season_start == 2026:
+            resp = requests.Response(); resp.status_code = 404
+            raise requests.HTTPError("404 Client Error", response=resp)
+        if season_start == 2024:
+            raise requests.Timeout("read timed out")
+        if season_start == 2023:
+            return frame.iloc[0:0]                          # header only
+        return frame.assign(Date=f"16/08/{season_start}")
+
+    with _patched((soccer_client, "fetch_football_data_csv", fetch)):
+        load = soccer_client.load_history_report("eng.1", seasons=6, current_season_start=2026)
+    assert load.loaded == (2021, 2022, 2025)
+    assert load.not_published == (2026,) and load.empty == (2023,) and list(load.failed) == [2024]
+    window = [2022, 2023, 2024, 2025, 2026]
+    assert exp._missing_seasons(load, window, season=2026, today=date(2026, 8, 10)) == [2023, 2024]
+    assert exp._missing_seasons(load, window, season=2026, today=date(2026, 9, 15)) == [2023, 2024, 2026]
+    assert exp._missing_seasons(None, window, season=2026, today=date(2026, 8, 10)) == window
+    timeout = soccer_client.HistoryLoad(frame=pd.DataFrame(), requested=(2026,), loaded=(), failed={2026: "Timeout"})
+    assert exp._missing_seasons(timeout, [2026], season=2026, today=date(2026, 8, 10)) == [2026]
 
 
 if __name__ == "__main__":

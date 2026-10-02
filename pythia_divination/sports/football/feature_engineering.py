@@ -67,6 +67,9 @@ def prepare_games(
         ],
     )
     frame["div_game"] = _safe_bool_to_int(frame["div_game"])
+    # Post-game flag: kept for display only. build_training_dataset drops it
+    # (_LEAKY_COLUMNS) -- |margin| averages 3.97 in OT games vs 11.55 otherwise, so it
+    # would leak straight into any margin or total model.
     frame["overtime"] = _safe_bool_to_int(frame["overtime"])
     frame["is_neutral_site"] = frame["location"].fillna("").astype(str).str.lower().eq("neutral").astype(int)
     frame["is_weekend"] = frame["weekday"].fillna("").isin(["Saturday", "Sunday"]).astype(int)
@@ -82,8 +85,14 @@ def prepare_games(
         (frame["home_moneyline"] < frame["away_moneyline"]).astype(int),
         np.nan,
     )
+    completed = frame["home_score"].notna() & frame["away_score"].notna()
+    frame["is_completed"] = completed.astype(int)
+    frame["is_tie"] = (completed & (frame["home_score"] == frame["away_score"])).astype(int)
+    # Ties (real in the NFL: 5 since 2020) are neither a home win nor a home loss, so
+    # the binary label is NaN for them and training drops them. They stay in the frame
+    # (and in team form, as half a win) because the game was played.
     frame["home_win"] = np.where(
-        frame["home_score"].notna() & frame["away_score"].notna(),
+        completed & (frame["is_tie"] == 0),
         (frame["home_score"] > frame["away_score"]).astype(float),
         np.nan,
     )
@@ -95,7 +104,7 @@ def prepare_games(
     frame["home_team_key"] = frame["home_team"].astype(str)
     frame["season_display"] = frame["season"].astype("Int64").astype(str)
     if require_completed:
-        frame = frame.loc[frame["home_win"].notna() & frame["official_date"].notna()].copy()
+        frame = frame.loc[completed & frame["official_date"].notna()].copy()
     return frame.sort_values(["official_date", "season", "week", "game_id"]).reset_index(drop=True)
 
 
@@ -137,7 +146,8 @@ def build_team_game_logs(games: pd.DataFrame, team_week_stats: pd.DataFrame) -> 
     stats = team_week_stats.copy()
     if stats.empty:
         stats = pd.DataFrame(columns=["season", "week", "team", "game_id"])
-    stats = stats.loc[stats.get("season_type", "REG") == "REG"].copy()
+    if "season_type" in stats.columns:
+        stats = stats.loc[stats["season_type"] == "REG"].copy()
     numeric_candidate_columns = [
         "season",
         "week",
@@ -175,6 +185,13 @@ def build_team_game_logs(games: pd.DataFrame, team_week_stats: pd.DataFrame) -> 
         for side, opp in (("away", "home"), ("home", "away")):
             key = f"{int(game['season'])}:{int(game['week'])}:{game[f'{side}_team']}:{game['game_id']}"
             stat_row = stats_map.get(key, {})
+            own_score = pd.to_numeric(pd.Series([game.get(f"{side}_score")]), errors="coerce").iloc[0]
+            opp_score = pd.to_numeric(pd.Series([game.get(f"{opp}_score")]), errors="coerce").iloc[0]
+            # 1 / 0 for a win / loss, 0.5 for a tie (standings convention), NaN if unplayed.
+            if pd.isna(own_score) or pd.isna(opp_score):
+                won = np.nan
+            else:
+                won = 1.0 if own_score > opp_score else (0.0 if own_score < opp_score else 0.5)
             passing_yards = pd.to_numeric(pd.Series([stat_row.get("passing_yards")]), errors="coerce").iloc[0]
             rushing_yards = pd.to_numeric(pd.Series([stat_row.get("rushing_yards")]), errors="coerce").iloc[0]
             passing_epa = pd.to_numeric(pd.Series([stat_row.get("passing_epa")]), errors="coerce").iloc[0]
@@ -190,7 +207,7 @@ def build_team_game_logs(games: pd.DataFrame, team_week_stats: pd.DataFrame) -> 
                     "team_key": game[f"{side}_team_key"],
                     "opponent_team": game[f"{opp}_team"],
                     "is_home": 1 if side == "home" else 0,
-                    "won": game[f"{side}_win"],
+                    "won": won,
                     "points_scored": game[f"{side}_score"],
                     "points_allowed": game[f"{opp}_score"],
                     "point_diff": game[f"{side}_score"] - game[f"{opp}_score"],

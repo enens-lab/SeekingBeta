@@ -38,6 +38,7 @@ are emptied at build time and re-synced from S3 here at runtime.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 import subprocess
 import time
@@ -48,7 +49,7 @@ import runpod
 # Bump on every worker-affecting change: the RunPod GitHub build is invisible from
 # the box, so ops polls {"type":"health"} until "build" reports the expected tag
 # before trusting a re-export to carry new code.
-HANDLER_BUILD = "2026-10-02.2"
+HANDLER_BUILD = "2026-10-02.3"
 
 REPO = Path(os.getenv("PYTHIA_REPO", "/work"))
 DIV = REPO / "pythia_divination"
@@ -139,12 +140,23 @@ def _sync_sport_data(sport):
             raise RuntimeError(f"data sync failed for '{sub}' (rc={rc}) from {src}")
 
 
-def _upload_boards(since_ts):
+def _is_empty_json_list(path):
+    try:
+        return json.loads(path.read_text(encoding="utf-8")) == []
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _upload_boards(since_ts, failed=False):
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     uploaded = []
     for f in sorted(OUTPUT_DIR.glob("*.json")):
         # Only files this export run actually (re)wrote — robust to naming.
         if f.stat().st_mtime >= since_ts - 1:
+            if failed and _is_empty_json_list(f):
+                # A failed run that wrote "no boards" must not replace yesterday's file.
+                print(f"[worker] skip empty {f.name} from a failed run", flush=True)
+                continue
             rc, _ = _run(
                 ["aws", "s3", "cp", str(f), f"s3://{S3_BUCKET}/{BOARDS_PREFIX}/{f.name}",
                  "--region", AWS_REGION, "--only-show-errors"],
@@ -164,6 +176,44 @@ def _upload_boards(since_ts):
 # the log is append-only by design (it is what market records are graded from).
 MARKET_LOG_SPORTS = {"mlb", "football", "basketball", "soccer"}
 MARKET_PICKS_DIR = DIV / "data" / "sports" / "market_picks"
+
+# Published files an exporter reads back so that, when an input is incomplete (a
+# failed football-data season, a missing basketball season table), it keeps the
+# previous record for that league instead of rewriting it from partial data. The
+# image's output dir starts empty, so seed them from frontend-boards/ first. They
+# are back-dated so they are only re-uploaded if the export rewrites them.
+PREVIOUS_BOARD_FILES = {
+    "soccer": ["soccer_historical_backtests.json", "soccer_track_record.json"],
+    "basketball": ["basketball_historical_backtests.json", "basketball_model_record.json"],
+}
+# Input caches worth keeping between cold workers (finished football-data seasons
+# never change; re-downloading ~30 CSVs a run is where partial failures came from).
+PERSIST_INPUT_DIRS = {"soccer": ["soccer/raw"]}
+
+
+def _seed_previous_boards(sport):
+    seeded = []
+    old = time.time() - 600
+    for name in PREVIOUS_BOARD_FILES.get(sport, []):
+        dest = OUTPUT_DIR / name
+        rc, _ = _run(["aws", "s3", "cp", f"s3://{S3_BUCKET}/{BOARDS_PREFIX}/{name}", str(dest),
+                      "--region", AWS_REGION, "--only-show-errors"], REPO, 300)
+        if rc == 0 and dest.exists():
+            os.utime(dest, (old, old))
+            seeded.append(name)
+        else:
+            print(f"[worker] no previous {name} to seed (rc={rc})", flush=True)
+    return seeded
+
+
+def _persist_inputs(sport):
+    for sub in PERSIST_INPUT_DIRS.get(sport, []):
+        local = DIV / "data" / "sports" / sub
+        if not local.exists():
+            continue
+        # upload only, never --delete: the cache only grows
+        _run(["aws", "s3", "sync", str(local) + "/", f"s3://{S3_BUCKET}/{SPORTS_DATA_PREFIX}/{sub}/",
+              "--region", AWS_REGION, "--only-show-errors"], REPO, SYNC_TIMEOUT_SEC)
 
 
 def _sync_market_picks_down(sport):
@@ -198,6 +248,7 @@ def _export_one(sport):
             _sync_market_picks_down(sport)
     except Exception as exc:  # noqa: BLE001
         return {"sport": sport, "ok": False, "error": f"input sync failed: {exc}"}
+    seeded = _seed_previous_boards(sport)
 
     start = time.time()
     last_rc, last_log = 0, ""
@@ -211,7 +262,7 @@ def _export_one(sport):
     # OOMs (exit -9), the *historical* board from phase 1 is already complete on disk —
     # publish it rather than losing the whole run.
     try:
-        boards = _upload_boards(start)
+        boards = _upload_boards(start, failed=last_rc != 0)
     except Exception as exc:  # noqa: BLE001
         return {"sport": sport, "ok": False, "exit_code": last_rc, "boards": [], "error": f"board upload failed: {exc}", "log_tail": last_log[-1500:]}
     picks = []
@@ -223,8 +274,10 @@ def _export_one(sport):
             # next run would grade without this snapshot) but not unpublish them.
             return {"sport": sport, "ok": False, "exit_code": last_rc, "boards": boards,
                     "error": f"market pick log upload failed: {exc}", "log_tail": last_log[-1500:]}
+    if last_rc == 0:
+        _persist_inputs(sport)
     return {"sport": sport, "ok": last_rc == 0, "exit_code": last_rc, "boards": boards,
-            "market_pick_snapshots": picks, "log_tail": last_log[-1500:]}
+            "market_pick_snapshots": picks, "seeded_previous": seeded, "log_tail": last_log[-1500:]}
 
 
 def _options_universe():
@@ -432,7 +485,7 @@ def _stock_predictions(payload):
         except Exception as exc:  # noqa: BLE001
             summary = {"parse_error": str(exc)}
     try:
-        boards = _upload_boards(start)
+        boards = _upload_boards(start, failed=last_rc != 0)
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "exit_code": rc, "summary": summary, "boards": [],
                 "error": f"upload failed: {exc}", "log_tail": log[-1500:]}

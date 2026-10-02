@@ -176,7 +176,7 @@ def pregame_picks(records: Iterable[dict]) -> dict[str, dict]:
 # Market types that need a regulation-length game. MLB: a game shortened by weather
 # ("Completed Early") is official for the moneyline but run lines and totals are
 # void (standard sportsbook rule).
-_NEEDS_FULL_GAME = {"run_line", "spread", "total", "team_total_home", "team_total_away"}
+_NEEDS_FULL_GAME = {"alt_spread", "alt_total", "run_line", "spread", "total", "team_total_home", "team_total_away"}
 
 
 def _normalize_result(value: Any) -> Optional[dict]:

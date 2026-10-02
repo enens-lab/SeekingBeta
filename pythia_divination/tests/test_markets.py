@@ -39,6 +39,7 @@ def test_grading_hand_computed():
     assert g("total", "under", 2.25, 2, 0)[0] == "half_win"
     assert g("total", "under", 2.25, 2, 1)[0] == "loss"
     assert g("team_total_home", "over", 3.5, 4, 0)[0] == "win"
+    assert g("alt_spread", "home", -9.5, 31, 21)[0] == "win" and g("alt_total", "over", 51.5, 24, 21)[0] == "loss"
     # moneyline / 1x2 / btts / double chance / dnb
     assert g("moneyline", "home", None, 20, 20) == ("push", 0.0)
     assert g("1x2", "draw", None, 1, 1)[0] == "win"

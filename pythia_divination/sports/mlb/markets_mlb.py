@@ -81,20 +81,22 @@ def mlb_market_picks(*, board_id: str, home_label: str, away_label: str, p_home:
         entry = mk.market_pick(board_id=board_id, market_type="run_line", side=side,
                                label=f"{labels[side]} -{RUN_LINE:g}",
                                prices=mk.score_matrix_handicap(m, side, -RUN_LINE), line=-RUN_LINE,
-                               # fair handicap from this side's view: minus its expected margin
-                               model_line=round(expected[other] - expected[side], 1) + 0.0,
+                               # fair handicap from this side's view: minus its expected margin,
+                               # on the half-point grid lines are quoted in
+                               model_line=mk.fair_line_from_mean(expected[other] - expected[side], half_point=False) + 0.0,
                                period=PERIOD, published_at=published_at)
         entry["marketId"] = run_line_market_id(board_id, side)
         entries.append(entry)
     total_line = fair_half_line(total_pmf)
     entries.append(mk.market_pick(board_id=board_id, market_type="total", side="over", label=f"Over {total_line:g}",
                                   prices=mk.score_matrix_total(m, "over", total_line), line=total_line,
-                                  model_line=round(exp_home + exp_away, 1), period=PERIOD, published_at=published_at))
+                                  # the line IS the model's 50/50 line; the (skewed) mean would contradict it
+                                  model_line=None, period=PERIOD, published_at=published_at))
     for side, pmf, label, exp in (("home", home_pmf, home_label, exp_home), ("away", away_pmf, away_label, exp_away)):
         line = fair_half_line(pmf)
         entries.append(mk.market_pick(board_id=board_id, market_type=f"team_total_{side}", side="over",
                                       label=f"{label} Over {line:g}", prices=_over_prices(pmf, line), line=line,
-                                      model_line=round(exp, 1), period=PERIOD, published_at=published_at))
+                                      model_line=None, period=PERIOD, published_at=published_at))
     for entry in entries:
         # No calibrated, market-specific tier cut points exist for MLB: never a tier.
         entry.pop("confidenceTier", None)

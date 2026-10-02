@@ -100,8 +100,9 @@ def test_board_markets_contract():
     assert abs(home["modelProbability"] - home["market"]["impliedProbability"]) < 2e-4
     assert abs(home["modelProbability"] + away["modelProbability"] - 1) < 2e-4
     assert home["modelLine"] == -6.0 and away["modelLine"] == 6.0          # model fair spread: information only
-    alts = sorted((x for x in m if ":spread:" in x["marketId"] and ":alt" in x["marketId"]), key=lambda x: x["line"])
+    alts = sorted((x for x in m if x["type"] == "alt_spread"), key=lambda x: x["line"])
     assert [a["line"] for a in alts] == [-14.0, -10.0, -4.0, 0.0] and all(a["side"] == "home" and a.get("market") is None for a in alts)
+    assert all(":alt" in a["marketId"] for a in alts) and {x["type"] for x in m if ":alt" in x["marketId"]} == {"alt_spread", "alt_total"}
     assert all(alts[i]["modelProbability"] < alts[i + 1]["modelProbability"] for i in range(len(alts) - 1))
     over, under = by["total:full_game:over"], by["total:full_game:under"]
     assert abs(over["modelProbability"] - over["market"]["impliedProbability"]) < 2e-4 and over["line"] == 48.5
@@ -110,6 +111,7 @@ def test_board_markets_contract():
     assert {x["type"] for x in tt} == {"team_total_home", "team_total_away"} and len(tt) == 4
     assert by["team_total_home:full_game:over"]["line"] == 27.5 and by["team_total_away:full_game:over"]["line"] == 20.5
     assert all(x["line"] % 1 == 0.5 and x.get("modelLine") is None for x in tt)
+    assert by["team_total_home:full_game:over"]["label"] == "BUF Over 27.5"   # heading already says "Team total"
 
 
 def test_away_favourite_and_no_line_and_stale():
@@ -117,7 +119,7 @@ def test_away_favourite_and_no_line_and_stale():
     m = _board(game=game)["markets"]
     by = {x["marketId"].split(":", 1)[1]: x for x in m}
     assert by["spread:full_game:home"]["line"] == 3.5 and by["spread:full_game:away"]["line"] == -3.5
-    assert all(x["side"] == "away" for x in m if ":alt" in x["marketId"] and x["type"] == "spread")
+    assert all(x["side"] == "away" for x in m if x["type"] == "alt_spread")
     pickem = {x["marketId"].split(":", 1)[1]: x for x in _board(game=dict(GAME, spread_line=0.0))["markets"]}
     assert json.dumps(pickem["spread:full_game:home"]["line"]) == "0.0" and pickem["spread:full_game:home"]["label"] == "BUF PK"
     no_line = {k: (None if k not in ("home_team", "away_team") else v) for k, v in GAME.items()}

@@ -321,7 +321,9 @@ def build_board_markets(*, board_id: str, game: dict[str, Any], ladder: dict[str
             if _is_whole(line) and not spread_push_ok:
                 continue  # no push-dependent rungs until the push model is validated
             prices = side_prices(values, probs, fav_side, line)
-            entry = mk.market_pick(board_id=board_id, market_type="spread", side=fav_side,
+            # Own type: clients list main lines and skip types they do not know, so the
+            # 4-rung ladder no longer crowds the card (it stays in the API and the log).
+            entry = mk.market_pick(board_id=board_id, market_type="alt_spread", side=fav_side,
                                    label=f"{fav_team} {_fmt_line(line)} (alt)", prices=prices, line=line,
                                    model_line=None, market=None, published_at=published_at, show_edge=False)
             add(entry, selection=f"{fav_side}:alt{k:+d}", basis="market_implied", attribution=ATTRIBUTION,
@@ -349,7 +351,7 @@ def build_board_markets(*, board_id: str, game: dict[str, Any], ladder: dict[str
             if _is_whole(line) and not total_push_ok:
                 continue
             prices = mk.total_prices_normal(center, sigma, line, "over")
-            entry = mk.market_pick(board_id=board_id, market_type="total", side="over",
+            entry = mk.market_pick(board_id=board_id, market_type="alt_total", side="over",
                                    label=f"Over {_fmt_line(line).lstrip('+')} (alt)", prices=prices, line=line,
                                    model_line=None, market=None, published_at=published_at, show_edge=False)
             add(entry, selection=f"over:alt{k:+d}", basis="market_implied", attribution=ATTRIBUTION, push_ok=total_push_ok)
@@ -365,7 +367,7 @@ def build_board_markets(*, board_id: str, game: dict[str, Any], ladder: dict[str
                 # The implied points are the MARKET's number, not our model's, so they
                 # are not published as modelLine (the x.5 line sits next to them).
                 entry = mk.market_pick(board_id=board_id, market_type=market_type, side=ou,
-                                       label=f"{team} team total {ou.title()} {line:g}", prices=prices, line=line,
+                                       label=f"{team} {ou.title()} {line:g}", prices=prices, line=line,
                                        model_line=None, market=None, published_at=published_at,
                                        show_edge=False)
                 add(entry, selection=ou, basis="market_implied", attribution=ATTRIBUTION, push_ok=True)
@@ -383,7 +385,7 @@ def restore_labels(record: dict[str, Any]) -> dict[str, Any]:
     if not record.get("basis"):
         if rtype == "moneyline":
             record["basis"] = "model"
-        elif ":alt" in mid or rtype.startswith("team_total_"):
+        elif ":alt" in mid or rtype.startswith(("team_total_", "alt_")):
             record["basis"] = "market_implied"
         elif rtype in ("spread", "total"):
             record["basis"] = "market"
@@ -421,6 +423,8 @@ def summary_type(record: dict[str, Any]) -> Optional[str]:
     is_alt = ":alt" in mid
     if rtype == "moneyline":
         return "moneyline"
+    if rtype in ("alt_spread", "alt_total"):
+        return rtype
     if rtype == "spread":
         if is_alt:
             return "alt_spread"

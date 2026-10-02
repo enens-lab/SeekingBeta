@@ -84,6 +84,9 @@ def _leg(value: float) -> float:
     return 1.0 if value > _EPS else (-1.0 if value < -_EPS else 0.0)
 
 
+_GRADE_ALIASES = {"alt_spread": "spread", "alt_total": "total"}
+
+
 def grade_pick(market_type: str, side: str, line: Optional[float], home_score: float, away_score: float,
                decimal_odds: float = 1.0 + 100.0 / 110.0) -> tuple[str, float]:
     """(result, unit_return) for a 1-unit stake at `decimal_odds`.
@@ -95,6 +98,8 @@ def grade_pick(market_type: str, side: str, line: Optional[float], home_score: f
     Raises ValueError for a type it cannot grade; callers must keep such picks as
     "ungradable" rather than dropping or voiding them (losing picks must not vanish).
     """
+    # Alternate-line ladders grade exactly like their main market.
+    market_type = _GRADE_ALIASES.get(market_type, market_type)
     h, a = float(home_score), float(away_score)
     win_ret = decimal_odds - 1.0
     if market_type in ("spread", "asian_handicap", "run_line", "puck_line", "set_handicap", "game_handicap"):

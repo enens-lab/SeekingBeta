@@ -90,6 +90,36 @@ def test_unpriced_pick_gets_no_units_and_start_time_rules():
     assert ml.pregame_picks([late]) == {}                      # published after kickoff -> never graded
 
 
+def test_void_shortened_regulation_ungradable_and_earliest_start():
+    base = {"sport": "mlb", "publishedAt": "2026-10-03T07:10:00+00:00", "gameDate": 20261003, "season": "2026"}
+    picks = {
+        "rl": {**base, "marketId": "rl", "type": "run_line", "side": "home", "line": -1.5, "gameId": "g1"},
+        "ml": {**base, "marketId": "ml", "type": "moneyline", "side": "home", "gameId": "g1"},
+        "pp": {**base, "marketId": "pp", "type": "player_prop", "side": "over", "line": 0.5, "gameId": "g1"},
+        "pt": {**base, "marketId": "pt", "type": "total", "side": "over", "line": 8.5, "gameId": "g2"},
+    }
+    res = {"g1": {"home": 5, "away": 2, "status": "shortened"}, "g2": {"home": 0, "away": 0, "status": "postponed"}}
+    g = {x["marketId"]: x for x in ml.grade_picks(picks, res)}
+    assert g["rl"]["result"] == "void" and g["ml"]["result"] == "win"      # shortened: run line void, ML stands
+    assert g["pt"]["result"] == "void"                                      # postponed
+    assert g["pp"]["result"] == "ungradable" and g["pp"]["unitReturn"] is None
+    s = {x["type"]: x for x in ml.summarize(g.values())}
+    assert s["run_line"]["voids"] == 1 and s["run_line"]["graded"] == 0
+    assert s["player_prop"]["ungradable"] == 1
+    # soccer knockout: 1-1 after 90, 2-1 after extra time -> 1x2 home loses (draw at 90)
+    sp = {"x": {"sport": "soccer", "marketId": "x", "type": "1x2", "side": "home", "gameId": "w1", "season": "2026"}}
+    out = ml.grade_picks(sp, {"w1": {"home": 2, "away": 1, "regulationHome": 1, "regulationAway": 1}})
+    assert out[0]["result"] == "loss"
+    # earliest start: a later snapshot moved the game earlier; the early pick stays gradable,
+    # a pick published between the new and old start is not
+    snaps = [{"marketId": "m", "gameId": "g9", "sport": "mlb", "publishedAt": "2026-10-04T07:10:00+00:00", "gameStart": "2026-10-04T23:00:00Z"},
+             {"marketId": "m", "gameId": "g9", "sport": "mlb", "publishedAt": "2026-10-04T19:30:00+00:00", "gameStart": "2026-10-04T23:00:00Z"},
+             {"marketId": "m2", "gameId": "g9", "sport": "mlb", "publishedAt": "2026-10-04T19:40:00+00:00", "gameStart": "2026-10-04T19:05:00Z"}]
+    chosen = ml.pregame_picks(snaps)
+    assert chosen["m"]["publishedAt"].startswith("2026-10-04T07:10"), chosen["m"]   # 19:30 pick is after the real 19:05 start
+    assert "m2" not in chosen
+
+
 def test_season_keys():
     nfl = ml.season_cross_year(8)
     assert nfl(20260913) == "2026-27" and nfl(20270207) == "2026-27" and nfl(20260601) == "2025-26"

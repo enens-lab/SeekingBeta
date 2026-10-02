@@ -45,6 +45,11 @@ def test_grading_hand_computed():
     assert g("btts", "yes", None, 1, 0)[0] == "loss"
     assert g("double_chance", "home_draw", None, 1, 1)[0] == "win"
     assert g("draw_no_bet", "away", None, 0, 0) == ("push", 0.0)
+    assert g("correct_score", "1-0", None, 1, 0)[0] == "win" and g("correct_score", "1-0", None, 2, 0)[0] == "loss"
+    try:
+        g("player_prop", "over", 1.5, 1, 0); raise AssertionError("unknown type must raise")
+    except ValueError:
+        pass
 
 
 def test_pricing_agrees_with_grading_on_every_score():
@@ -116,7 +121,10 @@ def test_market_pick_shape_and_edge_gate():
                            line=-3.5, model_line=-4.5, market=market, show_edge=True)
     assert hidden["marketId"] == "b1:spread:full_game" and "edge" not in hidden
     assert "edge" in shown and abs(shown["edge"] - (shown["modelProbability"] - 0.5)) < 1e-9
-    assert hidden["confidenceTier"] in ("low", "medium", "high")
+    assert "confidenceTier" not in hidden   # no tier without calibrated cut points
+    tiered = mk.market_pick(board_id="b1", market_type="spread", side="home", label="KC -3.5", prices=prices,
+                            line=-3.5, model_line=-4.5, tier_cuts=[(0.56, "high"), (0.53, "medium")])
+    assert tiered["confidenceTier"] in ("low", "medium", "high")
     assert set(hidden["outcomeProbabilities"]) == set(mk.OUTCOMES)
 
 

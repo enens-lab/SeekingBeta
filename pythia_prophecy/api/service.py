@@ -6329,7 +6329,12 @@ def _load_market_file(filename: str) -> Any:
     return payload
 
 
+SPORTS_BACKTEST_LABEL = "Simulated backtest: the model re-run on past games it was not trained on."
+
+
 def _attach_sports_markets(sport: str, coll: SportsBoardCollection) -> SportsBoardCollection:
+    if coll.backtests and not coll.backtestLabel:
+        coll = coll.model_copy(update={"backtestLabel": SPORTS_BACKTEST_LABEL})
     summary = _load_market_file(f"{sport}_market_summary.json")
     history = _load_market_file(f"{sport}_market_history.json")
     if not summary and not history:

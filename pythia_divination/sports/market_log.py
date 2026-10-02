@@ -139,11 +139,22 @@ def _game_cutoff(record: dict) -> Optional[datetime]:
 
 
 def pregame_picks(records: Iterable[dict]) -> dict[str, dict]:
-    """marketId -> the last snapshot published strictly before the game cutoff."""
+    """marketId -> the last snapshot published strictly before the game cutoff.
+
+    The cutoff is the EARLIEST start any snapshot reported for that game: if a game
+    is moved earlier, older snapshots must not keep the later cutoff and become
+    gradable after the real first pitch."""
+    records = list(records)
+    earliest: dict[str, datetime] = {}
+    for r in records:
+        c = _game_cutoff(r)
+        gid = str(r.get("gameId") or r.get("boardId") or "")
+        if c is not None and gid and (gid not in earliest or c < earliest[gid]):
+            earliest[gid] = c
     chosen: dict[str, dict] = {}
     for r in records:
         mid = r.get("marketId")
-        cutoff = _game_cutoff(r)
+        cutoff = earliest.get(str(r.get("gameId") or r.get("boardId") or "")) or _game_cutoff(r)
         try:
             published = datetime.fromisoformat(str(r.get("publishedAt")).replace("Z", "+00:00"))
         except ValueError:
@@ -162,25 +173,57 @@ def pregame_picks(records: Iterable[dict]) -> dict[str, dict]:
 
 # ── grading + summaries ───────────────────────────────────────────────────────
 
-def grade_picks(picks: dict[str, dict], results: dict[str, tuple[float, float]]) -> list[dict]:
-    """Grade pre-game picks whose game has a final score. `results` maps gameId ->
-    (home_score, away_score). Picks without a result stay ungraded (not voided)."""
+# Market types that need a regulation-length game. MLB: a game shortened by weather
+# ("Completed Early") is official for the moneyline but run lines and totals are
+# void (standard sportsbook rule).
+_NEEDS_FULL_GAME = {"run_line", "spread", "total", "team_total_home", "team_total_away"}
+
+
+def _normalize_result(value: Any) -> Optional[dict]:
+    """Accept (home, away) tuples or dicts {home, away, status?, regulationHome?,
+    regulationAway?}. status: final | postponed | cancelled | shortened."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    home, away = value
+    return {"home": home, "away": away, "status": "final"}
+
+
+def grade_picks(picks: dict[str, dict], results: dict[str, Any]) -> list[dict]:
+    """Grade pre-game picks whose game has a result. `results` maps gameId ->
+    (home_score, away_score) or a dict with status and regulation scores.
+
+    * postponed / cancelled -> void (stake returned).
+    * shortened (MLB "Completed Early") -> run line, spread, totals void; moneyline graded.
+    * regulation scores, when present, grade soccer and any period="reg_time" pick
+      (a World Cup knockout's 1X2 / totals settle on 90 minutes, not extra time).
+    * a type the grader does not support is kept as "ungradable" (logged loudly),
+      never silently voided: a losing pick must not vanish from the record.
+    Picks without any result yet stay ungraded."""
     graded = []
     for mid, p in picks.items():
-        score = results.get(str(p.get("gameId")))
-        if score is None:
+        res = _normalize_result(results.get(str(p.get("gameId"))))
+        if res is None:
             continue
+        status = str(res.get("status") or "final").lower()
         price = (p.get("market") or {}).get("decimalOdds")
-        try:
-            result, unit = mk.grade_pick(p["type"], p["side"], p.get("line"), score[0], score[1],
-                                         decimal_odds=float(price or STANDARD_DECIMAL))
-        except (ValueError, KeyError, TypeError) as exc:
-            logger.warning("market pick %s not gradable: %s", mid, exc)
+        home, away = res.get("home"), res.get("away")
+        if (p.get("period") == "reg_time" or str(p.get("sport") or "") == "soccer") and res.get("regulationHome") is not None:
+            home, away = res["regulationHome"], res["regulationAway"]
+        if status in ("postponed", "cancelled", "canceled") or (status == "shortened" and p.get("type") in _NEEDS_FULL_GAME):
             result, unit = "void", 0.0
+        else:
+            try:
+                result, unit = mk.grade_pick(p["type"], p["side"], p.get("line"), home, away,
+                                             decimal_odds=float(price or STANDARD_DECIMAL))
+            except (ValueError, KeyError, TypeError) as exc:
+                logger.error("market pick %s (%s) is UNGRADABLE: %s", mid, p.get("type"), exc)
+                result, unit = "ungradable", None
         # Units only exist at a real, logged price. A model-only market (no line
         # snapshot) gets a result but no invented -110 return.
-        graded.append({**p, "result": result, "unitReturn": unit if price else None,
-                       "homeScore": score[0], "awayScore": score[1]})
+        graded.append({**p, "result": result, "unitReturn": unit if (price and unit is not None) else None,
+                       "homeScore": res.get("home"), "awayScore": res.get("away")})
     return graded
 
 
@@ -197,13 +240,15 @@ def summarize(graded: Iterable[dict]) -> list[dict]:
       market Brier uses the logged de-vigged probability."""
     buckets: dict[tuple[str, str], dict[str, Any]] = {}
     for g in graded:
-        if g.get("result") == "void":
-            continue
         key = (str(g.get("type")), str(g.get("season") or "unknown"))
         b = buckets.setdefault(key, {"type": key[0], "season": key[1], "graded": 0, "wins": 0.0, "losses": 0.0, "pushes": 0,
+                                     "voids": 0, "ungradable": 0,
                                      "units": 0.0, "stake": 0.0, "priced": 0, "brier": [], "mbrier": [],
                                      "prices": [], "implied": []})
         r = g["result"]
+        if r in ("void", "ungradable"):
+            b["voids" if r == "void" else "ungradable"] += 1
+            continue
         b["graded"] += 1
         b["wins"] += {"win": 1, "half_win": 0.5}.get(r, 0)
         b["losses"] += {"loss": 1, "half_loss": 0.5}.get(r, 0)
@@ -233,6 +278,7 @@ def summarize(graded: Iterable[dict]) -> list[dict]:
         out.append({
             "type": b["type"], "season": b["season"], "graded": b["graded"],
             "wins": b["wins"], "losses": b["losses"], "pushes": b["pushes"],
+            "voids": b["voids"], "ungradable": b["ungradable"],
             # Hide the rate on small samples: a 7-3 start is not a record.
             "winRateExPush": round(b["wins"] / decided, 4) if decided >= MIN_GRADED_FOR_RATE else None,
             "breakEvenRate": round(1.0 / avg_price, 4) if avg_price else None,

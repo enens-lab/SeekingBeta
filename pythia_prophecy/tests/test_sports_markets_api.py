@@ -70,7 +70,10 @@ def test_market_files_attach_and_preview_trim():
         check(len(out.marketSummary) == 1 and out.marketSummary[0].season == "2026-27", "summary attached")
         check(out.backtests[0].markets and out.backtests[0].markets[0].result == "win", "graded pick attached by gameId")
         check(out.backtests[0].hitStatus == "Top Pick" and not out.backtests[1].markets, "hitStatus untouched; no stray attach")
-        check(s._attach_sports_markets("golf", coll) is coll, "sport without market files is untouched")
+        golf = s._attach_sports_markets("golf", coll)
+        check(golf.backtestLabel and golf.backtests == coll.backtests and not golf.marketSummary,
+              "sport without market files only gains the simulated-backtest label")
+        check(out.backtestLabel and "Simulated" in out.backtestLabel, "history labelled as simulated")
         pv = s._preview_sports_board_collection(out, events_cap=1)
         check(len(pv.upcoming[0].markets) == 1, "preview keeps only the headline market")
         dumped = m.SportsBoardsResponse(**{k: out for k in ("golf", "tennis", "basketball", "mlb", "football", "soccer", "olympics")}).model_dump()

@@ -89,8 +89,11 @@ def grade_pick(market_type: str, side: str, line: Optional[float], home_score: f
     """(result, unit_return) for a 1-unit stake at `decimal_odds`.
 
     market_type: moneyline | spread | asian_handicap | total | team_total_home | team_total_away
-                 | btts | 1x2 | double_chance | draw_no_bet
+                 | btts | 1x2 | double_chance | draw_no_bet | correct_score
     side: home | away | draw | over | under | yes | no | home_draw | away_draw | home_away
+          | "<home>-<away>" for correct_score (e.g. "1-0")
+    Raises ValueError for a type it cannot grade; callers must keep such picks as
+    "ungradable" rather than dropping or voiding them (losing picks must not vanish).
     """
     h, a = float(home_score), float(away_score)
     win_ret = decimal_odds - 1.0
@@ -116,6 +119,12 @@ def grade_pick(market_type: str, side: str, line: Optional[float], home_score: f
     elif market_type == "btts":
         both = h > 0 and a > 0
         r = 1.0 if (both == (side == "yes")) else -1.0
+    elif market_type == "correct_score":
+        try:
+            want_h, want_a = (int(x) for x in str(side).split("-", 1))
+        except ValueError as exc:
+            raise ValueError(f"correct_score side must be 'H-A', got {side!r}") from exc
+        r = 1.0 if (int(h) == want_h and int(a) == want_a) else -1.0
     else:
         raise ValueError(f"unknown market type {market_type!r}")
     label = {1.0: "win", 0.5: "half_win", 0.0: "push", -0.5: "half_loss", -1.0: "loss"}[round(r * 2) / 2]
@@ -261,11 +270,12 @@ def correct_scores(matrix: np.ndarray, top: int = 3) -> list[tuple[int, int, flo
 
 # ── board helpers ─────────────────────────────────────────────────────────────
 
-def confidence_tier(p_win_ex_push: float, calibrated_edges: Optional[Iterable[tuple[float, str]]] = None) -> str:
-    """Coarse tier from the push-excluded win probability. Thresholds are deliberately
-    modest: a 55% spread pick is a strong lean, not a 'lock'. Exporters may pass
-    sport-specific cut points derived from held-out calibration."""
-    cuts = list(calibrated_edges or [(0.58, "high"), (0.54, "medium")])
+def confidence_tier(p_win_ex_push: float, calibrated_edges: Iterable[tuple[float, str]]) -> str:
+    """Coarse tier from the push-excluded win probability using sport- and
+    market-specific cut points derived from held-out calibration. There are no
+    defaults on purpose: generic cuts labelled every heavy moneyline favourite
+    "high", which reads as a recommendation the record does not support."""
+    cuts = list(calibrated_edges)
     for threshold, tier in sorted(cuts, key=lambda t: -t[0]):
         if p_win_ex_push >= threshold:
             return tier
@@ -292,7 +302,8 @@ def market_pick(*, board_id: str, market_type: str, side: str, label: str, price
         "modelProbability": round(p, 4),
         "pushProbability": round(prices.push, 4) if prices.push > 0.0005 else None,
         "outcomeProbabilities": prices.as_dict(),
-        "confidenceTier": confidence_tier(p, tier_cuts),
+        # Tiers only with calibrated, market-specific cut points; never by default.
+        "confidenceTier": confidence_tier(p, tier_cuts) if tier_cuts else None,
         "publishedAt": published_at,
     }
     if market:

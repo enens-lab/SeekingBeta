@@ -691,6 +691,8 @@ class SportsMarketSummary(BaseModel):
     wins: float = 0.0          # half wins count 0.5
     losses: float = 0.0
     pushes: int = 0
+    voids: int = 0             # postponed / shortened (stake returned), excluded from the record
+    ungradable: int = 0        # kept visible; never silently dropped
     winRateExPush: Optional[float] = None
     breakEvenRate: Optional[float] = None       # e.g. 0.5238 at -110
     unitsAtStatedPrice: Optional[float] = None
@@ -805,6 +807,10 @@ class SportsBoardCollection(BaseModel):
     seasonSummary: Optional[SportsBoardSeasonSummary] = None
     # Per market type and sport season; empty until enough picks are graded.
     marketSummary: List[SportsMarketSummary] = []
+    # How to read `backtests`: they are a SIMULATED record (the model re-run on past
+    # games it was not trained on), not a log of what was published. Market history
+    # (markets[].result) is the live record, graded against the line shown at publish.
+    backtestLabel: Optional[str] = None
 
 
 class SportsBoardsResponse(BaseModel):

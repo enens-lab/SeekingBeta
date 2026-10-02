@@ -132,6 +132,16 @@ notably worse calibrated (log loss 0.757, worse than a coin flip), so the torch
 model should remain the served one. **No modelling work was needed; the metric
 was broken, not the model.**
 
+> **CORRECTION (2026-10-02, NFL).** The 65.3% / Brier 0.223 above was measured on
+> the same 322 games the torch epoch was picked on, without the market beside it.
+> On those games the de-vigged closing moneyline scored 67.7% / Brier 0.2058. In a
+> season walk-forward (2022-25, n=1,084, ties excluded) the old HGB recipe scored
+> Brier 0.2704 (worse than a coin flip); the market 0.2105 (67.75%). The NFL board
+> now serves the de-vigged nflverse moneyline as the headline and a ridge + Platt
+> "model view" next to it (walk-forward Brier 0.2212, 63.75%; worse than the market
+> by 0.0108, 95% CI 0.0053-0.0161). The torch model is no longer served. Numbers:
+> `pythia_divination/sports/football/metrics.json`.
+
 This also explains the basketball "instability" noted during Wave 1.3: the first
 reading (649/471) was correctly graded data, and later readings came from the
 corrupted export. The figure was never unstable.

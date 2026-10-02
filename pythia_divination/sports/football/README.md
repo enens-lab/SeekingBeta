@@ -1,61 +1,73 @@
-# Football Modeling Foundation
+# Football (NFL) Modeling and Markets
 
-This package is the first SeekingBeta.AI Football pipeline for NFL matchup prediction.
+NFL boards built from nflverse release assets (schedules with lines, weekly team and
+player stats, weekly rosters).
 
-## What it does
-- downloads historical NFL schedules from nflverse release assets
-- downloads weekly team stats, player stats, and weekly rosters
-- builds rolling pregame team and quarterback features
-- builds weekly roster-summary availability features
-- trains a first home-win baseline model
+## What the board shows
 
-## Recommended v1 target
+- **Headline win probability** (`predictions[].winProbability`, `predictedWinner`): the
+  de-vigged nflverse moneyline whenever a fresh line is posted (`basis: "market"`).
+  When no line is posted the board says so (`lineStatus: "not_posted"`) and the headline
+  is the model view (`basis: "model"`), never silently.
+- **Model view**: a `moneyline` market with `basis: "model"` (ridge margin model,
+  Platt-calibrated on prior-season out-of-sample predictions). Its fair spread appears
+  only as `modelLine` on the spread markets. It is not a pick and shows no edge.
+- **Markets centered on the posted line** (`sports/football/markets_nfl.py`): spread at
+  the posted line (both sides) plus an alt ladder for the favourite (line +/-3, +/-7),
+  total at the posted line plus an alt-over ladder, and team totals at x.5 around
+  (total +/- spread) / 2. Lines and prices: nflverse (CC-BY-4.0), `spread_line > 0` means
+  the HOME team is favoured, so the home line is `-spread_line`.
+- Spread probabilities come from a margin pmf with key-number weights (NFL margins land
+  on 3 and 7 far more often than a normal says), re-centered so the posted line matches
+  the de-vigged spread price. Push probabilities and whole-number alt lines are only
+  published while the walk-forward push gate passes (`ladder.push_validated`).
 
-Start with a **pregame home-team win probability model**.
+## Honest numbers (season walk-forward 2022-2025, n=1,084, ties excluded)
 
-Why this is the right first Football board:
-- one row per matchup
-- aligns naturally with the product's team-vs-team board layout
-- can be trained from historical schedules and weekly stats without proprietary live feeds
+| | Accuracy | Brier | Log-loss |
+|---|---|---|---|
+| Served headline (de-vigged moneyline) | 67.75% | 0.2105 | 0.6082 |
+| Model view (ridge + Platt) | 63.75% | 0.2212 | 0.6326 |
+| Old HGB recipe (440 features) | 63.75% | 0.2704 | 0.895 |
 
-## Current feature set
-- rolling team form
-- rolling offensive and defensive weekly stats
-- rest and schedule context
-- surface / roof / weather context
-- divisional-game context
-- quarterback rolling form
-- roster depth and experience summaries
+Alt-ladder Brier: spread 0.1945, total 0.2022. Full detail, per season, calibration
+slope/intercept CIs and the push gate: `metrics.json`.
 
-## Useful commands
+## Files
 
-Backfill Football history:
+- `model_view.py`: allowlist, walk-forward team ratings, ridge + Platt, calibration test
+- `markets_nfl.py`: de-vig, key-number margin pmf, ladders, board markets, summary buckets
+- `model_params.json`: committed serving params (no pickles, no gitignored artifacts)
+- `metrics.json`: committed walk-forward metrics with the market beside every number
+- `train_baseline.py`: trains/evaluates the above and rewrites both JSON files
+- `train_torch.py`: research comparison only (not served; walk-forward Brier 0.2271)
+
+## Commands
 
 ```bash
-cd /Users/huyngo/Downloads/pythia/pythia_divination
-python3 -m sports.football.ingest_history --season-start 2020 --season-end 2025 -v
+cd pythia_divination
+python -m sports.football.ingest_history --season-start 2020 --season-end 2026
+python -m sports.football.build_training_dataset --season-start 2020 --season-end 2026
+python -m sports.football.train_baseline          # rewrites model_params.json + metrics.json
+python scripts/export_football_frontend_data.py   # boards + pick log + graded record
+python tests/test_football_markets.py
 ```
 
-Build the training dataset:
+Retrain (`train_baseline`) once a season is complete; within a season the ratings and
+rolling form update from the daily ingest, and the params stay fixed so the current
+season stays out of sample.
 
-```bash
-cd /Users/huyngo/Downloads/pythia/pythia_divination
-python3 -m sports.football.build_training_dataset --season-start 2020 --season-end 2025 --refresh-source-data -v
-```
+## Training hygiene
 
-Train the baseline model:
+- `overtime`, scores, `is_tie` are in `_LEAKY_COLUMNS`; features come from an explicit
+  allowlist (no betting lines, no game-time weather, no game-week roster statuses).
+- Ties are not a home win or a home loss: no binary label, half a win in team form.
+- Every reported number is a season walk-forward; calibrations use prior seasons only.
 
-```bash
-cd /Users/huyngo/Downloads/pythia/pythia_divination
-python3 -m sports.football.train_baseline --rebuild-dataset --season-start 2020 --season-end 2025 --model hist_gradient_boosting -v
-```
+## Market record
 
-## Honest limitations
-- This v1 does not have play-by-play or EPA-by-situation features yet.
-- It does not model betting markets directly; lines are only context features.
-- It does not yet produce live Football boards in the product.
-- Next upgrades should be:
-  - play-by-play drive efficiency features
-  - injury report / probable inactive features
-  - player skill-position matchup features
-  - torch inference once the tabular baseline is stable
+Each daily bake appends the published markets to `data/sports/market_picks/football/`
+(append-only, `sports/market_log.py`). History is graded only from that log, against the
+line shown before kickoff: `football_market_history.json` and
+`football_market_summary.json`. The backtest boards are a separate, labelled simulation
+(`recordBasis: "simulated"`).

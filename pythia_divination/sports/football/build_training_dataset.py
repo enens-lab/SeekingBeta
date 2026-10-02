@@ -26,6 +26,8 @@ from sports.pga.storage import build_ingestion_paths, read_preferred_table, writ
 
 logger = logging.getLogger(__name__)
 
+# Columns only known after the game. Dropped from the training dataset so no model
+# can select them; trainers re-join scores from the games table for regression labels.
 _LEAKY_COLUMNS = {
     "away_score",
     "home_score",
@@ -34,6 +36,9 @@ _LEAKY_COLUMNS = {
     "point_margin_home",
     "point_total",
     "away_win",
+    "overtime",
+    "is_tie",
+    "is_completed",
 }
 
 

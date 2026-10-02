@@ -79,15 +79,31 @@ if [[ "$SYNTHETIC_PROBE" == "true" ]]; then
   check_endpoint sports "$PROBE_BASE/api/sports/boards?sports=golf&include_backtests=false"
   check_endpoint predict "$PROBE_BASE/predict/lstm_5d/AAPL"
   check_endpoint homepage "$PROBE_BASE/predict/homepage"
-  # Freshness: the sweep runs weekdays ~22:15 UTC; flag when the served file is
-  # older than STALE_PREDICTIONS_HOURS (default 54h = a missed weekday run,
-  # while a normal weekend gap of ~48h stays quiet).
-  STALE_PREDICTIONS_HOURS="${STALE_PREDICTIONS_HOURS:-54}"
-  pred_age="$(curl -sk --max-time 15 "$PROBE_BASE/predict/cache/status" 2>/dev/null \
-    | python3 -c 'import sys,json;d=json.load(sys.stdin);a=d.get("age_hours");print(int(a) if isinstance(a,(int,float)) else -1)' 2>/dev/null || echo -1)"
-  if [[ "$pred_age" =~ ^[0-9]+$ && "$pred_age" -gt "$STALE_PREDICTIONS_HOURS" ]]; then
+  # Freshness: the sweep runs Mon-Fri at 22:15 UTC and takes ~6 min. Alert only
+  # when the most recent scheduled run that should have finished by now (start +
+  # SWEEP_GRACE_MINUTES) did not produce the served file. A flat age threshold
+  # (the old 54h) fired every weekend: Friday's file is legitimately ~72h old by
+  # Monday's run, which made 205 false alerts in two weeks.
+  SWEEP_GRACE_MINUTES="${SWEEP_GRACE_MINUTES:-90}"
+  missed="$(curl -sk --max-time 15 "$PROBE_BASE/predict/cache/status" 2>/dev/null | SWEEP_GRACE_MINUTES="$SWEEP_GRACE_MINUTES" python3 -c '
+import sys, json, os
+from datetime import datetime, timedelta, timezone
+try:
+    d = json.load(sys.stdin)
+    gen = datetime.fromisoformat(str(d.get("generated_at")).replace("Z", "+00:00"))
+except Exception:
+    print("unreadable"); sys.exit()
+grace = timedelta(minutes=int(os.environ.get("SWEEP_GRACE_MINUTES", "90")))
+now = datetime.now(timezone.utc)
+run = now.replace(hour=22, minute=15, second=0, microsecond=0)
+while run.weekday() > 4 or run + grace > now:  # latest weekday run that should be done
+    run -= timedelta(days=1)
+    run = run.replace(hour=22, minute=15)
+print("missed_%s" % run.strftime("%a%d") if gen < run - timedelta(minutes=5) else "ok")
+' 2>/dev/null || echo unreadable)"
+  if [[ "$missed" != "ok" ]]; then
     synthetic_failures=$((synthetic_failures + 1))
-    synthetic_lines+=("predictions_stale=${pred_age}h")
+    synthetic_lines+=("predictions_${missed}")
   fi
 fi
 

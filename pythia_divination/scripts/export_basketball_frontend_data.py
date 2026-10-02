@@ -434,7 +434,21 @@ def _load_live_schedule(
         if schedule.empty:
             continue
         schedule["official_date"] = _to_datetime_mixed(schedule["official_date"])
-        schedule = schedule.loc[(schedule["is_regular_season"] == True)].copy()  # noqa: E712
+        # Regular season + play-in + playoffs (game-id type digits 02/05/04; NBA
+        # prefixes 0xx, WNBA 1xx). Regular-season-only dropped the whole WNBA postseason
+        # (19 games in Oct 2026). Preseason (x01) and All-Star (x03) stay out: rested
+        # starters make a model trained on real games mislead.
+        type_digits = schedule["game_id"].astype(str).str[1:3]
+        schedule = schedule.loc[(schedule["is_regular_season"] == True) | type_digits.isin(["04", "05"])].copy()  # noqa: E712
+        # Playoff slots whose matchup is not decided yet arrive as team id 0 with
+        # blank names ("TBD @ TBD"); they produced a board titled " at ".
+        known = pd.Series(True, index=schedule.index)
+        for side in ("away", "home"):
+            if f"{side}_team_id" in schedule.columns:
+                known &= pd.to_numeric(schedule[f"{side}_team_id"], errors="coerce").fillna(0) > 0
+            if f"{side}_team_name" in schedule.columns:
+                known &= schedule[f"{side}_team_name"].fillna("").astype(str).str.strip().ne("")
+        schedule = schedule.loc[known].copy()
         if include_completed:
             schedule = schedule.loc[
                 (schedule["status_code"] == 3)

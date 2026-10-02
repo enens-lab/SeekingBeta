@@ -738,13 +738,19 @@ def _build_backtests(frame: pd.DataFrame) -> list[dict[str, Any]]:
     return _build_backtests_from_frame(frame, historical_lineups=historical_lineups)
 
 
+# Regular season + every postseason round (F wild card, D division series, L league
+# championship, W World Series). Regular-season-only ("R") silently emptied the
+# Baseball tab for all of October 2026, the highest-interest stretch of the year.
+MLB_BOARD_GAME_TYPES = os.getenv("MLB_BOARD_GAME_TYPES", "R,F,D,L,W")
+
+
 def _load_upcoming_schedule(client: MLBStatsClient) -> pd.DataFrame:
     today = pd.Timestamp.utcnow().normalize()
     end_date = today + pd.Timedelta(days=UPCOMING_LOOKAHEAD_DAYS - 1)
     payload = client.get_schedule(
         start_date=today.date().isoformat(),
         end_date=end_date.date().isoformat(),
-        game_type="R",
+        game_type=MLB_BOARD_GAME_TYPES,
         hydrate="probablePitcher,team,linescore",
     )
     schedule = flatten_schedule(payload)
@@ -764,7 +770,7 @@ def _load_completed_schedule(client: MLBStatsClient, *, calendar_year: int | Non
     payload = client.get_schedule(
         start_date=f"{target_year}-01-01",
         end_date=today.date().isoformat(),
-        game_type="R",
+        game_type=MLB_BOARD_GAME_TYPES,
         hydrate="probablePitcher,team,linescore",
     )
     schedule = flatten_schedule(payload)

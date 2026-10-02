@@ -1,0 +1,28 @@
+{
+  "version": "tennis-elo538-k200o10-w70-v1",
+  "description": "Walk-forward tennis Elo on a stable player identity (sports/wta/elo.py). FiveThirtyEight-style decaying K, k = k_numerator / (prior_matches + k_offset) ** k_shape, kept separately for an overall and a per-surface rating; the match probability uses overall_weight * overall + (1 - overall_weight) * surface. Every prediction uses only matches dated before it. Tournament-winner probabilities come from a seeded knockout Monte Carlo over the field (sports/wta/tournament_sim.py).",
+  "initial_rating": 1500.0,
+  "k_numerator": 200.0,
+  "k_offset": 10.0,
+  "k_shape": 0.4,
+  "overall_weight": 0.7,
+  "default_surface": "Hard",
+  "surface_aliases": {"Carpet": "Hard"},
+  "update_on_walkovers": false,
+  "update_on_team_events": true,
+  "min_backtest_field": 16,
+  "backtest_start_year": 2023,
+  "simulations": 4000,
+  "seed_fraction": 0.25,
+  "selection": "k_numerator, k_offset, k_shape, overall_weight and update_on_walkovers picked by log-loss on 2021-2022 matches only (grid 150-250 x 5,10 x 0.4,0.5 x 0.5,0.6,0.7 x walkovers on/off); 2023-2025 was not used to choose them. initial_rating cancels out (every player starts equal).",
+  "evaluation": {
+    "definition": "tour-level singles dated 2023-01-01..2025-12-31, Davis Cup / BJK Cup (level D) and walkovers excluded, as in the 2026-10 markets plan",
+    "n": 15698,
+    "accuracy": 0.6422,
+    "log_loss": 0.6251,
+    "brier": 0.2183,
+    "atp_2025_log_loss": 0.6272,
+    "previous_elo": {"accuracy": 0.6346, "log_loss": 0.6315, "atp_2025_log_loss": 0.6504},
+    "plan_prototype_50_50_blend": {"accuracy": 0.6414, "log_loss": 0.6295}
+  }
+}

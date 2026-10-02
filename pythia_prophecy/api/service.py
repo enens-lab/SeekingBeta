@@ -932,6 +932,7 @@ SPORTS_FOOTBALL_LIVE_ENABLED = os.getenv("SPORTS_FOOTBALL_LIVE_ENABLED", "true")
 SPORTS_OLYMPICS_LIVE_ENABLED = os.getenv("SPORTS_OLYMPICS_LIVE_ENABLED", "true").lower() == "true"
 TENNIS_UPCOMING_LOOKAHEAD_DAYS = int(os.getenv("TENNIS_UPCOMING_LOOKAHEAD_DAYS", "60"))
 TENNIS_UPCOMING_PER_TOUR = {"ATP": 12, "WTA": 12}
+TENNIS_MIN_GRADED_FIELD = 16
 TENNIS_ATP_LIVE_RESULTS_URL = "https://stats.tennismylife.org/data/{year}.csv"
 TENNIS_LIVE_RESULTS_CACHE_TTL_SECONDS = 60 * 60
 _TENNIS_ATP_RESULTS_CACHE: dict[int, tuple[float, list[dict[str, Any]]]] = {}
@@ -1303,7 +1304,14 @@ def _build_dynamic_tennis_upcoming(backtests: list[dict[str, Any]]) -> list[dict
                 "scheduledDate": scheduled,
                 "latestDate": scheduled,
                 "predictedWinner": row.get("predictedWinner"),
-                "predictions": row.get("fullField") or [],
+                # Last season's board re-dated: keep its field, drop last season's
+                # winner flag, and say where the field comes from.
+                "predictions": [
+                    {key: value for key, value in entry.items() if key != "actualWinner"}
+                    for entry in (row.get("fullField") or [])
+                    if isinstance(entry, dict)
+                ],
+                "fieldBasis": "previous_edition",
             }
         )
 
@@ -1366,6 +1374,14 @@ def _fetch_live_atp_completed_tournaments(current_year: int) -> list[dict[str, A
     return completed
 
 
+def _is_previous_edition_board(item: dict[str, Any]) -> bool:
+    """Boards built from last season's field (the exporters set fieldBasis =
+    "previous_edition") are a projection, not a prediction of this event: grading
+    them against this year's champion would put a made-up record into the
+    season summary, so the runtime graders skip them."""
+    return str(item.get("fieldBasis") or "").strip().lower() == "previous_edition"
+
+
 def _build_runtime_tennis_backtests(
     upcoming: list[dict[str, Any]],
     backtests: list[dict[str, Any]],
@@ -1386,6 +1402,13 @@ def _build_runtime_tennis_backtests(
         if str(item.get("tour") or "").upper() != "ATP":
             continue
         if _event_year(item) != current_year:
+            continue
+        if _is_previous_edition_board(item):
+            continue
+        # Hit rates are only reported for fields of 16+ (round-robin finals and
+        # tiny draws are not comparable), matching the exported backtests.
+        field_size = _safe_int(item.get("fieldSize")) or len(item.get("predictions") or [])
+        if field_size < TENNIS_MIN_GRADED_FIELD:
             continue
         key = ("ATP", _canonical_tennis_event_name(str(item.get("name") or "")))
         predictions_by_event[key] = item
@@ -1502,6 +1525,8 @@ def _build_runtime_golf_backtests(
     predictions_by_event: dict[tuple[str, str], dict[str, Any]] = {}
     for item in upcoming:
         if _event_year(item) not in {None, current_year} and _event_year(item) != current_year:
+            continue
+        if _is_previous_edition_board(item):
             continue
         tour = str(item.get("tour") or "").upper()
         if tour != "PGA":

@@ -693,12 +693,18 @@ def train_multitask_torch(args: argparse.Namespace) -> dict[str, Any]:
             val_meta["won_normalized_probability"] = (
                 val_meta[f"{target}_probability"] / group_sums.replace(0, np.nan)
             ).fillna(1.0 / field_sizes)
+            # Score only events whose winner is in the held-out field (min_history can
+            # drop him); otherwise the "hit rate" mixes in events nobody could hit.
+            winners_per_event = val_meta.groupby("tournament_id")[target].transform("sum")
+            gradable = val_meta[winners_per_event == 1]
             top_pick = (
-                val_meta.sort_values(["tournament_id", "won_normalized_probability"], ascending=[True, False])
-                .groupby("tournament_id")
+                gradable.sort_values(["tournament_id", "won_normalized_probability"], ascending=[True, False])
+                .groupby("tournament_id", sort=False)
                 .head(1)
             )
-            metric_entry["top_pick_hit_rate"] = float(top_pick[target].mean()) if not top_pick.empty else 0.0
+            metric_entry["top_pick_hit_rate"] = float(top_pick[target].mean()) if not top_pick.empty else None
+            metric_entry["top_pick_events"] = int(len(top_pick))
+            metric_entry["top_pick_hits"] = int(top_pick[target].sum()) if not top_pick.empty else 0
         per_target_metrics[target] = metric_entry
 
     artifact_dir = Path(args.output_dir)
@@ -789,8 +795,11 @@ def main() -> None:
         print(f"{target} ROC AUC:         {target_metrics['roc_auc']}")
         print(f"{target} log loss:        {target_metrics['log_loss']:.6f}")
         print(f"{target} brier:           {target_metrics['brier_score']:.6f}")
-        if "top_pick_hit_rate" in target_metrics:
-            print(f"{target} top-pick hit:    {target_metrics['top_pick_hit_rate']:.2%}")
+        if target_metrics.get("top_pick_hit_rate") is not None:
+            print(
+                f"{target} top-pick hit:    {target_metrics['top_pick_hit_rate']:.2%}"
+                f" ({target_metrics.get('top_pick_hits')}/{target_metrics.get('top_pick_events')} events)"
+            )
     print(f"Artifact dir:           {metrics['artifact_dir']}")
     print("=" * 72)
 

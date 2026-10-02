@@ -730,6 +730,14 @@ class SportsUpcomingBoard(BaseModel):
     homeAvailability: Optional[SportsAvailabilitySummary] = None
     projectedLineupContext: Optional[SportsProjectedLineupContext] = None
     predictionSource: Optional[str] = None
+    # Where a ranked field (golf/tennis) comes from: "current_draw" (published
+    # draw), "observed_entrants" (players seen in this event's results so far) or
+    # "previous_edition" (last season's field; this year's is not out yet).
+    # fieldNote is the matching one-line explanation; ratingsAsOf (YYYYMMDD) is
+    # the last result the ratings include. Optional: old clients ignore them.
+    fieldBasis: Optional[str] = None
+    fieldNote: Optional[str] = None
+    ratingsAsOf: Optional[int] = None
     awayLineup: List[SportsLineupPlayer] = []
     homeLineup: List[SportsLineupPlayer] = []
     awayFeaturedPlayer: Optional[SportsLineupPlayer] = None
@@ -769,6 +777,11 @@ class SportsHistoricalBoard(BaseModel):
     latestDate: Optional[int] = None
     tournamentId: Optional[str] = None
     scheduledDate: Optional[int] = None
+    # Ranked fields (golf/tennis): the baseline pick (best-ranked / best-OWGR
+    # player) and whether it won, so a hit rate can be shown beside its baseline.
+    fieldSize: Optional[int] = None
+    rankingFavorite: Optional[str] = None
+    rankingFavoriteWon: Optional[bool] = None
     awayTeam: Optional[str] = None
     homeTeam: Optional[str] = None
     awayStarter: Optional[str] = None

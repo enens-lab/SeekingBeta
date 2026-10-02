@@ -2,6 +2,52 @@
 
 This package is the starting point for SeekingBeta.AI's MLB prediction pipeline.
 
+## What the app serves (since 2026-10)
+
+`pregame_model.py` + `markets_mlb.py`, used by `scripts/export_mlb_frontend_data.py`:
+
+- **Win probability**: logistic regression on Elo (K=4, home edge 24, margin-of-victory
+  multiplier, 1/3 regression between seasons, postseason included), decayed + shrunk
+  starter FIP-like / K-BB% / innings / experience, park factor, temperature and wind.
+- **Runs**: Poisson GLM per team (offense vs the opposing starter, park, weather, Elo
+  edge) with a negative-binomial dispersion (r about 3.65), two teams independent. This
+  prices the model-view **run line** (both -1.5 lines: home -1.5 / away +1.5 and away
+  -1.5 / home +1.5, the model favourite's first), **game total** and **team totals** at
+  the fair x.5 line (`markets[]`, basis "model", no market line, never an edge or a
+  confidence tier).
+- **Market log**: every bake logs the boards' markets (`sports/market_log.py`); the
+  exporter grades the last pregame snapshot per market. Rain-shortened games
+  ("Completed Early") void run lines and totals; a game not played within 24 h of the
+  earliest start any snapshot listed (postponed, made up later under the same gamePk,
+  or never played) voids its picks. Results go to `mlb_market_history.json` /
+  `mlb_market_summary.json`, never into `hitStatus`.
+- **Monthly walk-forward**: both models are refit at each month start on every game
+  before it. The in-app history (2024 -> yesterday) is these out-of-sample predictions,
+  and upcoming boards use the same procedure.
+- Fixed constants, the current fit and the evaluation live in `model_params.json`
+  (regenerate with `python scripts/fit_mlb_pregame_model.py`).
+
+Honest record (regular season, walk-forward): 2024 57.3% (Brier 0.2427), 2025 55.7%
+(0.2423), 2026 56.2% (0.2437). Always-home: 52.2% / 54.3% / 52.9%. 2025 betting
+favourite (ESPN BET close): 56.4% on the same games, Brier 0.2419 -- the market is
+still better than the model (model minus market Brier +0.0006, 95% CI -0.0009..+0.0021).
+
+Run line (regular season, Brier vs constant): home -1.5 0.2208 / 0.2286 (2024) and
+0.2244 / 0.2294 (2025); both -1.5 lines as served 0.2242 / 0.2307 and 0.2235 / 0.2285;
+largest quintile calibration gap 0.030 / 0.036 (season walk-forward home -1.5: 0.041 /
+0.040). On 2025 Jul-Sep a market-anchored run line (de-vigged moneyline + posted total)
+scores 0.2257 vs the model's 0.2242 (difference CI includes 0). Totals: the posted 2025
+line beats the model (Brier 0.2482 vs 0.2507), so the total stays a labelled model view.
+Full numbers and the acceptance checks: `model_params.json` -> `evaluation`,
+`market_baselines`.
+
+The HistGradientBoosting baseline (`train_baseline.py`) used to be served at "68.8%":
+that came from post-game boxscore fields (`team_box["bullpen"]` = relievers who did
+NOT pitch; `team_box["battingOrder"]` = end-of-game order). `roster_features.py` now
+builds the true starting nine (battingOrder codes ending in 00) and a pregame bullpen
+(relievers who pitched in the previous 14 days); `scripts/mlb_leak_tripwire.py` checks
+that bullpen features cannot beat always-home by more than 2 points.
+
 ## Recommended v1 target
 
 Start with a **pregame home-team win probability model**.
@@ -77,14 +123,16 @@ That should come after the official schedule/game ingestion, not before it.
 
 ### Bullpen features
 
-- available bullpen list from saved MLB boxscores
+- pregame bullpen: relievers who pitched for the team in the previous 14 days
+  (never the boxscore `bullpen` list -- that is the relievers who did NOT pitch)
 - rolling reliever performance from prior appearances
 - bullpen rest, workload, strikeout, WHIP, and ERA-like aggregates
 - best-arm and weakest-link style summary features
 
 ### Lineup quality
 
-- starting lineup slots from saved MLB boxscores
+- true starting nine from saved MLB boxscores (player battingOrder codes ending in 00,
+  never the end-of-game `battingOrder` list)
 - rolling hitter form from prior games
 - top/middle/bottom of order strength splits
 - lineup-wide OBP/SLG/OPS-like aggregates
@@ -148,6 +196,12 @@ Training runs should read from stored normalized tables, not hit the web every t
   - tabular baseline models (`hist_gradient_boosting`, `random_forest`, `extra_trees`)
 - `train_torch.py`
   - Apple-Silicon-friendly PyTorch home-win model
+- `pregame_model.py`
+  - the served honest model (results/starter loaders, Elo + starter features, walk-forward)
+- `markets_mlb.py`
+  - model-view run line / total / team-total `markets[]` entries
+- `model_params.json`
+  - constants, current fit and walk-forward evaluation of the served model
 
 ## Useful commands
 
@@ -165,7 +219,15 @@ cd /Users/huyngo/Downloads/pythia/pythia_divination
 bash scripts/backfill_mlb_statcast.sh
 ```
 
-Train the best current tabular baseline:
+Refit + evaluate the served model (writes model_params.json):
+
+```bash
+cd /Users/huyngo/Downloads/pythia/pythia_divination
+python scripts/fit_mlb_pregame_model.py
+python scripts/mlb_leak_tripwire.py
+```
+
+Train the (research-only) tabular baseline:
 
 ```bash
 cd /Users/huyngo/Downloads/pythia/pythia_divination

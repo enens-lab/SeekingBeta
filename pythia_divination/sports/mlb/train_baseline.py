@@ -100,6 +100,10 @@ def _select_feature_columns(dataset: pd.DataFrame) -> list[str]:
     for column in dataset.columns:
         if column in _IDENTIFIER_COLUMNS or column in _LABEL_COLUMNS:
             continue
+        # Merge-suffix ID copies (probable_pitcher_id_detail, venue_id_detail, ...) are
+        # identifiers, not measurements; older datasets still carry them.
+        if column.endswith("_detail"):
+            continue
         if dataset[column].dtype.kind in {"i", "u", "f", "b"}:
             series = pd.to_numeric(dataset[column], errors="coerce").dropna()
             if not series.empty and series.nunique() <= 1:

@@ -670,6 +670,11 @@ class SportsMarketPick(BaseModel):
     edge: Optional[float] = None                  # only when the market type's logged record earns it
     confidenceTier: Optional[str] = None          # low | medium | high (never "lock")
     publishedAt: Optional[str] = None
+    # Where modelProbability comes from: "market" (de-vigged line, the headline when
+    # one exists), "model" (our model's view), "market_implied" (derived from lines).
+    basis: Optional[str] = None
+    modelVersion: Optional[str] = None
+    attribution: Optional[str] = None             # e.g. "Lines: nflverse (CC-BY-4.0)"
     # history only
     result: Optional[str] = None                  # win | half_win | push | half_loss | loss | void
     unitReturn: Optional[float] = None

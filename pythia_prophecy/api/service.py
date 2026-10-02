@@ -88,6 +88,8 @@ from .models import (
     TrackRecordCurveResponse,
     SportsBoardsResponse,
     SportsBoardCollection,
+    SportsMarketPick,
+    SportsMarketSummary,
     BillingCheckoutSessionRequest,
     BillingCheckoutSessionResponse,
     BillingPortalSessionResponse,
@@ -1617,13 +1619,36 @@ def _merge_runtime_backtests(
     return _sort_sports_backtests(list(merged.values()))
 
 
+# Sports whose season spans the new year: the "current season" summary is keyed by
+# the season's start year, not the calendar year. Otherwise in October the NFL
+# "2026" record was last January's 2025-season playoff-run games (16 boards).
+_SPORT_SEASON_START_MONTH = {"football": 8, "soccer": 7}
+
+
+def _row_season_year(row: dict[str, Any], start_month: int) -> int | None:
+    date_key = _safe_int(row.get("scheduledDate")) or _safe_int(row.get("latestDate"))
+    key = row.get("key")
+    if not date_key and isinstance(key, (tuple, list)) and len(key) >= 3:
+        date_key = _safe_int(key[2])
+    if not date_key:
+        return _safe_int(row.get("year"))
+    year, month = date_key // 10000, (date_key // 100) % 100
+    return year if month >= start_month else year - 1
+
+
 def _build_sports_season_summary(
     backtests: list[dict[str, Any]],
     *,
     current_year: int | None = None,
+    season_start_month: int | None = None,
 ) -> dict[str, Any] | None:
-    target_year = current_year or datetime.now(timezone.utc).year
-    season_rows = [row for row in backtests if _safe_int(row.get("year")) == target_year]
+    now = datetime.now(timezone.utc)
+    if season_start_month:
+        target_year = current_year or (now.year if now.month >= season_start_month else now.year - 1)
+        season_rows = [row for row in backtests if _row_season_year(row, season_start_month) == target_year]
+    else:
+        target_year = current_year or now.year
+        season_rows = [row for row in backtests if _safe_int(row.get("year")) == target_year]
     if not season_rows:
         return {
             "year": target_year,
@@ -1698,12 +1723,16 @@ def _build_sports_board_collection(
     selected_date: str | None = None,
     available_dates: list[dict[str, Any]] | None = None,
     summary_rows: list[dict[str, Any]] | None = None,
+    sport: str | None = None,
 ) -> SportsBoardCollection:
     upcoming = _annotate_event_state(upcoming)
     # Compute the season summary from the FULL history BEFORE capping. When the
     # caller loaded the history through _load_sports_backtests, `backtests` is
     # already trimmed and the full history is represented by `summary_rows`.
-    season_summary = _build_sports_season_summary(summary_rows if summary_rows is not None else backtests)
+    season_summary = _build_sports_season_summary(
+        summary_rows if summary_rows is not None else backtests,
+        season_start_month=_SPORT_SEASON_START_MONTH.get(sport or ""),
+    )
     sorted_backtests = _sort_sports_backtests(backtests)
     if SPORTS_BACKTESTS_RESPONSE_CAP > 0:
         sorted_backtests = sorted_backtests[:SPORTS_BACKTESTS_RESPONSE_CAP]
@@ -1726,6 +1755,7 @@ def _build_dated_collection_from_upcoming(
     updated_at: datetime,
     source: str,
     summary_rows: list[dict[str, Any]] | None = None,
+    sport: str | None = None,
 ) -> SportsBoardCollection:
     today_key = _runtime_today_key()
     filtered = sorted(
@@ -1759,6 +1789,7 @@ def _build_dated_collection_from_upcoming(
         selected_date=resolved_selected,
         available_dates=available_dates,
         summary_rows=summary_rows,
+        sport=sport,
     )
 
 
@@ -2146,6 +2177,7 @@ def _sports_board_collection(
             updated_at=updated_at,
             source="runtime_filtered_sports_feed",
             summary_rows=summary_rows,
+            sport=sport,
         )
     return _build_sports_board_collection(
         upcoming=upcoming,
@@ -2153,6 +2185,7 @@ def _sports_board_collection(
         updated_at=updated_at,
         source="runtime_filtered_sports_feed",
         summary_rows=summary_rows,
+        sport=sport,
     )
 
 
@@ -6262,10 +6295,73 @@ async def _assemble_sports_boards(
             sport="olympics",
         )
 
-    return {
+    collections = {
         "golf": golf, "tennis": tennis, "basketball": basketball, "mlb": mlb,
         "football": football, "soccer": soccer, "olympics": olympics,
     }
+    return {sport: _attach_sports_markets(sport, coll) for sport, coll in collections.items()}
+
+
+# --- markets (spread / total / handicap ...) ------------------------------------
+# Exporters for sports with markets also write <sport>_market_summary.json (graded
+# record per market type and sport season) and <sport>_market_history.json (picks
+# graded from the append-only publish log, never re-scored). Both are optional:
+# absent files leave the collection untouched.
+_SPORTS_MARKET_FILES_CACHE: dict[str, tuple[tuple[float, int], Any]] = {}
+
+
+def _load_market_file(filename: str) -> Any:
+    path = _sports_data_path(filename)
+    try:
+        st = path.stat()
+    except FileNotFoundError:
+        return None
+    version = (st.st_mtime, st.st_size)
+    cached = _SPORTS_MARKET_FILES_CACHE.get(filename)
+    if cached and cached[0] == version:
+        return cached[1]
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("market file unreadable %s: %s", filename, exc)
+        return None
+    _SPORTS_MARKET_FILES_CACHE[filename] = (version, payload)
+    return payload
+
+
+def _attach_sports_markets(sport: str, coll: SportsBoardCollection) -> SportsBoardCollection:
+    summary = _load_market_file(f"{sport}_market_summary.json")
+    history = _load_market_file(f"{sport}_market_history.json")
+    if not summary and not history:
+        return coll
+    update: dict[str, Any] = {}
+    if isinstance(summary, list):
+        rows = []
+        for row in summary:
+            try:
+                rows.append(SportsMarketSummary(**row))
+            except Exception:
+                continue
+        update["marketSummary"] = rows
+    if isinstance(history, list) and coll.backtests:
+        by_game: dict[str, list[dict[str, Any]]] = {}
+        for pick in history:
+            if isinstance(pick, dict):
+                for key in (pick.get("boardId"), pick.get("gameId")):
+                    if key:
+                        by_game.setdefault(str(key), []).append(pick)
+        if by_game:
+            backtests = []
+            for bt in coll.backtests:
+                picks = by_game.get(str(bt.tournamentId or "")) or []
+                if picks and not bt.markets:
+                    try:
+                        bt = bt.model_copy(update={"markets": [SportsMarketPick(**pk) for pk in picks]})
+                    except Exception:
+                        pass
+                backtests.append(bt)
+            update["backtests"] = backtests
+    return coll.model_copy(update=update) if update else coll
 
 
 # --- /api/sports/boards response cache -------------------------------------
@@ -6405,6 +6501,7 @@ def _preview_sports_board_collection(
                 update={
                     "predictions": event.predictions[:_SPORTS_PREVIEW_PREDICTIONS_CAP],
                     "predictionsTotal": len(event.predictions),
+                    "markets": event.markets[:1],
                     "awayLineup": [],
                     "homeLineup": [],
                     "awayFeaturedPlayer": None,

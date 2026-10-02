@@ -48,7 +48,7 @@ import runpod
 # Bump on every worker-affecting change: the RunPod GitHub build is invisible from
 # the box, so ops polls {"type":"health"} until "build" reports the expected tag
 # before trusting a re-export to carry new code.
-HANDLER_BUILD = "2026-10-02.1"
+HANDLER_BUILD = "2026-10-02.2"
 
 REPO = Path(os.getenv("PYTHIA_REPO", "/work"))
 DIV = REPO / "pythia_divination"
@@ -156,6 +156,37 @@ def _upload_boards(since_ts):
     return uploaded
 
 
+# Sports whose exporters publish betting markets and log every published pick
+# (pythia_divination/sports/market_log.py). The log lives in S3 under
+# sports-data/market_picks/<sport>/ -- a prefix the worker's IAM user can already
+# read and write -- one write-once file per bake. Pulled before the export so
+# grading sees all earlier snapshots; new files pushed after. Never `sync --delete`:
+# the log is append-only by design (it is what market records are graded from).
+MARKET_LOG_SPORTS = {"mlb", "football", "basketball", "soccer"}
+MARKET_PICKS_DIR = DIV / "data" / "sports" / "market_picks"
+
+
+def _sync_market_picks_down(sport):
+    src = f"s3://{S3_BUCKET}/{SPORTS_DATA_PREFIX}/market_picks/{sport}/"
+    rc, _ = _aws_sync(src, str(MARKET_PICKS_DIR / sport) + "/")
+    if rc != 0:
+        raise RuntimeError(f"market pick log sync failed for {sport} (rc={rc}) from {src}")
+
+
+def _upload_market_picks(sport, since_ts):
+    directory = MARKET_PICKS_DIR / sport
+    uploaded = []
+    for f in sorted(directory.glob("picks_*.jsonl")) if directory.exists() else []:
+        if f.stat().st_mtime < since_ts - 1:
+            continue  # existing snapshot pulled from S3: never re-upload or overwrite
+        dest = f"s3://{S3_BUCKET}/{SPORTS_DATA_PREFIX}/market_picks/{sport}/{f.name}"
+        rc, _ = _run(["aws", "s3", "cp", str(f), dest, "--region", AWS_REGION, "--only-show-errors"], REPO, 300)
+        if rc != 0:
+            raise RuntimeError(f"market pick upload failed for {f.name} (rc={rc})")
+        uploaded.append(f.name)
+    return uploaded
+
+
 def _export_one(sport):
     if sport not in SPORTS:
         return {"sport": sport, "ok": False, "error": f"unknown sport '{sport}'", "known": sorted(SPORTS)}
@@ -163,6 +194,8 @@ def _export_one(sport):
     try:
         _sync_artifacts()
         _sync_sport_data(sport)
+        if sport in MARKET_LOG_SPORTS:
+            _sync_market_picks_down(sport)
     except Exception as exc:  # noqa: BLE001
         return {"sport": sport, "ok": False, "error": f"input sync failed: {exc}"}
 
@@ -181,7 +214,17 @@ def _export_one(sport):
         boards = _upload_boards(start)
     except Exception as exc:  # noqa: BLE001
         return {"sport": sport, "ok": False, "exit_code": last_rc, "boards": [], "error": f"board upload failed: {exc}", "log_tail": last_log[-1500:]}
-    return {"sport": sport, "ok": last_rc == 0, "exit_code": last_rc, "boards": boards, "log_tail": last_log[-1500:]}
+    picks = []
+    if sport in MARKET_LOG_SPORTS:
+        try:
+            picks = _upload_market_picks(sport, start)
+        except Exception as exc:  # noqa: BLE001
+            # Boards are already published; a failed log upload must be loud (the
+            # next run would grade without this snapshot) but not unpublish them.
+            return {"sport": sport, "ok": False, "exit_code": last_rc, "boards": boards,
+                    "error": f"market pick log upload failed: {exc}", "log_tail": last_log[-1500:]}
+    return {"sport": sport, "ok": last_rc == 0, "exit_code": last_rc, "boards": boards,
+            "market_pick_snapshots": picks, "log_tail": last_log[-1500:]}
 
 
 def _options_universe():

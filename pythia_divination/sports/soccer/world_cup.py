@@ -64,7 +64,11 @@ def load_world_cup_groups(url: str = WORLD_CUP_2026_URL) -> dict[str, list[str]]
 def build_international_model(
     results, since_year: int = 2015, min_matches: int = 25, decay_per_day: float = 0.0010
 ) -> DixonColesModel:
-    """Fit Dixon-Coles on recent internationals, filtered to established teams."""
+    """Fit Dixon-Coles on recent internationals, filtered to established teams.
+
+    Neutral-venue matches are fitted WITHOUT home advantage (martj42 ``neutral``
+    flag), matching how World Cup fixtures are predicted (neutral=True). The old
+    fit applied home advantage to every match and then predicted without it."""
     df = results[results["date"].dt.year >= since_year].copy()
     counts = df["home"].value_counts().add(df["away"].value_counts(), fill_value=0)
     established = set(counts[counts >= min_matches].index)
@@ -74,9 +78,10 @@ def build_international_model(
 
     latest = df["date"].max()
     weights = np.exp(-decay_per_day * (latest - df["date"]).dt.days.clip(lower=0).to_numpy(dtype=float))
+    neutral = df["neutral"].astype(bool).to_numpy() if "neutral" in df.columns else None
     return DixonColesModel().fit(
         df["home"], df["away"], df["home_goals"].astype(int), df["away_goals"].astype(int),
-        weights=weights, l2=5e-3,
+        weights=weights, l2=5e-3, neutral=neutral,
     )
 
 

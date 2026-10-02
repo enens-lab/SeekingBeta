@@ -89,8 +89,9 @@ def grade_pick(market_type: str, side: str, line: Optional[float], home_score: f
     """(result, unit_return) for a 1-unit stake at `decimal_odds`.
 
     market_type: moneyline | spread | asian_handicap | total | team_total_home | team_total_away
-                 | btts | 1x2 | double_chance | draw_no_bet
+                 | btts | 1x2 | double_chance | draw_no_bet | correct_score
     side: home | away | draw | over | under | yes | no | home_draw | away_draw | home_away
+          | "H-A" exact score for correct_score (e.g. "2-1", home goals first)
     """
     h, a = float(home_score), float(away_score)
     win_ret = decimal_odds - 1.0
@@ -116,6 +117,13 @@ def grade_pick(market_type: str, side: str, line: Optional[float], home_score: f
     elif market_type == "btts":
         both = h > 0 and a > 0
         r = 1.0 if (both == (side == "yes")) else -1.0
+    elif market_type == "correct_score":
+        # side is the exact score "home-away", e.g. "2-1"
+        try:
+            want_h, want_a = (int(x) for x in str(side).split("-"))
+        except ValueError as exc:
+            raise ValueError(f"correct_score side must be 'H-A', got {side!r}") from exc
+        r = 1.0 if (h == want_h and a == want_a) else -1.0
     else:
         raise ValueError(f"unknown market type {market_type!r}")
     label = {1.0: "win", 0.5: "half_win", 0.0: "push", -0.5: "half_loss", -1.0: "loss"}[round(r * 2) / 2]

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import io
 import logging
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -23,12 +25,40 @@ from .constants import (
     LEAGUE_CONFIGS,
     canonical_national_name,
     canonical_team_name,
+    current_season_start,
     football_data_season_code,
 )
 
 logger = logging.getLogger(__name__)
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data" / "sports" / "soccer"
+# Local override for the football-data CSV cache (e.g. a scratch dir in tests or a
+# dev run, so a run never writes into a shared data folder).
+RAW_CACHE_DIR_ENV = "SOCCER_RAW_CACHE_DIR"
+
+# football-data columns kept when keep_odds=True: de-vigged closing averages give the
+# market baseline printed NEXT TO the track record (aggregates only; per-match odds
+# are never published -- the football-data licence is unconfirmed).
+FD_ODDS_COLUMNS = {
+    "AvgCH": "close_avg_home", "AvgCD": "close_avg_draw", "AvgCA": "close_avg_away",
+    "AvgC>2.5": "close_avg_over25", "AvgC<2.5": "close_avg_under25",
+}
+
+
+def _raw_cache_dir() -> Path:
+    override = os.getenv(RAW_CACHE_DIR_ENV)
+    return Path(override) if override else (DATA_ROOT / "raw")
+
+
+def _season_cache_is_final(cache_path: Path, season_start: int) -> bool:
+    """A past season's cached CSV is only trusted if it was written after that
+    season ended (July 1 of start+1). A copy cached mid-season would otherwise be
+    used forever with the second half of the season missing."""
+    try:
+        written = datetime.fromtimestamp(cache_path.stat().st_mtime, tz=timezone.utc)
+    except OSError:
+        return False
+    return written >= datetime(int(season_start) + 1, 7, 1, tzinfo=timezone.utc)
 
 INTERNATIONAL_RESULTS_URL = (
     "https://raw.githubusercontent.com/martj42/international_results/master/results.csv"
@@ -52,11 +82,11 @@ def fetch_football_data_csv(
     """
     code = football_data_season_code(season_start)
     url = f"{FOOTBALL_DATA_BASE_URL}/{code}/{fd_code}.csv"
-    cache_dir = cache_dir or (DATA_ROOT / "raw")
+    cache_dir = cache_dir or _raw_cache_dir()
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / f"{fd_code}_{code}.csv"
 
-    if cache and cache_path.exists():
+    if cache and cache_path.exists() and _season_cache_is_final(cache_path, season_start):
         try:
             return pd.read_csv(cache_path, encoding="latin-1")
         except Exception:  # pragma: no cover - corrupt cache, re-fetch
@@ -69,19 +99,56 @@ def fetch_football_data_csv(
     return pd.read_csv(io.BytesIO(resp.content), encoding="latin-1")
 
 
-def load_history(league_key: str, seasons: int = 3, current_season_start: int | None = None) -> pd.DataFrame:
+def normalize_football_data(raw: pd.DataFrame, season_start: int | None = None, keep_odds: bool = False) -> pd.DataFrame:
+    """One football-data.co.uk league-season CSV -> date, home, away (canonical),
+    home_goals, away_goals, season_start [+ closing-odds columns when keep_odds].
+
+    Only full-time goals are used as model inputs. Same-match statistics (shots,
+    and from 2026-27 the post-match HxG/AxG) are never read."""
+    cols = {str(c).strip().lower(): c for c in raw.columns}
+    needed = ["hometeam", "awayteam", "fthg", "ftag"]
+    if not all(n in cols for n in needed):
+        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "season_start"])
+    frame = pd.DataFrame(
+        {
+            "home": raw[cols["hometeam"]].map(canonical_team_name),
+            "away": raw[cols["awayteam"]].map(canonical_team_name),
+            "home_goals": pd.to_numeric(raw[cols["fthg"]], errors="coerce"),
+            "away_goals": pd.to_numeric(raw[cols["ftag"]], errors="coerce"),
+            # football-data's own spelling, for display ("Nott'm Forest", not a
+            # title-cased canonical key)
+            "home_display": raw[cols["hometeam"]].astype(str).str.strip(),
+            "away_display": raw[cols["awayteam"]].astype(str).str.strip(),
+        }
+    )
+    if "date" in cols:
+        text = raw[cols["date"]].astype(str)
+        parsed = pd.to_datetime(text, format="%d/%m/%Y", errors="coerce")
+        parsed = parsed.fillna(pd.to_datetime(text, format="%d/%m/%y", errors="coerce"))
+        frame["date"] = parsed
+    else:
+        frame["date"] = pd.NaT
+    frame["season_start"] = int(season_start) if season_start is not None else pd.NA
+    if keep_odds:
+        for src, dst in FD_ODDS_COLUMNS.items():
+            frame[dst] = pd.to_numeric(raw[src], errors="coerce") if src in raw.columns else float("nan")
+    frame = frame.dropna(subset=["home", "away", "home_goals", "away_goals"])
+    return frame[(frame["home"] != "") & (frame["away"] != "")]
+
+
+def load_history(league_key: str, seasons: int = 3, current_season_start: int | None = None,
+                 keep_odds: bool = False) -> pd.DataFrame:
     """Concatenated, normalized match history for a league.
 
     Returns columns: date (datetime), home, away (canonical), home_goals,
-    away_goals. Newest season first in the source, sorted ascending by date.
+    away_goals, season_start (int) [+ closing odds when keep_odds], sorted by date.
+    The current season is derived from today's date (July rollover) unless given.
     """
-    from .constants import CURRENT_SEASON_START
-
     cfg = LEAGUE_CONFIGS.get(league_key)
     if not cfg or not cfg.get("fd_code"):
         raise ValueError(f"league {league_key!r} has no football-data history source")
     fd_code = str(cfg["fd_code"])
-    base = current_season_start if current_season_start is not None else CURRENT_SEASON_START
+    base = current_season_start if current_season_start is not None else current_season_start_fn()
 
     frames: list[pd.DataFrame] = []
     for offset in range(seasons):
@@ -92,31 +159,20 @@ def load_history(league_key: str, seasons: int = 3, current_season_start: int | 
         except Exception as exc:  # pragma: no cover - network/season gaps
             logger.warning("soccer history fetch failed for %s %s: %s", fd_code, start, exc)
             continue
-        cols = {c.lower(): c for c in raw.columns}
-        needed = ["hometeam", "awayteam", "fthg", "ftag"]
-        if not all(n in cols for n in needed):
-            continue
-        frame = pd.DataFrame(
-            {
-                "home": raw[cols["hometeam"]].map(canonical_team_name),
-                "away": raw[cols["awayteam"]].map(canonical_team_name),
-                "home_goals": pd.to_numeric(raw[cols["fthg"]], errors="coerce"),
-                "away_goals": pd.to_numeric(raw[cols["ftag"]], errors="coerce"),
-            }
-        )
-        if "date" in cols:
-            frame["date"] = pd.to_datetime(raw[cols["date"]], dayfirst=True, errors="coerce")
-        else:
-            frame["date"] = pd.NaT
-        frames.append(frame)
+        frame = normalize_football_data(raw, season_start=start, keep_odds=keep_odds)
+        if not frame.empty:
+            frames.append(frame)
 
     if not frames:
-        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals"])
+        return pd.DataFrame(columns=["date", "home", "away", "home_goals", "away_goals", "season_start"])
 
     out = pd.concat(frames, ignore_index=True)
-    out = out.dropna(subset=["home", "away", "home_goals", "away_goals"])
-    out = out[(out["home"] != "") & (out["away"] != "")]
-    return out.sort_values("date").reset_index(drop=True)
+    out["season_start"] = out["season_start"].astype(int)
+    out = out.dropna(subset=["date"])
+    return out.sort_values(["date", "home"], kind="mergesort").reset_index(drop=True)
+
+
+current_season_start_fn = current_season_start
 
 
 # --- international results (national teams, for the World Cup model) ---------
@@ -127,7 +183,7 @@ def fetch_international_results(since_year: int | None = None) -> pd.DataFrame:
     away_goals, neutral (bool). Cached to disk; refreshed when stale is fine
     since the export endpoint caches its own payload.
     """
-    cache_dir = DATA_ROOT / "raw"
+    cache_dir = _raw_cache_dir()
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / "international_results.csv"
 
@@ -279,6 +335,7 @@ def parse_espn_fixtures(payload: dict[str, Any]) -> list[dict[str, Any]]:
         if len(date_raw) >= 10:
             date_int = int(date_raw[0:10].replace("-", ""))
         venue = (comp.get("venue") or {}).get("fullName")
+        start_iso = _espn_start_iso(date_raw)
 
         def _score(c: dict[str, Any]) -> int | None:
             try:
@@ -300,6 +357,25 @@ def parse_espn_fixtures(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "away_name": (away_c.get("team") or {}).get("displayName"),
                 "home_score": _score(home_c),
                 "away_score": _score(away_c),
+                # Kick-off in ISO-8601 UTC: the market pick log only grades a pick
+                # published strictly before this (sports/market_log.py).
+                "start_iso": start_iso,
+                "neutral_site": comp.get("neutralSite"),
+                "status_name": status.get("name"),
             }
         )
     return fixtures
+
+
+def _espn_start_iso(date_raw: str) -> str | None:
+    """'2026-10-10T11:30Z' -> '2026-10-10T11:30:00+00:00'. Date-only or unparseable
+    values return None (a pick without a known kick-off is never graded)."""
+    if not date_raw or "T" not in date_raw:
+        return None
+    try:
+        ts = datetime.fromisoformat(date_raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return ts.astimezone(timezone.utc).isoformat()

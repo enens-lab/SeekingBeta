@@ -180,6 +180,15 @@ big = wr.build_receipts({"tennis": many}, None, now=NOW)
 big_text = wr.render_receipts_text(big, "https://x")
 check("long lists disclose what was trimmed", "and 3 more, all in the public record" in big_text)
 
+# --- season line says which league season, whose pick, and the baselines ---
+check("season heading: NFL scores the betting favourite",
+      wr._season_heading({"label": "NFL 2026-27", "basis": "market"}) == "Season (NFL 2026-27, simulated, closing betting favourite)")
+check("season heading: model sports stay a simulated backtest",
+      wr._season_heading({"label": "NBA 2025-26", "basis": "model"}) == "Season (NBA 2025-26, simulated backtest)")
+check("season heading: unlabelled summary unchanged", wr._season_heading({}) == "Season (simulated backtest)")
+check("season baselines appended",
+      wr._season_baselines({"baseline_note": "Always home 52.9%"}) == " · baselines: Always home 52.9%")
+
 print(f"\nAll {len(_passed)} checks passed:")
 for name in _passed:
     print("  PASS", name)

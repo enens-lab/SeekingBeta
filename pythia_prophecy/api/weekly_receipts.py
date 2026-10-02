@@ -78,6 +78,9 @@ def _season_block(season: Any) -> Optional[dict]:
         "top3_accuracy": _get(season, "top3Accuracy"),
         "top5_accuracy": _get(season, "top5Accuracy"),
         "year": _get(season, "year"),
+        "label": _get(season, "label"),
+        "basis": _get(season, "basis"),
+        "baseline_note": _get(season, "baselineNote"),
     }
 
 
@@ -284,6 +287,18 @@ def receipts_subject(receipts: dict) -> str:
     return "Your receipts: season records, losses included"
 
 
+def _season_heading(season: dict) -> str:
+    """'Season (NBA 2025-26, simulated backtest)'; NFL scores the betting favourite."""
+    what = "simulated, closing betting favourite" if season.get("basis") == "market" else "simulated backtest"
+    label = season.get("label")
+    return f"Season ({label}, {what})" if label else f"Season ({what})"
+
+
+def _season_baselines(season: dict) -> str:
+    note = season.get("baseline_note")
+    return f" · baselines: {note}" if note else ""
+
+
 def _season_sentence(season: dict) -> str:
     bits = [
         f"top pick {season['top_pick_hits']}/{season['sample_size']} "
@@ -325,7 +340,10 @@ def render_receipts_text(receipts: dict, frontend_url: str) -> str:
         if sport["season"]:
             through = _fmt_date_key(sport["graded_through"])
             suffix = f", graded through {through}" if through else ""
-            lines.append(f"  Season (simulated backtest): {_season_sentence(sport['season'])}{suffix}")
+            lines.append(
+                f"  {_season_heading(sport['season'])}: {_season_sentence(sport['season'])}"
+                f"{_season_baselines(sport['season'])}{suffix}"
+            )
 
         for row in week["details"][:5]:
             actual = f" (actual: {row['actual']})" if row.get("actual") else ""
@@ -397,8 +415,8 @@ def render_receipts_html_body(receipts: dict, frontend_url: str) -> str:
             through = _fmt_date_key(sport["graded_through"])
             suffix = f", graded through {through}" if through else ""
             parts.append(
-                f'<p class="muted">Season (simulated backtest): {escape(_season_sentence(sport["season"]))}'
-                f"{escape(suffix)}</p>"
+                f'<p class="muted">{escape(_season_heading(sport["season"]))}: {escape(_season_sentence(sport["season"]))}'
+                f"{escape(_season_baselines(sport['season']))}{escape(suffix)}</p>"
             )
 
         items = []

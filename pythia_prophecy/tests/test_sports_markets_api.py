@@ -57,7 +57,10 @@ def test_market_files_attach_and_preview_trim():
                 "modelProbability": 0.51, "result": "win", "unitReturn": 0.9091}
         (data / "football_market_history.json").write_text(json.dumps([pick]))
         (data / "football_market_summary.json").write_text(json.dumps([
-            {"type": "spread", "season": "2026-27", "graded": 14, "wins": 8, "losses": 6, "pushes": 0}]))
+            {"type": "moneyline", "season": "2026-27", "recordKind": "record", "graded": 14, "wins": 8, "losses": 6, "pushes": 0},
+            {"type": "spread", "season": "2026-27", "recordKind": "calibration", "graded": 30, "wins": None, "losses": None,
+             "hits": 16, "expectedHits": 15.2},
+            {"type": "total", "season": "2026-27", "graded": 9, "wins": 5, "losses": 4, "pushes": 0}]))
         coll = m.SportsBoardCollection(
             upcoming=[m.SportsUpcomingBoard(id="u1", name="A at B", tour="Football", course="x",
                                             markets=[{"marketId": f"u1:{t}:full_game", "type": t, "label": t, "side": "home",
@@ -67,17 +70,75 @@ def test_market_files_attach_and_preview_trim():
                        m.SportsHistoricalBoard(year=2026, tournament="X at Y", tour="Football", hitStatus="Miss", tournamentId="other")],
             updated_at=datetime.now(timezone.utc), source="t")
         out = s._attach_sports_markets("football", coll)
-        check(len(out.marketSummary) == 1 and out.marketSummary[0].season == "2026-27", "summary attached")
+        check([r.type for r in out.marketSummary] == ["moneyline"], f"only record rows are served: {out.marketSummary}")
         check(out.backtests[0].markets and out.backtests[0].markets[0].result == "win", "graded pick attached by gameId")
         check(out.backtests[0].hitStatus == "Top Pick" and not out.backtests[1].markets, "hitStatus untouched; no stray attach")
         golf = s._attach_sports_markets("golf", coll)
         check(golf.backtestLabel and golf.backtests == coll.backtests and not golf.marketSummary,
               "sport without market files only gains the simulated-backtest label")
-        check(out.backtestLabel and "Simulated" in out.backtestLabel, "history labelled as simulated")
+        check(out.backtestLabel and "Simulated" in out.backtestLabel and "betting favourite" in out.backtestLabel,
+              "NFL history labelled as the simulated closing-line headline, not the model")
+        check(golf.backtestLabel == s.SPORTS_BACKTEST_LABEL, "other sports keep the model backtest label")
         pv = s._preview_sports_board_collection(out, events_cap=1)
         check(len(pv.upcoming[0].markets) == 1, "preview keeps only the headline market")
         dumped = m.SportsBoardsResponse(**{k: out for k in ("golf", "tennis", "basketball", "mlb", "football", "soccer", "olympics")}).model_dump()
         check(dumped["football"]["upcoming"][0]["markets"][0]["type"] == "spread", "markets survive the response model")
+
+
+def test_history_badges_one_lean_per_type():
+    def pk(t, side, p, line=None):
+        return {"marketId": f"b:{t}:{side}:{line}", "type": t, "label": f"{t} {side} {line}", "side": side, "line": line,
+                "modelProbability": p, "result": "win"}
+    picks = [pk("spread", "home", 0.49, -2.5), pk("spread", "away", 0.51, 2.5),
+             pk("run_line", "home", 0.36, -1.5), pk("run_line", "away", 0.31, -1.5),
+             pk("total", "over", 0.84, 1.5), pk("total", "over", 0.56, 2.5), pk("total", "under", 0.63, 3.5),
+             pk("correct_score", "1-1", 0.12), pk("btts", "yes", 0.55)]
+    kept = s._history_badge_picks(picks)
+    check([(k["type"], k["side"], k["line"]) for k in kept] == [("spread", "away", 2.5), ("total", "over", 2.5), ("btts", "yes", None)],
+          f"one lean per type on the most balanced line; nothing under 50%: {kept}")
+    # exporter-attached history markets get the same rule
+    coll = m.SportsBoardCollection(
+        backtests=[m.SportsHistoricalBoard(year=2026, tournament="A at B", tour="Football", hitStatus="Miss",
+                                           tournamentId="g1", markets=picks)],
+        updated_at=datetime.now(timezone.utc), source="t")
+    with tempfile.TemporaryDirectory() as d:
+        s.SPORTS_DATA_SOURCE_DIR = Path(d)
+        s.SPORTS_FRONTEND_SOURCE_DIR = Path(d)
+        s._SPORTS_MARKET_FILES_CACHE.clear()
+        out = s._attach_sports_markets("football", coll)
+    check(len(out.backtests[0].markets) == 3, "exporter-attached picks filtered too")
+
+
+def test_season_summary_scope_and_labels():
+    def row(date_key, hit, tour):
+        return {"year": date_key // 10000, "tournament": f"{tour} {date_key}", "tour": tour, "hitStatus": hit,
+                "scheduledDate": date_key, "latestDate": date_key}
+    with tempfile.TemporaryDirectory() as d:
+        data = Path(d)
+        s.SPORTS_DATA_SOURCE_DIR = data
+        s.SPORTS_FRONTEND_SOURCE_DIR = data
+        s._SPORTS_MARKET_FILES_CACHE.clear()
+        (data / "soccer_track_record.json").write_text(json.dumps({"allLeagues": [
+            {"tour": "Top 5 leagues", "season": "2026-27", "n": 3, "alwaysHomeAccuracy": 0.432,
+             "market": {"n": 3, "favouriteWinRate": 0.52}}]}))
+        soccer_rows = [row(20260915, "Top Pick", "Premier League"), row(20260920, "Miss", "La Liga"),
+                       row(20260927, "Top Pick", "Serie A"),
+                       row(20260705, "Top Pick", "FIFA World Cup"), row(20260712, "Top Pick", "FIFA World Cup")]
+        soc = s._sport_season_summary("soccer", soccer_rows)
+        cur = 2026 if datetime.now(timezone.utc).month >= 7 else 2025
+        if cur == 2026:
+            check(soc["sampleSize"] == 3 and soc["topPickHits"] == 2, f"World Cup kept out of the league season: {soc}")
+            check(soc["label"] == "Top 5 leagues 2026-27" and "Closing favourite 52.0% (n=3)" in soc["baselineNote"], f"{soc}")
+        bb_rows = [row(20260410, "Top Pick", "Basketball"), row(20260612, "Miss", "Basketball"),
+                   row(20260820, "Top Pick", "Women's Basketball"), row(20260928, "Top Pick", "Women's Basketball")]
+        bb = s._sport_season_summary("basketball", bb_rows)
+        check(bb["label"] and bb["label"].startswith("WNBA") and bb["sampleSize"] in (0, 2), f"latest league only: {bb}")
+        nfl = s._sport_season_summary("football", [row(20260913, "Top Pick", "Football")])
+        check(nfl["basis"] == "market" and nfl["label"].startswith("NFL ") and "not our model" in nfl["baselineNote"], f"{nfl}")
+        golf = s._sport_season_summary("golf", [{**row(20260301, "Miss", "PGA"), "rankingFavoriteWon": True},
+                                                {**row(20260308, "Top Pick", "PGA"), "rankingFavoriteWon": False}])
+        if datetime.now(timezone.utc).year == 2026:
+            check(golf["baselineNote"] == "Ranking favourite won 1/2 (50.0%)", f"{golf}")
 
 
 def test_current_files_unchanged_for_other_sports():
@@ -96,7 +157,11 @@ def test_current_files_unchanged_for_other_sports():
         new = s._build_sports_board_collection(upcoming=[], backtests=kept, updated_at=datetime.now(timezone.utc),
                                                source="t", summary_rows=rows, sport=sport)
         old = s._build_sports_board_collection(upcoming=[], backtests=full, updated_at=datetime.now(timezone.utc), source="t")
-        check(new.seasonSummary == old.seasonSummary, f"{sport}: season summary changed")
+        numbers = ("year", "sampleSize", "topPickHits", "topPickAccuracy", "top3Hits", "top3Accuracy", "top5Hits", "top5Accuracy")
+        if sport != "basketball":   # basketball is now one league's season, not the calendar year
+            check(all(getattr(new.seasonSummary, k) == getattr(old.seasonSummary, k) for k in numbers),
+                  f"{sport}: season summary numbers changed")
+        check(new.seasonSummary.label, f"{sport}: season summary labelled")
         check([b.hitStatus for b in new.backtests] == [b.hitStatus for b in old.backtests], f"{sport}: hitStatus changed")
 
 

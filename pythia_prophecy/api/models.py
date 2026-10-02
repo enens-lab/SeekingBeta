@@ -3,8 +3,8 @@ Pydantic models for authentication and users
 """
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List, Dict
-from pydantic import BaseModel, EmailStr, Field
+from typing import Annotated, Any, Optional, List, Dict
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field
 
 
 class SubscriptionTier(str, Enum):
@@ -515,6 +515,15 @@ class SportsBoardDateOption(BaseModel):
     gameCount: int
 
 
+def _text_or_none(value: Any) -> Optional[str]:
+    return None if value is None else str(value)
+
+
+# Board labels coming from exporters (ids, timestamps, versions) are display text:
+# coerce numbers to str instead of rejecting the whole board.
+LenientText = Annotated[Optional[str], BeforeValidator(_text_or_none)]
+
+
 class SportsBoardSeasonSummary(BaseModel):
     year: int
     sampleSize: int
@@ -524,6 +533,13 @@ class SportsBoardSeasonSummary(BaseModel):
     top3Accuracy: Optional[float] = None
     top5Hits: Optional[int] = None
     top5Accuracy: Optional[float] = None
+    # Which season and league the numbers cover ("NBA 2025-26", "NFL 2026-27"),
+    # whose pick it scores ("model" or "market"), and the baselines on the same
+    # games ("Always home 52.9% · Market favourite 56.4%"). Optional: old clients
+    # ignore them; an accuracy figure must never be shown without them.
+    label: Optional[str] = None
+    basis: Optional[str] = None
+    baselineNote: Optional[str] = None
 
 
 class SportsTeamDetails(BaseModel):
@@ -700,6 +716,13 @@ class SportsMarketSummary(BaseModel):
     marketBaselineWinRate: Optional[float] = None
     brier: Optional[float] = None
     marketBrier: Optional[float] = None
+    # "record" (a one-sided lean the product published) or "calibration". The API
+    # only serves "record" rows today; calibration rows (hits vs expectedHits,
+    # Brier vs base rate) wait for a client that renders them as calibration.
+    recordKind: Optional[str] = None
+    hits: Optional[float] = None
+    expectedHits: Optional[float] = None
+    baseRateBrier: Optional[float] = None
 
 
 class SportsUpcomingBoard(BaseModel):
@@ -762,6 +785,16 @@ class SportsUpcomingBoard(BaseModel):
     # Markets beyond the win probability (spread, total, handicap, ...). Additive:
     # empty for sports/boards that do not publish them; old app builds ignore it.
     markets: List[SportsMarketPick] = []
+    # Whose number the headline win probability is: "market" (de-vigged sportsbook
+    # line, e.g. NFL from nflverse) or "model". lineStatus says whether a line was
+    # posted ("posted", "not_posted", "stale"); attribution credits the line source.
+    basis: Optional[str] = None
+    lineStatus: Optional[str] = None
+    lineCapturedAt: LenientText = None
+    attribution: Optional[str] = None
+    gameId: LenientText = None
+    gameStart: LenientText = None
+    modelVersion: LenientText = None
 
 
 class SportsHistoricalBoard(BaseModel):
@@ -808,6 +841,14 @@ class SportsHistoricalBoard(BaseModel):
     markets: List[SportsMarketPick] = []
     homeScore: Optional[float] = None
     awayScore: Optional[float] = None
+    # Whose pick the row scores ("market" or "model"), how the record was made
+    # ("simulated"), where the probability came from, the line attribution, and the
+    # model's own view when the headline is the market's.
+    basis: Optional[str] = None
+    recordBasis: Optional[str] = None
+    predictionSource: Optional[str] = None
+    attribution: Optional[str] = None
+    modelHomeWinProbability: Optional[float] = None
 
 
 class SportsBoardCollection(BaseModel):

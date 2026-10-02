@@ -1146,7 +1146,13 @@ def _backtests_cache_headroom() -> int:
 
 
 def _summary_row(item: dict[str, Any]) -> dict[str, Any]:
-    return {"key": _sports_backtest_key(item), "year": item.get("year"), "hitStatus": item.get("hitStatus")}
+    return {
+        "key": _sports_backtest_key(item),
+        "year": item.get("year"),
+        "hitStatus": item.get("hitStatus"),
+        "tour": item.get("tour"),
+        "rankingFavoriteWon": item.get("rankingFavoriteWon"),
+    }
 
 
 def _load_sports_backtests(filename: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1710,6 +1716,162 @@ def _build_sports_season_summary(
     }
 
 
+# Tours that are not part of a sport's league season (soccer: the World Cup is a
+# separate competition; mixing it in moved 2026-27 from 53.2% to 55.8%).
+_SEASON_EXCLUDED_TOURS = {"soccer": {"FIFA WORLD CUP"}}
+# Basketball: one summary per league, the league with the most recent game.
+_BASKETBALL_LEAGUES = (("BASKETBALL", "NBA", 9), ("WOMEN'S BASKETBALL", "WNBA", None))
+_SEASON_RECORD_FILES = {
+    "mlb": "mlb_record_summary.json",
+    "soccer": "soccer_track_record.json",
+    "basketball": "basketball_model_record.json",
+}
+
+
+def _row_tour(row: dict[str, Any]) -> str:
+    tour = row.get("tour")
+    if not tour and isinstance(row.get("key"), (tuple, list)) and row["key"]:
+        tour = row["key"][0]
+    return str(tour or "").upper()
+
+
+def _row_date_key(row: dict[str, Any]) -> int:
+    date_key = _safe_int(row.get("scheduledDate")) or _safe_int(row.get("latestDate"))
+    key = row.get("key")
+    if not date_key and isinstance(key, (tuple, list)) and len(key) >= 3:
+        date_key = _safe_int(key[2])
+    return date_key or 0
+
+
+def _season_text(year: int, start_month: int | None) -> str:
+    return f"{year}-{str(year + 1)[-2:]}" if start_month else str(year)
+
+
+def _pct(value: Any) -> str | None:
+    try:
+        return f"{float(value) * 100:.1f}%"
+    except (TypeError, ValueError):
+        return None
+
+
+def _join_baselines(parts: list[str | None]) -> str | None:
+    kept = [p for p in parts if p]
+    return " · ".join(kept) if kept else None
+
+
+def _mlb_baseline_note(record: Any, year: int) -> str | None:
+    seasons = record.get("seasons") if isinstance(record, dict) else None
+    row = next((r for r in seasons or [] if _safe_int(r.get("season")) == year), None)
+    if not row:
+        return None
+    parts = [
+        f"Always home {_pct(row.get('alwaysHomeAccuracy'))}" if row.get("alwaysHomeAccuracy") is not None else None,
+        f"Elo {_pct(row.get('eloAccuracy'))}" if row.get("eloAccuracy") is not None else None,
+    ]
+    market = next(
+        (m for m in record.get("marketBaselines") or [] if _safe_int(m.get("season")) == year), None
+    )
+    if market and market.get("favoriteWinRate") is not None:
+        parts.append(
+            f"Betting favourite {_pct(market['favoriteWinRate'])} (n={market.get('favoriteGames') or market.get('games_matched')})"
+        )
+    return _join_baselines(parts)
+
+
+def _soccer_baseline_note(record: Any, season: str) -> str | None:
+    rows = record.get("allLeagues") if isinstance(record, dict) else None
+    row = next((r for r in rows or [] if str(r.get("season")) == season), None)
+    if not row:
+        return None
+    market = row.get("market") or {}
+    return _join_baselines([
+        f"Always home {_pct(row.get('alwaysHomeAccuracy'))}" if row.get("alwaysHomeAccuracy") is not None else None,
+        f"Closing favourite {_pct(market.get('favouriteWinRate'))} (n={market.get('n')})"
+        if market.get("favouriteWinRate") is not None else None,
+    ])
+
+
+def _basketball_baseline_note(record: Any, league: str, season: str) -> str | None:
+    if not isinstance(record, dict):
+        return None
+    row = None
+    for item in record.get("records") or []:
+        if str(item.get("league", "")).lower() == league.lower() and str(item.get("season")) == season:
+            row = item
+            break
+    if row is not None:
+        market = row.get("market") or {}
+        return _join_baselines([
+            f"Always home {_pct((row.get('alwaysHome') or {}).get('accuracy'))}" if (row.get("alwaysHome") or {}).get("accuracy") is not None else None,
+            f"Elo {_pct((row.get('elo') or {}).get('accuracy'))}" if (row.get("elo") or {}).get("accuracy") is not None else None,
+            f"Closing favourite {_pct(market.get('accuracy'))} (n={market.get('games') or market.get('n')})"
+            if market.get("accuracy") is not None else None,
+        ])
+    seasons = ((record.get("leagues") or {}).get(league.lower()) or {}).get("seasons") or {}
+    base = (seasons.get(season) or {}).get("baselines") or {}
+    market = base.get("closingMarket") or {}
+    return _join_baselines([
+        f"Always home {_pct(base.get('alwaysHomeAccuracy'))}" if base.get("alwaysHomeAccuracy") is not None else None,
+        f"Elo {_pct(base.get('eloAccuracy'))}" if base.get("eloAccuracy") is not None else None,
+        f"Closing favourite {_pct(market.get('accuracy'))} (n={market.get('n')})" if market.get("accuracy") is not None else None,
+    ])
+
+
+def _ranking_favourite_note(rows: list[dict[str, Any]]) -> str | None:
+    known = [r for r in rows if r.get("rankingFavoriteWon") is not None]
+    if not known:
+        return None
+    won = sum(1 for r in known if r.get("rankingFavoriteWon"))
+    return f"Ranking favourite won {won}/{len(known)} ({_pct(won / len(known))})"
+
+
+def _sport_season_summary(sport: str | None, rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Season summary scoped to one league season, labelled with whose pick it
+    scores and the baselines on the same games (plan §9: never an accuracy number
+    without n, season and baseline)."""
+    sport = sport or ""
+    excluded = _SEASON_EXCLUDED_TOURS.get(sport)
+    if excluded:
+        rows = [r for r in rows if _row_tour(r) not in excluded]
+    start_month = _SPORT_SEASON_START_MONTH.get(sport)
+    league = None
+    if sport == "basketball" and rows:
+        latest_tour = _row_tour(max(rows, key=_row_date_key))
+        for tour, name, month in _BASKETBALL_LEAGUES:
+            if latest_tour == tour:
+                league, start_month = name, month
+                rows = [r for r in rows if _row_tour(r) == tour]
+                break
+    summary = _build_sports_season_summary(rows, season_start_month=start_month)
+    if summary is None:
+        return None
+    year = summary["year"]
+    season = _season_text(year, start_month)
+    summary["basis"] = "model"
+    record = _load_market_file(_SEASON_RECORD_FILES[sport]) if sport in _SEASON_RECORD_FILES else None
+    if sport == "football":
+        summary["label"] = f"NFL {season}"
+        summary["basis"] = "market"
+        summary["baselineNote"] = (
+            "Scores the closing betting favourite (de-vigged nflverse line), not our model; "
+            "games without a posted line use our model"
+        )
+    elif sport == "mlb":
+        summary["label"] = f"MLB {season}"
+        summary["baselineNote"] = _mlb_baseline_note(record, year)
+    elif sport == "soccer":
+        summary["label"] = f"Top 5 leagues {season}"
+        summary["baselineNote"] = _soccer_baseline_note(record, season)
+    elif sport == "basketball" and league:
+        summary["label"] = f"{league} {season}"
+        summary["baselineNote"] = _basketball_baseline_note(record, league, season)
+    elif sport in ("tennis", "golf"):
+        summary["label"] = f"{season} season"
+        target = [r for r in rows if _safe_int(r.get("year")) == year]
+        summary["baselineNote"] = _ranking_favourite_note(target)
+    return summary
+
+
 # Max historical backtests embedded per sport in the API response. The full set
 # (mlb alone has ~3,400) ballooned /api/sports/boards to ~60MB / ~19s. The
 # season summary is computed from the FULL set first (accuracy unchanged), then
@@ -1761,10 +1923,7 @@ def _build_sports_board_collection(
     # Compute the season summary from the FULL history BEFORE capping. When the
     # caller loaded the history through _load_sports_backtests, `backtests` is
     # already trimmed and the full history is represented by `summary_rows`.
-    season_summary = _build_sports_season_summary(
-        summary_rows if summary_rows is not None else backtests,
-        season_start_month=_SPORT_SEASON_START_MONTH.get(sport or ""),
-    )
+    season_summary = _sport_season_summary(sport, summary_rows if summary_rows is not None else backtests)
     sorted_backtests = _sort_sports_backtests(backtests)
     if SPORTS_BACKTESTS_RESPONSE_CAP > 0:
         sorted_backtests = sorted_backtests[:SPORTS_BACKTESTS_RESPONSE_CAP]
@@ -2276,6 +2435,7 @@ async def _live_mlb_board_collection(mlb_date: str | None = None) -> Optional[Sp
             source=str(payload.get("source") or "divination_live_mlb_feed"),
             selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
             available_dates=payload.get("availableDates") or [],
+            sport="mlb",
         )
     except Exception as exc:
         logger.warning("Falling back to cached MLB board feed: %r", exc)
@@ -2311,6 +2471,7 @@ async def _live_basketball_board_collection(basketball_date: str | None = None) 
             source=str(payload.get("source") or "divination_live_basketball_feed"),
             selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
             available_dates=payload.get("availableDates") or [],
+            sport="basketball",
         )
     except Exception as exc:
         logger.warning("Falling back to cached Basketball board feed: %s", exc)
@@ -2345,6 +2506,7 @@ async def _live_football_board_collection(football_date: str | None = None) -> O
             source=str(payload.get("source") or "divination_live_football_feed"),
             selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
             available_dates=payload.get("availableDates") or [],
+            sport="football",
         )
     except Exception as exc:
         logger.warning("Falling back to cached Football board feed: %s", exc)
@@ -2380,6 +2542,7 @@ async def _live_soccer_board_collection(soccer_date: str | None = None) -> Optio
             source=str(payload.get("source") or "divination_live_soccer_feed"),
             selected_date=str(payload.get("selectedDate")) if payload.get("selectedDate") else None,
             available_dates=payload.get("availableDates") or [],
+            sport="soccer",
         )
     except Exception as exc:
         logger.warning("Falling back to cached Soccer board feed: %s", exc)
@@ -2412,6 +2575,7 @@ async def _live_olympics_board_collection() -> Optional[SportsBoardCollection]:
             source=str(payload.get("source") or "divination_olympics_medal_model"),
             selected_date=None,
             available_dates=[],
+            sport="olympics",
         )
     except Exception as exc:
         logger.warning("Falling back to cached Olympics board feed: %s", exc)
@@ -6362,41 +6526,83 @@ def _load_market_file(filename: str) -> Any:
 
 
 SPORTS_BACKTEST_LABEL = "Simulated backtest: the model re-run on past games it was not trained on."
+# NFL history scores the headline we show, which is the de-vigged closing line.
+SPORTS_BACKTEST_LABELS = {
+    "football": (
+        "Simulated record of the headline we show: the closing betting favourite "
+        "(de-vigged nflverse line), or our model when no line was posted. Not our model's own record."
+    ),
+}
+
+
+def _history_badge_picks(picks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """One badge per market type: the model's lean (probability >= 0.5) on the most
+    balanced line it published. Both sides of a market, the unlikely side of a fixed
+    line (an MLB -1.5 at 35%) and long shots like exact scores are left off: a row of
+    'Loss' badges on 35% outcomes reads as the model being wrong when it was not."""
+    best: dict[str, dict[str, Any]] = {}
+    for pick in picks:
+        try:
+            p = float(pick.get("modelProbability"))
+        except (TypeError, ValueError):
+            continue
+        if p < 0.5:
+            continue
+        kind = str(pick.get("type") or "")
+        current = best.get(kind)
+        if current is None or p < float(current["modelProbability"]):
+            best[kind] = pick
+    order = {id(pick): i for i, pick in enumerate(picks)}
+    return sorted(best.values(), key=lambda pick: order[id(pick)])
 
 
 def _attach_sports_markets(sport: str, coll: SportsBoardCollection) -> SportsBoardCollection:
     if coll.backtests and not coll.backtestLabel:
-        coll = coll.model_copy(update={"backtestLabel": SPORTS_BACKTEST_LABEL})
+        coll = coll.model_copy(update={"backtestLabel": SPORTS_BACKTEST_LABELS.get(sport, SPORTS_BACKTEST_LABEL)})
     summary = _load_market_file(f"{sport}_market_summary.json")
     history = _load_market_file(f"{sport}_market_history.json")
-    if not summary and not history:
+    if not summary and not history and not any(bt.markets for bt in coll.backtests):
         return coll
     update: dict[str, Any] = {}
     if isinstance(summary, list):
+        # Only one-sided leans have a W-L record. Calibration rows (both sides of a
+        # market, fixed sides, pooled lines) stay out until a client can show them
+        # as calibration; every client renders summary rows as a W-L record.
         rows = []
         for row in summary:
+            if not isinstance(row, dict) or row.get("recordKind") != "record":
+                continue
             try:
                 rows.append(SportsMarketSummary(**row))
             except Exception:
                 continue
         update["marketSummary"] = rows
-    if isinstance(history, list) and coll.backtests:
-        by_game: dict[str, list[dict[str, Any]]] = {}
+    by_game: dict[str, list[dict[str, Any]]] = {}
+    if isinstance(history, list):
         for pick in history:
             if isinstance(pick, dict):
-                for key in (pick.get("boardId"), pick.get("gameId")):
-                    if key:
-                        by_game.setdefault(str(key), []).append(pick)
-        if by_game:
-            backtests = []
-            for bt in coll.backtests:
-                picks = by_game.get(str(bt.tournamentId or "")) or []
-                if picks and not bt.markets:
+                for key in {str(k) for k in (pick.get("boardId"), pick.get("gameId")) if k}:
+                    by_game.setdefault(key, []).append(pick)
+    if coll.backtests:
+        backtests = []
+        changed = False
+        for bt in coll.backtests:
+            if bt.markets:
+                # an exporter attached graded picks itself: same one-lean-per-type rule
+                kept = _history_badge_picks([m.model_dump() for m in bt.markets])
+                if len(kept) != len(bt.markets):
+                    bt = bt.model_copy(update={"markets": [SportsMarketPick(**pk) for pk in kept]})
+                    changed = True
+            else:
+                picks = _history_badge_picks(by_game.get(str(bt.tournamentId or "")) or [])
+                if picks:
                     try:
                         bt = bt.model_copy(update={"markets": [SportsMarketPick(**pk) for pk in picks]})
+                        changed = True
                     except Exception:
                         pass
-                backtests.append(bt)
+            backtests.append(bt)
+        if changed:
             update["backtests"] = backtests
     return coll.model_copy(update=update) if update else coll
 

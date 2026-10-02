@@ -98,7 +98,15 @@ export function formatSignedNumber(num: number): string {
 
 /** Whole percent, e.g. 0.5184 -> "52%". */
 export function formatMarketPercent(probability: number): string {
-  return `${Math.round(probability * 100)}%`;
+  if (!Number.isFinite(probability)) return '—';
+  return `${Math.round(Math.min(1, Math.max(0, probability)) * 100)}%`;
+}
+
+// Totals are a number of points or goals, not a handicap, so they carry no sign.
+const UNSIGNED_LINE_TYPES = new Set(['total', 'team_total_home', 'team_total_away']);
+
+function formatLine(type: string | undefined, num: number): string {
+  return type && UNSIGNED_LINE_TYPES.has(type) ? trimNumber(num, 2) : formatSignedNumber(num);
 }
 
 export function marketRowTitle(pick: SportsMarketPick): string {
@@ -111,20 +119,20 @@ export function marketSecondaryLine(pick: SportsMarketPick): string {
   const parts: string[] = [];
   if (typeof pick.modelLine === 'number') {
     const differs = typeof pick.line !== 'number' || Math.abs(pick.modelLine - pick.line) > 1e-9;
-    if (differs) parts.push(`Fair ${formatSignedNumber(pick.modelLine)}`);
+    if (differs) parts.push(`Fair ${formatLine(pick.type, pick.modelLine)}`);
   }
-  if (typeof pick.pushProbability === 'number' && pick.pushProbability >= 0.01) {
+  if (typeof pick.pushProbability === 'number' && pick.pushProbability >= 0.01 && pick.pushProbability <= 1) {
     parts.push(`Push ${formatMarketPercent(pick.pushProbability)}`);
   }
   if (pick.market) {
     const price: string[] = [];
-    if (typeof pick.market.line === 'number') price.push(formatSignedNumber(pick.market.line));
+    if (typeof pick.market.line === 'number') price.push(formatLine(pick.type, pick.market.line));
     if (typeof pick.market.americanOdds === 'number') {
       price.push(`(${formatSignedNumber(Math.round(pick.market.americanOdds))})`);
     }
     if (price.length) parts.push(`Line ${price.join(' ')}`);
   }
-  parts.push(pick.basis === 'market' ? 'Market' : 'Model view');
+  parts.push(pick.basis?.trim().toLowerCase() === 'market' ? 'Market' : 'Model view');
   return parts.join(' · ');
 }
 

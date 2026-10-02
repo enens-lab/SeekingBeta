@@ -143,9 +143,9 @@ test('row secondary line and footer follow the spec', () => {
   const [buf, , over, moneyline, teamTotal] = m.visibleMarkets(footballBoard.markets);
   assert.equal(m.formatMarketPercent(buf.modelProbability), '52%');
   assert.equal(m.marketSecondaryLine(buf), 'Fair -3 · Line -2.5 (-110) · Market');
-  assert.equal(m.marketSecondaryLine(over), 'Fair +48.5 · Line +47.5 (-108) · Market');
+  assert.equal(m.marketSecondaryLine(over), 'Fair 48.5 · Line 47.5 (-108) · Market');
   assert.equal(m.marketSecondaryLine(moneyline), 'Model view');
-  assert.equal(m.marketSecondaryLine(teamTotal), 'Fair +25 · Market');
+  assert.equal(m.marketSecondaryLine(teamTotal), 'Fair 25 · Market');
   const soccerRows = m.visibleMarkets(soccerBoard.markets);
   assert.deepEqual(soccerRows.map((pick) => pick.type), ['asian_handicap', 'total', 'btts', 'double_chance', 'correct_score']);
   assert.equal(m.marketSecondaryLine(soccerRows[0]), 'Fair -0.5 · Model view');

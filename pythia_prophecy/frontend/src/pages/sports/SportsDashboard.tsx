@@ -1029,7 +1029,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1283,7 +1283,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1517,7 +1517,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>

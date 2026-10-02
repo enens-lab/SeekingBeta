@@ -71,6 +71,7 @@ def parse_scoreboard_events(payload: dict[str, Any], tour: str) -> list[dict[str
     """Events for one tour: name, venue, dates and the named main-draw entrants.
 
     ``entrants`` lists every named player in a main-draw (non-qualifying) match;
+    ``seeds`` maps entrant -> draw seed (ESPN ``curatedRank``) where one is shown;
     ``open_slots`` counts first-round places still TBD (qualifiers not yet known).
     ``started`` is True once any main-draw match has a result.
     """
@@ -83,6 +84,7 @@ def parse_scoreboard_events(payload: dict[str, Any], tour: str) -> list[dict[str
             continue
         venue = str((event.get("venue") or {}).get("displayName") or "").strip()
         entrants: list[str] = []
+        seeds: dict[str, int] = {}
         seen: set[str] = set()
         first_round_slots = 0
         open_slots = 0
@@ -116,6 +118,12 @@ def parse_scoreboard_events(payload: dict[str, Any], tour: str) -> list[dict[str
                     if key not in seen:
                         seen.add(key)
                         entrants.append(display)
+                    try:
+                        seed = int((competitor.get("curatedRank") or {}).get("current"))
+                    except (TypeError, ValueError):
+                        seed = 0
+                    if 0 < seed < 99:
+                        seeds[display] = seed
         events.append(
             {
                 "name": name,
@@ -124,6 +132,7 @@ def parse_scoreboard_events(payload: dict[str, Any], tour: str) -> list[dict[str
                 "startKey": start,
                 "endKey": end,
                 "entrants": entrants,
+                "seeds": seeds,
                 "firstRoundSlots": first_round_slots,
                 "openSlots": open_slots,
                 "started": started,

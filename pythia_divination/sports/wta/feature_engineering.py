@@ -174,6 +174,8 @@ def build_player_event_features(match_history: pd.DataFrame) -> pd.DataFrame:
                 "age": _numeric_column(history, f"{prefix}_age"),
                 "height": _numeric_column(history, f"{prefix}_ht"),
                 "rank": _numeric_column(history, f"{prefix}_rank"),
+                # Draw seed; ESPN-sourced seasons have seeds but no rankings.
+                "seed": _numeric_column(history, f"{prefix}_seed"),
                 "matches_played": history[f"{short}_matches"].values,
                 "tour": history["tour"].values,
                 "_order": np.arange(len(history)),

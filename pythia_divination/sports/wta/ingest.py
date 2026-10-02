@@ -33,6 +33,11 @@ BASE_URL_ATP = "https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master
 # ATP's alphanumeric player codes) or when no local file exists at all.
 ATP_CURRENT_SEASON_URL = "https://stats.tennismylife.org/data/{year}.csv"
 ATP_CURRENT_SEASON_MIN_YEAR = 2025
+# The WTA has no Sackmann-format feed left at all; from this season on its results
+# come from ESPN's scoreboard (sports/wta/espn_results.py), rebuilt on every
+# --force run. Earlier seasons keep their files (2025 = tennis-data conversion),
+# so the 2023-25 evaluation in model_params.json is unaffected.
+WTA_ESPN_RESULTS_MIN_YEAR = 2026
 SACKMANN_COLUMNS = {"tourney_id", "tourney_name", "tourney_date", "winner_name", "loser_name", "winner_id", "loser_id"}
 
 XML_NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
@@ -339,6 +344,30 @@ def _download_sackmann_format(url: str, dest: Path) -> bool:
     return True
 
 
+def _write_espn_season(tour: str, year: int, dest: Path, prior: list[pd.DataFrame]) -> bool:
+    """Rebuild ``dest`` from ESPN results (sports/wta/espn_results.py). Leaves the
+    existing file alone when ESPN is off, unreachable or returns nothing."""
+    from sports.wta.espn_results import season_matches
+
+    if not prior:
+        logger.warning("No earlier %s seasons loaded; cannot cross-walk ESPN %s results.", tour.upper(), year)
+        return False
+    try:
+        frame = season_matches(tour.upper(), year, pd.concat(prior, ignore_index=True))
+    except Exception as exc:  # never let a results source break the ingest
+        logger.warning("ESPN %s %s results failed: %s", tour.upper(), year, exc)
+        return False
+    if frame is None or frame.empty:
+        logger.warning("ESPN %s %s results unavailable; keeping %s as it is.", tour.upper(), year, dest)
+        return False
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    frame.to_csv(tmp, index=False)
+    tmp.replace(dest)
+    logger.info("Saved %s ESPN %s %s match rows to %s", len(frame), tour.upper(), year, dest)
+    return True
+
+
 def ingest_matches(years: list[int], tour: str = "wta", force: bool = False) -> pd.DataFrame:
     """Download and merge match data for the requested years and tour."""
     all_matches: list[pd.DataFrame] = []
@@ -355,6 +384,8 @@ def ingest_matches(years: list[int], tour: str = "wta", force: bool = False) -> 
             downloaded = _download_file(url, dest)
             if not downloaded and tour == "atp" and (year >= ATP_CURRENT_SEASON_MIN_YEAR or not dest.exists()):
                 _download_sackmann_format(ATP_CURRENT_SEASON_URL.format(year=year), dest)
+            elif not downloaded and tour == "wta" and year >= WTA_ESPN_RESULTS_MIN_YEAR:
+                _write_espn_season(tour, year, dest, all_matches)
         else:
             logger.info("Using cached %s match data for year %s.", tour.upper(), year)
 

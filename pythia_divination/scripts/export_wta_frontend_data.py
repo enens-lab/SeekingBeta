@@ -9,12 +9,14 @@ fed through a seeded knockout simulation (``sports/wta/tournament_sim.py``):
   ``backtest_start_year``. Ratings are taken before each player's first match of
   the event, so every board is an honest out-of-sample prediction. Davis Cup /
   BJK Cup / United Cup / Laver Cup ties are never boards. Each board also names
-  the ranking favourite (best-ranked player in the field) as the baseline.
+  the ranking favourite (best-ranked player in the field) as the baseline; WTA
+  seasons from ESPN (2026+, ``sports/wta/espn_results.py``) carry seeds but no
+  rankings, so there the top seed is the baseline (``rankingFavoriteBasis``).
 * Upcoming boards: the published main draw when ESPN has it
-  (``fieldBasis: "current_draw"``), otherwise this season's entrants seen so far
-  (``"observed_entrants"``) or last season's field re-rated with today's ratings
-  (``"previous_edition"``). Ratings for an event already under way are frozen at
-  its start date.
+  (``fieldBasis: "current_draw"``, simulated bracket seeded with the draw's
+  seeds), otherwise this season's entrants seen so far (``"observed_entrants"``)
+  or last season's field re-rated with today's ratings (``"previous_edition"``).
+  Ratings for an event already under way are frozen at its start date.
 
 Also writes ``tennis_model_metrics.json``: match-level walk-forward accuracy,
 log-loss and Brier against the previous Elo and the ranking favourite, plus
@@ -168,6 +170,19 @@ def win_probabilities(event_key: str, ratings: np.ndarray, ranks: np.ndarray, pa
     return probs[: len(probs) - (len(extra_ratings) if extra_ratings is not None else 0)]
 
 
+def ranking_favourite(group: pd.DataFrame) -> tuple[str | None, str | None]:
+    """Baseline pick for a field: the best-ranked player; for events with no
+    rankings (ESPN-sourced WTA seasons) the top seed, i.e. the best-ranked
+    entrant at the entry deadline. Returns (name, "ranking" | "top_seed")."""
+    for column, basis in (("rank", "ranking"), ("seed", "top_seed")):
+        if column not in group.columns:
+            continue
+        values = pd.to_numeric(group[column], errors="coerce")
+        if values.notna().any():
+            return str(group.at[values.idxmin(), "player_name"]), basis
+    return None, None
+
+
 def _hit_status(actual: str | None, ordered_names: list[str]) -> str:
     if actual and ordered_names and actual == ordered_names[0]:
         return "Top Pick"
@@ -216,10 +231,7 @@ def build_backtests(events: pd.DataFrame, params: dict[str, Any]) -> tuple[list[
         order = np.argsort(-probs, kind="mergesort")
         names = [str(group.at[index, "player_name"]) for index in order]
         actual = str(champion_rows.iloc[0]["player_name"])
-        ranks = pd.to_numeric(group["rank"], errors="coerce")
-        favourite = None
-        if ranks.notna().any():
-            favourite = str(group.at[int(ranks.idxmin()), "player_name"])
+        favourite, favourite_basis = ranking_favourite(group)
 
         full_field = []
         for position, index in enumerate(order, start=1):
@@ -254,6 +266,7 @@ def build_backtests(events: pd.DataFrame, params: dict[str, Any]) -> tuple[list[
                 "fieldSize": int(len(group)),
                 "rankingFavorite": favourite,
                 "rankingFavoriteWon": bool(favourite is not None and favourite == actual),
+                "rankingFavoriteBasis": favourite_basis,
                 "modelVersion": params.get("version"),
             }
         )
@@ -267,6 +280,7 @@ def build_backtests(events: pd.DataFrame, params: dict[str, Any]) -> tuple[list[
                 "top3": actual in names[:3],
                 "favourite_known": favourite is not None,
                 "favourite_hit": favourite is not None and favourite == actual,
+                "favourite_basis": favourite_basis,
                 "champion_probability": float(probs[champion_index]),
             }
         )
@@ -293,6 +307,7 @@ def tournament_metrics(scoring: list[dict]) -> list[dict]:
                 "rankingFavoriteEvents": int(len(known)),
                 "rankingFavoriteHits": int(known["favourite_hit"].sum()),
                 "rankingFavoriteRate": round(float(known["favourite_hit"].mean()), 4) if len(known) else None,
+                "rankingFavoriteBasis": sorted({str(basis) for basis in known.get("favourite_basis", []) if basis}),
                 "championLogLoss": round(float(-np.log(np.clip(group["champion_probability"], 1e-6, 1)).mean()), 4),
                 "uniformLogLoss": round(float(np.log(group["field"]).mean()), 4),
             }
@@ -556,11 +571,17 @@ def build_upcoming(
         placeholders = None
         if open_slots:
             placeholders = np.full(open_slots, float(np.percentile(frame["blend_elo"], 25)))
+        # Seed the simulated bracket like the real one: the published draw's seeds
+        # when ESPN shows them, else the latest ranking we hold.
+        seeding = pd.to_numeric(frame["rank"], errors="coerce").to_numpy(dtype=float)
+        draw_seeds = ((live or {}).get("seeds") or {}) if basis == "current_draw" else {}
+        if len(draw_seeds) >= 2:
+            seeding = np.array([float(draw_seeds.get(name, np.nan)) for name in display], dtype=float)
         board_key = f"{tour}:{row.tournament_name}:{start}:{basis}"
         probs = win_probabilities(
             board_key,
             frame["blend_elo"].to_numpy(dtype=float),
-            pd.to_numeric(frame["rank"], errors="coerce").to_numpy(dtype=float),
+            seeding,
             params,
             extra_ratings=placeholders,
         )
@@ -638,6 +659,8 @@ def build_metrics(tables: dict[str, Any], params: dict[str, Any], scoring: list[
         "notes": [
             "All probabilities are walk-forward: each uses only matches dated before it.",
             "Market odds are not used or shown for tennis.",
+            "ATP results 2025+ come from tennismylife; WTA results 2026+ from ESPN's scoreboard (tour-level events only), "
+            "where the ranking-favourite baseline is the top seed because ESPN publishes no rankings.",
         ],
     }
 

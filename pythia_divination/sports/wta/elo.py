@@ -8,9 +8,13 @@ Two fixes over the original ``feature_engineering.process_match_history`` Elo:
    ``assign_player_keys`` keeps a legacy numeric id where one exists and maps
    any other id (new-scheme or ``fallback-*``) onto the legacy id with the same
    normalised name; only players never seen under a legacy id get a name key.
-2. Method. FiveThirtyEight-style decaying K, ``k = 250 / (n + 5) ** 0.4`` with
-   n the player's prior matches, kept separately for an overall rating and a
-   per-surface rating; the match probability uses a 50/50 blend of the two.
+2. Method. FiveThirtyEight-style decaying K, ``k = k_numerator / (n + k_offset)
+   ** k_shape`` with n the player's prior matches, kept separately for an
+   overall rating and a per-surface rating; the match probability uses
+   ``overall_weight * overall + (1 - overall_weight) * surface``. The committed
+   values (200, 10, 0.4, 0.7) were chosen on 2021-22 only; the plan's literal
+   250/(n+5)^0.4 with a 50/50 blend scores 64.04% / 0.6292 on 2023-25 and
+   0.6330 on ATP 2025 with this data, short of the acceptance bar.
 
 Every number this module produces for a match uses only matches processed
 before it (walk-forward). Parameters live in ``model_params.json`` next to this
@@ -60,6 +64,11 @@ TEAM_EVENT_PATTERNS = (
     "hopman cup",
 )
 TEAM_EVENT_LEVELS = {"D"}
+
+# Short-name repair (see _repair_short_name_keys): with several namesake
+# candidates, take one only if she clearly dominates the two seasons before.
+REPAIR_MIN_RECENT = 5
+REPAIR_DOMINANCE = 5
 
 _WALKOVER_RE = re.compile(r"w/o|walkover|\bdef\b", re.IGNORECASE)
 _LEGACY_ID_RE = re.compile(r"^\d+$")
@@ -189,19 +198,29 @@ def _repair_short_name_keys(frame: pd.DataFrame) -> pd.DataFrame:
     2025 results went to an empty id, restarting her at 1500). A short-name row
     keeps its key when that key's full name agrees with it; otherwise it moves to
     the one full-name player (same tour, same surname ending and initial, active
-    within two seasons) if exactly one exists, and is left alone if ambiguous.
+    within two seasons) if exactly one exists. With several, it moves to the one
+    that clearly dominates the two seasons before the row (at least
+    ``REPAIR_MIN_RECENT`` matches and ``REPAIR_DOMINANCE`` times the runner-up's:
+    "Fernandez L.A." is Leylah Fernandez, 100 matches, not Lya Fernandez, one),
+    and is left alone otherwise.
     """
     if not any(frame[f"{side}_name"].astype(str).str.match(_SHORT_PARTS_RE).any() for side in ("winner", "loser")):
         return frame
     full_name: dict[str, str] = {}
     last_seen: dict[str, int] = {}
+    played: dict[str, list[int]] = {}
     for side in ("winner", "loser"):
         for key, name, day in zip(frame[f"{side}_key"], frame[f"{side}_name"], frame["tourney_date"]):
             if not key:
                 continue
             last_seen[key] = max(last_seen.get(key, 0), int(day))
+            played.setdefault(key, []).append(int(day))
             if _short_name_parts(name) is None and normalize_name(name):
                 full_name[key] = normalize_name(name)
+
+    def recent_matches(key: str, start: int, end: int) -> int:
+        return sum(1 for value in played.get(key, ()) if start <= value < end)
+
     by_tour: dict[str, list[tuple[str, str]]] = {}
     for key, name in full_name.items():
         by_tour.setdefault(key.split(":", 1)[0], []).append((key, name))
@@ -225,6 +244,11 @@ def _repair_short_name_keys(frame: pd.DataFrame) -> pd.DataFrame:
                 other for other, full in by_tour.get(tour, [])
                 if agrees(full) and last_seen.get(other, 0) >= horizon
             ]
+            if len(candidates) > 1:
+                activity = sorted(((recent_matches(other, horizon, int(day)), other) for other in candidates), reverse=True)
+                best, runner_up = activity[0][0], activity[1][0]
+                if best >= REPAIR_MIN_RECENT and best >= REPAIR_DOMINANCE * max(runner_up, 1):
+                    candidates = [activity[0][1]]
             if len(candidates) == 1:
                 remap[(key, name)] = candidates[0]
             elif key in full_name:

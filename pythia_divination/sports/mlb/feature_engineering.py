@@ -9,7 +9,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-_WIND_PATTERN = re.compile(r"(?P<mph>\\d+)\\s*mph(?:,\\s*(?P<direction>.*))?$", re.IGNORECASE)
+# Raw string: single backslashes. The doubled ones this used to have matched a literal
+# backslash, so weather_wind_mph was null on 100% of rows ("14 mph, Out To CF").
+_WIND_PATTERN = re.compile(r"(?P<mph>\d+)\s*mph(?:,\s*(?P<direction>.*))?$", re.IGNORECASE)
 _SAFE_TEAM_LOG_BASE_COLUMNS = {"days_rest", "games_played_prior", "win_pct_prior", "same_site_win_pct_last_10"}
 _SAFE_STARTER_LOG_BASE_COLUMNS = {"days_rest", "starts_prior", "starter_win_pct_prior"}
 
@@ -95,6 +97,11 @@ def prepare_games(
             else:
                 merged[column] = merged[detail_column]
 
+    # The `_detail` copies are merge leftovers (team/venue/pitcher IDs, names, dates that
+    # duplicate schedule columns). Numeric IDs among them were fed to the model as if they
+    # were measurements; drop them all once the backfill above has used them.
+    merged = merged.drop(columns=[column for column in merged.columns if column.endswith("_detail")])
+
     # Normalize the pitcher-ID dtype ONCE, here, rather than at each downstream join.
     # An all-null column arrives as object, and pandas refuses object-to-int64 merges
     # outright ("You are trying to merge on object and int64 columns"), which broke the
@@ -166,6 +173,14 @@ def prepare_games(
                 merged["official_date"],
                 merged[f"{side}_starter_profile_mlb_debut_date"],
             )
+            # The profile's current_age is the age when the profile was FETCHED (2026 for a
+            # 2021 game). Use the age on the game date; drop it when the birth date is unknown.
+            birth_column = f"{side}_starter_profile_birth_date"
+            age_column = f"{side}_starter_profile_current_age"
+            if birth_column in merged.columns:
+                merged[age_column] = _years_since(merged["official_date"], merged[birth_column])
+            elif age_column in merged.columns:
+                merged = merged.drop(columns=[age_column])
             merged[f"{side}_starter_profile_is_lefty"] = merged[f"{side}_starter_profile_pitch_hand"].eq("L").astype(float)
             merged[f"{side}_starter_profile_is_righty"] = merged[f"{side}_starter_profile_pitch_hand"].eq("R").astype(float)
 

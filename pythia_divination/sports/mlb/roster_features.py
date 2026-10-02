@@ -87,11 +87,86 @@ def _iter_raw_payload_paths(raw_dirs: list[Path]) -> list[Path]:
     return paths
 
 
+# The bullpen a team carries into a game, as known before first pitch: every reliever
+# who appeared for that team in the previous BULLPEN_LOOKBACK_DAYS days.
+BULLPEN_LOOKBACK_DAYS = 14
+
+
+def starting_lineup(team_box: dict[str, Any]) -> list[tuple[int, int]]:
+    """(slot, player_id) for the TRUE starting nine: boxscore players whose battingOrder
+    code ends in "00" (slot = code // 100). team_box["battingOrder"] is the END-of-game
+    order -- pinch hitters and defensive subs replace starters there (14.6% of entries),
+    which leaked the game script into the lineup features."""
+    starters: list[tuple[int, int]] = []
+    for player in (team_box.get("players") or {}).values():
+        code = str(player.get("battingOrder") or "")
+        if not code.isdigit() or not code.endswith("00"):
+            continue
+        player_id = _safe_int((player.get("person") or {}).get("id"))
+        if player_id is not None:
+            starters.append((int(code) // 100, player_id))
+    return sorted(starters)[:9]
+
+
+def build_pregame_bullpen_roster(
+    reliever_logs: pd.DataFrame,
+    team_games: pd.DataFrame,
+    reliever_profiles: dict[int, dict[str, Any]] | None = None,
+    *,
+    lookback_days: int = BULLPEN_LOOKBACK_DAYS,
+) -> pd.DataFrame:
+    """Pregame bullpen per team-game: relievers who pitched for the team in the
+    `lookback_days` days BEFORE the game date. Replaces team_box["bullpen"], which lists
+    the relievers who did NOT pitch in that game (a post-game fact: counts, closer saves
+    and leverage aggregates over it encoded how the game went -- 68.8% "accuracy")."""
+    columns = ["game_pk", "official_date", "season", "team_side", "team_id", "team_name", "reliever_id",
+               "reliever_name", "reliever_age", "reliever_weight", "reliever_pitch_hand", "reliever_mlb_debut_date",
+               "reliever_years_since_debut"]
+    if reliever_logs.empty or team_games.empty:
+        return pd.DataFrame(columns=columns)
+    reliever_profiles = reliever_profiles or {}
+    logs = reliever_logs[["team_id", "official_date", "reliever_id"]].copy()
+    logs["official_date"] = pd.to_datetime(logs["official_date"], errors="coerce")
+    logs = logs.dropna().sort_values(["team_id", "official_date"])
+    games = team_games.copy()
+    games["official_date"] = pd.to_datetime(games["official_date"], errors="coerce")
+    window = np.timedelta64(int(lookback_days), "D")
+    rows: list[dict[str, Any]] = []
+    by_team = {int(t): (g["official_date"].to_numpy(), g["reliever_id"].to_numpy()) for t, g in logs.groupby("team_id")}
+    for game in games.itertuples(index=False):
+        dates, ids = by_team.get(int(game.team_id), (None, None))
+        if dates is None or pd.isna(game.official_date):
+            continue
+        day = np.datetime64(game.official_date)
+        lo, hi = np.searchsorted(dates, day - window, side="left"), np.searchsorted(dates, day, side="left")
+        for reliever_id in dict.fromkeys(int(x) for x in ids[lo:hi]):
+            profile = reliever_profiles.get(reliever_id, {})
+            rows.append({
+                "game_pk": game.game_pk, "official_date": game.official_date, "season": game.season,
+                "team_side": game.team_side, "team_id": game.team_id, "team_name": game.team_name,
+                "reliever_id": reliever_id,
+                "reliever_name": profile.get("fullName"),
+                "reliever_age": _years_since(game.official_date, profile.get("birthDate")),
+                "reliever_weight": _safe_float(profile.get("weight")),
+                "reliever_pitch_hand": (profile.get("pitchHand") or {}).get("code"),
+                "reliever_mlb_debut_date": profile.get("mlbDebutDate"),
+                "reliever_years_since_debut": _years_since(game.official_date, profile.get("mlbDebutDate")),
+            })
+    return pd.DataFrame(rows, columns=columns)
+
+
 def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Parse saved MLB raw payloads into lineup and bullpen tables plus player logs."""
+    """Parse saved MLB raw payloads into lineup and bullpen tables plus player logs.
+
+    Only pregame-knowable rosters come out of here: the lineup is the true starting nine
+    (battingOrder codes ending in 00) and the bullpen is the relievers who pitched for the
+    team in the previous BULLPEN_LOOKBACK_DAYS days. Neither team_box["battingOrder"]
+    (end-of-game order) nor team_box["bullpen"] (relievers who did NOT pitch) is read.
+    Ages are at the game date (from birthDate), not the payload's fetch-time currentAge."""
     lineup_rows: list[dict[str, Any]] = []
     batter_logs: list[dict[str, Any]] = []
-    bullpen_rows: list[dict[str, Any]] = []
+    team_games: list[dict[str, Any]] = []
+    reliever_profiles: dict[int, dict[str, Any]] = {}
     reliever_logs: list[dict[str, Any]] = []
 
     for payload_path in _iter_raw_payload_paths(raw_dirs):
@@ -118,16 +193,10 @@ def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFr
                 continue
 
             players = team_box.get("players", {})
-            lineup_ids: list[int] = []
-            seen_lineup_ids: set[int] = set()
-            for raw_player_id in team_box.get("battingOrder", []):
-                player_id = _safe_int(raw_player_id)
-                if player_id is None or player_id in seen_lineup_ids:
-                    continue
-                seen_lineup_ids.add(player_id)
-                lineup_ids.append(player_id)
+            team_games.append({"game_pk": game_pk, "official_date": official_date, "season": season,
+                               "team_side": side, "team_id": team_id, "team_name": team_name})
 
-            for slot, player_id in enumerate(lineup_ids[:9], start=1):
+            for slot, player_id in starting_lineup(team_box):
                 profile = game_players.get(f"ID{player_id}", {})
                 years_since_debut = _years_since(official_date, profile.get("mlbDebutDate"))
                 lineup_rows.append(
@@ -141,38 +210,12 @@ def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFr
                         "lineup_slot": slot,
                         "batter_id": player_id,
                         "batter_name": profile.get("fullName"),
-                        "batter_age": _safe_float(profile.get("currentAge")),
+                        "batter_age": _years_since(official_date, profile.get("birthDate")),
                         "batter_weight": _safe_float(profile.get("weight")),
                         "batter_bat_side": profile.get("batSide", {}).get("code"),
                         "batter_position": profile.get("primaryPosition", {}).get("abbreviation"),
                         "batter_mlb_debut_date": profile.get("mlbDebutDate"),
                         "batter_years_since_debut": years_since_debut,
-                    }
-                )
-
-            seen_bullpen_ids: set[int] = set()
-            for raw_pitcher_id in team_box.get("bullpen", []):
-                pitcher_id = _safe_int(raw_pitcher_id)
-                if pitcher_id is None or pitcher_id in seen_bullpen_ids:
-                    continue
-                seen_bullpen_ids.add(pitcher_id)
-                profile = game_players.get(f"ID{pitcher_id}", {})
-                years_since_debut = _years_since(official_date, profile.get("mlbDebutDate"))
-                bullpen_rows.append(
-                    {
-                        "game_pk": game_pk,
-                        "official_date": official_date,
-                        "season": season,
-                        "team_side": side,
-                        "team_id": team_id,
-                        "team_name": team_name,
-                        "reliever_id": pitcher_id,
-                        "reliever_name": profile.get("fullName"),
-                        "reliever_age": _safe_float(profile.get("currentAge")),
-                        "reliever_weight": _safe_float(profile.get("weight")),
-                        "reliever_pitch_hand": profile.get("pitchHand", {}).get("code"),
-                        "reliever_mlb_debut_date": profile.get("mlbDebutDate"),
-                        "reliever_years_since_debut": years_since_debut,
                     }
                 )
 
@@ -225,7 +268,7 @@ def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFr
                                 "obp_like": obp_like,
                                 "slg_like": slg_like,
                                 "ops_like": ops_like,
-                                "current_age": _safe_float(profile.get("currentAge")),
+                                "current_age": _years_since(official_date, profile.get("birthDate")),
                                 "years_since_debut": years_since_debut,
                                 "bat_side_code": profile.get("batSide", {}).get("code"),
                             }
@@ -237,7 +280,10 @@ def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFr
                     innings_pitched = pitching.get("inningsPitched")
                     outs_recorded = _innings_to_outs(innings_pitched)
                     pitches_thrown = _safe_int(pitching.get("pitchesThrown") or pitching.get("numberOfPitches")) or 0
-                    if games_started <= 0 and (outs_recorded or 0) > 0:
+                    batters_faced = _safe_int(pitching.get("battersFaced")) or 0
+                    # A relief outing that recorded no out (a blow-up) still counts.
+                    if games_started <= 0 and ((outs_recorded or 0) > 0 or batters_faced > 0):
+                        reliever_profiles[player_id] = profile
                         hits_allowed = _safe_int(pitching.get("hits")) or 0
                         walks = _safe_int(pitching.get("baseOnBalls")) or 0
                         strikeouts = _safe_int(pitching.get("strikeOuts")) or 0
@@ -263,11 +309,11 @@ def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFr
                                 "home_runs_allowed": home_runs_allowed,
                                 "pitches_thrown": pitches_thrown,
                                 "strikes": strikes,
-                                "batters_faced": _safe_int(pitching.get("battersFaced")) or 0,
+                                "batters_faced": batters_faced,
                                 "whip": _safe_divide(hits_allowed + walks, innings_value),
                                 "era_like": _safe_divide(earned_runs * 9.0, innings_value),
                                 "strike_pct": _safe_divide(strikes, pitches_thrown),
-                                "current_age": _safe_float(profile.get("currentAge")),
+                                "current_age": _years_since(official_date, profile.get("birthDate")),
                                 "years_since_debut": years_since_debut,
                                 "pitch_hand_code": profile.get("pitchHand", {}).get("code"),
                                 "season_saves": _safe_int(player.get("seasonStats", {}).get("pitching", {}).get("saves")) or 0,
@@ -277,11 +323,13 @@ def extract_roster_tables(raw_dirs: list[Path]) -> tuple[pd.DataFrame, pd.DataFr
                             }
                         )
 
+    reliever_frame = pd.DataFrame(reliever_logs)
+    bullpen_roster = build_pregame_bullpen_roster(reliever_frame, pd.DataFrame(team_games), reliever_profiles)
     return (
         pd.DataFrame(lineup_rows),
         pd.DataFrame(batter_logs),
-        pd.DataFrame(bullpen_rows),
-        pd.DataFrame(reliever_logs),
+        bullpen_roster,
+        reliever_frame,
     )
 
 

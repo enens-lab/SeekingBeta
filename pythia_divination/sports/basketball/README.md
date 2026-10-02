@@ -1,6 +1,31 @@
 # Basketball Modeling Foundation
 
-This package is the first SeekingBeta.AI basketball pipeline for NBA and WNBA.
+This package is the SeekingBeta.AI basketball pipeline for NBA and WNBA.
+
+## Served model (2026-10-02, plan items P1-4 / P1-12)
+
+`scripts/export_basketball_frontend_data.py` serves `honest_model.py`, refit at every bake:
+
+- **Win probability:** Elo with margin of victory (`elo.py`; K=16 NBA / 30 WNBA, home
+  advantage 60, 0.75 season carry-over) as a fixed log-odds offset, plus an L1 logistic
+  regression over same-season box-score form, rotation/availability, true rest and
+  back-to-back from local tip dates (`results.py`, capped at 4 days) and a postseason
+  flag. A Platt map fitted only on earlier walk-forward predictions, shrunk toward the
+  identity, calibrates it. The torch MLP / HGB artifacts are no longer read.
+- **Spread / total / team totals (model only, `market: null`):** opponent-adjusted
+  offense/defense ratings (`ratings.py`) blended 50/50 with an Elo+rest ridge for the
+  margin; normal distributions with a rolling out-of-sample sigma.
+- **History:** a 14-day walk-forward (`recordBasis: "simulated"`); every game is graded by
+  a model fitted only on earlier dates. NBA 2022-24 / WNBA 2024 tuned the parameters, so
+  they are predicted (to seed the calibrator and sigma) but never published.
+- **Inputs:** results, Elo and rest come from the normalized tables plus the live CDN
+  schedule and freshly fetched boxscores. `backfill_history.py` appends archived seasons,
+  play-in, playoff and cup games without dropping existing rows.
+- **Parameters:** `model_params.json` (committed). **Evidence:** `walk_forward_metrics.json`,
+  regenerated with `python -m sports.basketball.evaluate_walk_forward --market-file <closing lines> --out ...`.
+- **Leakage guard:** the schedule/boxscore `wins`/`losses` columns are POST-game records
+  (opening night shows 1-0 / 0-1). They and anything derived from them, such as
+  `matchup_diff_wins`, never enter the model.
 
 ## What it does
 - pulls the current live season schedule from the official NBA/WNBA schedule feeds

@@ -1,55 +1,82 @@
+"""Export the NBA/WNBA boards (upcoming + honest history + model-only markets).
+
+What changed (2026-10-02, plan items P1-4 and P1-12):
+
+* Served model: Elo-MOV prior + L1-regularized logistic regression over box-score
+  form, true rest/back-to-back and postseason flags (sports/basketball/
+  honest_model.py), refit at every export on every completed game before today.
+  The torch MLP / HistGradientBoosting artifacts are no longer read.
+* The served probability goes through a Platt map fitted only on earlier
+  out-of-sample (walk-forward) predictions and shrunk toward the identity.
+* History boards come from a 14-day walk-forward: each graded game was predicted by
+  a model (and calibrator) fitted only on games from earlier dates, and the board
+  records that cutoff (``modelTrainedThrough``) plus ``recordBasis: "simulated"``.
+  Seasons whose games tuned the hyper-parameters (NBA 2022-24, WNBA 2024) are
+  predicted too but never published. The old backtests were the HGB validation file
+  and the "completed" boards regraded calendar-year games with the current model,
+  including 167 games inside its training window (the published 72.6%).
+* Everything that changes daily (results, Elo, rest, form) is rebuilt from data this
+  export fetches: the live CDN schedule (whole current season with scores) plus the
+  boxscores of completed games missing from the S3-synced tables.
+* Upcoming boards carry a ``markets`` block (model fair spread both sides, total,
+  team totals, moneyline; ``basis: "model"``, ``market: null``, never an edge). Each
+  bake appends them to the market pick log and regrades everything logged so far
+  into basketball_market_history.json / basketball_market_summary.json. Market
+  results never touch hitStatus / seasonSummary.
+"""
+
 from __future__ import annotations
 
 import json
-import os
 import logging
+import os
 import sys
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import joblib
 import numpy as np
 import pandas as pd
-
-try:
-    import torch
-except Exception:  # pragma: no cover - torch is optional at runtime
-    torch = None  # type: ignore[assignment]
 
 DIV_ROOT = Path(__file__).resolve().parents[1]
 if str(DIV_ROOT) not in sys.path:
     sys.path.insert(0, str(DIV_ROOT))
 
-from sports.basketball.build_training_dataset import DEFAULT_BASKETBALL_DATA_ROOT
-from sports.basketball.client import BasketballStatsClient, flatten_schedule
-from sports.table_dtypes import coerce_table_dtypes
-from sports.basketball.constants import LEAGUE_CONFIGS
-from sports.basketball.feature_engineering import (
-    add_matchup_differentials,
-    attach_pregame_team_features,
-    prepare_games,
+from sports import market_log, markets  # noqa: E402
+from sports.basketball import honest_model as hm  # noqa: E402
+from sports.basketball.backfill_history import (  # noqa: E402
+    COMPETITIVE_TYPES,
+    append_to_tables,
+    bundles_to_frames,
+    canonical_game_id,
+    fetch_final_games,
+    game_type_from_id,
 )
-from sports.basketball.rotation_features import (
-    attach_expected_rotation_features,
-    build_projected_rotation_map,
-)
-if torch is not None:
-    from sports.basketball.torch_model import BasketballTorchModel
-from sports.pga.storage import read_preferred_table
+from sports.basketball.build_training_dataset import DEFAULT_BASKETBALL_DATA_ROOT  # noqa: E402
+from sports.basketball.client import BasketballStatsClient, flatten_schedule  # noqa: E402
+from sports.basketball.constants import LEAGUE_CONFIGS  # noqa: E402
+from sports.basketball.results import LOCAL_TZ, local_dates  # noqa: E402
+from sports.basketball.rotation_features import build_projected_rotation_map  # noqa: E402
 
 PROJ_ROOT = Path(__file__).resolve().parents[2]
 BASKETBALL_DATA_ROOT = DEFAULT_BASKETBALL_DATA_ROOT
 NORMALIZED_DIR = BASKETBALL_DATA_ROOT / "normalized"
 FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
-ARTIFACTS_ROOT = DIV_ROOT / "artifacts" / "basketball_baseline"
-TORCH_ARTIFACTS_ROOT = DIV_ROOT / "artifacts" / "basketball_torch"
 UPCOMING_LOOKAHEAD_DAYS = 7
 MAX_AVAILABLE_DATES = 7
+LEAGUES = ("nba", "wnba")
+MARKET_SPORT_KEY = "basketball"
+MARKET_HISTORY_CAP = 300
+# History boards keep lineups only for the newest N (the BFF serves 150); older
+# boards keep the keys with empty lineups so the file stays a few MB, not ~90.
+HISTORY_LINEUP_BOARDS = int(os.getenv("BASKETBALL_HISTORY_LINEUP_BOARDS", "200"))
 logger = logging.getLogger(__name__)
-_TABLE_CACHE: dict[tuple[str, tuple[str, ...]], tuple[tuple[tuple[str, float], ...], pd.DataFrame]] = {}
-_PREDICTOR_CACHE: dict[tuple[str, str], tuple[tuple[tuple[str, float], ...], dict[str, Any]]] = {}
 
+SEASON_OF = {"nba": market_log.season_cross_year(9), "wnba": market_log.season_calendar}
+
+
+# ── small helpers (unchanged board formatting) ───────────────────────────────
 
 def _to_datetime_mixed(values: object) -> pd.Series | pd.Timestamp:
     return pd.to_datetime(values, errors="coerce", format="mixed")
@@ -60,174 +87,31 @@ def _display_tour(league: str) -> str:
 
 
 def _optional_text(value: object) -> str | None:
-    if value is None or pd.isna(value):
+    if value is None:
         return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
     text = str(value).strip()
     return text or None
 
 
-def _paths_signature(paths: list[Path]) -> tuple[tuple[str, float], ...]:
-    return tuple((str(path), path.stat().st_mtime if path.exists() else -1.0) for path in paths)
-
-
-def _load_table_optional(*candidates: Path) -> pd.DataFrame:
-    existing = [candidate for candidate in candidates if candidate.exists()]
-    if not existing:
-        return pd.DataFrame()
-    try:
-        frame = read_preferred_table(*candidates)
-    except (FileNotFoundError, ImportError):
-        csv_candidates = [candidate for candidate in candidates if candidate.suffix == ".csv" and candidate.exists()]
-        if not csv_candidates:
-            return pd.DataFrame()
-        frame = pd.read_csv(csv_candidates[0], low_memory=False)
-    if "game_id" in frame.columns:
-        frame["game_id"] = frame["game_id"].astype(str)
-    if "official_date" in frame.columns:
-        frame["official_date"] = _to_datetime_mixed(frame["official_date"])
-    if "season_display" in frame.columns:
-        frame["season_display"] = frame["season_display"].astype(str)
-    # Normalize the remaining key/id/date dtypes once at load so joins never hit a
-    # dtype clash (see sports/table_dtypes.py).
-    return coerce_table_dtypes(frame, table=existing[0].stem)
-
-
-def _load_league_table(stem: str, leagues: list[str]) -> pd.DataFrame:
-    candidates = [
-        candidate
-        for league in leagues
-        for candidate in (
-            NORMALIZED_DIR / f"{stem}_{league}_latest.parquet",
-            NORMALIZED_DIR / f"{stem}_{league}_latest.csv",
-        )
-    ]
-    cache_key = (stem, tuple(leagues))
-    signature = _paths_signature(candidates)
-    cached = _TABLE_CACHE.get(cache_key)
-    if cached and cached[0] == signature:
-        return cached[1].copy(deep=False)
-
-    frames: list[pd.DataFrame] = []
-    for league in leagues:
-        frame = _load_table_optional(
-            NORMALIZED_DIR / f"{stem}_{league}_latest.parquet",
-            NORMALIZED_DIR / f"{stem}_{league}_latest.csv",
-        )
-        if not frame.empty:
-            frames.append(frame)
-    if not frames:
-        return pd.DataFrame()
-    combined = pd.concat(frames, ignore_index=True)
-    if "game_id" in combined.columns:
-        combined["game_id"] = combined["game_id"].astype(str)
-    if "official_date" in combined.columns:
-        combined["official_date"] = _to_datetime_mixed(combined["official_date"])
-    _TABLE_CACHE[cache_key] = (signature, combined)
-    return combined.copy(deep=False)
-
-
 def _safe_float(value: object) -> float | None:
-    if value is None or pd.isna(value):
+    if value is None:
         return None
     try:
+        if pd.isna(value):
+            return None
         return float(value)
     except (TypeError, ValueError):
         return None
 
 
-def _resolve_home_win(row: object) -> int | None:
-    """Ground-truth home_win label for a scored game, or None if unknowable.
-
-    This used to be read as ``int(getattr(row, "home_win", 0) or 0)``, which
-    turned an ABSENT label into "the away team won". A pandas merge between two
-    frames that both carry `home_win` suffixes it to `home_win_x`/`home_win_y`,
-    leaving no plain column and silently tripping that default -- so every
-    published basketball accuracy figure was really measuring "how often did the
-    model pick the away team". Returning None lets callers skip a game instead of
-    inventing a result.
-    """
-    for name in ("home_win", "home_win_x", "home_win_y"):
-        value = _safe_float(getattr(row, name, None))
-        if value is not None:
-            return int(value)
-
-    home_score = _safe_float(getattr(row, "home_score", None))
-    away_score = _safe_float(getattr(row, "away_score", None))
-    if home_score is not None and away_score is not None and home_score != away_score:
-        return int(home_score > away_score)
-    return None
-
-
 def _safe_int(value: object) -> int | None:
-    if value is None or pd.isna(value):
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _sigmoid(values: pd.Series) -> pd.Series:
-    clipped = values.clip(-6.0, 6.0)
-    return 1.0 / (1.0 + np.exp(-clipped))
-
-
-def _load_torch_predictor(league: str) -> dict[str, Any] | None:
-    if torch is None:
-        return None
-
-    model_dir = TORCH_ARTIFACTS_ROOT / league / "home_win"
-    model_path = model_dir / "model.pt"
-    imputer_path = model_dir / "imputer.joblib"
-    scaler_path = model_dir / "scaler.joblib"
-    required = [model_path, imputer_path, scaler_path]
-    if not all(path.exists() for path in required):
-        return None
-
-    cache_key = ("torch", league)
-    signature = _paths_signature(required)
-    cached = _PREDICTOR_CACHE.get(cache_key)
-    if cached and cached[0] == signature:
-        return cached[1]
-
-    checkpoint = torch.load(model_path, map_location="cpu")
-    model = BasketballTorchModel(
-        input_dim=int(checkpoint["input_dim"]),
-        hidden_width=int(checkpoint["hidden_width"]),
-        dropout=float(checkpoint["dropout"]),
-    )
-    model.load_state_dict(checkpoint["state_dict"])
-    model.eval()
-    predictor = {
-        "model": model,
-        "feature_columns": list(checkpoint["feature_columns"]),
-        "imputer": joblib.load(imputer_path),
-        "scaler": joblib.load(scaler_path),
-    }
-    _PREDICTOR_CACHE[cache_key] = (signature, predictor)
-    return predictor
-
-
-def _load_baseline_predictor(league: str) -> dict[str, Any] | None:
-    model_dir = ARTIFACTS_ROOT / league / "hist_gradient_boosting" / "home_win"
-    model_path = model_dir / "model.joblib"
-    feature_columns_path = model_dir / "feature_columns.csv"
-    required = [model_path, feature_columns_path]
-    if not all(path.exists() for path in required):
-        return None
-
-    cache_key = ("baseline", league)
-    signature = _paths_signature(required)
-    cached = _PREDICTOR_CACHE.get(cache_key)
-    if cached and cached[0] == signature:
-        return cached[1]
-
-    predictor = {
-        "model": joblib.load(model_path),
-        "feature_columns": pd.read_csv(feature_columns_path)["feature"].tolist(),
-    }
-    _PREDICTOR_CACHE[cache_key] = (signature, predictor)
-    return predictor
+    number = _safe_float(value)
+    return int(number) if number is not None else None
 
 
 def _date_key(value: object) -> str | None:
@@ -251,29 +135,11 @@ def _date_label(value: str) -> str:
     return timestamp.strftime("%a, %b %d").replace(" 0", " ")
 
 
-def _build_available_dates(schedule: pd.DataFrame) -> list[dict[str, Any]]:
-    if schedule.empty:
-        return []
-    rows: list[dict[str, Any]] = []
-    date_counts = (
-        schedule.assign(date_key=schedule["official_date"].map(_date_key))
-        .dropna(subset=["date_key"])
-        .groupby("date_key")
-        .size()
-        .sort_index()
-    )
-    for date_key, count in date_counts.head(MAX_AVAILABLE_DATES).items():
-        rows.append({"dateKey": str(date_key), "label": _date_label(str(date_key)), "gameCount": int(count)})
-    return rows
-
-
-def _resolve_selected_date(available_dates: list[dict[str, Any]], selected_date: str | None) -> str | None:
-    if not available_dates:
+def _iso_utc(value: object) -> str | None:
+    ts = _to_datetime_mixed(value)
+    if pd.isna(ts):
         return None
-    valid = {row["dateKey"] for row in available_dates}
-    if selected_date and selected_date in valid:
-        return selected_date
-    return available_dates[0]["dateKey"]
+    return pd.Timestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _team_logo_url(league: str, team_id: int | None) -> str | None:
@@ -292,23 +158,23 @@ def _player_headshot_url(league: str, player_id: int | None) -> str | None:
     return f"https://cdn.nba.com/headshots/nba/latest/1040x760/{int(player_id)}.png"
 
 
-def _format_record_prior(games_played: float | None, win_pct: float | None) -> str | None:
-    if games_played is None or win_pct is None or games_played <= 0:
+def _format_record(wins: float | None, games: float | None) -> str | None:
+    if games is None or wins is None or games <= 0:
         return None
-    wins = int(round(games_played * win_pct))
-    wins = max(0, min(wins, int(round(games_played))))
-    losses = max(int(round(games_played)) - wins, 0)
-    return f"{wins}-{losses}"
+    w = int(round(wins))
+    return f"{w}-{int(round(games)) - w}"
 
 
 def _format_recent_form(row: Any, side: str) -> str | None:
     wins_rate = _safe_float(getattr(row, f"{side}_team_won_avg_last_5", np.nan))
     net_rating = _safe_float(getattr(row, f"{side}_team_net_rating_est_avg_last_10", np.nan))
     points = _safe_float(getattr(row, f"{side}_team_points_scored_avg_last_5", np.nan))
+    games = _safe_float(getattr(row, f"{side}_team_games_played_prior", np.nan)) or 0
     parts: list[str] = []
     if wins_rate is not None:
-        wins = max(0, min(5, int(round(wins_rate * 5))))
-        parts.append(f"{wins}-{5 - wins} last 5")
+        n = int(min(5, games)) or 5
+        wins = max(0, min(n, int(round(wins_rate * n))))
+        parts.append(f"{wins}-{n - wins} last {n}")
     if net_rating is not None:
         parts.append(f"{net_rating:+.1f} net")
     if points is not None:
@@ -345,12 +211,11 @@ def _build_team_details(row: Any, side: str) -> dict[str, Any]:
     team_id = _safe_int(getattr(row, f"{side}_team_id"))
     return {
         "teamId": team_id,
-        "abbreviation": _optional_text(getattr(row, f"{side}_team_tricode", None)),
+        "abbreviation": _optional_text(getattr(row, f"{side}_tricode", None)),
         "logoUrl": _team_logo_url(league, team_id),
-        "recordPrior": _format_record_prior(
-            _safe_float(getattr(row, f"{side}_team_games_played_prior", np.nan)),
-            _safe_float(getattr(row, f"{side}_team_win_pct_prior", np.nan)),
-        ),
+        # Same-season record before tip (from results, so it counts every game played).
+        "recordPrior": _format_record(_safe_float(getattr(row, f"{side}_wins_before", np.nan)),
+                                      _safe_float(getattr(row, f"{side}_games_before", np.nan))),
         "recentForm": _format_recent_form(row, side),
         "availabilitySummary": _format_availability_summary(row, side),
         "lineupContinuity": _format_lineup_continuity(row, side),
@@ -359,12 +224,18 @@ def _build_team_details(row: Any, side: str) -> dict[str, Any]:
 
 
 def _build_prediction_team_profile(row: Any, side: str) -> dict[str, Any]:
+    wins = _safe_float(getattr(row, f"{side}_wins_before", np.nan))
+    games = _safe_float(getattr(row, f"{side}_games_before", np.nan))
+    win_pct = (wins / games) if wins is not None and games else None
+    net = _safe_float(getattr(row, f"{side}_team_net_rating_est_avg_last_10", np.nan))
+    core = _safe_float(getattr(row, f"{side}_availability_core_availability_rating", np.nan))
+    # "--" when there is no same-season history yet (season openers), not a fake 0.
     return {
         "subtitle": _format_recent_form(row, side),
         "stats": [
-            {"label": "Win %", "value": f"{(_safe_float(getattr(row, f'{side}_team_win_pct_prior', np.nan)) or 0) * 100:.0f}%"},
-            {"label": "Net L10", "value": f"{(_safe_float(getattr(row, f'{side}_team_net_rating_est_avg_last_10', np.nan)) or 0):+.1f}"},
-            {"label": "Core Ready", "value": f"{((_safe_float(getattr(row, f'{side}_availability_core_availability_rating', np.nan)) or 0) * 100):.0f}%"},
+            {"label": "Win %", "value": f"{win_pct * 100:.0f}%" if win_pct is not None else "--"},
+            {"label": "Net L10", "value": f"{net:+.1f}" if net is not None else "--"},
+            {"label": "Core Ready", "value": f"{core * 100:.0f}%" if core is not None else "--"},
         ],
     }
 
@@ -392,481 +263,656 @@ def _historical_player_radar(row: Any) -> list[dict[str, float]]:
     ]
 
 
-def _load_live_schedule(
-    client: BasketballStatsClient,
-    *,
-    include_completed: bool = False,
-    calendar_year: int | None = None,
-) -> pd.DataFrame:
-    def _cached_schedule_payload(league: str) -> dict[str, Any] | None:
-        pattern = f"schedule_{league}_{LEAGUE_CONFIGS[league].current_season}.json"
-        raw_root = BASKETBALL_DATA_ROOT / "raw"
-        candidates = sorted(raw_root.glob(f"*/{pattern}"), reverse=True)
-        for candidate in candidates:
-            try:
-                payload = json.loads(candidate.read_text())
-            except Exception:
-                continue
-            if isinstance(payload, dict):
-                return payload
-        return None
+def _historical_lineup(frame: pd.DataFrame | None) -> list[dict[str, Any]]:
+    if frame is None or frame.empty:
+        return []
+    side_frame = frame.copy()
+    side_frame["starter_numeric"] = side_frame["starter"].fillna(False).astype(bool).astype(int)
+    side_frame["minutes_numeric"] = pd.to_numeric(side_frame["minutes"], errors="coerce").fillna(0.0)
+    side_frame["points_numeric"] = pd.to_numeric(side_frame["points"], errors="coerce").fillna(0.0)
+    side_frame = side_frame.sort_values(["starter_numeric", "minutes_numeric", "points_numeric"], ascending=[False, False, False]).head(9)
+    entries: list[dict[str, Any]] = []
+    for index, row in enumerate(side_frame.itertuples(index=False), start=1):
+        field_goal_pct = _safe_float(getattr(row, "field_goal_pct", None))
+        entries.append({
+            "playerId": _safe_int(getattr(row, "player_id", None)),
+            "playerName": getattr(row, "player_name"),
+            "lineupSlot": index,
+            "position": _optional_text(getattr(row, "position", None)),
+            "performanceSummary": f"{int(_safe_float(getattr(row, 'points', 0)) or 0)} pts | {(_safe_float(getattr(row, 'minutes', 0)) or 0):.1f} min",
+            "profile": {
+                "imageUrl": _player_headshot_url(str(getattr(row, "league")), _safe_int(getattr(row, "player_id", None))),
+                "subtitle": "Starter" if bool(getattr(row, "starter", False)) else "Rotation",
+                "stats": [
+                    {"label": "Pts", "value": str(int(_safe_float(getattr(row, "points", 0)) or 0))},
+                    {"label": "FG%", "value": f"{field_goal_pct * 100:.1f}%" if field_goal_pct is not None else "--"},
+                    {"label": "Ast", "value": str(int(_safe_float(getattr(row, "assists", 0)) or 0))},
+                    {"label": "Reb", "value": str(int(_safe_float(getattr(row, "rebounds_total", 0)) or 0))},
+                ],
+            },
+            "radarMetrics": _historical_player_radar(row),
+        })
+    return entries
 
-    frames: list[pd.DataFrame] = []
-    today = datetime.now(timezone.utc).date()
-    max_date = today + timedelta(days=UPCOMING_LOOKAHEAD_DAYS)
-    target_year = calendar_year or today.year
-    for league in ("nba", "wnba"):
+
+# ── inputs: tables + live schedule + fresh boxscores ─────────────────────────
+
+def _today_local() -> pd.Timestamp:
+    """Bake date in US Eastern (games are scheduled on ET dates). BASKETBALL_EXPORT_TODAY
+    (YYYY-MM-DD) overrides it for dry runs / tests."""
+    override = os.getenv("BASKETBALL_EXPORT_TODAY")
+    if override:
+        return pd.Timestamp(override).normalize()
+    return pd.Timestamp.now(tz=LOCAL_TZ).tz_localize(None).normalize()
+
+
+def _cached_schedule_payload(league: str) -> dict[str, Any] | None:
+    pattern = f"schedule_{league}_{LEAGUE_CONFIGS[league].current_season}.json"
+    for candidate in sorted((BASKETBALL_DATA_ROOT / "raw").glob(f"*/{pattern}"), reverse=True):
         try:
-            payload = client.get_schedule(league)
-        except Exception as exc:
-            payload = _cached_schedule_payload(league)
-            if payload is not None:
-                logger.warning("Falling back to cached %s schedule snapshot for live Basketball export: %s", league.upper(), exc)
-                schedule = flatten_schedule(payload, league=league)
-            else:
-                schedule = _load_league_table("schedule", [league])
-                if schedule.empty:
-                    logger.warning("Unable to load live %s schedule and no cached snapshot was found: %s", league.upper(), exc)
-                    continue
-                logger.warning("Falling back to normalized %s schedule table for live Basketball export: %s", league.upper(), exc)
-        else:
-            schedule = flatten_schedule(payload, league=league)
-        if schedule.empty:
+            payload = json.loads(candidate.read_text())
+        except Exception:
             continue
-        schedule["official_date"] = _to_datetime_mixed(schedule["official_date"])
-        # Regular season + play-in + playoffs (game-id type digits 02/05/04; NBA
-        # prefixes 0xx, WNBA 1xx). Regular-season-only dropped the whole WNBA postseason
-        # (19 games in Oct 2026). Preseason (x01) and All-Star (x03) stay out: rested
-        # starters make a model trained on real games mislead.
-        type_digits = schedule["game_id"].astype(str).str[1:3]
-        schedule = schedule.loc[(schedule["is_regular_season"] == True) | type_digits.isin(["04", "05"])].copy()  # noqa: E712
-        # Playoff slots whose matchup is not decided yet arrive as team id 0 with
-        # blank names ("TBD @ TBD"); they produced a board titled " at ".
-        known = pd.Series(True, index=schedule.index)
-        for side in ("away", "home"):
-            if f"{side}_team_id" in schedule.columns:
-                known &= pd.to_numeric(schedule[f"{side}_team_id"], errors="coerce").fillna(0) > 0
-            if f"{side}_team_name" in schedule.columns:
-                known &= schedule[f"{side}_team_name"].fillna("").astype(str).str.strip().ne("")
-        schedule = schedule.loc[known].copy()
-        if include_completed:
-            schedule = schedule.loc[
-                (schedule["status_code"] == 3)
-                & schedule["official_date"].notna()
-                & (schedule["official_date"].dt.year == target_year)
-                & (schedule["official_date"].dt.date <= today)
-            ].copy()
-        else:
-            schedule = schedule.loc[
-                (schedule["status_code"] != 3)
-                & (schedule["official_date"].dt.date >= today)
-                & (schedule["official_date"].dt.date <= max_date)
-            ].copy()
-        if not schedule.empty:
-            frames.append(schedule)
-    if not frames:
-        return pd.DataFrame()
-    return pd.concat(frames, ignore_index=True).sort_values(["official_date", "league", "game_id"]).reset_index(drop=True)
+        if isinstance(payload, dict):
+            return payload
+    return None
 
 
-def _predict_games(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        return frame
-
-    scored_frames: list[pd.DataFrame] = []
-    for league, group in frame.groupby("league", sort=False):
-        inference = group.copy()
-        torch_predictor = _load_torch_predictor(league)
-        if torch_predictor is not None:
-            try:
-                x = (
-                    inference.reindex(columns=torch_predictor["feature_columns"])
-                    .apply(pd.to_numeric, errors="coerce")
-                    .replace([np.inf, -np.inf], np.nan)
-                )
-                imputed = torch_predictor["imputer"].transform(x)
-                scaled = torch_predictor["scaler"].transform(imputed).astype(np.float32, copy=False)
-                tensor = torch.from_numpy(scaled)
-                with torch.no_grad():
-                    probabilities = torch.sigmoid(torch_predictor["model"](tensor)).cpu().numpy()
-                inference["home_win_probability"] = probabilities
-                inference["away_win_probability"] = 1.0 - probabilities
-                inference["prediction_source"] = f"{league}_torch_model"
-                scored_frames.append(inference)
-                continue
-            except Exception:
-                logger.exception("Basketball torch inference failed for %s; falling back to baseline model.", league.upper())
-
-        baseline_predictor = _load_baseline_predictor(league)
-        if baseline_predictor is not None:
-            try:
-                x = (
-                    inference.reindex(columns=baseline_predictor["feature_columns"])
-                    .apply(pd.to_numeric, errors="coerce")
-                    .replace([np.inf, -np.inf], np.nan)
-                )
-                probabilities = baseline_predictor["model"].predict_proba(x)[:, 1]
-                inference["home_win_probability"] = probabilities
-                inference["away_win_probability"] = 1.0 - probabilities
-                inference["prediction_source"] = f"{league}_baseline_model"
-                scored_frames.append(inference)
-                continue
-            except Exception:
-                logger.exception("Basketball baseline inference failed for %s; falling back to heuristic scorer.", league.upper())
-
-        score = pd.Series(0.0, index=inference.index, dtype=float)
-        weighted_columns = [
-            ("matchup_diff_win_pct_prior", 1.2),
-            ("matchup_diff_net_rating_est_avg_last_10", 0.35),
-            ("availability_diff_core_availability_rating", 1.0),
-            ("availability_diff_expected_rotation_points_total", 0.015),
-            ("home_rest_advantage", 0.18),
-        ]
-        for column, weight in weighted_columns:
-            if column in inference.columns:
-                score += pd.to_numeric(inference[column], errors="coerce").fillna(0.0) * weight
-        probabilities = _sigmoid(score)
-        inference["home_win_probability"] = probabilities
-        inference["away_win_probability"] = 1.0 - probabilities
-        inference["prediction_source"] = f"{league}_heuristic_fallback"
-        scored_frames.append(inference)
-
-    return pd.concat(scored_frames, ignore_index=True).sort_values(["official_date", "league", "game_id"]).reset_index(drop=True)
+def _live_schedule(client: BasketballStatsClient, league: str) -> pd.DataFrame:
+    try:
+        payload = client.get_schedule(league)
+    except Exception as exc:  # network / CDN block: fall back to the newest raw snapshot
+        payload = _cached_schedule_payload(league)
+        logger.warning("Live %s schedule unavailable (%s); %s", league.upper(), exc,
+                       "using cached snapshot" if payload else "no snapshot")
+        if payload is None:
+            return pd.DataFrame()
+    schedule = flatten_schedule(payload, league=league)
+    if schedule.empty:
+        return schedule
+    schedule["game_id"] = schedule["game_id"].map(canonical_game_id)
+    return schedule
 
 
-def _build_upcoming_boards(frame: pd.DataFrame, rotation_map: dict[str, dict[str, list[dict[str, Any]]]]) -> list[dict[str, Any]]:
+def _refresh_boxscores(league: str, live: pd.DataFrame, tables: hm.LeagueTables) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Boxscores of completed live-schedule games the (possibly stale) tables lack."""
+    empty = (pd.DataFrame(), pd.DataFrame(), pd.DataFrame())
+    if live.empty or os.getenv("BASKETBALL_BOXSCORE_REFRESH", "1") == "0":
+        return empty
+    have = set(tables.details["game_id"].dropna()) if "game_id" in tables.details.columns else set()
+    kinds = live["game_id"].map(game_type_from_id)
+    done = live.loc[(pd.to_numeric(live["status_code"], errors="coerce") == 3) & kinds.isin(COMPETITIVE_TYPES)]
+    missing = [gid for gid in done.sort_values("official_date")["game_id"] if gid not in have]
+    if not missing:
+        return empty
+    max_games = int(os.getenv("BASKETBALL_BOXSCORE_REFRESH_MAX", "1500"))
+    budget = float(os.getenv("BASKETBALL_BOXSCORE_REFRESH_SECONDS", "900"))
+    logger.info("basketball refresh: %d completed %s games missing from the tables", len(missing), league.upper())
+    bundles = fetch_final_games(league, missing[-max_games:], max_workers=2, time_budget_seconds=budget)
+    if not bundles:
+        return empty
+    sched, details, players = bundles_to_frames(bundles)
+    if os.getenv("BASKETBALL_PERSIST_REFRESH", "1") != "0":
+        try:
+            append_to_tables(NORMALIZED_DIR, league, sched, details, players)
+        except Exception:  # never fail the export over a cache write
+            logger.exception("Could not persist refreshed %s boxscores", league.upper())
+    return sched, details, players
+
+
+@dataclass
+class ExportContext:
+    today: pd.Timestamp
+    params: dict[str, Any]
+    runs: dict[str, hm.LeagueRun] = field(default_factory=dict)
+    live: dict[str, pd.DataFrame] = field(default_factory=dict)
+    upcoming_ids: dict[str, set[str]] = field(default_factory=dict)
+    tbd_tip_ids: set[str] = field(default_factory=set)   # date known, tip time not yet set
+    players: dict[str, pd.DataFrame] = field(default_factory=dict)
+    published_at: str = ""
+
+
+def _upcoming_live_games(live: pd.DataFrame, today: pd.Timestamp) -> pd.DataFrame:
+    if live.empty:
+        return live
+    frame = live.copy()
+    frame["kind"] = frame["game_id"].map(game_type_from_id)
+    frame["tip_utc"] = pd.to_datetime(frame["game_date_time_utc"], errors="coerce", utc=True).dt.tz_localize(None)
+    frame["local_date"] = local_dates(frame["tip_utc"])
+    known = (pd.to_numeric(frame["home_team_id"], errors="coerce").fillna(0) > 0) & (
+        pd.to_numeric(frame["away_team_id"], errors="coerce").fillna(0) > 0)
+    window = (frame["local_date"] >= today) & (frame["local_date"] <= today + pd.Timedelta(days=UPCOMING_LOOKAHEAD_DAYS))
+    # Regular season, play-in, playoffs and cup finals. Preseason and All-Star games
+    # stay out: rested starters make a model trained on real games mislead.
+    keep = known & window & frame["kind"].isin(COMPETITIVE_TYPES) & (pd.to_numeric(frame["status_code"], errors="coerce") != 3)
+    return frame.loc[keep]
+
+
+def tbd_tip_game_ids(live: pd.DataFrame) -> set[str]:
+    """Games whose tip time is a placeholder: the CDN lists them as "TBD" with a
+    midnight-Eastern (04:00/05:00 UTC) timestamp. Their date is right but the time is
+    not, so boards publish no gameStart for them (the pick log then cuts off at the
+    conservative noon-UTC fallback instead of a fake midnight tip)."""
+    if live.empty:
+        return set()
+    status = live.get("status_text", pd.Series("", index=live.index)).fillna("").astype(str).str.strip().str.upper()
+    tip = pd.to_datetime(live.get("game_date_time_utc"), errors="coerce", utc=True)
+    local = tip.dt.tz_convert(LOCAL_TZ)
+    midnight = (local.dt.hour == 0) & (local.dt.minute == 0)
+    return set(live.loc[status.str.startswith("TBD") | midnight.fillna(False), "game_id"].astype(str))
+
+
+def build_context(*, with_history: bool = True, today: pd.Timestamp | None = None) -> ExportContext:
+    ctx = ExportContext(today=today if today is not None else _today_local(), params=hm.load_params())
+    ctx.published_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    client = BasketballStatsClient()
+    for league in LEAGUES:
+        live = _live_schedule(client, league)
+        ctx.live[league] = live
+        tables = hm.load_league_tables(NORMALIZED_DIR, league, extra_schedules=[live] if not live.empty else None)
+        sched, details, players = _refresh_boxscores(league, live, tables)
+        if not details.empty:
+            tables = hm.load_league_tables(NORMALIZED_DIR, league,
+                                           extra_schedules=[s for s in (sched, live) if not s.empty],
+                                           extra_details=[details], extra_players=[players])
+        upcoming = _upcoming_live_games(live, ctx.today)
+        ctx.upcoming_ids[league] = set(upcoming["game_id"])
+        ctx.tbd_tip_ids |= tbd_tip_game_ids(upcoming)
+        ctx.players[league] = tables.players
+        try:
+            run = hm.run_league(tables, ctx.params, today=ctx.today, upcoming_ids=ctx.upcoming_ids[league],
+                                with_history=with_history)
+        except Exception:
+            logger.exception("Basketball %s model run failed", league.upper())
+            run = None
+        if run is not None:
+            ctx.runs[league] = run
+            logger.info("basketball %s: %d games, trained through %s, %d history, %d upcoming, timings %s", league.upper(),
+                        int(run.design["final"].sum()), run.trained_through, len(run.history), len(run.upcoming),
+                        {k: round(v, 1) for k, v in run.timings.items()})
+    return ctx
+
+
+# ── upcoming boards ───────────────────────────────────────────────────────────
+
+def _board_rows(run: hm.LeagueRun, game_ids: set[str]) -> pd.DataFrame:
+    """Design rows (results + pregame features) for the given games, with the column
+    names the board formatters read."""
+    design = run.design.loc[run.design["game_id"].isin(game_ids)].copy()
+    feats = run.bundle.features
+    extra_cols = [c for c in feats.columns if c.startswith(("home_availability_", "away_availability_"))
+                  and c not in design.columns]
+    if extra_cols:
+        design = design.join(feats[extra_cols], on="game_id")
+    for side in ("home", "away"):
+        design[f"{side}_team_name"] = design[f"{side}_name"]
+    return design
+
+
+def _current_season_player_logs(player_logs: pd.DataFrame, season: str) -> pd.DataFrame:
+    if player_logs.empty or "season_display" not in player_logs.columns:
+        return player_logs
+    same = player_logs.loc[player_logs["season_display"].astype(str) == str(season)]
+    teams_with_games = set(same["team_key"])
+    # Season openers have no same-season rows yet: fall back to the newest earlier season.
+    earlier = player_logs.loc[(player_logs["season_display"].astype(str) < str(season)) & ~player_logs["team_key"].isin(teams_with_games)]
+    if not earlier.empty:
+        newest = earlier.groupby("team_key")["season_display"].transform("max")
+        earlier = earlier.loc[earlier["season_display"] == newest]
+    return pd.concat([same, earlier], ignore_index=True)
+
+
+def _rotation_map(run: hm.LeagueRun, rows: pd.DataFrame) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    logs = run.bundle.player_logs
+    if logs.empty or rows.empty:
+        return {}
+    games = pd.DataFrame({
+        "game_id": rows["game_id"].values,
+        "official_date": pd.to_datetime(rows["tip_utc"]).values,
+        "home_team_key": rows["league"].astype(str).values + ":" + rows["home_team_id"].astype(str).values,
+        "away_team_key": rows["league"].astype(str).values + ":" + rows["away_team_id"].astype(str).values,
+    })
+    out: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for season, idx in rows.groupby("season").groups.items():
+        sub = games.loc[games["game_id"].isin(rows.loc[idx, "game_id"])]
+        try:
+            out.update(build_projected_rotation_map(sub, _current_season_player_logs(logs, str(season))))
+        except Exception:
+            logger.exception("projected rotations failed for %s", season)
+    return out
+
+
+def _spread_label(tricode: str, line: float) -> str:
+    return f"{tricode} {line:+.1f}"
+
+
+def build_board_markets(board_id: str, row: Any, pred: Any, sigmas: dict[str, float], *, published_at: str,
+                        version: str) -> list[dict[str, Any]]:
+    """Model-only markets for one upcoming game (P1-12). No market line, no edge."""
+    out: list[dict[str, Any]] = []
+    home, away = str(getattr(row, "home_tricode") or "HOME"), str(getattr(row, "away_tricode") or "AWAY")
+
+    def add(entry: dict[str, Any], suffix: str | None) -> None:
+        if suffix:
+            entry["marketId"] = f"{entry['marketId']}:{suffix}"
+        entry["basis"] = "model"
+        entry["modelVersion"] = version
+        # No tier: tiers need per-market calibrated cut points we do not have yet
+        # (plan review C7). Drop the default-cut tier the shared helper adds.
+        entry.pop("confidenceTier", None)
+        out.append(entry)
+
+    p_home = _safe_float(getattr(pred, "p_home", None))
+    if p_home is not None:
+        side, p, team = ("home", p_home, home) if p_home >= 0.5 else ("away", 1.0 - p_home, away)
+        prices = markets.LinePrices(win=p, half_win=0.0, push=0.0, half_loss=0.0, loss=1.0 - p)
+        # One moneyline pick per game (no side suffix): if the favourite flips between
+        # bakes, the last pregame snapshot is the one graded.
+        add(markets.market_pick(board_id=board_id, market_type="moneyline", side=side, label=f"{team} to win",
+                                prices=prices, line=None, model_line=None, published_at=published_at,
+                                show_edge=False), None)
+    margin = _safe_float(getattr(pred, "margin_pred", None))
+    total = _safe_float(getattr(pred, "total_pred", None))
+    if margin is None or total is None:
+        return out
+    s_m, s_t, s_tt = float(sigmas["margin"]), float(sigmas["total"]), float(sigmas["team_total"])
+    # Fair spread: both sides at the model's x.5 line (no push), home view = -line.
+    home_line = -markets.fair_line_from_mean(margin)
+    for side, team, line, mean in (("home", home, home_line, margin), ("away", away, -home_line, -margin)):
+        prices = markets.spread_prices_normal(mean, s_m, line, integer_scores=True)
+        add(markets.market_pick(board_id=board_id, market_type="spread", side=side, label=_spread_label(team, line),
+                                prices=prices, line=line, model_line=round(-mean, 1), published_at=published_at,
+                                show_edge=False), side)
+    total_line = markets.fair_line_from_mean(total)
+    for side in ("over", "under"):
+        prices = markets.total_prices_normal(total, s_t, total_line, side, integer_scores=True)
+        add(markets.market_pick(board_id=board_id, market_type="total", side=side,
+                                label=f"{side.title()} {total_line:.1f}", prices=prices, line=total_line,
+                                model_line=round(total, 1), published_at=published_at, show_edge=False), side)
+    for kind, team, mean in (("team_total_home", home, (total + margin) / 2.0), ("team_total_away", away, (total - margin) / 2.0)):
+        line = markets.fair_line_from_mean(mean)
+        for side in ("over", "under"):
+            prices = markets.total_prices_normal(mean, s_tt, line, side, integer_scores=True)
+            add(markets.market_pick(board_id=board_id, market_type=kind, side=side,
+                                    label=f"{team} {side.title()} {line:.1f}", prices=prices, line=line,
+                                    model_line=round(mean, 1), published_at=published_at, show_edge=False), side)
+    return out
+
+
+def _build_upcoming_boards(ctx: ExportContext, league: str, game_ids: set[str]) -> list[dict[str, Any]]:
+    run = ctx.runs.get(league)
+    if run is None or run.upcoming.empty:
+        return []
+    preds = run.upcoming.loc[run.upcoming["game_id"].isin(game_ids)].set_index("game_id")
+    rows = _board_rows(run, set(preds.index))
+    rotation_map = _rotation_map(run, rows)
+    version = hm.model_version(ctx.params)
+    trained = run.trained_through.strftime("%Y-%m-%d") if run.trained_through is not None else None
     boards: list[dict[str, Any]] = []
-    for row in frame.itertuples(index=False):
-        home_prob = float(getattr(row, "home_win_probability", 0.5))
-        away_prob = float(getattr(row, "away_win_probability", 0.5))
-        scheduled_date = _date_key_int(getattr(row, "official_date", None))
-        game_id = str(getattr(row, "game_id"))
-        predicted_winner = getattr(row, "home_team_name") if home_prob >= away_prob else getattr(row, "away_team_name")
-        predictions = [
-            {
-                "rank": 1 if away_prob > home_prob else 2,
-                "playerName": getattr(row, "away_team_name"),
-                "winProbability": away_prob * 100.0,
-                "side": "away",
-                "profile": _build_prediction_team_profile(row, "away"),
-            },
-            {
-                "rank": 1 if home_prob >= away_prob else 2,
-                "playerName": getattr(row, "home_team_name"),
-                "winProbability": home_prob * 100.0,
-                "side": "home",
-                "profile": _build_prediction_team_profile(row, "home"),
-            },
-        ]
-        predictions = sorted(predictions, key=lambda item: item["winProbability"], reverse=True)
+    for row in rows.sort_values(["tip_utc", "game_id"]).itertuples(index=False):
+        game_id = str(row.game_id)
+        pred = preds.loc[game_id]
+        home_prob = float(pred["p_home"])
+        away_prob = 1.0 - home_prob
+        scheduled_date = _date_key_int(row.local_date)
+        predicted_winner = row.home_name if home_prob >= away_prob else row.away_name
+        predictions = sorted([
+            {"rank": 0, "playerName": row.away_name, "winProbability": away_prob * 100.0, "side": "away",
+             "profile": _build_prediction_team_profile(row, "away")},
+            {"rank": 0, "playerName": row.home_name, "winProbability": home_prob * 100.0, "side": "home",
+             "profile": _build_prediction_team_profile(row, "home")},
+        ], key=lambda item: item["winProbability"], reverse=True)
         for index, item in enumerate(predictions, start=1):
             item["rank"] = index
-
-        away_availability = {
-            "ilAdds14": _safe_int(getattr(row, "away_availability_likely_inactive_core_players", np.nan)) or 0,
-            "ilActivations14": _safe_int(getattr(row, "away_availability_expected_starters", np.nan)) or 0,
-            "rosterMoves14": _safe_int(getattr(row, "away_availability_expected_rotation_players", np.nan)) or 0,
-        }
-        home_availability = {
-            "ilAdds14": _safe_int(getattr(row, "home_availability_likely_inactive_core_players", np.nan)) or 0,
-            "ilActivations14": _safe_int(getattr(row, "home_availability_expected_starters", np.nan)) or 0,
-            "rosterMoves14": _safe_int(getattr(row, "home_availability_expected_rotation_players", np.nan)) or 0,
-        }
-
         away_lineup = rotation_map.get(game_id, {}).get("away", [])
         home_lineup = rotation_map.get(game_id, {}).get("home", [])
-        away_featured_player = _featured_player(away_lineup)
-        home_featured_player = _featured_player(home_lineup)
-
-        boards.append(
-            {
-                "id": f"basketball-{getattr(row, 'league')}-{game_id}",
-                "name": f"{getattr(row, 'away_team_name')} at {getattr(row, 'home_team_name')}",
-                "tour": _display_tour(str(getattr(row, "league"))),
-                "course": _optional_text(getattr(row, "arena_name", None)) or "Arena",
-                "venue": _optional_text(getattr(row, "arena_name", None)) or "Arena",
-                "scheduledDate": scheduled_date,
-                "latestDate": scheduled_date,
-                "predictedWinner": predicted_winner,
-                "awayTeam": getattr(row, "away_team_name"),
-                "homeTeam": getattr(row, "home_team_name"),
-                "awayTeamDetails": _build_team_details(row, "away"),
-                "homeTeamDetails": _build_team_details(row, "home"),
-                "awayAvailability": away_availability,
-                "homeAvailability": home_availability,
-                "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
-                "awayLineup": away_lineup,
-                "homeLineup": home_lineup,
-                "awayFeaturedPlayer": away_featured_player,
-                "homeFeaturedPlayer": home_featured_player,
-                "predictions": predictions,
-            }
-        )
+        board_id = f"basketball-{league}-{game_id}"
+        boards.append({
+            "id": board_id,
+            "gameId": game_id,
+            "gameStart": None if game_id in ctx.tbd_tip_ids else _iso_utc(row.tip_utc),
+            "name": f"{row.away_name} at {row.home_name}",
+            "tour": _display_tour(league),
+            "course": _optional_text(row.arena_name) or "Arena",
+            "venue": _optional_text(row.arena_name) or "Arena",
+            "scheduledDate": scheduled_date,
+            "latestDate": scheduled_date,
+            "predictedWinner": predicted_winner,
+            "awayTeam": row.away_name,
+            "homeTeam": row.home_name,
+            "awayTeamDetails": _build_team_details(row, "away"),
+            "homeTeamDetails": _build_team_details(row, "home"),
+            "awayAvailability": {
+                "ilAdds14": _safe_int(getattr(row, "away_availability_likely_inactive_core_players", np.nan)) or 0,
+                "ilActivations14": _safe_int(getattr(row, "away_availability_expected_starters", np.nan)) or 0,
+                "rosterMoves14": _safe_int(getattr(row, "away_availability_expected_rotation_players", np.nan)) or 0,
+            },
+            "homeAvailability": {
+                "ilAdds14": _safe_int(getattr(row, "home_availability_likely_inactive_core_players", np.nan)) or 0,
+                "ilActivations14": _safe_int(getattr(row, "home_availability_expected_starters", np.nan)) or 0,
+                "rosterMoves14": _safe_int(getattr(row, "home_availability_expected_rotation_players", np.nan)) or 0,
+            },
+            "predictionSource": f"{league}_elo_l1_logistic",
+            "basis": "model",
+            "modelVersion": version,
+            "modelTrainedThrough": trained,
+            "gameType": str(row.kind),
+            "awayLineup": away_lineup,
+            "homeLineup": home_lineup,
+            "awayFeaturedPlayer": _featured_player(away_lineup),
+            "homeFeaturedPlayer": _featured_player(home_lineup),
+            "predictions": predictions,
+            "markets": build_board_markets(board_id, row, pred, run.sigmas, published_at=ctx.published_at,
+                                           version=version),
+        })
     return boards
 
 
-def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
-    client = BasketballStatsClient()
-    full_schedule = _load_live_schedule(client)
-    available_dates = _build_available_dates(full_schedule)
-    resolved_selected_date = _resolve_selected_date(available_dates, selected_date)
-    if full_schedule.empty or not resolved_selected_date:
-        return {
-            "selectedDate": resolved_selected_date,
-            "availableDates": available_dates,
-            "upcoming": [],
-            "completed": _build_live_completed_boards(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "source": "divination_live_basketball_feed",
-        }
+def _available_dates(ctx: ExportContext) -> list[dict[str, Any]]:
+    counts: dict[str, int] = {}
+    for league in LEAGUES:
+        run = ctx.runs.get(league)
+        if run is None or run.upcoming.empty:
+            continue
+        rows = run.design.loc[run.design["game_id"].isin(set(run.upcoming["game_id"]))]
+        for key in rows["local_date"].map(_date_key).dropna():
+            counts[key] = counts.get(key, 0) + 1
+    return [{"dateKey": k, "label": _date_label(k), "gameCount": int(v)} for k, v in sorted(counts.items())[:MAX_AVAILABLE_DATES]]
 
-    # Bake the next BASKETBALL_UPCOMING_BOARD_DAYS game-days, not one: a single baked
-    # date empties as soon as UTC rolls past it (the 2026-09-19 export carried two
-    # WNBA boards for that day and showed nothing the next morning). Same fix as
-    # MLB's UPCOMING_BOARD_DAYS (edec4da); the BFF derives availableDates from the
-    # surviving boards, so a multi-day bake gives the picker its dates too.
-    ordered_keys = [str(option["dateKey"]) for option in available_dates]
-    start_idx = ordered_keys.index(resolved_selected_date) if resolved_selected_date in ordered_keys else 0
+
+def build_upcoming(ctx: ExportContext, selected_date: str | None = None) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str | None]:
+    available_dates = _available_dates(ctx)
+    if not available_dates:
+        return [], available_dates, None
+    keys = [d["dateKey"] for d in available_dates]
+    resolved = selected_date if selected_date in keys else keys[0]
+    # Bake the next BASKETBALL_UPCOMING_BOARD_DAYS game-days (a single day empties as
+    # soon as UTC rolls past it; the BFF derives availableDates from the boards).
     board_days = max(1, int(os.getenv("BASKETBALL_UPCOMING_BOARD_DAYS", "4")))
-    target_dates = set(ordered_keys[start_idx : start_idx + board_days])
-    schedule = full_schedule.loc[full_schedule["official_date"].map(_date_key).isin(target_dates)].copy()
-    schedule["game_id"] = schedule["game_id"].astype(str)
-    team_logs = _load_league_table("team_game_logs", ["nba", "wnba"])
-    expected_logs = _load_league_table("expected_rotation_game_logs", ["nba", "wnba"])
-    player_logs = _load_league_table("player_game_logs", ["nba", "wnba"])
+    start = keys.index(resolved)
+    target = set(keys[start:start + board_days])
+    boards: list[dict[str, Any]] = []
+    for league in LEAGUES:
+        run = ctx.runs.get(league)
+        if run is None or run.upcoming.empty:
+            continue
+        rows = run.design.loc[run.design["game_id"].isin(set(run.upcoming["game_id"]))]
+        ids = set(rows.loc[rows["local_date"].map(_date_key).isin(target), "game_id"])
+        boards.extend(_build_upcoming_boards(ctx, league, ids))
+    # Date first: a TBD tip has no gameStart and must not jump ahead of today's games.
+    boards.sort(key=lambda b: (b.get("scheduledDate") or 0, b.get("gameStart") or "~", b["id"]))
+    return boards, available_dates, resolved
 
-    games = prepare_games(schedule, pd.DataFrame(columns=["league", "game_id"]), require_completed=False)
-    games = attach_pregame_team_features(games, team_logs)
-    games = attach_expected_rotation_features(games, expected_logs)
-    games = add_matchup_differentials(games)
-    rotation_map = build_projected_rotation_map(games, player_logs) if not player_logs.empty else {}
-    scored_games = _predict_games(games)
 
+def build_live_upcoming_payload(selected_date: str | None = None) -> dict[str, Any]:
+    """Live API path (divination /api/sports/basketball/boards): upcoming boards only.
+    History is the exported walk-forward file; regrading completed games here with the
+    current model is exactly what produced the in-sample 72.6% figure. The walk-forward
+    still runs (not returned): the served calibrator and the spread/total sigmas are
+    fitted on its out-of-sample predictions, so live and baked boards agree."""
+    ctx = build_context(with_history=True)
+    boards, available_dates, resolved = build_upcoming(ctx, selected_date)
     return {
-        "selectedDate": resolved_selected_date,
+        "selectedDate": resolved,
         "availableDates": available_dates,
-        "upcoming": _build_upcoming_boards(scored_games, rotation_map),
-        "completed": _build_live_completed_boards(),
+        "upcoming": boards,
+        "completed": [],
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "source": "divination_live_basketball_feed",
     }
 
 
-def _build_live_completed_boards(calendar_year: int | None = None) -> list[dict[str, Any]]:
-    client = BasketballStatsClient()
-    schedule = _load_live_schedule(client, include_completed=True, calendar_year=calendar_year)
-    if schedule.empty:
-        return []
+# ── honest history boards ─────────────────────────────────────────────────────
 
-    team_logs = _load_league_table("team_game_logs", ["nba", "wnba"])
-    expected_logs = _load_league_table("expected_rotation_game_logs", ["nba", "wnba"])
-    player_boxscores = _load_league_table("player_boxscores", ["nba", "wnba"])
+def _player_groups(players: pd.DataFrame, game_ids: set[str]) -> dict[tuple[str, str], pd.DataFrame]:
+    if players is None or players.empty or not game_ids:
+        return {}
+    p = players.loc[players["game_id"].isin(game_ids)]
+    return {(str(g), str(s)): frame for (g, s), frame in p.groupby(["game_id", "team_side"])}
 
-    games = prepare_games(schedule, pd.DataFrame(columns=["league", "game_id"]), require_completed=True)
-    if games.empty:
-        return []
-    games = attach_pregame_team_features(games, team_logs)
-    games = attach_expected_rotation_features(games, expected_logs)
-    games = add_matchup_differentials(games)
-    scored_games = _predict_games(games)
 
+def build_history_boards(ctx: ExportContext) -> list[dict[str, Any]]:
+    version = hm.model_version(ctx.params)
+    entries: list[tuple[Any, ...]] = []
+    for league in LEAGUES:
+        run = ctx.runs.get(league)
+        if run is None or run.history.empty or "p_home" not in run.history.columns:
+            continue
+        hist = _published_history(run)
+        rows = _board_rows(run, set(hist["game_id"])).set_index("game_id")
+        for rec in hist.itertuples(index=False):
+            entries.append((league, rec, rows.loc[rec.game_id]))
+    entries.sort(key=lambda e: (e[1].local_date, e[1].game_id), reverse=True)
+    lineup_ids = {str(e[1].game_id) for e in entries[:HISTORY_LINEUP_BOARDS]}
+    groups: dict[tuple[str, str], pd.DataFrame] = {}
+    for league in LEAGUES:
+        groups.update(_player_groups(ctx.players.get(league, pd.DataFrame()), lineup_ids))
     boards: list[dict[str, Any]] = []
-    for row in scored_games.itertuples(index=False):
-        home_prob = _safe_float(getattr(row, "home_win_probability", np.nan)) or 0.5
+    for league, rec, row in entries:
+        home_prob = float(rec.p_home)
         away_prob = 1.0 - home_prob
-        predicted_winner = getattr(row, "home_team_name") if home_prob >= away_prob else getattr(row, "away_team_name")
-        home_win = _resolve_home_win(row)
-        if home_win is None:
-            # Ungraded (missing label): never fabricate a winner.
+        home_name, away_name = str(row["home_name"]), str(row["away_name"])
+        predicted = home_name if home_prob >= away_prob else away_name
+        actual = home_name if float(rec.home_win) == 1.0 else away_name
+        gid = str(rec.game_id)
+        away_lineup = _historical_lineup(groups.get((gid, "away"))) if gid in lineup_ids else []
+        home_lineup = _historical_lineup(groups.get((gid, "home"))) if gid in lineup_ids else []
+        row_obj = pd.Series({**row.to_dict(), "league": league, "game_id": gid})
+        row_ns = _RowView(row_obj)
+        date_int = _date_key_int(rec.local_date)
+        boards.append({
+            "year": int(pd.Timestamp(rec.local_date).year),
+            "tournament": f"{away_name} at {home_name}",
+            "tournamentId": f"basketball-{league}-{gid}",
+            "tour": _display_tour(league),
+            # Walk-forward grade: the model that made this pick never saw this game.
+            "hitStatus": "Top Pick" if predicted == actual else "Miss",
+            "predictedWinner": predicted,
+            "actualWinner": actual,
+            "prob": max(home_prob, away_prob),
+            "homeWinProbability": round(home_prob, 4),
+            "awayWinProbability": round(away_prob, 4),
+            # A replay, not a live log: "simulated" walk-forward record (plan review D3).
+            # Live market picks carry their own record (basketball_market_history.json).
+            "recordBasis": "simulated",
+            "basis": "model",
+            "venue": _optional_text(row.get("arena_name")) or "Arena",
+            "course": _optional_text(row.get("arena_name")) or "Arena",
+            "latestDate": date_int,
+            "scheduledDate": date_int,
+            "awayTeam": away_name,
+            "homeTeam": home_name,
+            "awayTeamDetails": _build_team_details(row_ns, "away"),
+            "homeTeamDetails": _build_team_details(row_ns, "home"),
+            "awayLineup": away_lineup,
+            "homeLineup": home_lineup,
+            "awayFeaturedPlayer": _featured_player(away_lineup),
+            "homeFeaturedPlayer": _featured_player(home_lineup),
+            "gameId": gid,
+            "gameType": str(row.get("kind")),
+            "homeScore": _safe_int(rec.home_score),
+            "awayScore": _safe_int(rec.away_score),
+            "predictionSource": f"{league}_elo_l1_logistic_walk_forward",
+            "modelVersion": version,
+            "modelTrainedThrough": pd.Timestamp(rec.train_cutoff).strftime("%Y-%m-%d"),
+        })
+    return boards
+
+
+def _published_history(run: hm.LeagueRun) -> pd.DataFrame:
+    """Walk-forward predictions users may see: published seasons only (warm-up seasons
+    tuned the hyper-parameters and only seed the calibrator / sigma), and only games
+    the model actually picked (a probability of exactly 0.5 is no pick)."""
+    if run.history.empty or "p_home" not in run.history.columns:
+        return pd.DataFrame()
+    hist = run.history.dropna(subset=["p_home", "home_win"])
+    if "published" in hist.columns:
+        hist = hist.loc[hist["published"].astype(bool)]
+    return hist.loc[(hist["p_home"] - 0.5).abs() > 1e-9]
+
+
+class _RowView:
+    """Attribute access over a Series (the board formatters use getattr)."""
+
+    def __init__(self, series: pd.Series) -> None:
+        self._s = series
+
+    def __getattr__(self, name: str) -> Any:
+        return self._s.get(name, np.nan)
+
+
+def live_model_line_accuracy(graded: list[dict[str, Any]]) -> dict[str, Any]:
+    """P1-12 grading for the LIVE log: mean absolute error of the published model
+    line (spread / total / team totals) against the final score, per type and season,
+    one row per game (both sides of a fair line carry the same model line). Win rates
+    of both-sided fair lines are 50% by construction, so MAE is the honest metric."""
+    seen: dict[tuple[str, str, str], float] = {}
+    for g in graded:
+        kind, line = str(g.get("type")), g.get("modelLine")
+        if kind not in ("spread", "total", "team_total_home", "team_total_away") or line is None:
             continue
-        actual_winner = getattr(row, "home_team_name") if home_win == 1 else getattr(row, "away_team_name")
-        lineups = _historical_lineups(player_boxscores, str(getattr(row, "game_id")))
-        away_availability = {
-            "ilAdds14": _safe_int(getattr(row, "away_availability_likely_inactive_core_players", np.nan)),
-            "ilActivations14": _safe_int(getattr(row, "away_availability_expected_available_players", np.nan)),
-            "rosterMoves14": _safe_int(getattr(row, "away_availability_likely_absent_rotation_players", np.nan)),
-        }
-        home_availability = {
-            "ilAdds14": _safe_int(getattr(row, "home_availability_likely_inactive_core_players", np.nan)),
-            "ilActivations14": _safe_int(getattr(row, "home_availability_expected_available_players", np.nan)),
-            "rosterMoves14": _safe_int(getattr(row, "home_availability_likely_absent_rotation_players", np.nan)),
-        }
-        boards.append(
-            {
-                "year": int(_to_datetime_mixed(getattr(row, "official_date")).year),
-                "tournament": f"{getattr(row, 'away_team_name')} at {getattr(row, 'home_team_name')}",
-                "tour": _display_tour(str(getattr(row, "league"))),
-                "hitStatus": "Top Pick" if predicted_winner == actual_winner else "Miss",
-                "predictedWinner": predicted_winner,
-                "actualWinner": actual_winner,
-                "prob": max(home_prob, away_prob),
-                "venue": _optional_text(getattr(row, "arena_name", None)) or "Arena",
-                "course": _optional_text(getattr(row, "arena_name", None)) or "Arena",
-                "latestDate": _date_key_int(getattr(row, "official_date", None)),
-                "scheduledDate": _date_key_int(getattr(row, "official_date", None)),
-                "awayTeam": getattr(row, "away_team_name"),
-                "homeTeam": getattr(row, "home_team_name"),
-                "awayTeamDetails": _build_team_details(row, "away"),
-                "homeTeamDetails": _build_team_details(row, "home"),
-                "awayAvailability": away_availability,
-                "homeAvailability": home_availability,
-                "predictionSource": _optional_text(getattr(row, "prediction_source", None)),
-                "awayLineup": lineups["away"],
-                "homeLineup": lineups["home"],
-                "awayFeaturedPlayer": _featured_player(lineups["away"]),
-                "homeFeaturedPlayer": _featured_player(lineups["home"]),
+        h, a = float(g["homeScore"]), float(g["awayScore"])
+        if kind == "spread":
+            # modelLine is the picked side's handicap: -(expected margin of that side)
+            actual = -(h - a) if g.get("side") == "home" else -(a - h)
+        else:
+            actual = {"total": h + a, "team_total_home": h, "team_total_away": a}[kind]
+        seen[(kind, str(g.get("season")), str(g.get("gameId")))] = abs(float(line) - actual)
+    out: dict[str, Any] = {}
+    for (kind, season, _), err in seen.items():
+        row = out.setdefault(kind, {}).setdefault(season, {"n": 0, "_sum": 0.0})
+        row["n"] += 1
+        row["_sum"] += err
+    for kind in out.values():
+        for row in kind.values():
+            row["mae"] = round(row.pop("_sum") / row["n"], 2)
+    return out
+
+
+def build_model_record(ctx: ExportContext, graded: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Per league/season honest record with baselines, for the app's track-record copy."""
+    metrics_path = DIV_ROOT / "sports" / "basketball" / "walk_forward_metrics.json"
+    offline = {}
+    if metrics_path.exists():
+        try:
+            offline = json.loads(metrics_path.read_text()).get("leagues", {})
+        except Exception:
+            offline = {}
+    out: dict[str, Any] = {"modelVersion": hm.model_version(ctx.params), "generatedAt": ctx.published_at,
+                           "recordBasis": "simulated",
+                           "method": ("14-day walk-forward: each game graded with a model (and calibrator) fitted only on "
+                                      "games from earlier dates. A probability of exactly 0.5 is no pick."),
+                           "leagues": {}}
+    for league, run in ctx.runs.items():
+        hist = _published_history(run)
+        seasons = {}
+        for season, g in hist.groupby("season"):
+            y = g["home_win"].to_numpy(float)
+            model = hm.win_metrics(y, g["p_home"].to_numpy(float))
+            elo = hm.win_metrics(y, g["p_elo"].to_numpy(float))
+            offline_market = (((offline.get(league) or {}).get("winner") or {}).get(str(season)) or {}).get("market_matched")
+            seasons[str(season)] = {
+                "recordBasis": "simulated",
+                "n": model.get("n"),
+                "nPicks": model.get("n_picks"),
+                "accuracy": round(model.get("accuracy", float("nan")), 4),
+                "brier": round(model.get("brier", float("nan")), 4),
+                "logLoss": round(model.get("log_loss", float("nan")), 4),
+                "baselines": {
+                    "alwaysHomeAccuracy": round(float(np.mean(y == 1)), 4),
+                    "eloAccuracy": round(elo.get("accuracy", float("nan")), 4),
+                    "eloBrier": round(elo.get("brier", float("nan")), 4),
+                    "closingMarket": ({"n": offline_market["n"], "accuracy": offline_market["market"]["accuracy"],
+                                       "brier": offline_market["market"]["brier"],
+                                       "source": "closing moneyline, de-vigged (offline QA; aggregate only, no lines shown)"}
+                                      if offline_market else None),
+                },
+                "firstGame": str(g["local_date"].min().date()),
+                "lastGame": str(g["local_date"].max().date()),
             }
-        )
-    return sorted(boards, key=lambda item: (item.get("latestDate") or 0, item.get("tournament") or ""), reverse=True)
+        out["leagues"][league] = {"trainedThrough": str(run.trained_through.date()) if run.trained_through is not None else None,
+                                  "walkForwardLines": _walk_forward_line_accuracy(run),
+                                  "sigmas": {k: round(v, 2) for k, v in run.sigmas.items()},
+                                  "calibration": run.calibration, "seasons": seasons}
+    out["liveModelLines"] = {"recordBasis": "live, logged at publish",
+                             "byType": live_model_line_accuracy(graded or [])}
+    return out
 
 
-def _load_historical_sources() -> list[pd.DataFrame]:
-    frames: list[pd.DataFrame] = []
-    dataset = _load_table_optional(
-        NORMALIZED_DIR / "basketball_training_dataset_latest.parquet",
-        NORMALIZED_DIR / "basketball_training_dataset_latest.csv",
-        NORMALIZED_DIR / "basketball_nba_training_dataset_latest.parquet",
-        NORMALIZED_DIR / "basketball_nba_training_dataset_latest.csv",
-    )
-    if dataset.empty:
-        dataset = _load_league_table("basketball", ["nba", "wnba"])
-    player_boxscores = _load_league_table("player_boxscores", ["nba", "wnba"])
-
-    for league in ("nba", "wnba"):
-        predictions_path = ARTIFACTS_ROOT / league / "hist_gradient_boosting" / "home_win" / "validation_predictions.csv"
-        if not predictions_path.exists():
-            continue
-        predictions = pd.read_csv(predictions_path)
-        predictions["official_date"] = _to_datetime_mixed(predictions["official_date"])
-        predictions["game_id"] = predictions["game_id"].astype(str)
-        merged = predictions.merge(
-            dataset.loc[dataset["league"] == league].drop_duplicates(subset=["game_id"]),
-            on=["game_id", "league", "official_date", "away_team_name", "home_team_name"],
-            how="left",
-            # Both frames carry `home_win`; without explicit suffixes pandas
-            # renames BOTH and no plain `home_win` survives the merge.
-            suffixes=("", "_dataset"),
-        )
-        if not player_boxscores.empty:
-            merged = merged.merge(
-                player_boxscores.groupby("game_id").size().rename("player_rows"),
-                on="game_id",
-                how="left",
-            )
-        frames.append(merged)
-    return frames
+def _walk_forward_line_accuracy(run: hm.LeagueRun) -> dict[str, Any]:
+    """Simulated (walk-forward) margin / total MAE and 80% interval coverage per season."""
+    hist = run.history
+    if hist.empty or "margin_pred" not in hist.columns:
+        return {}
+    hist = hist.loc[hist["published"].astype(bool)] if "published" in hist.columns else hist
+    out: dict[str, Any] = {}
+    for season, g in hist.dropna(subset=["margin_pred", "total_pred"]).groupby("season"):
+        out[str(season)] = {
+            "n": int(len(g)),
+            "marginMae": round(float((g["margin"] - g["margin_pred"]).abs().mean()), 2),
+            "totalMae": round(float((g["total"] - g["total_pred"]).abs().mean()), 2),
+            "marginCoverage80": round(hm.interval_coverage(g["resid_margin"], g["sigma_margin"]).get("cov80", float("nan")), 3),
+            "totalCoverage80": round(hm.interval_coverage(g["resid_total"], g["sigma_total"]).get("cov80", float("nan")), 3),
+        }
+    return out
 
 
-def _historical_lineups(player_boxscores: pd.DataFrame, game_id: str) -> dict[str, list[dict[str, Any]]]:
-    if player_boxscores.empty:
-        return {"away": [], "home": []}
-    frame = player_boxscores.loc[player_boxscores["game_id"].astype(str) == str(game_id)].copy()
-    result = {"away": [], "home": []}
-    for side, side_name in (("away", "away"), ("home", "home")):
-        side_frame = frame.loc[frame["team_side"] == side_name].copy()
-        if side_frame.empty:
-            continue
-        side_frame["starter_numeric"] = side_frame["starter"].fillna(False).astype(int)
-        side_frame["minutes_numeric"] = pd.to_numeric(side_frame["minutes"], errors="coerce").fillna(0.0)
-        side_frame = side_frame.sort_values(["starter_numeric", "minutes_numeric", "points"], ascending=[False, False, False]).head(9)
-        entries: list[dict[str, Any]] = []
-        for index, row in enumerate(side_frame.itertuples(index=False), start=1):
-            field_goal_pct = _safe_float(getattr(row, "field_goal_pct", None))
-            entries.append(
-                {
-                    "playerId": _safe_int(getattr(row, "player_id", None)),
-                    "playerName": getattr(row, "player_name"),
-                    "lineupSlot": index,
-                    "position": _optional_text(getattr(row, "position", None)),
-                    "performanceSummary": f"{int(getattr(row, 'points', 0) or 0)} pts | {float(getattr(row, 'minutes', 0) or 0):.1f} min",
-                    "profile": {
-                        "imageUrl": _player_headshot_url(str(getattr(row, "league")), _safe_int(getattr(row, "player_id", None))),
-                        "subtitle": "Starter" if bool(getattr(row, "starter", False)) else "Rotation",
-                        "stats": [
-                            {"label": "Pts", "value": str(int(getattr(row, "points", 0) or 0))},
-                            {"label": "FG%", "value": f"{field_goal_pct * 100:.1f}%" if field_goal_pct is not None else "--"},
-                            {"label": "Ast", "value": str(int(getattr(row, "assists", 0) or 0))},
-                            {"label": "Reb", "value": str(int(getattr(row, "rebounds_total", 0) or 0))},
-                        ],
-                    },
-                    "radarMetrics": _historical_player_radar(row),
-                }
-            )
-        result[side] = entries
-    return result
+# ── market pick log ───────────────────────────────────────────────────────────
+
+def _market_root() -> Path:
+    return Path(os.getenv("MARKET_PICKS_ROOT") or market_log.DEFAULT_ROOT)
 
 
-def _build_backtests() -> list[dict[str, Any]]:
-    dataset = _load_table_optional(
-        NORMALIZED_DIR / "basketball_training_dataset_latest.parquet",
-        NORMALIZED_DIR / "basketball_training_dataset_latest.csv",
-        NORMALIZED_DIR / "basketball_nba_training_dataset_latest.parquet",
-        NORMALIZED_DIR / "basketball_nba_training_dataset_latest.csv",
-    )
-    if dataset.empty:
-        dataset = _load_league_table("basketball", ["nba", "wnba"])
-    player_boxscores = _load_league_table("player_boxscores", ["nba", "wnba"])
+def log_and_grade_markets(ctx: ExportContext, upcoming: list[dict[str, Any]]
+                          ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Append this bake's picks to the log, then regrade everything logged so far.
+    Returns (all graded, newest-first history capped for the app, summary)."""
+    root = _market_root()
+    version = hm.model_version(ctx.params)
+    records: list[dict[str, Any]] = []
+    for league in LEAGUES:
+        boards = [b for b in upcoming if b["id"].startswith(f"basketball-{league}-")]
+        records += market_log.picks_from_boards(MARKET_SPORT_KEY, boards, season_of=SEASON_OF[league],
+                                                model_version=version, published_at=ctx.published_at)
+    market_log.write_snapshot(MARKET_SPORT_KEY, records, root=root)
+    chosen = market_log.pregame_picks(market_log.load_snapshots(MARKET_SPORT_KEY, root=root))
+    results: dict[str, tuple[float, float]] = {}
+    for run in ctx.runs.values():
+        finals = run.design.loc[run.design["final"]]
+        results.update({str(g): (float(h), float(a)) for g, h, a in zip(finals["game_id"], finals["home_score"], finals["away_score"])})
+    graded = market_log.grade_picks(chosen, results)
+    graded.sort(key=lambda g: (str(g.get("gameDate") or ""), str(g.get("gameStart") or ""), str(g.get("marketId"))),
+                reverse=True)
+    return graded, graded[:MARKET_HISTORY_CAP], market_log.summarize(graded)
 
-    boards: list[dict[str, Any]] = []
-    for league in ("nba", "wnba"):
-        predictions_path = ARTIFACTS_ROOT / league / "hist_gradient_boosting" / "home_win" / "validation_predictions.csv"
-        if not predictions_path.exists():
-            continue
-        predictions = pd.read_csv(predictions_path)
-        predictions["official_date"] = _to_datetime_mixed(predictions["official_date"])
-        predictions["game_id"] = predictions["game_id"].astype(str)
-        merged = predictions.merge(
-            dataset.loc[dataset["league"] == league].drop_duplicates(subset=["game_id"]),
-            on=["game_id", "league", "official_date", "away_team_name", "home_team_name"],
-            how="left",
-            # Both frames carry `home_win`; without explicit suffixes pandas
-            # renames BOTH and no plain `home_win` survives the merge.
-            suffixes=("", "_dataset"),
-        )
-        for row in merged.itertuples(index=False):
-            home_prob = _safe_float(getattr(row, "home_win_probability", np.nan)) or 0.5
-            away_prob = 1.0 - home_prob
-            predicted_winner = getattr(row, "home_team_name") if home_prob >= away_prob else getattr(row, "away_team_name")
-            home_win = _resolve_home_win(row)
-            if home_win is None:
-                # Ungraded (missing label): never fabricate a winner.
-                continue
-            actual_winner = getattr(row, "home_team_name") if home_win == 1 else getattr(row, "away_team_name")
-            lineups = _historical_lineups(player_boxscores, str(getattr(row, "game_id")))
-            boards.append(
-                {
-                    "year": int(_to_datetime_mixed(getattr(row, "official_date")).year),
-                    "tournament": f"{getattr(row, 'away_team_name')} at {getattr(row, 'home_team_name')}",
-                    "tour": _display_tour(str(league)),
-                    "hitStatus": "Top Pick" if predicted_winner == actual_winner else "Miss",
-                    "predictedWinner": predicted_winner,
-                    "actualWinner": actual_winner,
-                    "prob": max(home_prob, away_prob),
-                    "venue": _optional_text(getattr(row, "arena_name", None)) or "Arena",
-                    "course": _optional_text(getattr(row, "arena_name", None)) or "Arena",
-                    "latestDate": _date_key_int(getattr(row, "official_date", None)),
-                    "scheduledDate": _date_key_int(getattr(row, "official_date", None)),
-                    "awayTeam": getattr(row, "away_team_name"),
-                    "homeTeam": getattr(row, "home_team_name"),
-                    "awayTeamDetails": _build_team_details(row, "away"),
-                    "homeTeamDetails": _build_team_details(row, "home"),
-                    "awayLineup": lineups["away"],
-                    "homeLineup": lineups["home"],
-                    "awayFeaturedPlayer": _featured_player(lineups["away"]),
-                    "homeFeaturedPlayer": _featured_player(lineups["home"]),
-                }
-            )
-    return sorted(boards, key=lambda item: (item.get("latestDate") or 0, item.get("tournament") or ""), reverse=True)
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+def _write_json(path: Path, payload: Any, *, compact: bool = False) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, separators=(",", ":")) if compact else json.dumps(payload, indent=2))
+    os.replace(tmp, path)
 
 
 def export_basketball_frontend_data() -> None:
-    backtests = _build_backtests()
-    upcoming_payload = build_live_upcoming_payload()
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    ctx = build_context(with_history=True)
     FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    (FRONTEND_DATA_DIR / "basketball_historical_backtests.json").write_text(json.dumps(backtests, indent=2))
-    (FRONTEND_DATA_DIR / "basketball_upcoming_tournaments.json").write_text(json.dumps(upcoming_payload["upcoming"], indent=2))
-    print(f"Exported {len(backtests)} Basketball historical boards")
-    print(f"Exported {len(upcoming_payload['upcoming'])} Basketball upcoming boards")
+    backtests = build_history_boards(ctx)
+    if backtests:
+        _write_json(FRONTEND_DATA_DIR / "basketball_historical_backtests.json", backtests, compact=True)
+    upcoming, _, _ = build_upcoming(ctx)
+    _write_json(FRONTEND_DATA_DIR / "basketball_upcoming_tournaments.json", upcoming)
+    graded: list[dict[str, Any]] = []
+    try:
+        graded, history, summary = log_and_grade_markets(ctx, upcoming)
+        _write_json(FRONTEND_DATA_DIR / f"{MARKET_SPORT_KEY}_market_history.json", history)
+        _write_json(FRONTEND_DATA_DIR / f"{MARKET_SPORT_KEY}_market_summary.json", summary)
+    except Exception:
+        logger.exception("Basketball market log / grading failed")
+    _write_json(FRONTEND_DATA_DIR / "basketball_model_record.json", build_model_record(ctx, graded))
+    print(f"Exported {len(backtests)} Basketball historical boards (walk-forward)")
+    print(f"Exported {len(upcoming)} Basketball upcoming boards")
 
 
 if __name__ == "__main__":

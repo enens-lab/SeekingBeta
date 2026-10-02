@@ -8,7 +8,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-_SAFE_TEAM_LOG_BASE_COLUMNS = {"days_rest", "games_played_prior", "win_pct_prior", "same_site_win_pct_last_10"}
+# `days_rest` is deliberately NOT attached: the team-log row merged onto a game is the
+# team's PREVIOUS game, so its days_rest was the rest before that earlier game (it
+# matched true rest 34.4% of the time and reached 928 days across a data gap).
+# Correct rest / back-to-back comes from local tip dates in sports/basketball/results.py.
+_SAFE_TEAM_LOG_BASE_COLUMNS = {"games_played_prior", "win_pct_prior", "same_site_win_pct_last_10"}
+# Cap for the (diagnostic) days_rest column kept on the team logs themselves.
+REST_DAYS_CAP = 4
 
 
 def _to_datetime_mixed(values: Any) -> pd.Series:
@@ -73,7 +79,13 @@ def _merge_latest_feature_rows(
     group_col: str,
     feature_cols: list[str],
     on_cols: list[str],
+    season_col: str | None = None,
 ) -> pd.DataFrame:
+    """Attach, per team, the latest history row strictly before each base row.
+
+    With `season_col` (present in both frames) only a row of the SAME season can be
+    attached, so a season opener gets NaN form features instead of last season's
+    (or, across a data gap, several seasons old) rolling averages."""
     if history.empty or base.empty:
         return base
 
@@ -81,19 +93,25 @@ def _merge_latest_feature_rows(
     history_frame = history.dropna(subset=[group_col, "official_date"]).copy()
     history_frame["official_date"] = _to_datetime_mixed(history_frame["official_date"])
     history_frame = history_frame.sort_values([group_col, "official_date", "game_id"]).reset_index(drop=True)
+    by_season = bool(season_col) and season_col in base.columns and season_col in history_frame.columns
+    history_cols = ["official_date", *feature_cols] + ([season_col] if by_season else [])
 
     for key, base_group in base.groupby(group_col, sort=False):
-        history_group = history_frame.loc[history_frame[group_col] == key, ["official_date", *feature_cols]].copy()
+        history_group = history_frame.loc[history_frame[group_col] == key, history_cols].copy()
         base_sorted = base_group.sort_values(["official_date", "game_id"]).reset_index(drop=True)
         if history_group.empty:
             for column in feature_cols:
                 base_sorted[column] = np.nan
             output_parts.append(base_sorted)
             continue
+        if by_season:
+            base_sorted[season_col] = base_sorted[season_col].astype(str)
+            history_group[season_col] = history_group[season_col].astype(str)
         merged = pd.merge_asof(
             base_sorted,
             history_group.sort_values("official_date"),
             on="official_date",
+            by=season_col if by_season else None,
             direction="backward",
             allow_exact_matches=False,
         )
@@ -103,7 +121,7 @@ def _merge_latest_feature_rows(
     return merged_base.sort_values(on_cols).reset_index(drop=True)
 
 
-def build_team_game_logs(games: pd.DataFrame) -> pd.DataFrame:
+def build_team_game_logs(games: pd.DataFrame, *, season_reset: bool = True) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for game in games.to_dict(orient="records"):
         for side, opp in (("away", "home"), ("home", "away")):
@@ -162,9 +180,15 @@ def build_team_game_logs(games: pd.DataFrame) -> pd.DataFrame:
     frame = pd.DataFrame(rows)
     if frame.empty:
         return frame
-    frame = frame.sort_values(["team_key", "official_date", "game_id"]).reset_index(drop=True)
     frame["official_date"] = _to_datetime_mixed(frame["official_date"])
-    frame["days_rest"] = frame.groupby("team_key")["official_date"].diff().dt.days
+    frame = frame.sort_values(["team_key", "official_date", "game_id"]).reset_index(drop=True)
+    # Form features are per SEASON: win_pct_prior used to expand over every season
+    # in the table (a 94-62 "record" on a 2026 board) and rolling windows reached
+    # back across the off-season.
+    group_keys = ["team_key", "season_display"] if season_reset and "season_display" in frame.columns else ["team_key"]
+    if len(group_keys) > 1:
+        frame["season_display"] = frame["season_display"].astype(str)
+    frame["days_rest"] = frame.groupby(group_keys)["official_date"].diff().dt.days.clip(upper=REST_DAYS_CAP)
 
     metrics = [
         "won",
@@ -193,21 +217,26 @@ def build_team_game_logs(games: pd.DataFrame) -> pd.DataFrame:
         "def_rating_est",
         "net_rating_est",
     ]
+    # Each log row summarizes the games THROUGH its own game. Consumers attach the
+    # latest row strictly BEFORE a target game (attach_pregame_team_features), so the
+    # attached value covers every completed game up to the previous one. The old
+    # shift(1) here plus the strict-before merge skipped the most recent game.
     windows = (3, 5, 10)
+    rolled: dict[str, pd.Series] = {}
     for metric in metrics:
         frame[metric] = pd.to_numeric(frame[metric], errors="coerce")
-        grouped = frame.groupby("team_key")[metric]
+        grouped = frame.groupby(group_keys)[metric]
         for window in windows:
-            frame[f"{metric}_avg_last_{window}"] = grouped.transform(
-                lambda series, w=window: series.shift(1).rolling(w, min_periods=1).mean()
+            rolled[f"{metric}_avg_last_{window}"] = grouped.transform(
+                lambda series, w=window: series.rolling(w, min_periods=1).mean()
             )
-
-    frame["games_played_prior"] = frame.groupby("team_key").cumcount()
-    frame["win_pct_prior"] = frame.groupby("team_key")["won"].transform(lambda s: s.shift(1).expanding().mean())
-    frame["same_site_win_pct_last_10"] = frame.groupby(["team_key", "is_home"])["won"].transform(
-        lambda s: s.shift(1).rolling(10, min_periods=1).mean()
+    rolled["games_played_prior"] = frame.groupby(group_keys).cumcount() + 1
+    rolled["win_pct_prior"] = frame.groupby(group_keys)["won"].transform(lambda s: s.expanding().mean())
+    rolled["same_site_win_pct_last_10"] = frame.groupby([*group_keys, "is_home"])["won"].transform(
+        lambda s: s.rolling(10, min_periods=1).mean()
     )
-    return frame
+    # One concat instead of ~80 column inserts (pandas fragmentation warnings).
+    return pd.concat([frame.drop(columns=[c for c in rolled if c in frame.columns]), pd.DataFrame(rolled, index=frame.index)], axis=1)
 
 
 def attach_pregame_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -> pd.DataFrame:
@@ -229,28 +258,34 @@ def attach_pregame_team_features(games: pd.DataFrame, team_logs: pd.DataFrame) -
         ("away", "away_team_key", 0),
         ("home", "home_team_key", 1),
     )
+    # Same-season attachment when both sides know the season (see _merge_latest_feature_rows).
+    season_col = "season_display" if "season_display" in merged.columns and "season_display" in team_logs.columns else None
+    season_cols = [season_col] if season_col else []
 
     for side, team_col, is_home_value in side_specs:
-        base = merged[["game_id", "official_date", team_col]].rename(columns={team_col: "team_key"})
+        base = merged[["game_id", "official_date", team_col, *season_cols]].rename(columns={team_col: "team_key"})
 
         general = _merge_latest_feature_rows(
             base,
-            team_logs[["team_key", "game_id", "official_date", *general_columns]],
+            team_logs[["team_key", "game_id", "official_date", *season_cols, *general_columns]],
             group_col="team_key",
             feature_cols=general_columns,
             on_cols=["official_date", "game_id"],
+            season_col=season_col,
         ).rename(columns={column: f"{side}_team_{column}" for column in general_columns})
-        general = general.rename(columns={"team_key": team_col})
+        general = general.rename(columns={"team_key": team_col}).drop(columns=season_cols)
         merged = merged.merge(general, on=["game_id", "official_date", team_col], how="left")
 
-        same_site_history = team_logs.loc[team_logs["is_home"] == is_home_value, ["team_key", "game_id", "official_date", "same_site_win_pct_last_10"]]
+        same_site_history = team_logs.loc[team_logs["is_home"] == is_home_value, ["team_key", "game_id", "official_date", *season_cols, "same_site_win_pct_last_10"]]
         same_site = _merge_latest_feature_rows(
             base,
             same_site_history,
             group_col="team_key",
             feature_cols=["same_site_win_pct_last_10"],
             on_cols=["official_date", "game_id"],
+            season_col=season_col,
         ).rename(columns={"same_site_win_pct_last_10": f"{side}_team_same_site_win_pct_last_10", "team_key": team_col})
+        same_site = same_site.drop(columns=season_cols)
         merged = merged.merge(same_site, on=["game_id", "official_date", team_col], how="left")
 
     return merged

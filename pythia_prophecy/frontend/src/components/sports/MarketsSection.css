@@ -1,0 +1,190 @@
+/* Sports Markets UI (spec v1): upcoming "Markets" block, history result badges,
+   live market record and the backtest basis caption. Theme tokens only. */
+
+.markets-section {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: var(--sports-card-bg);
+  border: 1px solid var(--sports-border);
+}
+
+.markets-section-title {
+  margin: 0 0 0.6rem;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.markets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.markets-row {
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--sports-border);
+}
+
+.markets-row:first-child {
+  border-top: none;
+  padding-top: 0.2rem;
+}
+
+.markets-row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.markets-row-title {
+  min-width: 0;
+  color: var(--text-main);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* Neutral on purpose: probabilities are never color-coded. */
+.markets-row-prob {
+  flex-shrink: 0;
+  color: var(--text-main);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.markets-row-meta {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.markets-toggle {
+  margin-top: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markets-toggle:hover {
+  color: var(--accent-hover);
+}
+
+.markets-footer {
+  margin: 0.6rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.markets-footer + .markets-footer {
+  margin-top: 0.2rem;
+}
+
+/* History (track record) rows */
+/* Spans the full width of the .backtest-row grid, under the existing columns. */
+.market-result-badges {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-top: 0.65rem;
+}
+
+.market-result-badge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.market-result-badge.positive {
+  color: var(--success);
+  background: var(--success-bg);
+}
+
+.market-result-badge.negative {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.market-result-badge.neutral {
+  color: var(--text-muted);
+  background: var(--sports-surface);
+  border-color: var(--sports-border);
+}
+
+.market-final-score {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Season area: live market record */
+.market-record {
+  margin-top: 0.9rem;
+  padding: 0.9rem 1.05rem;
+  border-radius: 16px;
+  background: var(--sports-surface);
+  border: 1px solid var(--sports-border);
+}
+
+.market-record-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.market-record-row strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.market-record-row span {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.market-record-caption,
+.backtest-basis-caption {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.market-record-caption {
+  margin: 0.65rem 0 0;
+}
+
+.backtest-basis-caption {
+  margin: 0 0 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .markets-section {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .markets-row-main {
+    gap: 0.6rem;
+  }
+}

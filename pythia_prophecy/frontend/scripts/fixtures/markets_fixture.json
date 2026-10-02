@@ -1,0 +1,471 @@
+{
+ "golf": {
+  "upcoming": [],
+  "backtests": [],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": []
+ },
+ "tennis": {
+  "upcoming": [],
+  "backtests": [],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": []
+ },
+ "basketball": {
+  "upcoming": [],
+  "backtests": [],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": []
+ },
+ "mlb": {
+  "upcoming": [],
+  "backtests": [],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": []
+ },
+ "football": {
+  "upcoming": [
+   {
+    "id": "football-2026_05_KC_BUF",
+    "name": "KC at BUF",
+    "tour": "Football",
+    "course": "Highmark Stadium",
+    "scheduledDate": 20261005,
+    "latestDate": 20261005,
+    "predictedWinner": "BUF",
+    "awayTeam": "KC",
+    "homeTeam": "BUF",
+    "gameId": "2026_05_KC_BUF",
+    "gameStart": "2026-10-05T17:00:00Z",
+    "predictions": [
+     {
+      "rank": 1,
+      "playerName": "BUF",
+      "winProbability": 58.0,
+      "side": "home"
+     },
+     {
+      "rank": 2,
+      "playerName": "KC",
+      "winProbability": 42.0,
+      "side": "away"
+     }
+    ],
+    "markets": [
+     {
+      "marketId": "football-2026_05_KC_BUF:spread:full_game",
+      "type": "spread",
+      "period": "full_game",
+      "label": "BUF -2.5",
+      "side": "home",
+      "line": -2.5,
+      "modelLine": -3.0,
+      "modelProbability": 0.5184,
+      "outcomeProbabilities": {
+       "win": 0.5184,
+       "half_win": 0.0,
+       "push": 0.0,
+       "half_loss": 0.0,
+       "loss": 0.4816
+      },
+      "confidenceTier": "low",
+      "market": {
+       "line": -2.5,
+       "americanOdds": -110,
+       "decimalOdds": 1.9091,
+       "impliedProbability": 0.5,
+       "source": "nflverse",
+       "capturedAt": "2026-10-02T07:12:00Z"
+      },
+      "attribution": "Lines: nflverse (CC-BY-4.0)",
+      "modelVersion": "nfl-2026.10",
+      "basis": "market"
+     },
+     {
+      "marketId": "football-2026_05_KC_BUF:spread:full_game",
+      "type": "spread",
+      "period": "full_game",
+      "label": "KC +2.5",
+      "side": "away",
+      "line": 2.5,
+      "modelLine": 3.0,
+      "modelProbability": 0.4816,
+      "outcomeProbabilities": {
+       "win": 0.4816,
+       "half_win": 0.0,
+       "push": 0.0,
+       "half_loss": 0.0,
+       "loss": 0.5184
+      },
+      "confidenceTier": "low",
+      "market": {
+       "line": 2.5,
+       "americanOdds": -110,
+       "decimalOdds": 1.9091,
+       "impliedProbability": 0.5,
+       "source": "nflverse",
+       "capturedAt": "2026-10-02T07:12:00Z"
+      },
+      "attribution": "Lines: nflverse (CC-BY-4.0)",
+      "modelVersion": "nfl-2026.10",
+      "basis": "market"
+     },
+     {
+      "marketId": "football-2026_05_KC_BUF:total:full_game",
+      "type": "total",
+      "period": "full_game",
+      "label": "Over 47.5",
+      "side": "over",
+      "line": 47.5,
+      "modelLine": 48.5,
+      "modelProbability": 0.5215,
+      "outcomeProbabilities": {
+       "win": 0.5215,
+       "half_win": 0.0,
+       "push": 0.0,
+       "half_loss": 0.0,
+       "loss": 0.4785
+      },
+      "confidenceTier": "low",
+      "market": {
+       "line": 47.5,
+       "americanOdds": -108,
+       "decimalOdds": 1.9259,
+       "impliedProbability": 0.505,
+       "source": "nflverse",
+       "capturedAt": "2026-10-02T07:12:00Z"
+      },
+      "attribution": "Lines: nflverse (CC-BY-4.0)",
+      "modelVersion": "nfl-2026.10",
+      "basis": "market"
+     },
+     {
+      "marketId": "football-2026_05_KC_BUF:team_total_home:full_game",
+      "type": "team_total_home",
+      "period": "full_game",
+      "label": "BUF over 24.5",
+      "side": "over",
+      "line": 24.5,
+      "modelLine": 25.0,
+      "modelProbability": 0.5232,
+      "outcomeProbabilities": {
+       "win": 0.5232,
+       "half_win": 0.0,
+       "push": 0.0,
+       "half_loss": 0.0,
+       "loss": 0.4768
+      },
+      "confidenceTier": "low",
+      "modelVersion": "nfl-2026.10",
+      "basis": "market"
+     },
+     {
+      "marketId": "football-2026_05_KC_BUF:moneyline:full_game",
+      "type": "moneyline",
+      "period": "full_game",
+      "label": "BUF moneyline",
+      "side": "home",
+      "modelProbability": 0.58,
+      "outcomeProbabilities": {
+       "win": 0.58,
+       "half_win": 0,
+       "push": 0,
+       "half_loss": 0,
+       "loss": 0.42
+      },
+      "confidenceTier": "high",
+      "modelVersion": "nfl-2026.10",
+      "basis": "model"
+     },
+     {
+      "marketId": "football-2026_05_KC_BUF:player_prop_test:full_game",
+      "type": "player_prop_test",
+      "label": "Allen over 1.5 TD",
+      "side": "over",
+      "modelProbability": 0.44
+     }
+    ]
+   }
+  ],
+  "backtests": [
+   {
+    "year": 2026,
+    "tournament": "CAR at ATL",
+    "tour": "Football",
+    "hitStatus": "Top Pick",
+    "predictedWinner": "ATL",
+    "actualWinner": "ATL",
+    "scheduledDate": 20260920,
+    "latestDate": 20260920,
+    "awayTeam": "CAR",
+    "homeTeam": "ATL",
+    "tournamentId": "2026_02_CAR_ATL",
+    "homeScore": 27,
+    "awayScore": 24,
+    "markets": [
+     {
+      "marketId": "football-2026_02_CAR_ATL:spread:full_game",
+      "type": "spread",
+      "label": "ATL -2.5",
+      "side": "home",
+      "line": -2.5,
+      "modelProbability": 0.52,
+      "result": "win",
+      "unitReturn": 0.9091,
+      "basis": "market"
+     },
+     {
+      "marketId": "football-2026_02_CAR_ATL:total:full_game",
+      "type": "total",
+      "label": "Over 51.5",
+      "side": "over",
+      "line": 51.5,
+      "modelProbability": 0.5,
+      "result": "push",
+      "unitReturn": 0.0,
+      "basis": "market"
+     },
+     {
+      "marketId": "x:unknown:full_game",
+      "type": "player_prop_test",
+      "label": "skip me",
+      "side": "over",
+      "modelProbability": 0.5,
+      "result": "loss"
+     }
+    ]
+   }
+  ],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": [
+   {
+    "type": "spread",
+    "season": "2026-27",
+    "graded": 114,
+    "wins": 60.5,
+    "losses": 49.5,
+    "pushes": 4,
+    "winRateExPush": 0.55,
+    "breakEvenRate": 0.5238,
+    "unitsAtStatedPrice": 4.6,
+    "roi": 0.042,
+    "marketBaselineWinRate": 0.5
+   },
+   {
+    "type": "total",
+    "season": "2026-27",
+    "graded": 41,
+    "wins": 20,
+    "losses": 20,
+    "pushes": 1,
+    "winRateExPush": null,
+    "breakEvenRate": 0.5238,
+    "unitsAtStatedPrice": null,
+    "roi": null
+   }
+  ]
+ },
+ "soccer": {
+  "upcoming": [
+   {
+    "id": "soccer-eng.1-401879300",
+    "name": "Leeds at Arsenal",
+    "tour": "Premier League",
+    "course": "Emirates Stadium",
+    "scheduledDate": 20261018,
+    "latestDate": 20261018,
+    "predictedWinner": "Arsenal",
+    "homeTeam": "Arsenal",
+    "awayTeam": "Leeds",
+    "homeWinProbability": 0.4896,
+    "drawProbability": 0.2489,
+    "awayWinProbability": 0.2615,
+    "gameId": "401879300",
+    "gameStart": "2026-10-18T14:00:00Z",
+    "predictions": [
+     {
+      "rank": 1,
+      "playerName": "Arsenal",
+      "winProbability": 49.0,
+      "side": "home"
+     },
+     {
+      "rank": 2,
+      "playerName": "Leeds",
+      "winProbability": 26.2,
+      "side": "away"
+     }
+    ],
+    "markets": [
+     {
+      "marketId": "soccer-eng.1-401879300:asian_handicap:full_game",
+      "type": "asian_handicap",
+      "period": "full_game",
+      "label": "Arsenal -0.75",
+      "side": "home",
+      "line": -0.75,
+      "modelLine": -0.5,
+      "modelProbability": 0.4218,
+      "outcomeProbabilities": {
+       "win": 0.2552,
+       "half_win": 0.2344,
+       "push": 0.0,
+       "half_loss": 0.0,
+       "loss": 0.5104
+      },
+      "confidenceTier": "low",
+      "modelVersion": "nfl-2026.10",
+      "basis": "model"
+     },
+     {
+      "marketId": "soccer-eng.1-401879300:total:full_game",
+      "type": "total",
+      "period": "full_game",
+      "label": "Over 2.5",
+      "side": "over",
+      "line": 2.5,
+      "modelLine": 2.5,
+      "modelProbability": 0.5064,
+      "outcomeProbabilities": {
+       "win": 0.5064,
+       "half_win": 0.0,
+       "push": 0.0,
+       "half_loss": 0.0,
+       "loss": 0.4936
+      },
+      "confidenceTier": "low",
+      "modelVersion": "nfl-2026.10",
+      "basis": "model"
+     },
+     {
+      "marketId": "soccer-eng.1-401879300:btts:full_game",
+      "type": "btts",
+      "period": "full_game",
+      "label": "Both teams to score: Yes",
+      "side": "yes",
+      "modelProbability": 0.5324,
+      "outcomeProbabilities": {
+       "win": 0.5324,
+       "half_win": 0,
+       "push": 0,
+       "half_loss": 0,
+       "loss": 0.4676
+      },
+      "confidenceTier": "low",
+      "modelVersion": "nfl-2026.10",
+      "basis": "model"
+     },
+     {
+      "marketId": "soccer-eng.1-401879300:double_chance:full_game",
+      "type": "double_chance",
+      "period": "full_game",
+      "label": "Arsenal or draw",
+      "side": "home_draw",
+      "modelProbability": 0.7385,
+      "outcomeProbabilities": {
+       "win": 0.7385,
+       "half_win": 0,
+       "push": 0,
+       "half_loss": 0,
+       "loss": 0.2615
+      },
+      "confidenceTier": "high",
+      "modelVersion": "nfl-2026.10",
+      "basis": "model"
+     },
+     {
+      "marketId": "soccer-eng.1-401879300:correct_score:full_game",
+      "type": "correct_score",
+      "label": "1-0",
+      "side": "1-0",
+      "modelProbability": 0.1075,
+      "basis": "model"
+     }
+    ]
+   }
+  ],
+  "backtests": [
+   {
+    "year": 2026,
+    "tournament": "Chelsea at Everton",
+    "tour": "Premier League",
+    "hitStatus": "Miss",
+    "predictedWinner": "Everton",
+    "actualWinner": "Chelsea",
+    "scheduledDate": 20260927,
+    "latestDate": 20260927,
+    "homeTeam": "Everton",
+    "awayTeam": "Chelsea",
+    "tournamentId": "401879222",
+    "homeScore": 1,
+    "awayScore": 1,
+    "markets": [
+     {
+      "marketId": "s:ah",
+      "type": "asian_handicap",
+      "label": "Everton -0.25",
+      "side": "home",
+      "line": -0.25,
+      "modelProbability": 0.53,
+      "result": "half_loss",
+      "basis": "model"
+     },
+     {
+      "marketId": "s:btts",
+      "type": "btts",
+      "label": "Both teams to score: Yes",
+      "side": "yes",
+      "modelProbability": 0.55,
+      "result": "win",
+      "basis": "model"
+     }
+    ]
+   }
+  ],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": [
+   {
+    "type": "btts",
+    "season": "2026-27",
+    "graded": 12,
+    "wins": 7,
+    "losses": 5,
+    "pushes": 0
+   }
+  ]
+ },
+ "olympics": {
+  "upcoming": [],
+  "backtests": [],
+  "updated_at": "2026-10-02T07:20:00Z",
+  "source": "fixture",
+  "selectedDate": null,
+  "availableDates": [],
+  "seasonSummary": null,
+  "marketSummary": []
+ }
+}

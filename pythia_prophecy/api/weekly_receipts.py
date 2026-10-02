@@ -325,7 +325,7 @@ def render_receipts_text(receipts: dict, frontend_url: str) -> str:
         if sport["season"]:
             through = _fmt_date_key(sport["graded_through"])
             suffix = f", graded through {through}" if through else ""
-            lines.append(f"  Season: {_season_sentence(sport['season'])}{suffix}")
+            lines.append(f"  Season (simulated backtest): {_season_sentence(sport['season'])}{suffix}")
 
         for row in week["details"][:5]:
             actual = f" (actual: {row['actual']})" if row.get("actual") else ""
@@ -397,7 +397,7 @@ def render_receipts_html_body(receipts: dict, frontend_url: str) -> str:
             through = _fmt_date_key(sport["graded_through"])
             suffix = f", graded through {through}" if through else ""
             parts.append(
-                f'<p class="muted">Season: {escape(_season_sentence(sport["season"]))}'
+                f'<p class="muted">Season (simulated backtest): {escape(_season_sentence(sport["season"]))}'
                 f"{escape(suffix)}</p>"
             )
 

@@ -125,6 +125,16 @@ Datasets regenerated and deployed (commit 207a771).
 | Basketball 2026 season | 204/475 (43%) | **471/649 (72.6%)** |
 | Home-win rate, both | 0% | **55%** |
 
+> **Correction (2026-10-02 audit, out-of-sample against the closing market):** the
+> figures in this table and paragraph overstate the models. NFL: on the same 322 games
+> the de-vigged closing moneyline scored 67.7% / Brier 0.206 vs the model's 65.2% /
+> 0.223, and the gradient-boosting recipe walk-forward 2022-25 is worse than a coin
+> flip on probability quality (Brier 0.270, n=1,084). Basketball 72.6% included 167
+> games inside the model's training window (76.1% on those); out of sample it is level
+> with the market at best. MLB's published 68.8% came from post-game leakage (unused
+> relievers in the bullpen features); honest walk-forward is about 56-57% vs the 2025
+> market favourite's 56.3%. Do not quote the numbers below; see section 2e.
+
 The NFL model is competitive and well calibrated: Brier 0.223, log loss 0.638
 (beating the 0.693 coin-flip line), and accuracy rising with confidence (58.6%
 below 60% confidence, 82.9% at 60-70%, 90% above 70%). The HGB baseline is
@@ -384,6 +394,28 @@ human read. Full detail in `.claude/logs/2026-09-19.md`; the product-relevant on
   the $70/mo instance becomes a $12 Lightsail (`LIGHTSAIL_MIGRATION.md`); (4) the
   per-ticker payload shape is frozen (web, iOS and Android parse it loosely), so keep
   new fields additive.
+
+## 2e. Honest accuracy audit and the markets expansion (2026-10-02)
+
+Measured out-of-sample (walk-forward) against the closing betting market, which is the
+baseline every accuracy number must be shown next to. Full evidence and plan:
+`.claude/logs/2026-09-19.md` (2026-10-02 section) and the commits that follow.
+
+| Sport | Was shown | Honest | Market baseline (same games) |
+|---|---|---|---|
+| MLB | 68.8% (leak) | ~56-57% walk-forward | 2025 favourite 56.3% |
+| NFL | 65.3% | 63.8% HGB walk-forward; probabilities overconfident | 67.5% (Brier 0.211) |
+| NBA | 72.6% (incl. training games) | ~68-70% walk-forward L1+Elo | 68.8% pooled |
+| WNBA | 79.3% (n=58, early-stopping set) | served model 61.5% on 2026 | 70.3% |
+| Soccer | 42% newest 90 | 51.7% walk-forward (centering bug), 52.7% fixed | 54.6% closing |
+| Tennis | 30.6% top pick | 18.6% on real fields (Davis Cup removed) | ranking favourite 19.3% |
+
+No model beats the closing line on spreads or totals in any sport (best: NFL 52.5% ATS,
+p=0.12, below the 52.4% break-even). Product consequence: new markets (spread, total,
+team totals, Asian handicap, BTTS, double chance, run line...) are published as
+probabilities anchored on the market where we have a line, with our model as a
+labelled "model view", graded from an append-only publish log, and never as an
+"edge" or "value bet" until a logged record earns it.
 
 ## 3. Roadmap
 

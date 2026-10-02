@@ -11,8 +11,16 @@ This package is the starting point for SeekingBeta.AI's MLB prediction pipeline.
   starter FIP-like / K-BB% / innings / experience, park factor, temperature and wind.
 - **Runs**: Poisson GLM per team (offense vs the opposing starter, park, weather, Elo
   edge) with a negative-binomial dispersion (r about 3.65), two teams independent. This
-  prices the model-view **run line** (favourite -1.5), **game total** and **team totals**
-  (`markets[]`, basis "model", no market line, never an edge).
+  prices the model-view **run line** (both -1.5 lines: home -1.5 / away +1.5 and away
+  -1.5 / home +1.5, the model favourite's first), **game total** and **team totals** at
+  the fair x.5 line (`markets[]`, basis "model", no market line, never an edge or a
+  confidence tier).
+- **Market log**: every bake logs the boards' markets (`sports/market_log.py`); the
+  exporter grades the last pregame snapshot per market. Rain-shortened games
+  ("Completed Early") void run lines and totals; a game not played within 24 h of the
+  earliest start any snapshot listed (postponed, made up later under the same gamePk,
+  or never played) voids its picks. Results go to `mlb_market_history.json` /
+  `mlb_market_summary.json`, never into `hitStatus`.
 - **Monthly walk-forward**: both models are refit at each month start on every game
   before it. The in-app history (2024 -> yesterday) is these out-of-sample predictions,
   and upcoming boards use the same procedure.
@@ -22,7 +30,16 @@ This package is the starting point for SeekingBeta.AI's MLB prediction pipeline.
 Honest record (regular season, walk-forward): 2024 57.3% (Brier 0.2427), 2025 55.7%
 (0.2423), 2026 56.2% (0.2437). Always-home: 52.2% / 54.3% / 52.9%. 2025 betting
 favourite (ESPN BET close): 56.4% on the same games, Brier 0.2419 -- the market is
-still better than the model.
+still better than the model (model minus market Brier +0.0006, 95% CI -0.0009..+0.0021).
+
+Run line (regular season, Brier vs constant): home -1.5 0.2208 / 0.2286 (2024) and
+0.2244 / 0.2294 (2025); both -1.5 lines as served 0.2242 / 0.2307 and 0.2235 / 0.2285;
+largest quintile calibration gap 0.030 / 0.036 (season walk-forward home -1.5: 0.041 /
+0.040). On 2025 Jul-Sep a market-anchored run line (de-vigged moneyline + posted total)
+scores 0.2257 vs the model's 0.2242 (difference CI includes 0). Totals: the posted 2025
+line beats the model (Brier 0.2482 vs 0.2507), so the total stays a labelled model view.
+Full numbers and the acceptance checks: `model_params.json` -> `evaluation`,
+`market_baselines`.
 
 The HistGradientBoosting baseline (`train_baseline.py`) used to be served at "68.8%":
 that came from post-game boxscore fields (`team_box["bullpen"]` = relievers who did

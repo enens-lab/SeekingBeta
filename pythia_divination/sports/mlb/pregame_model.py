@@ -53,6 +53,24 @@ NORMALIZED_DIR = DIV_ROOT / "data" / "sports" / "mlb" / "normalized"
 GAME_TYPES = ("R", "F", "D", "L", "W")
 POSTSEASON_TYPES = {"F", "D", "L", "W"}
 COMPLETED_STATES = {"Final", "Completed Early", "Game Over"}
+# detailedState prefixes: the Stats API also emits variants such as "Completed Early: Rain"
+# and "Final: Tied"; a prefix match keeps those from being treated as unplayed.
+_COMPLETED_PREFIXES = ("Final", "Completed Early", "Game Over")
+_NOT_PLAYED_PREFIXES = ("Postponed", "Cancelled", "Canceled")
+
+
+def is_completed_state(state: Any) -> bool:
+    text = str(state or "")
+    return text in COMPLETED_STATES or text.startswith(_COMPLETED_PREFIXES)
+
+
+def result_status(state: Any) -> str:
+    """Grading status of a completed game: "shortened" for an official game called
+    before 9 innings ("Completed Early"), whose run lines and totals are void by the
+    standard sportsbook rule while the moneyline stands; "final" otherwise."""
+    return "shortened" if str(state or "").startswith("Completed Early") else "final"
+
+
 FIRST_SEASON = 2020
 MAX_RUNS = 30  # score-matrix support: P(team scores > 30) is ~1e-9 at r=3.8, mu=6
 
@@ -232,11 +250,13 @@ def _normalize_results(frame: pd.DataFrame) -> pd.DataFrame:
     g["dt"] = pd.to_datetime(g["game_date"], utc=True, errors="coerce").dt.tz_localize(None)
     g["dt"] = g["dt"].fillna(g["official_date"] + pd.Timedelta(hours=23))
     g["season"] = g["season"].fillna(g["official_date"].dt.year).astype(int)
-    g["is_final"] = (g["status_detailed"].isin(COMPLETED_STATES) & g["home_score"].notna() & g["away_score"].notna())
+    g["is_final"] = (g["status_detailed"].map(is_completed_state).astype(bool)
+                     & g["home_score"].notna() & g["away_score"].notna())
     # A rescheduled game keeps its gamePk and shows up twice (once "Postponed"): keep the
     # played one, else the latest listing.
     g = g.sort_values(["game_pk", "is_final", "dt"]).drop_duplicates("game_pk", keep="last")
-    g = g[~g["status_detailed"].isin(["Postponed", "Cancelled"]) | g["is_final"]]
+    not_played = g["status_detailed"].astype(str).str.startswith(_NOT_PLAYED_PREFIXES)
+    g = g[~not_played | g["is_final"]]
     tie = g["is_final"] & (g["home_score"] == g["away_score"])
     g["home_win"] = np.where(g["is_final"] & ~tie, (g["home_score"] > g["away_score"]).astype(float), np.nan)
     g["is_postseason"] = g["game_type"].isin(POSTSEASON_TYPES).astype(float)
@@ -681,6 +701,63 @@ def nb_pmf(mu: float, r: float, max_runs: int = MAX_RUNS) -> np.ndarray:
 def score_matrix(mu_home: float, mu_away: float, r: float, max_runs: int = MAX_RUNS) -> np.ndarray:
     """P[home_runs = i, away_runs = j] with independent NB margins."""
     return np.outer(nb_pmf(mu_home, r, max_runs), nb_pmf(mu_away, r, max_runs))
+
+
+def nb_pmf_rows(mu: Iterable[float], r: float, max_runs: int = MAX_RUNS) -> np.ndarray:
+    """nb_pmf for many means at once: shape (len(mu), max_runs + 1), rows renormalized."""
+    ks = np.arange(max_runs + 1, dtype=float)[None, :]
+    mu = np.maximum(np.asarray(list(mu), dtype=float), 1e-6)[:, None]
+    pmf = np.exp(_nb_logpmf(ks, float(r), mu))
+    return pmf / pmf.sum(axis=1, keepdims=True)
+
+
+def _fair_half_lines(pmf: np.ndarray) -> np.ndarray:
+    """Row-wise x.5 line whose P(value > line) is closest to 0.5 (markets_mlb.fair_half_line)."""
+    sf = 1.0 - np.cumsum(pmf, axis=1)
+    return np.argmin(np.abs(sf - 0.5), axis=1) + 0.5
+
+
+def batch_probabilities(mu_home: Iterable[float], mu_away: Iterable[float], r: Iterable[float] | float,
+                        *, total_lines: Iterable[float] = (), team_lines: Iterable[float] = ()) -> dict[str, np.ndarray]:
+    """Per game (vectorized) P(home by 2+), P(away by 2+), P(tied after the modelled
+    runs), P(total > L) and P(total < L) for each L in total_lines, P(team runs > L) for
+    each L in team_lines, and the served fair x.5 lines with P(over) at them
+    (total_fair_line / over_fair, {home,away}_fair_line / {home,away}_over_fair) -- the
+    numbers behind the run line / total / team total markets, for evaluation over
+    thousands of games."""
+    mu_home = np.asarray(list(mu_home), dtype=float); mu_away = np.asarray(list(mu_away), dtype=float)
+    rs = np.broadcast_to(np.asarray(r, dtype=float), mu_home.shape)
+    out: dict[str, list] = {}
+    i, j = np.indices((MAX_RUNS + 1, MAX_RUNS + 1))
+    for r_value in np.unique(rs):
+        idx = np.flatnonzero(rs == r_value)
+        ph, pa = nb_pmf_rows(mu_home[idx], r_value), nb_pmf_rows(mu_away[idx], r_value)
+        m = ph[:, :, None] * pa[:, None, :]
+        parts = {"home_by_2": (m * (i - j >= 2)).sum((1, 2)), "away_by_2": (m * (j - i >= 2)).sum((1, 2)),
+                 "tie": (m * (i == j)).sum((1, 2))}
+        for line in total_lines:
+            parts[f"over_{line:g}"] = (m * ((i + j) > line)).sum((1, 2))
+            parts[f"under_{line:g}"] = (m * ((i + j) < line)).sum((1, 2))
+        ks = np.arange(MAX_RUNS + 1)
+        for line in team_lines:
+            parts[f"home_over_{line:g}"] = ph[:, ks > line].sum(axis=1)
+            parts[f"away_over_{line:g}"] = pa[:, ks > line].sum(axis=1)
+        tot = np.stack([(m * ((i + j) == k)).sum((1, 2)) for k in range(2 * MAX_RUNS + 1)], axis=1)
+        parts["total_fair_line"] = _fair_half_lines(tot)
+        parts["over_fair"] = (tot * (np.arange(tot.shape[1])[None, :] > parts["total_fair_line"][:, None])).sum(axis=1)
+        for name, pmf in (("home", ph), ("away", pa)):
+            line = _fair_half_lines(pmf)
+            parts[f"{name}_fair_line"] = line
+            parts[f"{name}_over_fair"] = (pmf * (ks[None, :] > line[:, None])).sum(axis=1)
+        for key, values in parts.items():
+            out.setdefault(key, []).append((idx, values))
+    result = {}
+    for key, chunks in out.items():
+        arr = np.empty(len(mu_home))
+        for idx, values in chunks:
+            arr[idx] = values
+        result[key] = arr
+    return result
 
 
 def matrix_probabilities(m: np.ndarray, *, total_line: Optional[float] = None) -> dict[str, float]:

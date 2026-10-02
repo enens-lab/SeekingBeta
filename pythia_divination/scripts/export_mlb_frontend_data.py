@@ -720,12 +720,19 @@ def _fetch_boxscore_lineups(game_pks: list[int]) -> dict[int, dict[str, list[dic
 
 
 def _history_lineups(game_pks: list[int], *, fetch_missing: bool) -> dict[int, dict[str, list[dict[str, Any]]]]:
-    lineups = _load_historical_lineup_map(set(game_pks))
+    """Lineups for detailed history boards: the true starting nine from the live boxscore
+    first (the local lineup_roster table may predate the starting-nine fix and hold the
+    end-of-game order), the local table only as a fallback."""
+    lineups: dict[int, dict[str, list[dict[str, Any]]]] = {}
     if fetch_missing and HISTORY_LINEUP_FETCH > 0:
-        missing = [pk for pk in game_pks if not lineups.get(pk)][:HISTORY_LINEUP_FETCH]
-        if missing:
-            print(f"[mlb-export] fetching {len(missing)} boxscore lineups for recent history boards", flush=True)
-            lineups.update(_fetch_boxscore_lineups(missing))
+        wanted = game_pks[:HISTORY_LINEUP_FETCH]
+        if wanted:
+            print(f"[mlb-export] fetching {len(wanted)} boxscore lineups for recent history boards", flush=True)
+            lineups.update(_fetch_boxscore_lineups(wanted))
+    missing = {pk for pk in game_pks if not lineups.get(pk)}
+    if missing:
+        local = _load_historical_lineup_map(missing)
+        lineups.update({pk: value for pk, value in local.items() if pk in missing})
     return lineups
 
 
@@ -830,35 +837,58 @@ def _build_history_boards(engine: PregameEngine, *, season: int | None = None,
 def _record_summary(engine: PregameEngine) -> dict[str, Any]:
     """Honest record per season with the baselines it must be read against."""
     frame = _completed_frame(engine)
-    seasons = []
-    for season, group in frame.groupby("season"):
+
+    def _block(group: pd.DataFrame) -> dict[str, Any]:
         y = group["home_win"].to_numpy(dtype=float)
         p = group["home_win_probability"].to_numpy(dtype=float)
         elo = group["elo_p"].to_numpy(dtype=float)
         n = int(len(group))
         hits = int(((p >= 0.5) == (y == 1)).sum())
-        seasons.append({
-            "season": int(season),
+        return {
             "games": n,
-            "regularSeasonGames": int((group["game_type"] == "R").sum()),
             "modelHits": hits,
             "modelAccuracy": round(hits / n, 4) if n else None,
             "modelBrier": round(float(np.mean((p - y) ** 2)), 4) if n else None,
             "alwaysHomeAccuracy": round(float(y.mean()), 4) if n else None,
             "eloAccuracy": round(float(((elo >= 0.5) == (y == 1)).mean()), 4) if n else None,
             "eloBrier": round(float(np.mean((elo - y) ** 2)), 4) if n else None,
+        }
+
+    seasons = []
+    for season, group in frame.groupby("season"):
+        regular = group[group["game_type"] == "R"]
+        seasons.append({
+            "season": int(season),
+            **_block(group),
+            "regularSeasonGames": int(len(regular)),
+            # The plan's and the market's figures are regular-season only.
+            "regularSeason": _block(regular) if len(regular) else None,
+            "postseasonGames": int((group["game_type"] != "R").sum()),
             "from": str(group["official_date"].min().date()),
             "through": str(group["official_date"].max().date()),
         })
     return {
         "updatedAt": datetime.now(timezone.utc).isoformat(),
         "modelVersion": engine.version,
+        # History boards are a SIMULATED record (the model re-run on games it was not
+        # trained on), never merged with the live market record graded at publish time.
+        "basis": "simulated",
+        "label": "Simulated backtest: the model re-run on past games it was not trained on.",
         "method": ("Monthly walk-forward: each game is predicted by a model fit only on games played before the first "
                    "day of its month, using pregame information (Elo, probable starters, park, weather)."),
         "seasons": sorted(seasons, key=lambda item: item["season"], reverse=True),
         "marketBaselines": engine.params.get("market_baselines", []),
-        "evaluation": engine.params.get("evaluation", {}),
+        # model_params.json evaluation without the per-quintile tables (kept in the repo file)
+        "evaluation": _without_keys(engine.params.get("evaluation", {}), {"quintiles"}),
     }
+
+
+def _without_keys(value: Any, drop: set[str]) -> Any:
+    if isinstance(value, dict):
+        return {k: _without_keys(v, drop) for k, v in value.items() if k not in drop}
+    if isinstance(value, list):
+        return [_without_keys(v, drop) for v in value]
+    return value
 
 
 # Regular season + every postseason round (F wild card, D division series, L league
@@ -1308,16 +1338,72 @@ def _build_live_completed_backtests(calendar_year: int | None = None, *, engine:
 
 # ── market pick log: snapshot what was shown, grade only pregame snapshots ─────
 
+# A game not played within this many hours of the earliest start any snapshot listed for
+# it (postponed and made up later, or never played) voids its picks -- the usual
+# sportsbook rule. A postponed game keeps its gamePk, so without this a pick published
+# for the original date would be graded on the make-up game days later.
+MARKET_VOID_AFTER_HOURS = float(os.getenv("MLB_MARKET_VOID_AFTER_HOURS", "24"))
+# The shared grader accepts per-game result dicts with a status (postponed/cancelled ->
+# void; "shortened" -> run line/totals void, moneyline graded) since the plan-review
+# fixes; an older sports/market_log.py only takes (home, away) tuples.
+_GRADER_TAKES_STATUS = getattr(market_log, "_normalize_result", None) is not None
+
+
+def _market_results(engine: PregameEngine, records: list[dict[str, Any]], *,
+                    now: pd.Timestamp | None = None) -> dict[str, dict[str, Any]]:
+    """gameId -> {home, away, status} for every logged game that is decided.
+
+    status: "final"; "shortened" (official but called before 9 innings); "postponed"
+    (played more than MARKET_VOID_AFTER_HOURS after the earliest listed start, or not
+    played at all by then). Games still to be played are absent (picks stay ungraded)."""
+    window = pd.Timedelta(hours=MARKET_VOID_AFTER_HOURS)
+    now = now if now is not None else pd.Timestamp.now(tz="UTC")
+    earliest: dict[str, pd.Timestamp] = {}
+    for record in records:
+        gid = str(record.get("gameId") or "")
+        start = pd.to_datetime(record.get("gameStart"), utc=True, errors="coerce")
+        if gid and pd.notna(start) and (gid not in earliest or start < earliest[gid]):
+            earliest[gid] = start
+    finals = engine.frame.loc[engine.frame["is_final"]]
+    played = {
+        str(int(pk)): (float(h), float(a), pd.Timestamp(dt).tz_localize("UTC") if pd.notna(dt) else None,
+                       pm.result_status(state))
+        for pk, h, a, dt, state in zip(finals["game_pk"], finals["home_score"], finals["away_score"],
+                                       finals["dt"], finals["status_detailed"])
+    }
+    results: dict[str, dict[str, Any]] = {}
+    for gid in {str(r.get("gameId")) for r in records if r.get("gameId")}:
+        start = earliest.get(gid)
+        if gid in played:
+            home, away, played_at, status = played[gid]
+            if start is not None and played_at is not None and played_at - start > window:
+                status = "postponed"
+            results[gid] = {"home": home, "away": away, "status": status}
+        elif start is not None and now - start > window:
+            results[gid] = {"home": None, "away": None, "status": "postponed"}
+    return results
+
+
+def _grade_market_picks(chosen: dict[str, dict[str, Any]], results: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    if _GRADER_TAKES_STATUS:
+        graded = market_log.grade_picks(chosen, results)
+    else:
+        # Older grader: scores only. Leave void-able games ungraded rather than grade a
+        # shortened or made-up game as if it were the game the pick was published for.
+        graded = market_log.grade_picks(chosen, {gid: (r["home"], r["away"]) for gid, r in results.items()
+                                                 if r["status"] == "final"})
+    # Every MLB market is a model view; the log record does not carry the pick's basis.
+    return [{**g, "basis": g.get("basis") or "model"} for g in graded]
+
+
 def _write_market_log(engine: PregameEngine, upcoming: list[dict[str, Any]]) -> dict[str, Any]:
     versions = {board.get("modelVersion") for board in upcoming if board.get("modelVersion")}
     model_version = versions.pop() if len(versions) == 1 else engine.version
     records = market_log.picks_from_boards("mlb", upcoming, season_of=market_log.season_calendar, model_version=model_version)
     snapshot = market_log.write_snapshot("mlb", records, root=MARKET_LOG_ROOT)
-    chosen = market_log.pregame_picks(market_log.load_snapshots("mlb", root=MARKET_LOG_ROOT))
-    finals = engine.frame.loc[engine.frame["is_final"]]
-    results = {str(int(pk)): (float(h), float(a))
-               for pk, h, a in zip(finals["game_pk"], finals["home_score"], finals["away_score"])}
-    graded = market_log.grade_picks(chosen, results)
+    logged = market_log.load_snapshots("mlb", root=MARKET_LOG_ROOT)
+    chosen = market_log.pregame_picks(logged)
+    graded = _grade_market_picks(chosen, _market_results(engine, logged))
     graded.sort(key=lambda g: (int(g.get("gameDate") or 0), str(g.get("gameStart") or ""), str(g.get("marketId"))),
                 reverse=True)
     summary = market_log.summarize(graded)

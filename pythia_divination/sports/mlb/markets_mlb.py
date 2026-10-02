@@ -3,22 +3,30 @@
 Every market here is a MODEL VIEW (basis "model", market null): we have no MLB line
 feed yet, and on 2025 closing lines the market beat the model on the moneyline (Brier
 0.2419 vs 0.2425, same 2,379 games) and, in the analyst prototype, on totals (0.2482 vs
-0.2505). So these are calibrated probabilities with a fixed, documented side -- never a
-"pick" chosen by the model, never an edge:
+0.2505). So these are calibrated probabilities with fixed, documented sides -- never a
+"pick" chosen by the model, never an edge, never a confidence tier:
 
-  * run_line          the favourite -1.5 (favourite = the win model's favourite). This is
-                      the standard posted run line; it is home -1.5 / away +1.5 whenever
-                      the home team is favoured. The other side's probability is the
-                      entry's outcomeProbabilities["loss"].
+  * run_line          BOTH -1.5 lines, the model favourite's first:
+                        home -1.5 (its "loss" outcome is away +1.5) and
+                        away -1.5 (its "loss" outcome is home +1.5).
+                      The favourite's entry is the standard posted run line; the other is
+                      the underdog -1.5 alternate. Each side keeps its own stable marketId
+                      (<boardId>:run_line:full_game:<side>) so a favourite flipping between
+                      daily bakes never withdraws a logged pick.
   * total             Over at the model fair line: the x.5 line whose P(over) is closest
                       to 50%; modelLine is the projected total runs.
   * team_total_home / team_total_away
                       Over at each team's fair x.5 line; modelLine is projected runs.
 
-A fixed side keeps the logged record honest: its win rate is the observed frequency
-of the stated outcome (about 40% for favourite -1.5), to be read against the mean
-modelProbability (calibration), not a hand-picked "lean" that would show a 60%+
-"record" that is only the base rate of the +1.5 side.
+Fixed sides keep the logged record honest: a side's win rate is the observed frequency
+of the stated outcome (about 40% for the favourite -1.5, 31% for the underdog -1.5), to
+be read against the mean modelProbability (calibration), not a hand-picked "lean" that
+would show a 60%+ "record" that is only the base rate of the +1.5 side.
+
+Walk-forward calibration of the served run lines (monthly refit, regular season;
+details in model_params.json evaluation): Brier below the constant in 2024, 2025 and
+2026 for the favourite -1.5, the underdog -1.5 and both pooled, largest quintile gap
+<= 0.05 on each of those.
 """
 from __future__ import annotations
 
@@ -30,6 +38,7 @@ from sports import markets as mk
 from sports.mlb import pregame_model as pm
 
 PERIOD = "full_game"
+RUN_LINE = 1.5
 
 
 def fair_half_line(pmf: np.ndarray) -> float:
@@ -47,6 +56,10 @@ def _over_prices(pmf: np.ndarray, line: float) -> mk.LinePrices:
     return mk.LinePrices(win=over, half_win=0.0, push=push, half_loss=0.0, loss=under)
 
 
+def run_line_market_id(board_id: str, side: str) -> str:
+    return f"{board_id}:run_line:{PERIOD}:{side}"
+
+
 def mlb_market_picks(*, board_id: str, home_label: str, away_label: str, p_home: float,
                      mu_home: float, mu_away: float, nb_r: float, published_at: Optional[str],
                      model_version: str) -> list[dict]:
@@ -59,14 +72,20 @@ def mlb_market_picks(*, board_id: str, home_label: str, away_label: str, p_home:
     exp_away = float((away_pmf * np.arange(len(away_pmf))).sum())
     total_pmf = np.bincount((np.add.outer(np.arange(m.shape[0]), np.arange(m.shape[1]))).ravel(), weights=m.ravel())
 
-    fav = "home" if p_home >= 0.5 else "away"
-    fav_label = home_label if fav == "home" else away_label
-    fav_margin = (exp_home - exp_away) if fav == "home" else (exp_away - exp_home)
-    entries = [
-        mk.market_pick(board_id=board_id, market_type="run_line", side=fav, label=f"{fav_label} -1.5",
-                       prices=mk.score_matrix_handicap(m, fav, -1.5), line=-1.5,
-                       model_line=round(-fav_margin, 1), period=PERIOD, published_at=published_at),
-    ]
+    labels = {"home": home_label, "away": away_label}
+    expected = {"home": exp_home, "away": exp_away}
+    favourite = "home" if p_home >= 0.5 else "away"
+    entries = []
+    for side in (favourite, "away" if favourite == "home" else "home"):
+        other = "away" if side == "home" else "home"
+        entry = mk.market_pick(board_id=board_id, market_type="run_line", side=side,
+                               label=f"{labels[side]} -{RUN_LINE:g}",
+                               prices=mk.score_matrix_handicap(m, side, -RUN_LINE), line=-RUN_LINE,
+                               # fair handicap from this side's view: minus its expected margin
+                               model_line=round(expected[other] - expected[side], 1) + 0.0,
+                               period=PERIOD, published_at=published_at)
+        entry["marketId"] = run_line_market_id(board_id, side)
+        entries.append(entry)
     total_line = fair_half_line(total_pmf)
     entries.append(mk.market_pick(board_id=board_id, market_type="total", side="over", label=f"Over {total_line:g}",
                                   prices=mk.score_matrix_total(m, "over", total_line), line=total_line,
@@ -77,6 +96,8 @@ def mlb_market_picks(*, board_id: str, home_label: str, away_label: str, p_home:
                                       label=f"{label} Over {line:g}", prices=_over_prices(pmf, line), line=line,
                                       model_line=round(exp, 1), period=PERIOD, published_at=published_at))
     for entry in entries:
+        # No calibrated, market-specific tier cut points exist for MLB: never a tier.
+        entry.pop("confidenceTier", None)
         entry["basis"] = "model"
         entry["modelVersion"] = model_version
     return entries

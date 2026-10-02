@@ -1587,11 +1587,18 @@ def _build_mlb_available_dates(upcoming: list[dict[str, Any]]) -> list[dict[str,
     return available
 
 
-def _sports_backtest_key(item: dict[str, Any]) -> tuple[str, str, int]:
+# Tours where the same matchup can be played twice on one date (MLB doubleheaders: 61
+# games in 2025). Their boards carry the game id, which keeps both games; everywhere
+# else (tour, name, date) already identifies one event.
+_GAME_ID_KEYED_TOURS = {"BASEBALL"}
+
+
+def _sports_backtest_key(item: dict[str, Any]) -> tuple[str, str, int, str]:
     tour = str(item.get("tour") or "").upper()
     tournament = _canonical_sports_name(str(item.get("tournament") or item.get("name") or ""))
     date_key = _safe_int(item.get("scheduledDate")) or _safe_int(item.get("latestDate")) or 0
-    return tour, tournament, date_key
+    game_id = str(item.get("gameId") or "") if tour in _GAME_ID_KEYED_TOURS else ""
+    return tour, tournament, date_key, game_id
 
 
 def _sort_sports_backtests(backtests: list[dict[str, Any]]) -> list[dict[str, Any]]:

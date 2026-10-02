@@ -205,27 +205,147 @@ def test_market_entries_contract_and_grading_agreement():
     entries = mlb_market_picks(board_id="mlb-1", home_label="NYY", away_label="BOS", p_home=0.56, mu_home=4.9,
                                mu_away=4.2, nb_r=3.7, published_at="2026-10-02T07:10:00+00:00",
                                model_version="mlb-pregame-v1@2026-10-01")
-    assert [e["type"] for e in entries] == ["run_line", "total", "team_total_home", "team_total_away"]
-    assert len({e["marketId"] for e in entries}) == 4
+    assert [e["type"] for e in entries] == ["run_line", "run_line", "total", "team_total_home", "team_total_away"]
+    assert len({e["marketId"] for e in entries}) == 5
     for e in entries:
         assert e["basis"] == "model" and e["modelVersion"].startswith("mlb-pregame")
         assert "edge" not in e and "market" not in e
-        assert e["confidenceTier"] in ("low", "medium", "high")
+        assert "confidenceTier" not in e  # no calibrated MLB tier cut points: never a tier
         assert abs(sum(e["outcomeProbabilities"].values()) - 1.0) < 1e-3
         assert e["line"] % 1 == 0.5 or e["line"] == -1.5
-    rl = entries[0]
-    assert rl["side"] == "home" and rl["label"] == "NYY -1.5" and rl["line"] == -1.5
+        assert "pushProbability" not in e  # x.5 lines never push
+    fav, dog = entries[0], entries[1]
+    # home -1.5 (its loss = away +1.5) and away -1.5, the model favourite's first
+    assert (fav["side"], fav["label"], fav["line"]) == ("home", "NYY -1.5", -1.5)
+    assert (dog["side"], dog["label"], dog["line"]) == ("away", "BOS -1.5", -1.5)
+    assert fav["marketId"] == "mlb-1:run_line:full_game:home" and dog["marketId"] == "mlb-1:run_line:full_game:away"
+    assert fav["modelProbability"] > dog["modelProbability"]
+    assert fav["modelLine"] < 0 < dog["modelLine"] and abs(fav["modelLine"] + dog["modelLine"]) < 1e-9
     # priced probabilities == probability-weighted grade_pick outcomes over the score matrix
     m = pm.score_matrix(4.9, 4.2, 3.7)
+    i, j = np.indices(m.shape)
     for e in entries:
         win = sum(m[h, a] for h in range(m.shape[0]) for a in range(m.shape[1])
                   if mk.grade_pick(e["type"], e["side"], e["line"], h, a)[0] == "win")
         assert abs(win - e["outcomeProbabilities"]["win"]) < 1e-3, (e["type"], win, e["outcomeProbabilities"])
-    away_fav = mlb_market_picks(board_id="mlb-2", home_label="NYY", away_label="BOS", p_home=0.45, mu_home=4.0,
+    assert abs(fav["outcomeProbabilities"]["loss"] - m[i - j < 2].sum()) < 1e-3  # = away +1.5 covers
+    away_fav = mlb_market_picks(board_id="mlb-1", home_label="NYY", away_label="BOS", p_home=0.45, mu_home=4.0,
                                 mu_away=4.8, nb_r=3.7, published_at=None, model_version="v")
     assert away_fav[0]["side"] == "away" and away_fav[0]["label"] == "BOS -1.5"
+    # a favourite flipping between bakes keeps each side's marketId (no withdrawn picks)
+    assert {e["marketId"] for e in away_fav[:2]} == {fav["marketId"], dog["marketId"]}
     assert mlb_market_picks(board_id="mlb-3", home_label="A", away_label="B", p_home=0.5, mu_home=float("nan"),
                             mu_away=4.0, nb_r=3.7, published_at=None, model_version="v") == []
+
+
+def test_batch_probabilities_match_single_matrix():
+    mu_h, mu_a, rs = [4.9, 3.6, 5.4], [4.2, 4.4, 3.1], [3.7, 3.7, 3.2]
+    pr = pm.batch_probabilities(mu_h, mu_a, rs, total_lines=(8.5,), team_lines=(4.5,))
+    for k, (h, a, r) in enumerate(zip(mu_h, mu_a, rs)):
+        m = pm.score_matrix(h, a, r)
+        i, j = np.indices(m.shape)
+        assert abs(pr["home_by_2"][k] - m[i - j >= 2].sum()) < 1e-12
+        assert abs(pr["away_by_2"][k] - m[j - i >= 2].sum()) < 1e-12
+        assert abs(pr["over_8.5"][k] - m[(i + j) > 8.5].sum()) < 1e-12
+        assert abs(pr["home_over_4.5"][k] - m.sum(axis=1)[5:].sum()) < 1e-12
+        total = np.bincount((i + j).ravel(), weights=m.ravel())
+        assert pr["total_fair_line"][k] == fair_half_line(total)
+        assert pr["home_fair_line"][k] == fair_half_line(m.sum(axis=1))
+        entries = mlb_market_picks(board_id="b", home_label="H", away_label="A", p_home=0.5, mu_home=h, mu_away=a,
+                                   nb_r=r, published_at=None, model_version="v")
+        served_total = next(e for e in entries if e["type"] == "total")
+        assert served_total["line"] == pr["total_fair_line"][k]
+        assert abs(served_total["modelProbability"] - pr["over_fair"][k]) < 1e-4
+
+
+def test_completed_states_and_result_status():
+    assert pm.is_completed_state("Final") and pm.is_completed_state("Completed Early: Rain")
+    assert pm.is_completed_state("Game Over") and not pm.is_completed_state("Postponed")
+    assert not pm.is_completed_state("In Progress") and not pm.is_completed_state(None)
+    assert pm.result_status("Completed Early: Rain") == "shortened" and pm.result_status("Final") == "final"
+    games, _ = _synthetic_games(20)
+    raw = games.drop(columns=["dt", "is_final", "home_win", "is_postseason", "order"]).copy()
+    raw.loc[raw.index[0], "status_detailed"] = "Completed Early: Rain"
+    raw.loc[raw.index[1], ["status_detailed", "home_score", "away_score"]] = ["Postponed", None, None]
+    norm = pm._normalize_results(raw)
+    assert bool(norm.set_index("game_pk").loc[raw.iloc[0]["game_pk"], "is_final"])
+    assert raw.iloc[1]["game_pk"] not in set(norm["game_pk"])
+
+
+def _market_engine(rows: list[dict]):
+    from scripts.export_mlb_frontend_data import PregameEngine
+    frame = pd.DataFrame(rows)
+    frame["dt"] = pd.to_datetime(frame["dt"])
+    return PregameEngine(frame=frame, params={"version": "mlb-pregame-v1"}, built_at=0.0)
+
+
+def test_market_results_void_rules_and_grading():
+    import scripts.export_mlb_frontend_data as ex
+
+    start = "2026-09-20T23:05:00Z"
+    engine = _market_engine([
+        # played as listed
+        {"game_pk": 1, "is_final": True, "home_score": 5.0, "away_score": 2.0, "dt": "2026-09-20 23:05", "status_detailed": "Final"},
+        # rain-shortened official game: moneyline stands, run line / totals void
+        {"game_pk": 2, "is_final": True, "home_score": 4.0, "away_score": 1.0, "dt": "2026-09-20 23:05", "status_detailed": "Completed Early: Rain"},
+        # postponed, made up two days later under the same gamePk
+        {"game_pk": 3, "is_final": True, "home_score": 6.0, "away_score": 0.0, "dt": "2026-09-22 17:10", "status_detailed": "Final"},
+        # still to be played (after `now`)
+        {"game_pk": 5, "is_final": False, "home_score": None, "away_score": None, "dt": "2026-09-24 23:05", "status_detailed": "Scheduled"},
+    ])
+    boards = []
+    for pk in (1, 2, 3, 4, 5):
+        boards.append({"id": f"mlb-{pk}", "gameId": str(pk), "scheduledDate": 20260920 if pk != 5 else 20260924,
+                       "gameStart": start if pk != 5 else "2026-09-24T23:05:00Z", "homeTeam": "H", "awayTeam": "A",
+                       "markets": mlb_market_picks(board_id=f"mlb-{pk}", home_label="H", away_label="A", p_home=0.55,
+                                                   mu_home=4.6, mu_away=4.1, nb_r=3.7,
+                                                   published_at="2026-09-20T07:10:00+00:00", model_version="v")})
+    records = ml.picks_from_boards("mlb", boards, season_of=ml.season_calendar, model_version="v")
+    now = pd.Timestamp("2026-09-23T12:00:00Z")
+    results = ex._market_results(engine, records, now=now)
+    assert results["1"] == {"home": 5.0, "away": 2.0, "status": "final"}
+    assert results["2"]["status"] == "shortened"
+    assert results["3"]["status"] == "postponed"          # made up > 24 h after the listed start
+    assert results["4"] == {"home": None, "away": None, "status": "postponed"}  # never played
+    assert "5" not in results                               # not started yet: stays ungraded
+    # before the 24 h window passes an unplayed game is not voided yet
+    assert "4" not in ex._market_results(engine, records, now=pd.Timestamp("2026-09-21T12:00:00Z"))
+
+    graded = ex._grade_market_picks(ml.pregame_picks(records), results)
+    assert all(g["basis"] == "model" for g in graded)
+    by_game: dict[str, list] = {}
+    for g in graded:
+        by_game.setdefault(g["gameId"], []).append(g)
+    assert {g["result"] for g in by_game["1"]} <= {"win", "loss"} and len(by_game["1"]) == 5
+    home_rl = next(g for g in by_game["1"] if g["marketId"].endswith(":run_line:full_game:home"))
+    assert home_rl["result"] == "win" and home_rl["unitReturn"] is None   # won by 3, unpriced
+    assert "5" not in by_game
+    if ex._GRADER_TAKES_STATUS:
+        # shared grader with status support: void, never a win/loss on the wrong game
+        assert all(g["result"] == "void" for g in by_game["2"] + by_game["3"] + by_game["4"])
+    else:
+        # older grader (scores only): such games are left ungraded rather than mis-graded
+        assert not ({"2", "3", "4"} & set(by_game))
+    summary = ml.summarize(graded)
+    assert all(s["roi"] is None for s in summary)
+
+
+def test_record_summary_baselines_and_label():
+    import scripts.export_mlb_frontend_data as ex
+
+    rows = []
+    for k in range(40):
+        rows.append({"game_pk": k, "is_final": True, "home_win": float(k % 3 != 0), "home_win_probability": 0.55 if k % 2 else 0.45,
+                     "elo_p": 0.52, "season": 2025, "game_type": "R" if k < 36 else "D",
+                     "official_date": pd.Timestamp("2025-06-01") + pd.Timedelta(days=k), "dt": pd.Timestamp("2025-06-01") + pd.Timedelta(days=k)})
+    engine = _market_engine(rows)
+    engine.params["market_baselines"] = [{"season": 2025, "favoriteWinRate": 0.5637}]
+    summary = ex._record_summary(engine)
+    assert summary["basis"] == "simulated" and "Simulated" in summary["label"]
+    season = summary["seasons"][0]
+    assert season["games"] == 40 and season["regularSeasonGames"] == 36 and season["postseasonGames"] == 4
+    assert season["regularSeason"]["games"] == 36 and season["alwaysHomeAccuracy"] is not None
+    assert summary["marketBaselines"][0]["favoriteWinRate"] == 0.5637
 
 
 def test_market_log_roundtrip_unpriced():
@@ -241,11 +361,12 @@ def test_market_log_roundtrip_unpriced():
         ml.write_snapshot("mlb", recs, root=Path(d))
         ml.write_snapshot("mlb", late, root=Path(d))
         chosen = ml.pregame_picks(ml.load_snapshots("mlb", root=Path(d)))
-        assert len(chosen) == 4 and all(p["publishedAt"].startswith("2026-10-02") for p in chosen.values())
+        assert len(chosen) == 5 and all(p["publishedAt"].startswith("2026-10-02") for p in chosen.values())
         graded = ml.grade_picks(chosen, {"9": (5.0, 2.0)})
-    by_type = {g["type"]: g for g in graded}
-    assert by_type["run_line"]["result"] == "win"            # CLE -1.5, won by 3
-    assert by_type["total"]["result"] in ("win", "loss")
+    by_id = {g["marketId"]: g for g in graded}
+    assert by_id["mlb-9:run_line:full_game:home"]["result"] == "win"    # CLE -1.5, won by 3
+    assert by_id["mlb-9:run_line:full_game:away"]["result"] == "loss"   # CWS -1.5
+    assert by_id["mlb-9:total:full_game"]["result"] in ("win", "loss")
     assert all(g["unitReturn"] is None for g in graded)      # no line feed -> no invented ROI
     assert all(g["season"] == "2026" for g in graded)
     summary = ml.summarize(graded)

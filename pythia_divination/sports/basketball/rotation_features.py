@@ -59,6 +59,15 @@ def _player_radar_metrics_from_row(row: Any) -> list[dict[str, float]]:
     ]
 
 
+def _season_groups(frame: pd.DataFrame, key: str) -> list[str]:
+    """Group rolling windows per season when the rows know their season: form from
+    last season (or, across a data gap, several seasons ago) is not current form."""
+    if "season_display" in frame.columns and frame["season_display"].notna().all():
+        frame["season_display"] = frame["season_display"].astype(str)
+        return [key, "season_display"]
+    return [key]
+
+
 def build_player_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
     """Convert raw player boxscore rows into rolling player history."""
     frame = player_games.copy()
@@ -75,7 +84,8 @@ def build_player_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
     frame["inactive"] = np.where(status_normalized == "INACTIVE", 1.0, 0.0)
     frame["active_dnp"] = np.where((frame["available"] == 1.0) & (frame["played"] == 0.0), 1.0, 0.0)
     frame = frame.sort_values(["player_key", "official_date", "game_id"]).reset_index(drop=True)
-    frame["days_rest"] = frame.groupby("player_key")["official_date"].diff().dt.days
+    group_keys = _season_groups(frame, "player_key")
+    frame["days_rest"] = frame.groupby(group_keys)["official_date"].diff().dt.days
 
     metrics = [
         "minutes",
@@ -97,17 +107,19 @@ def build_player_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
         "inactive",
         "active_dnp",
     ]
+    # Rows summarize games THROUGH their own game; consumers read the latest row
+    # strictly before a target game (see feature_engineering.build_team_game_logs).
     windows = (3, 5, 10)
+    rolled: dict[str, pd.Series] = {}
     for metric in metrics:
         frame[metric] = pd.to_numeric(frame[metric], errors="coerce")
-        grouped = frame.groupby("player_key")[metric]
+        grouped = frame.groupby(group_keys)[metric]
         for window in windows:
-            frame[f"{metric}_avg_last_{window}"] = grouped.transform(
-                lambda series, w=window: series.shift(1).rolling(w, min_periods=1).mean()
+            rolled[f"{metric}_avg_last_{window}"] = grouped.transform(
+                lambda series, w=window: series.rolling(w, min_periods=1).mean()
             )
-
-    frame["games_played_prior"] = frame.groupby("player_key").cumcount()
-    return frame
+    rolled["games_played_prior"] = frame.groupby(group_keys).cumcount() + 1
+    return pd.concat([frame.drop(columns=[c for c in rolled if c in frame.columns]), pd.DataFrame(rolled, index=frame.index)], axis=1)
 
 
 def _overlap_count(current_ids: Iterable[int], previous_ids: Iterable[int]) -> int:
@@ -129,6 +141,7 @@ def build_rotation_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
     frame["minutes"] = pd.to_numeric(frame["minutes"], errors="coerce")
     frame["points"] = pd.to_numeric(frame["points"], errors="coerce")
 
+    has_season = "season_display" in frame.columns and frame["season_display"].notna().all()
     rows: list[dict[str, Any]] = []
     for (league, team_key, team_id, game_id), group in frame.groupby(
         ["league", "team_key", "team_id", "game_id"], sort=False
@@ -151,6 +164,7 @@ def build_rotation_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
                 "team_id": team_id,
                 "game_id": game_id,
                 "official_date": group["official_date"].iloc[0],
+                **({"season_display": str(group["season_display"].iloc[0])} if has_season else {}),
                 "players_used": int(len(played)),
                 "starters_used": int(len(starters)),
                 "bench_players_used": int(len(bench)),
@@ -173,13 +187,14 @@ def build_rotation_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
         return rotation
 
     rotation = rotation.sort_values(["team_key", "official_date", "game_id"]).reset_index(drop=True)
-    rotation["days_rest"] = rotation.groupby("team_key")["official_date"].diff().dt.days
+    group_keys = _season_groups(rotation, "team_key")
+    rotation["days_rest"] = rotation.groupby(group_keys)["official_date"].diff().dt.days
     rotation["prev_rotation_overlap"] = (
-        rotation.groupby("team_key")["rotation_player_ids"]
+        rotation.groupby(group_keys)["rotation_player_ids"]
         .transform(lambda series: [np.nan] + [_overlap_count(current, previous) for previous, current in zip(series[:-1], series[1:])])
     )
     rotation["prev_starter_overlap"] = (
-        rotation.groupby("team_key")["starter_player_ids"]
+        rotation.groupby(group_keys)["starter_player_ids"]
         .transform(lambda series: [np.nan] + [_overlap_count(current, previous) for previous, current in zip(series[:-1], series[1:])])
     )
 
@@ -200,15 +215,17 @@ def build_rotation_game_logs(player_games: pd.DataFrame) -> pd.DataFrame:
         "prev_starter_overlap",
     ]
     windows = (3, 5, 10)
+    rolled: dict[str, pd.Series] = {}
     for metric in metrics:
         rotation[metric] = pd.to_numeric(rotation[metric], errors="coerce")
-        grouped = rotation.groupby("team_key")[metric]
+        grouped = rotation.groupby(group_keys)[metric]
         for window in windows:
-            rotation[f"{metric}_avg_last_{window}"] = grouped.transform(
-                lambda series, w=window: series.shift(1).rolling(w, min_periods=1).mean()
+            rolled[f"{metric}_avg_last_{window}"] = grouped.transform(
+                lambda series, w=window: series.rolling(w, min_periods=1).mean()
             )
-
-    rotation["games_played_prior"] = rotation.groupby("team_key").cumcount()
+    rolled["games_played_prior"] = rotation.groupby(group_keys).cumcount() + 1
+    rotation = pd.concat([rotation.drop(columns=[c for c in rolled if c in rotation.columns]),
+                          pd.DataFrame(rolled, index=rotation.index)], axis=1)
     return rotation.drop(columns=["rotation_player_ids", "starter_player_ids"])
 
 
@@ -456,6 +473,7 @@ def build_expected_rotation_game_logs(games: pd.DataFrame, player_logs: pd.DataF
     if games.empty or player_logs.empty:
         return pd.DataFrame()
 
+    season_aware = "season_display" in games.columns and "season_display" in player_logs.columns
     team_games: list[dict[str, Any]] = []
     for game in games.to_dict(orient="records"):
         for side in ("away", "home"):
@@ -466,6 +484,7 @@ def build_expected_rotation_game_logs(games: pd.DataFrame, player_logs: pd.DataF
                     "team_id": game[f"{side}_team_id"],
                     "game_id": game["game_id"],
                     "official_date": game["official_date"],
+                    **({"_season": str(game["season_display"])} if season_aware else {}),
                 }
             )
 
@@ -477,21 +496,29 @@ def build_expected_rotation_game_logs(games: pd.DataFrame, player_logs: pd.DataF
         team_history = history.loc[history["team_key"] == team_key].copy()
         if team_history.empty:
             for record in base_group.to_dict(orient="records"):
+                record.pop("_season", None)
                 rows.append({**record, **_summarize_expected_rotation_state(pd.DataFrame())})
             continue
 
         history_records = team_history.to_dict(orient="records")
         latest_by_player: dict[str, dict[str, Any]] = {}
         pointer = 0
+        current_season: str | None = None
 
         for record in base_group.sort_values(["official_date", "game_id"]).to_dict(orient="records"):
             record_date = pd.to_datetime(record["official_date"], errors="coerce")
+            record_season = record.pop("_season", None)
+            if season_aware and record_season != current_season:
+                # New season: last season's roster is not this season's availability.
+                latest_by_player = {}
+                current_season = record_season
             while pointer < len(history_records):
                 candidate = history_records[pointer]
                 candidate_date = pd.to_datetime(candidate["official_date"], errors="coerce")
                 if pd.isna(candidate_date) or candidate_date >= record_date:
                     break
-                latest_by_player[str(candidate["player_key"])] = candidate
+                if not season_aware or str(candidate.get("season_display")) == record_season:
+                    latest_by_player[str(candidate["player_key"])] = candidate
                 pointer += 1
 
             latest_frame = pd.DataFrame(list(latest_by_player.values()))
@@ -505,42 +532,50 @@ def attach_pregame_rotation_features(games: pd.DataFrame, rotation_logs: pd.Data
     if rotation_logs.empty or games.empty:
         return games
 
+    # days_rest is not attached: the attached row is the PREVIOUS game's, so its rest
+    # was the rest before that game (see feature_engineering._SAFE_TEAM_LOG_BASE_COLUMNS).
     safe_feature_columns = [
         column
         for column in rotation_logs.columns
         if column.endswith("_avg_last_3")
         or column.endswith("_avg_last_5")
         or column.endswith("_avg_last_10")
-        or column in {"days_rest", "games_played_prior"}
+        or column in {"games_played_prior"}
     ]
+    season_col = "season_display" if "season_display" in games.columns and "season_display" in rotation_logs.columns else None
+    season_cols = [season_col] if season_col else []
 
     merged = games.copy()
     for side, team_col in (("away", "away_team_key"), ("home", "home_team_key")):
-        base = merged[["game_id", "official_date", team_col]].rename(columns={team_col: "team_key"})
+        base = merged[["game_id", "official_date", team_col, *season_cols]].rename(columns={team_col: "team_key"})
         output_parts: list[pd.DataFrame] = []
-        history = rotation_logs[["team_key", "game_id", "official_date", *safe_feature_columns]].copy()
+        history = rotation_logs[["team_key", "game_id", "official_date", *season_cols, *safe_feature_columns]].copy()
         history["official_date"] = pd.to_datetime(history["official_date"], errors="coerce")
         history = history.sort_values(["team_key", "official_date", "game_id"]).reset_index(drop=True)
 
         for team_key, base_group in base.groupby("team_key", sort=False):
-            history_group = history.loc[history["team_key"] == team_key, ["official_date", *safe_feature_columns]].copy()
+            history_group = history.loc[history["team_key"] == team_key, ["official_date", *season_cols, *safe_feature_columns]].copy()
             base_sorted = base_group.sort_values(["official_date", "game_id"]).reset_index(drop=True)
             if history_group.empty:
                 for column in safe_feature_columns:
                     base_sorted[column] = np.nan
                 output_parts.append(base_sorted)
                 continue
+            if season_col:
+                base_sorted[season_col] = base_sorted[season_col].astype(str)
+                history_group[season_col] = history_group[season_col].astype(str)
             output_parts.append(
                 pd.merge_asof(
                     base_sorted,
                     history_group.sort_values("official_date"),
                     on="official_date",
+                    by=season_col,
                     direction="backward",
                     allow_exact_matches=False,
                 )
             )
 
-        feature_frame = pd.concat(output_parts, ignore_index=True)
+        feature_frame = pd.concat(output_parts, ignore_index=True).drop(columns=season_cols)
         feature_frame = feature_frame.rename(
             columns={
                 "team_key": team_col,

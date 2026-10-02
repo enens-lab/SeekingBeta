@@ -1,0 +1,47 @@
+{
+  "version": "bb-honest-2026.10.02",
+  "notes": [
+    "Small fitted parameters for the served NBA/WNBA model, committed so the RunPod export needs no new artifact.",
+    "Every value was chosen on EARLY seasons only, before the reported walk-forward seasons (NBA 2024-25 on, WNBA 2025 on):",
+    "Elo K / home advantage / carry-over: grid on NBA 2022-23 + 2023-24 (best K=16, HCA=60, carry 0.75, log-loss 0.6310, n=2638) and WNBA 2024 (K=30).",
+    "Ratings half-life / L2 / prior-season weight: grid on NBA 2022-23 + 2023-24 (best margin+total MAE: 45 days, L2 4, weight 1.0) and WNBA 2024 (90 days, L2 2; the prior-season weight is not identifiable from one season, kept at 0.5).",
+    "Win-model C: walk-forward on NBA 2022-23 + 2023-24 (C=0.02 Brier 0.2196 vs 0.2205 at C=0.01 and C=0.05); the WNBA reuses it.",
+    "The L1 logistic regression itself is refit at every export on all completed games before the bake (and per 14-day block for the walk-forward history), so it has no stored coefficients.",
+    "sigma_defaults are cold-start values only; once 100 out-of-sample residuals exist the rolling out-of-sample sigma is used.",
+    "calibration: Platt map fitted only on EARLIER walk-forward predictions (warm-up seasons included), shrunk toward the identity (prior_strength in units of summed log-loss; identity below min_oos predictions). Fixed a priori, not tuned on the reported seasons."
+  ],
+  "rest_cap_days": 4,
+  "walk_forward": {"block_days": 14},
+  "win_model": {
+    "type": "elo_offset_l1",
+    "C": 0.02,
+    "extra_penalty_factor": 1.0,
+    "include_rotation_features": true,
+    "extra_features": ["elo_diff", "rest_home_c", "rest_away_c", "b2b_home", "b2b_away", "rest_diff", "b2b_diff", "is_postseason", "is_neutral"]
+  },
+  "margin_model": {
+    "ratings_weight": 0.5,
+    "elo_rest_features": ["elo_diff", "rest_home_c", "rest_away_c", "b2b_home", "b2b_away", "rest_diff", "b2b_diff"],
+    "ridge_alphas": [1.0, 3.2, 10.0, 31.6, 100.0, 316.2, 1000.0, 3162.3, 10000.0, 31622.8]
+  },
+  "sigma": {"window": 400, "min_residuals": 100},
+  "calibration": {"method": "platt_shrunk_to_identity", "prior_strength": 20.0, "min_oos": 200, "window": 1500},
+  "leagues": {
+    "nba": {
+      "elo": {"k": 16.0, "hca": 60.0, "carry": 0.75, "init": 1500.0, "mov": true},
+      "ratings": {"half_life_days": 45.0, "l2": 4.0, "prev_season_weight": 1.0, "window_days": 400, "min_games": 30},
+      "sigma_defaults": {"margin": 14.2, "total": 20.1, "team_total": 12.5},
+      "history_from_season": "2024-25",
+      "margin_warmup_from_season": "2022-23",
+      "min_train_games": 300
+    },
+    "wnba": {
+      "elo": {"k": 30.0, "hca": 60.0, "carry": 0.75, "init": 1500.0, "mov": true},
+      "ratings": {"half_life_days": 90.0, "l2": 2.0, "prev_season_weight": 0.5, "window_days": 400, "min_games": 30},
+      "sigma_defaults": {"margin": 13.1, "total": 18.2, "team_total": 11.3},
+      "history_from_season": "2025",
+      "margin_warmup_from_season": "2024",
+      "min_train_games": 100
+    }
+  }
+}

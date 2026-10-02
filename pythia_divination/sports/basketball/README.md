@@ -12,9 +12,19 @@ This package is the SeekingBeta.AI basketball pipeline for NBA and WNBA.
   back-to-back from local tip dates (`results.py`, capped at 4 days) and a postseason
   flag. A Platt map fitted only on earlier walk-forward predictions, shrunk toward the
   identity, calibrates it. The torch MLP / HGB artifacts are no longer read.
+  **WNBA serves calibrated Elo-MOV** (`leagues.wnba.win_model` in `model_params.json`):
+  the L1 model's paired Brier CI against Elo included 0 there, and the review rule
+  prefers Elo in that case. NBA keeps the L1 model (CI below 0).
+- **No pick:** a probability within 0.005 of 0.5 (shown as 50% / 50%) is no pick: no
+  history board, no accuracy credit, no moneyline lean (`honest_model.NO_PICK_BAND`).
+- **Missing-season guard:** `honest_model.data_coverage` checks every season from
+  `margin_warmup_from_season` through the current one (count >= 60% of the median of
+  complete seasons, box scores for >= 60% of finals). A failing league keeps its
+  previous history / model record and publishes no upcoming boards.
 - **Spread / total / team totals (model only, `market: null`):** opponent-adjusted
   offense/defense ratings (`ratings.py`) blended 50/50 with an Elo+rest ridge for the
-  margin; normal distributions with a rolling out-of-sample sigma.
+  margin; normal distributions with a rolling out-of-sample sigma. Play-in and playoff
+  boards carry spread + moneyline only (postseason totals ran 8.6 points under the model).
 - **History:** a 14-day walk-forward (`recordBasis: "simulated"`); every game is graded by
   a model fitted only on earlier dates. NBA 2022-24 / WNBA 2024 tuned the parameters, so
   they are predicted (to seed the calibrator and sigma) but never published.

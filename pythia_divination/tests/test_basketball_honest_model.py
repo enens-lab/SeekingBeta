@@ -301,12 +301,15 @@ def test_rolling_sigma_uses_only_earlier_dates():
 class _Row:
     home_tricode = "DET"
     away_tricode = "BOS"
+    kind = "regular"
 
 
-def _board_markets(margin: float = 5.3, total: float = 226.4, p_home: float = 0.66) -> list[dict]:
+def _board_markets(margin: float = 5.3, total: float = 226.4, p_home: float = 0.66, kind: str = "regular") -> list[dict]:
     from scripts.export_basketball_frontend_data import build_board_markets
     pred = pd.Series({"p_home": p_home, "margin_pred": margin, "total_pred": total})
-    return build_board_markets("basketball-nba-0022600001", _Row(), pred,
+    row = _Row()
+    row.kind = kind
+    return build_board_markets("basketball-nba-0022600001", row, pred,
                                {"margin": 14.2, "total": 20.1, "team_total": 12.3},
                                published_at="2026-10-20T07:10:00+00:00", version="test")
 
@@ -381,6 +384,16 @@ def test_market_log_round_trip_grades_unpriced_without_units():
         assert all(g["unitReturn"] is None for g in graded)                  # model-only: no invented -110 ROI
         summary = {s["type"]: s for s in ml.summarize(graded)}
         assert summary["spread"]["season"] == "2026-27" and summary["spread"]["roi"] is None
+        # Fair lines are logged on BOTH sides (and the moneyline is a fixed favourite
+        # side), so the exporter keeps the default record_types: every row is a
+        # calibration row, never a W-L record.
+        assert set(summary) == {"moneyline", "spread", "total", "team_total_home", "team_total_away"}
+        for row in summary.values():
+            assert row["recordKind"] == "calibration", row
+            assert row["wins"] is None and row["losses"] is None and row["winRateExPush"] is None
+            assert row["unitsAtStatedPrice"] is None and row["roi"] is None
+        assert summary["spread"]["hits"] == 1 and summary["spread"]["graded"] == 2      # one side won, one lost
+        assert summary["spread"]["brier"] is not None and summary["spread"]["baseRateBrier"] == 0.25
 
 
 def test_tbd_tips_publish_no_game_start():
@@ -457,6 +470,8 @@ def test_real_data_walk_forward_if_available():
         print("  (skipped: no local WNBA tables)")
         return
     tables = hm.load_league_tables(nd, "wnba")
+    coverage = hm.data_coverage(tables, PARAMS, today=pd.Timestamp("2026-10-02"))
+    assert coverage["ok"], coverage["problems"]                                # local tables pass the guard
     run = hm.run_league(tables, PARAMS, today=pd.Timestamp("2026-10-02"), upcoming_ids=set(), with_history=True)
     allpreds = run.history.dropna(subset=["p_home"])
     assert (allpreds["local_date"] > allpreds["train_cutoff"]).all()
@@ -471,6 +486,187 @@ def test_real_data_walk_forward_if_available():
     assert m["brier"] < 0.25   # better than a coin flip
     leaky = [c for c in run.feature_cols if c.endswith(("_wins", "_losses", "_id", "_id_detail")) or "days_rest" in c]
     assert not leaky, leaky
+
+
+# ── verifier fixes: no-pick band, postseason markets, WNBA Elo, missing-season guard ──
+
+def test_no_pick_band_matches_the_displayed_fifty_fifty():
+    from scripts.export_basketball_frontend_data import _published_history
+    assert hm.NO_PICK_BAND == 0.005
+    # 0.500014 (the WNBA board shown as 50% / 50%) and 0.4951 are no picks; 0.506 / 0.494 are.
+    y = np.array([0.0, 1.0, 1.0, 0.0, 1.0])
+    p = np.array([0.500014, 0.4951, 0.506, 0.494, 0.7])
+    m = hm.win_metrics(y, p)
+    assert m["n"] == 5 and m["n_picks"] == 3 and m["accuracy"] == 1.0
+    assert abs(m["brier"] - float(np.mean((p - y) ** 2))) < 1e-12               # Brier still covers every game
+    hist = pd.DataFrame({"game_id": list("abcde"), "p_home": p, "home_win": y, "published": [True] * 5})
+    run = hm.LeagueRun(league="wnba", design=pd.DataFrame(), feature_cols=[], bundle=None, history=hist,
+                       upcoming=pd.DataFrame(), trained_through=None, sigmas={}, timings={})
+    assert list(_published_history(run)["game_id"]) == ["c", "d", "e"]          # no history board for a 50/50
+    assert len(_published_history(run, include_no_picks=True)) == 5
+    # no moneyline lean inside the band; the fair lines are still published
+    coin = {(x["type"], x["side"]) for x in _board_markets(p_home=0.502)}
+    assert not any(kind == "moneyline" for kind, _ in coin) and ("spread", "home") in coin
+    assert any(x["type"] == "moneyline" for x in _board_markets(p_home=0.506))
+
+
+def test_postseason_boards_publish_no_totals():
+    from scripts.export_basketball_frontend_data import POSTSEASON_SUPPRESSED_MARKETS
+    for kind in ("playoff", "play_in"):
+        picks = _board_markets(kind=kind)
+        types = {x["type"] for x in picks}
+        assert types == {"moneyline", "spread"}, (kind, types)
+        assert not types & set(POSTSEASON_SUPPRESSED_MARKETS)
+    regular = {x["type"] for x in _board_markets(kind="regular")}
+    cup = {x["type"] for x in _board_markets(kind="cup_final")}
+    assert regular == cup == {"moneyline", "spread", "total", "team_total_home", "team_total_away"}
+
+
+def test_wnba_serves_calibrated_elo_and_nba_keeps_the_l1_model():
+    assert PARAMS["leagues"]["wnba"]["win_model"]["type"] == "elo"
+    assert hm.win_model_config(PARAMS, "nba")["type"] == "elo_offset_l1"
+    assert hm.win_model_config(PARAMS, "wnba")["C"] == PARAMS["win_model"]["C"]       # override merges, not replaces
+    assert isinstance(hm.win_estimator(PARAMS, "wnba"), hm.EloWinModel)
+    assert isinstance(hm.win_estimator(PARAMS, "nba"), hm.OffsetL1Logistic)
+    assert hm.served_win_model(PARAMS, "wnba") == "elo_mov_calibrated"
+    assert hm.served_win_model(PARAMS, "nba") == "elo_l1_logistic"
+    design = _synthetic_design(n_per_season=300)
+    cols = ["x1", "noise", *PARAMS["win_model"]["extra_features"]]
+    model = hm.fit_win_model(design, design.index[:300], cols, PARAMS, "wnba")
+    assert np.allclose(hm.predict_win(model, design, design.index[300:]), design.loc[design.index[300:], "p_elo"])
+    # walk-forward: raw = Elo-MOV, served = shrunk Platt of it fitted on earlier OOS games only
+    params = {**PARAMS, "calibration": {"prior_strength": 20.0, "min_oos": 100, "window": 100000}}
+    preds = hm.walk_forward(design, cols, params, "wnba", win_seasons=["2024-25", "2025-26"], margin_seasons=[])
+    joined = preds.merge(design[["game_id", "p_elo", "local_date"]], on="game_id")
+    assert np.allclose(joined["p_raw"], joined["p_elo"])
+    z = joined["calib_a"] + joined["calib_b"] * np.log(joined["p_raw"] / (1 - joined["p_raw"]))
+    assert np.allclose(joined["p_home"], 1 / (1 + np.exp(-z)), atol=1e-9)
+    assert (joined["calib_n"] > 0).any() and (joined["local_date"] > joined["train_cutoff"]).all()
+    nba = hm.walk_forward(design, cols, params, "nba", win_seasons=["2025-26"], margin_seasons=[])
+    assert not np.allclose(nba["p_raw"], design.set_index("game_id").loc[nba["game_id"], "p_elo"].to_numpy())
+
+
+def _season_tables(league: str, counts: dict[int, int], *, box_share: float = 1.0) -> hm.LeagueTables:
+    """Synthetic normalized tables: `counts` = {season start year: final games}."""
+    prefix = "002" if league == "nba" else "102"
+    rows = []
+    for year, n in counts.items():
+        start = pd.Timestamp(f"{year}-10-22" if league == "nba" else f"{year}-05-16")
+        for k in range(n):
+            tip = start + pd.Timedelta(hours=int(k * 4000 / max(n, 1)) + 23)
+            rows.append({"game_id": f"{prefix}{str(year)[-2:]}{k + 1:05d}", "league": league,
+                         "game_date_time_utc": tip.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                         "home_team_id": 1 + k % 10, "away_team_id": 11 + k % 10,
+                         "home_score": 100 + k % 7, "away_score": 90 + k % 9})
+    sched = _sched(rows)
+    sched["league"] = league
+    with_box = sched["game_id"].iloc[: int(len(sched) * box_share)]
+    details = pd.DataFrame({"game_id": with_box.values})
+    players = pd.DataFrame({"game_id": with_box.values, "player_id": 1})
+    return hm.LeagueTables(league=league, schedules=[sched], details=details, players=players)
+
+
+def test_missing_season_guard():
+    today = pd.Timestamp("2026-10-02")
+    full = {2021: 1320, 2022: 1320, 2023: 1318, 2024: 1321, 2025: 1322}
+    ok = hm.data_coverage(_season_tables("nba", full), PARAMS, today=today)
+    assert ok["ok"], ok["problems"]
+    # 2026-27 has not started on Oct 2 (no game, before Nov 15): 2025-26 is the last required season
+    assert ok["required"] == ["2022-23", "2023-24", "2024-25", "2025-26"] and ok["inProgress"] is None
+    assert ok["seasons"]["2025-26"] == {"games": 1322, "teamBoxscores": 1322, "playerBoxscores": 1322}
+    # a whole season missing between the warm-up season and the current one
+    hole = hm.data_coverage(_season_tables("nba", {k: v for k, v in full.items() if k != 2023}), PARAMS, today=today)
+    assert not hole["ok"] and any(s.startswith("2023-24: no final games") for s in hole["problems"]), hole["problems"]
+    # a complete season far below the others (< 60% of the median)
+    thin = hm.data_coverage(_season_tables("nba", {**full, 2024: 700}), PARAMS, today=today)
+    assert not thin["ok"] and any(s.startswith("2024-25: 700 final games") for s in thin["problems"]), thin["problems"]
+    assert thin["minGames"] == round(0.6 * 1319.0, 1)
+    assert hm.data_coverage(_season_tables("nba", {**full, 2024: 800}), PARAMS, today=today)["ok"]   # 800 >= 791.4
+    # the in-progress season is exempt from the count check but must exist once it has started
+    nov = pd.Timestamp("2026-11-20")
+    early = hm.data_coverage(_season_tables("nba", {**full, 2026: 40}), PARAMS, today=nov)
+    assert early["ok"] and early["inProgress"] == "2026-27" and early["required"][-1] == "2026-27"
+    gone = hm.data_coverage(_season_tables("nba", full), PARAMS, today=nov)          # past Nov 15, zero games
+    assert not gone["ok"] and any(s.startswith("2026-27: no final games") for s in gone["problems"])
+    # box scores missing for most of a season (the model's form features)
+    box = hm.data_coverage(_season_tables("nba", full, box_share=0.5), PARAMS, today=today)
+    assert not box["ok"] and any("teamBoxscores" in s for s in box["problems"])
+    # WNBA: calendar seasons, 2026 in progress on Oct 2
+    w = hm.data_coverage(_season_tables("wnba", {2024: 263, 2025: 311, 2026: 340}), PARAMS, today=today)
+    assert w["ok"] and w["required"] == ["2024", "2025", "2026"] and w["inProgress"] == "2026"
+    w_hole = hm.data_coverage(_season_tables("wnba", {2024: 263, 2026: 340}), PARAMS, today=today)
+    assert not w_hole["ok"] and w_hole["problems"][0].startswith("2025: no final games")
+
+
+def test_degraded_league_keeps_previous_record_and_publishes_no_upcoming():
+    from scripts import export_basketball_frontend_data as ex
+    fresh = [{"tournamentId": "basketball-wnba-1022600001", "scheduledDate": 20260901, "gameId": "1022600001", "v": "new"}]
+    previous = [{"tournamentId": "basketball-nba-0042500401", "scheduledDate": 20260613, "gameId": "0042500401", "v": "old"},
+                {"tournamentId": "basketball-wnba-1022500001", "scheduledDate": 20250901, "gameId": "1022500001", "v": "old"}]
+    assert ex.merge_previous_boards(fresh, previous, set()) == fresh
+    merged = ex.merge_previous_boards(fresh, previous, {"nba"})
+    assert [(b["gameId"], b["v"]) for b in merged] == [("1022600001", "new"), ("0042500401", "old")]
+    assert ex.merge_previous_boards(fresh, None, {"nba"}) is None          # nothing to carry over: do not write
+    rec_fresh = {"generatedAt": "new", "records": [{"league": "wnba", "season": "2026"}],
+                 "leagues": {"wnba": {"seasons": {}}},
+                 "dataGuard": {"nba": {"ok": False, "published": "withheld"}, "wnba": {"ok": True, "published": "fresh"}}}
+    rec_prev = {"generatedAt": "old", "modelVersion": "v1",
+                "records": [{"league": "nba", "season": "2025-26"}, {"league": "wnba", "season": "2025"}],
+                "leagues": {"nba": {"seasons": {"2025-26": {}}}, "wnba": {"seasons": {}}}}
+    out = ex.merge_previous_record(rec_fresh, rec_prev, {"nba"})
+    assert out["records"] == [{"league": "nba", "season": "2025-26"}, {"league": "wnba", "season": "2026"}]
+    assert out["leagues"]["nba"]["keptFromGeneratedAt"] == "old" and out["generatedAt"] == "new"
+    assert out["dataGuard"]["nba"]["published"] == "kept previous" and out["dataGuard"]["wnba"]["published"] == "fresh"
+    assert ex.merge_previous_record(rec_fresh, None, {"nba"}) is None
+    # a degraded league's upcoming games never reach the boards
+    design = pd.DataFrame({"game_id": ["g1"], "local_date": [pd.Timestamp("2026-10-03")]})
+    run = hm.LeagueRun(league="nba", design=design, feature_cols=[], bundle=None, history=pd.DataFrame(),
+                       upcoming=pd.DataFrame({"game_id": ["g1"], "p_home": [0.6]}), trained_through=None,
+                       sigmas={}, timings={})
+    ctx = ex.ExportContext(today=pd.Timestamp("2026-10-02"), params=PARAMS, runs={"nba": run})
+    assert [d["dateKey"] for d in ex._available_dates(ctx)] == ["2026-10-03"]
+    ctx.degraded["nba"] = ["2024-25: no final games"]
+    assert ex._available_dates(ctx) == [] and ex.build_upcoming(ctx) == ([], [], None)
+    assert not ctx.publishable("nba") and ex.build_history_boards(ctx) == []
+
+
+def test_model_record_rows_carry_n_league_season_and_same_game_baselines():
+    from scripts import export_basketball_frontend_data as ex
+    rng = np.random.default_rng(5)
+    n = 200
+    p_elo = rng.uniform(0.2, 0.8, n)
+    y = (rng.random(n) < p_elo).astype(float)
+    p_home = np.clip(p_elo + 0.02, 0, 1)
+    p_home[np.abs(p_home - 0.5) < 0.01] = 0.6
+    p_home[0] = 0.5001                                                        # shown as 50% / 50%: no pick
+    hist = pd.DataFrame({"game_id": [f"g{i}" for i in range(n)], "season": "2025-26", "published": True,
+                         "p_home": p_home, "p_elo": p_elo,
+                         "home_win": y, "local_date": pd.Timestamp("2025-11-01") + pd.to_timedelta(np.arange(n), "D")})
+    run = hm.LeagueRun(league="nba", design=pd.DataFrame(), feature_cols=[], bundle=None, history=hist,
+                       upcoming=pd.DataFrame(), trained_through=pd.Timestamp("2026-06-13"), sigmas={"margin": 14.0},
+                       timings={})
+    offline = {"as_of": "2026-10-02", "model_version": "v-test", "leagues": {"nba": {"winner": {"2025-26": {"market_matched": {
+        "n": 150, "market": {"n": 150, "n_picks": 149, "accuracy": 0.7, "brier": 0.19, "log_loss": 0.57},
+        "model": {"n": 150, "n_picks": 150, "accuracy": 0.68, "brier": 0.205, "log_loss": 0.6},
+        "elo": {"n": 150, "n_picks": 150, "accuracy": 0.67, "brier": 0.207, "log_loss": 0.605},
+        "always_home_accuracy": 0.55, "model_minus_market_brier": {"n": 150, "diff": 0.015, "ci": [0.01, 0.02]}}}}}}}
+    ctx = ex.ExportContext(today=pd.Timestamp("2026-10-02"), params=PARAMS, runs={"nba": run})
+    rec = ex.build_model_record(ctx, [], offline=offline)
+    assert rec["noPickBand"] == hm.NO_PICK_BAND and rec["dataGuard"]["nba"]["published"] == "fresh"
+    (row,) = rec["records"]
+    assert (row["league"], row["season"], row["games"], row["servedModel"]) == ("nba", "2025-26", n, "elo_l1_logistic")
+    assert row["model"]["games"] == row["elo"]["games"] == row["alwaysHome"]["games"] == n
+    assert row["model"]["picks"] == n - 1                                     # the 0.5001 game is no pick
+    assert abs(row["alwaysHome"]["accuracy"] - round(float(np.mean(y == 1)), 4)) < 1e-9
+    assert abs(row["elo"]["brier"] - round(float(np.mean((p_elo - y) ** 2)), 4)) < 1e-9
+    assert row["market"] == {"games": 150, "picks": 149, "accuracy": 0.7, "brier": 0.19, "logLoss": 0.57}
+    mm = row["marketMatched"]
+    assert mm["games"] == mm["model"]["games"] == mm["elo"]["games"] == mm["alwaysHome"]["games"] == 150
+    assert mm["asOf"] == "2026-10-02" and mm["evaluatedModelVersion"] == "v-test"
+    assert rec["leagues"]["nba"]["seasons"]["2025-26"] is row
+    # no closing lines for a season: market is null, never a number from other games
+    bare = ex.build_model_record(ctx, [], offline={})["records"][0]
+    assert bare["market"] is None and bare["marketMatched"] is None
 
 
 if __name__ == "__main__":

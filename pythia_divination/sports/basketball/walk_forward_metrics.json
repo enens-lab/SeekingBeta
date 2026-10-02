@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-10-02T20:10:28.482668+00:00",
+  "generated_at": "2026-10-02T20:51:51.514712+00:00",
   "as_of": "2026-10-02",
-  "model_version": "bb-honest-2026.10.02",
+  "model_version": "bb-honest-2026.10.02.2",
   "params_overrides": [],
   "market_source": "ESPN closing lines matched by team and tip time (internal QA only, not displayed)",
   "method": "14-day expanding-window walk-forward: every graded game is predicted by models fit only on games from earlier local dates; Elo/rest/ratings are pregame by construction.",
@@ -9,17 +9,18 @@
     "nba_pooled_brier": {
       "target": "<= 0.2090, market shown",
       "n": 2460,
+      "always_home_accuracy": 0.5492,
       "model": {
         "n": 2460,
-        "n_picks": 2460,
-        "accuracy": 0.6813,
+        "n_picks": 2423,
+        "accuracy": 0.6835,
         "brier": 0.2072,
         "log_loss": 0.6006
       },
       "elo": {
         "n": 2460,
-        "n_picks": 2460,
-        "accuracy": 0.6744,
+        "n_picks": 2415,
+        "accuracy": 0.6766,
         "brier": 0.2092,
         "log_loss": 0.606
       },
@@ -34,18 +35,26 @@
       "market_n": 2460,
       "market": {
         "n": 2460,
-        "n_picks": 2443,
-        "accuracy": 0.6955,
+        "n_picks": 2436,
+        "accuracy": 0.6954,
         "brier": 0.1969,
         "log_loss": 0.576
       },
       "model_on_market_games": {
         "n": 2460,
-        "n_picks": 2460,
-        "accuracy": 0.6813,
+        "n_picks": 2423,
+        "accuracy": 0.6835,
         "brier": 0.2072,
         "log_loss": 0.6006
       },
+      "elo_on_market_games": {
+        "n": 2460,
+        "n_picks": 2415,
+        "accuracy": 0.6766,
+        "brier": 0.2092,
+        "log_loss": 0.606
+      },
+      "always_home_on_market_games": 0.5492,
       "model_minus_market_brier": {
         "n": 2460,
         "diff": 0.0103,
@@ -93,49 +102,58 @@
       "target": "<= 0.2085 (n < 500 per season: judge on the paired CI vs market)",
       "subset": "2025 regular season after its 60th game + 2026 regular season",
       "n": 556,
+      "always_home_accuracy": 0.5504,
       "model": {
         "n": 556,
-        "n_picks": 556,
-        "accuracy": 0.6601,
-        "brier": 0.2109,
-        "log_loss": 0.6105
+        "n_picks": 545,
+        "accuracy": 0.6697,
+        "brier": 0.2101,
+        "log_loss": 0.6087
       },
       "elo": {
         "n": 556,
-        "n_picks": 556,
-        "accuracy": 0.6763,
+        "n_picks": 546,
+        "accuracy": 0.6795,
         "brier": 0.2097,
         "log_loss": 0.6079
       },
       "model_minus_elo_brier": {
         "n": 556,
-        "diff": 0.0013,
+        "diff": 0.0004,
         "ci": [
           -0.0015,
-          0.0041
+          0.0024
         ]
       },
       "market_n": 556,
       "market": {
         "n": 556,
-        "n_picks": 552,
-        "accuracy": 0.6866,
+        "n_picks": 550,
+        "accuracy": 0.6855,
         "brier": 0.2029,
         "log_loss": 0.5903
       },
       "model_on_market_games": {
         "n": 556,
-        "n_picks": 556,
-        "accuracy": 0.6601,
-        "brier": 0.2109,
-        "log_loss": 0.6105
+        "n_picks": 545,
+        "accuracy": 0.6697,
+        "brier": 0.2101,
+        "log_loss": 0.6087
       },
+      "elo_on_market_games": {
+        "n": 556,
+        "n_picks": 546,
+        "accuracy": 0.6795,
+        "brier": 0.2097,
+        "log_loss": 0.6079
+      },
+      "always_home_on_market_games": 0.5504,
       "model_minus_market_brier": {
         "n": 556,
-        "diff": 0.0081,
+        "diff": 0.0073,
         "ci": [
-          -0.0003,
-          0.0165
+          -0.0012,
+          0.0157
         ]
       },
       "passed": false
@@ -143,49 +161,58 @@
     "wnba_2026": {
       "target": "accuracy >= 0.70 and log_loss <= 0.56 (n=330 < 500: judge on the paired CI vs market)",
       "n": 330,
+      "always_home_accuracy": 0.5394,
       "model": {
         "n": 330,
-        "n_picks": 330,
-        "accuracy": 0.6515,
-        "brier": 0.2087,
-        "log_loss": 0.6054
+        "n_picks": 325,
+        "accuracy": 0.6554,
+        "brier": 0.2078,
+        "log_loss": 0.6037
       },
       "elo": {
         "n": 330,
-        "n_picks": 330,
-        "accuracy": 0.6697,
+        "n_picks": 327,
+        "accuracy": 0.6667,
         "brier": 0.2073,
         "log_loss": 0.6031
       },
       "model_minus_elo_brier": {
         "n": 330,
-        "diff": 0.0014,
+        "diff": 0.0005,
         "ci": [
-          -0.0024,
-          0.0052
+          -0.0023,
+          0.0033
         ]
       },
       "market_n": 330,
       "market": {
         "n": 330,
-        "n_picks": 329,
-        "accuracy": 0.7052,
+        "n_picks": 327,
+        "accuracy": 0.7034,
         "brier": 0.1968,
         "log_loss": 0.5775
       },
       "model_on_market_games": {
         "n": 330,
-        "n_picks": 330,
-        "accuracy": 0.6515,
-        "brier": 0.2087,
-        "log_loss": 0.6054
+        "n_picks": 325,
+        "accuracy": 0.6554,
+        "brier": 0.2078,
+        "log_loss": 0.6037
       },
+      "elo_on_market_games": {
+        "n": 330,
+        "n_picks": 327,
+        "accuracy": 0.6667,
+        "brier": 0.2073,
+        "log_loss": 0.6031
+      },
+      "always_home_on_market_games": 0.5394,
       "model_minus_market_brier": {
         "n": 330,
-        "diff": 0.012,
+        "diff": 0.0111,
         "ci": [
-          0.0016,
-          0.0223
+          0.0008,
+          0.0214
         ]
       },
       "passed": false,
@@ -194,21 +221,21 @@
     "wnba_calibration": {
       "target": "slope CI includes 1, intercept CI includes 0, p>=0.8 bucket |mean p - hit| <= 0.04",
       "n": 616,
-      "slope": 1.004,
+      "slope": 1.016,
       "slope_ci": [
-        0.788,
-        1.221
+        0.798,
+        1.233
       ],
-      "intercept": 0.047,
+      "intercept": -0.015,
       "intercept_ci": [
-        -0.125,
-        0.22
+        -0.187,
+        0.158
       ],
       "bucket_80": {
-        "n": 79,
-        "mean_p": 0.8392,
-        "hit": 0.8734,
-        "gap": 0.0342
+        "n": 78,
+        "mean_p": 0.8438,
+        "hit": 0.859,
+        "gap": 0.0152
       },
       "passed": true
     },
@@ -243,7 +270,7 @@
       },
       "wnba": {
         "2025": {
-          "model": 0.5821,
+          "model": 0.5736,
           "elo": 0.5736,
           "market": 0.5366,
           "n": 34,
@@ -251,7 +278,7 @@
           "passed": true
         },
         "2026": {
-          "model": 0.7826,
+          "model": 0.7885,
           "elo": 0.8136,
           "market": 0.7087,
           "n": 37,
@@ -268,13 +295,13 @@
   "leagues": {
     "nba": {
       "league": "nba",
-      "seconds": 100.7,
+      "seconds": 98.6,
       "timings": {
         "results_elo": 0.1,
         "features_team": 2.5,
-        "features_rotation": 78.9,
-        "features": 81.9,
-        "walk_forward": 18.2,
+        "features_rotation": 77.0,
+        "features": 80.1,
+        "walk_forward": 17.9,
         "serve": 0.0
       },
       "n_features": 433,
@@ -289,6 +316,7 @@
         "b": 1.0408,
         "n": 1500
       },
+      "served_win_model": "elo_l1_logistic",
       "warmup_seasons": [
         "2022-23",
         "2023-24"
@@ -299,15 +327,15 @@
           "n": 1321,
           "model": {
             "n": 1321,
-            "n_picks": 1321,
-            "accuracy": 0.6662,
+            "n_picks": 1301,
+            "accuracy": 0.6687,
             "brier": 0.2108,
             "log_loss": 0.6082
           },
           "model_uncalibrated": {
             "n": 1321,
-            "n_picks": 1321,
-            "accuracy": 0.6631,
+            "n_picks": 1293,
+            "accuracy": 0.6698,
             "brier": 0.2106,
             "log_loss": 0.6077
           },
@@ -333,8 +361,8 @@
           },
           "elo": {
             "n": 1321,
-            "n_picks": 1321,
-            "accuracy": 0.6586,
+            "n_picks": 1294,
+            "accuracy": 0.66,
             "brier": 0.2137,
             "log_loss": 0.6149
           },
@@ -360,18 +388,19 @@
             },
             "model": {
               "n": 1231,
-              "n_picks": 1231,
-              "accuracy": 0.671,
+              "n_picks": 1212,
+              "accuracy": 0.6733,
               "brier": 0.2094,
               "log_loss": 0.6051
             },
             "elo": {
               "n": 1231,
-              "n_picks": 1231,
-              "accuracy": 0.6637,
+              "n_picks": 1206,
+              "accuracy": 0.6658,
               "brier": 0.2124,
               "log_loss": 0.6121
             },
+            "always_home_accuracy": 0.5435,
             "model_minus_market_brier": {
               "n": 1231,
               "diff": 0.0101,
@@ -406,15 +435,15 @@
           "n": 1230,
           "model": {
             "n": 1230,
-            "n_picks": 1230,
-            "accuracy": 0.6715,
+            "n_picks": 1211,
+            "accuracy": 0.6738,
             "brier": 0.2091,
             "log_loss": 0.6044
           },
           "model_uncalibrated": {
             "n": 1230,
-            "n_picks": 1230,
-            "accuracy": 0.6699,
+            "n_picks": 1204,
+            "accuracy": 0.6761,
             "brier": 0.2089,
             "log_loss": 0.6039
           },
@@ -440,8 +469,8 @@
           },
           "elo": {
             "n": 1230,
-            "n_picks": 1230,
-            "accuracy": 0.6642,
+            "n_picks": 1205,
+            "accuracy": 0.6664,
             "brier": 0.212,
             "log_loss": 0.6114
           },
@@ -467,18 +496,19 @@
             },
             "model": {
               "n": 1230,
-              "n_picks": 1230,
-              "accuracy": 0.6715,
+              "n_picks": 1211,
+              "accuracy": 0.6738,
               "brier": 0.2091,
               "log_loss": 0.6044
             },
             "elo": {
               "n": 1230,
-              "n_picks": 1230,
-              "accuracy": 0.6642,
+              "n_picks": 1205,
+              "accuracy": 0.6664,
               "brier": 0.212,
               "log_loss": 0.6114
             },
+            "always_home_accuracy": 0.5439,
             "model_minus_market_brier": {
               "n": 1230,
               "diff": 0.01,
@@ -513,15 +543,15 @@
           "n": 1322,
           "model": {
             "n": 1322,
-            "n_picks": 1322,
-            "accuracy": 0.6861,
+            "n_picks": 1302,
+            "accuracy": 0.6882,
             "brier": 0.2066,
             "log_loss": 0.5999
           },
           "model_uncalibrated": {
             "n": 1322,
-            "n_picks": 1322,
-            "accuracy": 0.6876,
+            "n_picks": 1303,
+            "accuracy": 0.6892,
             "brier": 0.2062,
             "log_loss": 0.5992
           },
@@ -547,8 +577,8 @@
           },
           "elo": {
             "n": 1322,
-            "n_picks": 1322,
-            "accuracy": 0.6815,
+            "n_picks": 1300,
+            "accuracy": 0.6831,
             "brier": 0.2078,
             "log_loss": 0.6038
           },
@@ -567,25 +597,26 @@
             "n": 1231,
             "market": {
               "n": 1231,
-              "n_picks": 1228,
-              "accuracy": 0.6938,
+              "n_picks": 1221,
+              "accuracy": 0.6937,
               "brier": 0.1947,
               "log_loss": 0.5707
             },
             "model": {
               "n": 1231,
-              "n_picks": 1231,
-              "accuracy": 0.6913,
+              "n_picks": 1213,
+              "accuracy": 0.6933,
               "brier": 0.2052,
               "log_loss": 0.5966
             },
             "elo": {
               "n": 1231,
-              "n_picks": 1231,
-              "accuracy": 0.6848,
+              "n_picks": 1211,
+              "accuracy": 0.687,
               "brier": 0.2063,
               "log_loss": 0.6004
             },
+            "always_home_accuracy": 0.5548,
             "model_minus_market_brier": {
               "n": 1231,
               "diff": 0.0105,
@@ -620,15 +651,15 @@
           "n": 1230,
           "model": {
             "n": 1230,
-            "n_picks": 1230,
-            "accuracy": 0.6911,
+            "n_picks": 1212,
+            "accuracy": 0.6931,
             "brier": 0.2053,
             "log_loss": 0.5967
           },
           "model_uncalibrated": {
             "n": 1230,
-            "n_picks": 1230,
-            "accuracy": 0.6919,
+            "n_picks": 1213,
+            "accuracy": 0.6933,
             "brier": 0.2048,
             "log_loss": 0.596
           },
@@ -654,8 +685,8 @@
           },
           "elo": {
             "n": 1230,
-            "n_picks": 1230,
-            "accuracy": 0.6846,
+            "n_picks": 1210,
+            "accuracy": 0.6868,
             "brier": 0.2064,
             "log_loss": 0.6006
           },
@@ -674,25 +705,26 @@
             "n": 1230,
             "market": {
               "n": 1230,
-              "n_picks": 1227,
-              "accuracy": 0.6936,
+              "n_picks": 1220,
+              "accuracy": 0.6934,
               "brier": 0.1947,
               "log_loss": 0.5707
             },
             "model": {
               "n": 1230,
-              "n_picks": 1230,
-              "accuracy": 0.6911,
+              "n_picks": 1212,
+              "accuracy": 0.6931,
               "brier": 0.2053,
               "log_loss": 0.5967
             },
             "elo": {
               "n": 1230,
-              "n_picks": 1230,
-              "accuracy": 0.6846,
+              "n_picks": 1210,
+              "accuracy": 0.6868,
               "brier": 0.2064,
               "log_loss": 0.6006
             },
+            "always_home_accuracy": 0.5545,
             "model_minus_market_brier": {
               "n": 1230,
               "diff": 0.0106,
@@ -727,15 +759,15 @@
           "n": 2643,
           "model": {
             "n": 2643,
-            "n_picks": 2643,
-            "accuracy": 0.6761,
+            "n_picks": 2603,
+            "accuracy": 0.6784,
             "brier": 0.2087,
             "log_loss": 0.6041
           },
           "model_uncalibrated": {
             "n": 2643,
-            "n_picks": 2643,
-            "accuracy": 0.6754,
+            "n_picks": 2596,
+            "accuracy": 0.6795,
             "brier": 0.2084,
             "log_loss": 0.6034
           },
@@ -761,8 +793,8 @@
           },
           "elo": {
             "n": 2643,
-            "n_picks": 2643,
-            "accuracy": 0.6701,
+            "n_picks": 2594,
+            "accuracy": 0.6715,
             "brier": 0.2107,
             "log_loss": 0.6094
           },
@@ -781,25 +813,26 @@
             "n": 2462,
             "market": {
               "n": 2462,
-              "n_picks": 2445,
-              "accuracy": 0.6953,
+              "n_picks": 2438,
+              "accuracy": 0.6952,
               "brier": 0.197,
               "log_loss": 0.5762
             },
             "model": {
               "n": 2462,
-              "n_picks": 2462,
-              "accuracy": 0.6812,
+              "n_picks": 2425,
+              "accuracy": 0.6833,
               "brier": 0.2073,
               "log_loss": 0.6008
             },
             "elo": {
               "n": 2462,
-              "n_picks": 2462,
-              "accuracy": 0.6742,
+              "n_picks": 2417,
+              "accuracy": 0.6765,
               "brier": 0.2093,
               "log_loss": 0.6063
             },
+            "always_home_accuracy": 0.5491,
             "model_minus_market_brier": {
               "n": 2462,
               "diff": 0.0103,
@@ -834,15 +867,15 @@
           "n": 2460,
           "model": {
             "n": 2460,
-            "n_picks": 2460,
-            "accuracy": 0.6813,
+            "n_picks": 2423,
+            "accuracy": 0.6835,
             "brier": 0.2072,
             "log_loss": 0.6006
           },
           "model_uncalibrated": {
             "n": 2460,
-            "n_picks": 2460,
-            "accuracy": 0.6809,
+            "n_picks": 2417,
+            "accuracy": 0.6847,
             "brier": 0.2069,
             "log_loss": 0.5999
           },
@@ -868,8 +901,8 @@
           },
           "elo": {
             "n": 2460,
-            "n_picks": 2460,
-            "accuracy": 0.6744,
+            "n_picks": 2415,
+            "accuracy": 0.6766,
             "brier": 0.2092,
             "log_loss": 0.606
           },
@@ -888,25 +921,26 @@
             "n": 2460,
             "market": {
               "n": 2460,
-              "n_picks": 2443,
-              "accuracy": 0.6955,
+              "n_picks": 2436,
+              "accuracy": 0.6954,
               "brier": 0.1969,
               "log_loss": 0.576
             },
             "model": {
               "n": 2460,
-              "n_picks": 2460,
-              "accuracy": 0.6813,
+              "n_picks": 2423,
+              "accuracy": 0.6835,
               "brier": 0.2072,
               "log_loss": 0.6006
             },
             "elo": {
               "n": 2460,
-              "n_picks": 2460,
-              "accuracy": 0.6744,
+              "n_picks": 2415,
+              "accuracy": 0.6766,
               "brier": 0.2092,
               "log_loss": 0.606
             },
+            "always_home_accuracy": 0.5492,
             "model_minus_market_brier": {
               "n": 2460,
               "diff": 0.0103,
@@ -1124,18 +1158,39 @@
             "market_total_mae": 14.334,
             "model_total_mae": 14.872
           }
+        },
+        "pooled_postseason": {
+          "n": 181,
+          "margin_mae": 12.682,
+          "margin_mae_ratings_only": 12.724,
+          "margin_mae_elo_rest_only": 12.668,
+          "total_mae": 15.306,
+          "margin_bias": 1.497,
+          "total_bias": -8.559,
+          "sigma_margin_mean": 14.56,
+          "sigma_total_mean": 18.4,
+          "margin_coverage": {
+            "cov68": 0.6409,
+            "cov80": 0.7569,
+            "cov95": 0.9282
+          },
+          "total_coverage": {
+            "cov68": 0.663,
+            "cov80": 0.7901,
+            "cov95": 0.9282
+          }
         }
       }
     },
     "wnba": {
       "league": "wnba",
-      "seconds": 15.3,
+      "seconds": 14.0,
       "timings": {
         "results_elo": 0.0,
         "features_team": 0.5,
-        "features_rotation": 11.0,
-        "features": 11.5,
-        "walk_forward": 3.7,
+        "features_rotation": 10.8,
+        "features": 11.3,
+        "walk_forward": 2.6,
         "serve": 0.0
       },
       "n_features": 433,
@@ -1146,10 +1201,11 @@
         "team_total": 10.94
       },
       "served_calibration": {
-        "a": 0.0071,
-        "b": 1.0165,
+        "a": -0.1049,
+        "b": 1.0152,
         "n": 787
       },
+      "served_win_model": "elo_mov_calibrated",
       "warmup_seasons": [
         "2024"
       ],
@@ -1159,51 +1215,51 @@
           "n": 311,
           "model": {
             "n": 311,
-            "n_picks": 311,
-            "accuracy": 0.6785,
-            "brier": 0.2136,
-            "log_loss": 0.6158
+            "n_picks": 301,
+            "accuracy": 0.6877,
+            "brier": 0.2132,
+            "log_loss": 0.6147
           },
           "model_uncalibrated": {
             "n": 311,
-            "n_picks": 311,
-            "accuracy": 0.6849,
-            "brier": 0.2131,
-            "log_loss": 0.6146
+            "n_picks": 301,
+            "accuracy": 0.6877,
+            "brier": 0.2128,
+            "log_loss": 0.6139
           },
           "model_calibration": {
             "n": 311,
-            "slope": 0.9595,
+            "slope": 0.9634,
             "slope_ci": [
-              0.6497,
-              1.2693
+              0.6532,
+              1.2736
             ],
-            "intercept": 0.0812,
+            "intercept": 0.0019,
             "intercept_ci": [
-              -0.1608,
-              0.3232
+              -0.2401,
+              0.2438
             ],
             "bucket_80": {
-              "n": 34,
-              "mean_p": 0.8439,
-              "hit": 0.9118
+              "n": 37,
+              "mean_p": 0.8465,
+              "hit": 0.8919
             },
             "slope_ci_includes_1": true,
             "intercept_ci_includes_0": true
           },
           "elo": {
             "n": 311,
-            "n_picks": 311,
-            "accuracy": 0.6752,
+            "n_picks": 301,
+            "accuracy": 0.6877,
             "brier": 0.2128,
             "log_loss": 0.6139
           },
           "model_minus_elo_brier": {
             "n": 311,
-            "diff": 0.0008,
+            "diff": 0.0004,
             "ci": [
-              -0.0027,
-              0.0042
+              -0.0015,
+              0.0022
             ]
           },
           "always_home_accuracy": 0.5627,
@@ -1220,23 +1276,24 @@
             },
             "model": {
               "n": 287,
-              "n_picks": 287,
-              "accuracy": 0.6829,
-              "brier": 0.2118,
-              "log_loss": 0.612
+              "n_picks": 278,
+              "accuracy": 0.6942,
+              "brier": 0.2115,
+              "log_loss": 0.6111
             },
             "elo": {
               "n": 287,
-              "n_picks": 287,
-              "accuracy": 0.6864,
+              "n_picks": 277,
+              "accuracy": 0.7004,
               "brier": 0.2113,
               "log_loss": 0.6106
             },
+            "always_home_accuracy": 0.5575,
             "model_minus_market_brier": {
               "n": 287,
-              "diff": 0.0014,
+              "diff": 0.0011,
               "ci": [
-                -0.0125,
+                -0.0133,
                 0.0154
               ]
             },
@@ -1266,51 +1323,51 @@
           "n": 286,
           "model": {
             "n": 286,
-            "n_picks": 286,
-            "accuracy": 0.6853,
-            "brier": 0.2107,
-            "log_loss": 0.6095
-          },
-          "model_uncalibrated": {
-            "n": 286,
-            "n_picks": 286,
-            "accuracy": 0.6923,
+            "n_picks": 277,
+            "accuracy": 0.6968,
             "brier": 0.2102,
             "log_loss": 0.6083
           },
+          "model_uncalibrated": {
+            "n": 286,
+            "n_picks": 276,
+            "accuracy": 0.7029,
+            "brier": 0.21,
+            "log_loss": 0.6077
+          },
           "model_calibration": {
             "n": 286,
-            "slope": 0.9954,
+            "slope": 0.9997,
             "slope_ci": [
-              0.6728,
-              1.3181
+              0.6769,
+              1.3225
             ],
-            "intercept": 0.0757,
+            "intercept": -0.0072,
             "intercept_ci": [
-              -0.177,
-              0.3285
+              -0.26,
+              0.2455
             ],
             "bucket_80": {
-              "n": 34,
-              "mean_p": 0.8439,
-              "hit": 0.9118
+              "n": 37,
+              "mean_p": 0.8465,
+              "hit": 0.8919
             },
             "slope_ci_includes_1": true,
             "intercept_ci_includes_0": true
           },
           "elo": {
             "n": 286,
-            "n_picks": 286,
-            "accuracy": 0.6888,
+            "n_picks": 276,
+            "accuracy": 0.7029,
             "brier": 0.21,
             "log_loss": 0.6077
           },
           "model_minus_elo_brier": {
             "n": 286,
-            "diff": 0.0007,
+            "diff": 0.0003,
             "ci": [
-              -0.0028,
-              0.0043
+              -0.0016,
+              0.0021
             ]
           },
           "always_home_accuracy": 0.5594,
@@ -1327,23 +1384,24 @@
             },
             "model": {
               "n": 286,
-              "n_picks": 286,
-              "accuracy": 0.6853,
-              "brier": 0.2107,
-              "log_loss": 0.6095
+              "n_picks": 277,
+              "accuracy": 0.6968,
+              "brier": 0.2102,
+              "log_loss": 0.6083
             },
             "elo": {
               "n": 286,
-              "n_picks": 286,
-              "accuracy": 0.6888,
+              "n_picks": 276,
+              "accuracy": 0.7029,
               "brier": 0.21,
               "log_loss": 0.6077
             },
+            "always_home_accuracy": 0.5594,
             "model_minus_market_brier": {
               "n": 286,
-              "diff": 0.0018,
+              "diff": 0.0014,
               "ci": [
-                -0.0121,
+                -0.013,
                 0.0158
               ]
             },
@@ -1373,51 +1431,51 @@
           "n": 340,
           "model": {
             "n": 340,
-            "n_picks": 340,
-            "accuracy": 0.6529,
-            "brier": 0.2099,
-            "log_loss": 0.6079
+            "n_picks": 335,
+            "accuracy": 0.6567,
+            "brier": 0.2089,
+            "log_loss": 0.6061
           },
           "model_uncalibrated": {
             "n": 340,
-            "n_picks": 340,
-            "accuracy": 0.6559,
-            "brier": 0.2086,
-            "log_loss": 0.605
+            "n_picks": 337,
+            "accuracy": 0.6677,
+            "brier": 0.208,
+            "log_loss": 0.6046
           },
           "model_calibration": {
             "n": 340,
-            "slope": 0.9997,
+            "slope": 1.0156,
             "slope_ci": [
-              0.7095,
-              1.2898
+              0.7229,
+              1.3083
             ],
-            "intercept": 0.0591,
+            "intercept": 0.0156,
             "intercept_ci": [
-              -0.173,
-              0.2912
+              -0.2163,
+              0.2476
             ],
             "bucket_80": {
-              "n": 45,
-              "mean_p": 0.8356,
-              "hit": 0.8444
+              "n": 41,
+              "mean_p": 0.8414,
+              "hit": 0.8293
             },
             "slope_ci_includes_1": true,
             "intercept_ci_includes_0": true
           },
           "elo": {
             "n": 340,
-            "n_picks": 340,
-            "accuracy": 0.6706,
+            "n_picks": 337,
+            "accuracy": 0.6677,
             "brier": 0.208,
             "log_loss": 0.6046
           },
           "model_minus_elo_brier": {
             "n": 340,
-            "diff": 0.0019,
+            "diff": 0.0009,
             "ci": [
-              -0.0019,
-              0.0057
+              -0.0018,
+              0.0037
             ]
           },
           "always_home_accuracy": 0.5471,
@@ -1427,31 +1485,32 @@
             "n": 331,
             "market": {
               "n": 331,
-              "n_picks": 330,
-              "accuracy": 0.7061,
+              "n_picks": 328,
+              "accuracy": 0.7043,
               "brier": 0.1965,
               "log_loss": 0.577
             },
             "model": {
               "n": 331,
-              "n_picks": 331,
-              "accuracy": 0.6495,
-              "brier": 0.2091,
-              "log_loss": 0.6063
+              "n_picks": 326,
+              "accuracy": 0.6534,
+              "brier": 0.2082,
+              "log_loss": 0.6045
             },
             "elo": {
               "n": 331,
-              "n_picks": 331,
-              "accuracy": 0.6677,
+              "n_picks": 328,
+              "accuracy": 0.6646,
               "brier": 0.2076,
               "log_loss": 0.6036
             },
+            "always_home_accuracy": 0.5408,
             "model_minus_market_brier": {
               "n": 331,
-              "diff": 0.0127,
+              "diff": 0.0117,
               "ci": [
-                0.0023,
-                0.0231
+                0.0014,
+                0.0221
               ]
             },
             "market_calibration": {
@@ -1480,51 +1539,51 @@
           "n": 330,
           "model": {
             "n": 330,
-            "n_picks": 330,
-            "accuracy": 0.6515,
-            "brier": 0.2087,
-            "log_loss": 0.6054
+            "n_picks": 325,
+            "accuracy": 0.6554,
+            "brier": 0.2078,
+            "log_loss": 0.6037
           },
           "model_uncalibrated": {
             "n": 330,
-            "n_picks": 330,
-            "accuracy": 0.6545,
-            "brier": 0.2075,
-            "log_loss": 0.6026
+            "n_picks": 327,
+            "accuracy": 0.6667,
+            "brier": 0.2073,
+            "log_loss": 0.6031
           },
           "model_calibration": {
             "n": 330,
-            "slope": 1.0112,
+            "slope": 1.0285,
             "slope_ci": [
-              0.7187,
-              1.3038
+              0.7333,
+              1.3237
             ],
-            "intercept": 0.0228,
+            "intercept": -0.0214,
             "intercept_ci": [
-              -0.2129,
-              0.2586
+              -0.257,
+              0.2142
             ],
             "bucket_80": {
-              "n": 45,
-              "mean_p": 0.8356,
-              "hit": 0.8444
+              "n": 41,
+              "mean_p": 0.8414,
+              "hit": 0.8293
             },
             "slope_ci_includes_1": true,
             "intercept_ci_includes_0": true
           },
           "elo": {
             "n": 330,
-            "n_picks": 330,
-            "accuracy": 0.6697,
+            "n_picks": 327,
+            "accuracy": 0.6667,
             "brier": 0.2073,
             "log_loss": 0.6031
           },
           "model_minus_elo_brier": {
             "n": 330,
-            "diff": 0.0014,
+            "diff": 0.0005,
             "ci": [
-              -0.0024,
-              0.0052
+              -0.0023,
+              0.0033
             ]
           },
           "always_home_accuracy": 0.5394,
@@ -1534,31 +1593,32 @@
             "n": 330,
             "market": {
               "n": 330,
-              "n_picks": 329,
-              "accuracy": 0.7052,
+              "n_picks": 327,
+              "accuracy": 0.7034,
               "brier": 0.1968,
               "log_loss": 0.5775
             },
             "model": {
               "n": 330,
-              "n_picks": 330,
-              "accuracy": 0.6515,
-              "brier": 0.2087,
-              "log_loss": 0.6054
+              "n_picks": 325,
+              "accuracy": 0.6554,
+              "brier": 0.2078,
+              "log_loss": 0.6037
             },
             "elo": {
               "n": 330,
-              "n_picks": 330,
-              "accuracy": 0.6697,
+              "n_picks": 327,
+              "accuracy": 0.6667,
               "brier": 0.2073,
               "log_loss": 0.6031
             },
+            "always_home_accuracy": 0.5394,
             "model_minus_market_brier": {
               "n": 330,
-              "diff": 0.012,
+              "diff": 0.0111,
               "ci": [
-                0.0016,
-                0.0223
+                0.0008,
+                0.0214
               ]
             },
             "market_calibration": {
@@ -1587,51 +1647,51 @@
           "n": 651,
           "model": {
             "n": 651,
-            "n_picks": 651,
-            "accuracy": 0.6651,
-            "brier": 0.2117,
-            "log_loss": 0.6117
+            "n_picks": 636,
+            "accuracy": 0.6714,
+            "brier": 0.2109,
+            "log_loss": 0.6102
           },
           "model_uncalibrated": {
             "n": 651,
-            "n_picks": 651,
-            "accuracy": 0.6697,
-            "brier": 0.2107,
-            "log_loss": 0.6096
+            "n_picks": 638,
+            "accuracy": 0.6771,
+            "brier": 0.2103,
+            "log_loss": 0.609
           },
           "model_calibration": {
             "n": 651,
-            "slope": 0.9813,
+            "slope": 0.9909,
             "slope_ci": [
-              0.7696,
-              1.193
+              0.7783,
+              1.2036
             ],
-            "intercept": 0.0697,
+            "intercept": 0.009,
             "intercept_ci": [
-              -0.0978,
-              0.2372
+              -0.1584,
+              0.1765
             ],
             "bucket_80": {
-              "n": 79,
-              "mean_p": 0.8392,
-              "hit": 0.8734
+              "n": 78,
+              "mean_p": 0.8438,
+              "hit": 0.859
             },
             "slope_ci_includes_1": true,
             "intercept_ci_includes_0": true
           },
           "elo": {
             "n": 651,
-            "n_picks": 651,
-            "accuracy": 0.6728,
+            "n_picks": 638,
+            "accuracy": 0.6771,
             "brier": 0.2103,
             "log_loss": 0.609
           },
           "model_minus_elo_brier": {
             "n": 651,
-            "diff": 0.0014,
+            "diff": 0.0007,
             "ci": [
-              -0.0012,
-              0.0039
+              -0.001,
+              0.0023
             ]
           },
           "always_home_accuracy": 0.5545,
@@ -1641,31 +1701,32 @@
             "n": 618,
             "market": {
               "n": 618,
-              "n_picks": 614,
-              "accuracy": 0.6889,
+              "n_picks": 612,
+              "accuracy": 0.6879,
               "brier": 0.2029,
               "log_loss": 0.5908
             },
             "model": {
               "n": 618,
-              "n_picks": 618,
-              "accuracy": 0.665,
-              "brier": 0.2104,
-              "log_loss": 0.609
+              "n_picks": 604,
+              "accuracy": 0.6722,
+              "brier": 0.2097,
+              "log_loss": 0.6075
             },
             "elo": {
               "n": 618,
-              "n_picks": 618,
-              "accuracy": 0.6764,
+              "n_picks": 605,
+              "accuracy": 0.681,
               "brier": 0.2093,
               "log_loss": 0.6069
             },
+            "always_home_accuracy": 0.5485,
             "model_minus_market_brier": {
               "n": 618,
-              "diff": 0.0075,
+              "diff": 0.0068,
               "ci": [
-                -0.0011,
-                0.016
+                -0.0019,
+                0.0154
               ]
             },
             "market_calibration": {
@@ -1694,51 +1755,51 @@
           "n": 616,
           "model": {
             "n": 616,
-            "n_picks": 616,
-            "accuracy": 0.6672,
-            "brier": 0.2096,
-            "log_loss": 0.6073
+            "n_picks": 602,
+            "accuracy": 0.6744,
+            "brier": 0.2089,
+            "log_loss": 0.6059
           },
           "model_uncalibrated": {
             "n": 616,
-            "n_picks": 616,
-            "accuracy": 0.6721,
-            "brier": 0.2087,
+            "n_picks": 603,
+            "accuracy": 0.6833,
+            "brier": 0.2085,
             "log_loss": 0.6052
           },
           "model_calibration": {
             "n": 616,
-            "slope": 1.0044,
+            "slope": 1.0157,
             "slope_ci": [
-              0.7878,
-              1.2211
+              0.798,
+              1.2334
             ],
-            "intercept": 0.0475,
+            "intercept": -0.0148,
             "intercept_ci": [
-              -0.1249,
-              0.2198
+              -0.1872,
+              0.1575
             ],
             "bucket_80": {
-              "n": 79,
-              "mean_p": 0.8392,
-              "hit": 0.8734
+              "n": 78,
+              "mean_p": 0.8438,
+              "hit": 0.859
             },
             "slope_ci_includes_1": true,
             "intercept_ci_includes_0": true
           },
           "elo": {
             "n": 616,
-            "n_picks": 616,
-            "accuracy": 0.6786,
+            "n_picks": 603,
+            "accuracy": 0.6833,
             "brier": 0.2085,
             "log_loss": 0.6052
           },
           "model_minus_elo_brier": {
             "n": 616,
-            "diff": 0.0011,
+            "diff": 0.0004,
             "ci": [
-              -0.0015,
-              0.0037
+              -0.0013,
+              0.0021
             ]
           },
           "always_home_accuracy": 0.5487,
@@ -1748,31 +1809,32 @@
             "n": 616,
             "market": {
               "n": 616,
-              "n_picks": 612,
-              "accuracy": 0.6895,
+              "n_picks": 610,
+              "accuracy": 0.6885,
               "brier": 0.2024,
               "log_loss": 0.5894
             },
             "model": {
               "n": 616,
-              "n_picks": 616,
-              "accuracy": 0.6672,
-              "brier": 0.2096,
-              "log_loss": 0.6073
+              "n_picks": 602,
+              "accuracy": 0.6744,
+              "brier": 0.2089,
+              "log_loss": 0.6059
             },
             "elo": {
               "n": 616,
-              "n_picks": 616,
-              "accuracy": 0.6786,
+              "n_picks": 603,
+              "accuracy": 0.6833,
               "brier": 0.2085,
               "log_loss": 0.6052
             },
+            "always_home_accuracy": 0.5487,
             "model_minus_market_brier": {
               "n": 616,
-              "diff": 0.0073,
+              "diff": 0.0066,
               "ci": [
-                -0.0013,
-                0.0158
+                -0.0021,
+                0.0152
               ]
             },
             "market_calibration": {
@@ -1802,7 +1864,7 @@
         "2025": {
           "n": 34,
           "start": "2025-05-16",
-          "model_log_loss": 0.5821,
+          "model_log_loss": 0.5736,
           "elo_log_loss": 0.5736,
           "home_win_rate": 0.6176,
           "market_log_loss": 0.5366
@@ -1810,7 +1872,7 @@
         "2026": {
           "n": 37,
           "start": "2026-05-08",
-          "model_log_loss": 0.7826,
+          "model_log_loss": 0.7885,
           "elo_log_loss": 0.8136,
           "home_win_rate": 0.2973,
           "market_log_loss": 0.7087
@@ -1983,6 +2045,27 @@
             "model_margin_mae": 10.432,
             "market_total_mae": 13.937,
             "model_total_mae": 14.221
+          }
+        },
+        "pooled_postseason": {
+          "n": 33,
+          "margin_mae": 11.342,
+          "margin_mae_ratings_only": 11.296,
+          "margin_mae_elo_rest_only": 11.433,
+          "total_mae": 12.765,
+          "margin_bias": 2.521,
+          "total_bias": 1.633,
+          "sigma_margin_mean": 13.11,
+          "sigma_total_mean": 17.11,
+          "margin_coverage": {
+            "cov68": 0.6364,
+            "cov80": 0.7576,
+            "cov95": 0.9697
+          },
+          "total_coverage": {
+            "cov68": 0.7576,
+            "cov80": 0.8788,
+            "cov95": 0.9394
           }
         }
       }

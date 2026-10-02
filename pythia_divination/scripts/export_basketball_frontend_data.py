@@ -22,7 +22,25 @@ What changed (2026-10-02, plan items P1-4 and P1-12):
   team totals, moneyline; ``basis: "model"``, ``market: null``, never an edge). Each
   bake appends them to the market pick log and regrades everything logged so far
   into basketball_market_history.json / basketball_market_summary.json. Market
-  results never touch hitStatus / seasonSummary.
+  results never touch hitStatus / seasonSummary. Both sides of every fair line are
+  logged, so market_log.summarize keeps them all as calibration rows (no W-L).
+
+Verifier fixes (2026-10-02, second pass):
+
+* Missing-season guard (hm.data_coverage): a league whose tables lack a season from
+  margin_warmup_from_season through the current one, or hold a complete season with
+  < 60% of the median complete-season game count (or < 60% box-score coverage), is
+  logged at ERROR, keeps its PREVIOUS history boards and model record, and gets no
+  upcoming boards. Without a previous file on disk the record files are not
+  rewritten at all (the RunPod worker uploads only files it rewrote).
+* WNBA serves calibrated Elo-MOV (model_params.json leagues.wnba.win_model); NBA keeps
+  the L1 model. predictionSource names the served model.
+* No total / team-total markets on play-in and playoff boards.
+* |p - 0.5| < hm.NO_PICK_BAND (0.005) is no pick everywhere: no history board, no
+  accuracy credit, no moneyline lean.
+* basketball_model_record.json: a flat `records` list, every figure with its games /
+  picks count and the Elo, always-home and closing-market baselines on the same games.
+* BASKETBALL_EXPORT_OUTPUT_DIR overrides the output directory (dry runs).
 """
 
 from __future__ import annotations
@@ -62,7 +80,7 @@ from sports.basketball.rotation_features import build_projected_rotation_map  # 
 PROJ_ROOT = Path(__file__).resolve().parents[2]
 BASKETBALL_DATA_ROOT = DEFAULT_BASKETBALL_DATA_ROOT
 NORMALIZED_DIR = BASKETBALL_DATA_ROOT / "normalized"
-FRONTEND_DATA_DIR = PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"
+FRONTEND_DATA_DIR = Path(os.getenv("BASKETBALL_EXPORT_OUTPUT_DIR") or (PROJ_ROOT / "pythia_prophecy" / "frontend" / "src" / "data"))
 UPCOMING_LOOKAHEAD_DAYS = 7
 MAX_AVAILABLE_DATES = 7
 LEAGUES = ("nba", "wnba")
@@ -71,6 +89,15 @@ MARKET_HISTORY_CAP = 300
 # History boards keep lineups only for the newest N (the BFF serves 150); older
 # boards keep the keys with empty lineups so the file stays a few MB, not ~90.
 HISTORY_LINEUP_BOARDS = int(os.getenv("BASKETBALL_HISTORY_LINEUP_BOARDS", "200"))
+# No total / team-total markets on play-in and playoff boards: on the walk-forward
+# (NBA 2024-25 + 2025-26 play-in/playoffs, n=181) the total was biased by -8.6 points
+# (actual minus model) and 80% margin-interval coverage fell to 75.7%. Spread and
+# moneyline stay; walkForwardLines.postseason in the model record tracks both.
+POSTSEASON_KINDS = ("play_in", "playoff")
+POSTSEASON_SUPPRESSED_MARKETS = ("total", "team_total_home", "team_total_away")
+HISTORY_FILE = "basketball_historical_backtests.json"
+UPCOMING_FILE = "basketball_upcoming_tournaments.json"
+MODEL_RECORD_FILE = "basketball_model_record.json"
 logger = logging.getLogger(__name__)
 
 SEASON_OF = {"nba": market_log.season_cross_year(9), "wnba": market_log.season_calendar}
@@ -370,6 +397,13 @@ class ExportContext:
     tbd_tip_ids: set[str] = field(default_factory=set)   # date known, tip time not yet set
     players: dict[str, pd.DataFrame] = field(default_factory=dict)
     published_at: str = ""
+    coverage: dict[str, dict[str, Any]] = field(default_factory=dict)   # hm.data_coverage per league
+    degraded: dict[str, list[str]] = field(default_factory=dict)       # league -> why it must not publish
+
+    def publishable(self, league: str) -> bool:
+        """A fresh record / upcoming boards may be published for this league: its model
+        ran on tables that passed the missing-season guard."""
+        return league in self.runs and league not in self.degraded
 
 
 def _upcoming_live_games(live: pd.DataFrame, today: pd.Timestamp) -> pd.DataFrame:
@@ -419,12 +453,29 @@ def build_context(*, with_history: bool = True, today: pd.Timestamp | None = Non
         ctx.upcoming_ids[league] = set(upcoming["game_id"])
         ctx.tbd_tip_ids |= tbd_tip_game_ids(upcoming)
         ctx.players[league] = tables.players
+        coverage = hm.data_coverage(tables, ctx.params, today=ctx.today)
+        ctx.coverage[league] = coverage
+        if not coverage["ok"]:
+            # Never publish a partial simulated record or boards from a fit on holed data:
+            # the previous record files stay, upcoming boards are withheld. The results
+            # are still loaded (finals only) so logged market picks keep grading.
+            ctx.degraded[league] = list(coverage["problems"])
+            logger.error("Basketball %s tables fail the missing-season guard (%s); keeping the previous "
+                         "record and publishing no %s upcoming boards. Seasons: %s", league.upper(),
+                         "; ".join(coverage["problems"]), league.upper(), coverage["seasons"])
         try:
-            run = hm.run_league(tables, ctx.params, today=ctx.today, upcoming_ids=ctx.upcoming_ids[league],
-                                with_history=with_history)
-        except Exception:
+            if league in ctx.degraded:
+                run = hm.run_league(tables, ctx.params, today=ctx.today, upcoming_ids=set(), with_history=False)
+            else:
+                run = hm.run_league(tables, ctx.params, today=ctx.today, upcoming_ids=ctx.upcoming_ids[league],
+                                    with_history=with_history)
+        except Exception as exc:
             logger.exception("Basketball %s model run failed", league.upper())
+            ctx.degraded.setdefault(league, []).append(f"model run failed: {exc!r}")
             run = None
+        if run is None and league not in ctx.degraded:
+            ctx.degraded[league] = ["no competitive games in the tables"]
+            logger.error("Basketball %s: no games in the tables; keeping the previous record", league.upper())
         if run is not None:
             ctx.runs[league] = run
             logger.info("basketball %s: %d games, trained through %s, %d history, %d upcoming, timings %s", league.upper(),
@@ -503,7 +554,8 @@ def build_board_markets(board_id: str, row: Any, pred: Any, sigmas: dict[str, fl
         out.append(entry)
 
     p_home = _safe_float(getattr(pred, "p_home", None))
-    if p_home is not None:
+    # Within hm.NO_PICK_BAND of 0.5 the board shows 50% / 50%: no moneyline lean to log.
+    if p_home is not None and bool(hm.is_pick(p_home)):
         side, p, team = ("home", p_home, home) if p_home >= 0.5 else ("away", 1.0 - p_home, away)
         prices = markets.LinePrices(win=p, half_win=0.0, push=0.0, half_loss=0.0, loss=1.0 - p)
         # One moneyline pick per game (no side suffix): if the favourite flips between
@@ -523,6 +575,8 @@ def build_board_markets(board_id: str, row: Any, pred: Any, sigmas: dict[str, fl
         add(markets.market_pick(board_id=board_id, market_type="spread", side=side, label=_spread_label(team, line),
                                 prices=prices, line=line, model_line=round(-mean, 1), published_at=published_at,
                                 show_edge=False), side)
+    if str(getattr(row, "kind", "") or "") in POSTSEASON_KINDS:
+        return out   # no total / team totals on play-in and playoff boards (see POSTSEASON_SUPPRESSED_MARKETS)
     total_line = markets.fair_line_from_mean(total)
     for side in ("over", "under"):
         prices = markets.total_prices_normal(total, s_t, total_line, side, integer_scores=True)
@@ -541,7 +595,7 @@ def build_board_markets(board_id: str, row: Any, pred: Any, sigmas: dict[str, fl
 
 def _build_upcoming_boards(ctx: ExportContext, league: str, game_ids: set[str]) -> list[dict[str, Any]]:
     run = ctx.runs.get(league)
-    if run is None or run.upcoming.empty:
+    if run is None or run.upcoming.empty or not ctx.publishable(league):
         return []
     preds = run.upcoming.loc[run.upcoming["game_id"].isin(game_ids)].set_index("game_id")
     rows = _board_rows(run, set(preds.index))
@@ -592,7 +646,7 @@ def _build_upcoming_boards(ctx: ExportContext, league: str, game_ids: set[str]) 
                 "ilActivations14": _safe_int(getattr(row, "home_availability_expected_starters", np.nan)) or 0,
                 "rosterMoves14": _safe_int(getattr(row, "home_availability_expected_rotation_players", np.nan)) or 0,
             },
-            "predictionSource": f"{league}_elo_l1_logistic",
+            "predictionSource": f"{league}_{hm.served_win_model(ctx.params, league)}",
             "basis": "model",
             "modelVersion": version,
             "modelTrainedThrough": trained,
@@ -612,7 +666,7 @@ def _available_dates(ctx: ExportContext) -> list[dict[str, Any]]:
     counts: dict[str, int] = {}
     for league in LEAGUES:
         run = ctx.runs.get(league)
-        if run is None or run.upcoming.empty:
+        if run is None or run.upcoming.empty or not ctx.publishable(league):
             continue
         rows = run.design.loc[run.design["game_id"].isin(set(run.upcoming["game_id"]))]
         for key in rows["local_date"].map(_date_key).dropna():
@@ -634,7 +688,7 @@ def build_upcoming(ctx: ExportContext, selected_date: str | None = None) -> tupl
     boards: list[dict[str, Any]] = []
     for league in LEAGUES:
         run = ctx.runs.get(league)
-        if run is None or run.upcoming.empty:
+        if run is None or run.upcoming.empty or not ctx.publishable(league):
             continue
         rows = run.design.loc[run.design["game_id"].isin(set(run.upcoming["game_id"]))]
         ids = set(rows.loc[rows["local_date"].map(_date_key).isin(target), "game_id"])
@@ -676,7 +730,7 @@ def build_history_boards(ctx: ExportContext) -> list[dict[str, Any]]:
     entries: list[tuple[Any, ...]] = []
     for league in LEAGUES:
         run = ctx.runs.get(league)
-        if run is None or run.history.empty or "p_home" not in run.history.columns:
+        if run is None or run.history.empty or "p_home" not in run.history.columns or not ctx.publishable(league):
             continue
         hist = _published_history(run)
         rows = _board_rows(run, set(hist["game_id"])).set_index("game_id")
@@ -732,23 +786,25 @@ def build_history_boards(ctx: ExportContext) -> list[dict[str, Any]]:
             "gameType": str(row.get("kind")),
             "homeScore": _safe_int(rec.home_score),
             "awayScore": _safe_int(rec.away_score),
-            "predictionSource": f"{league}_elo_l1_logistic_walk_forward",
+            "predictionSource": f"{league}_{hm.served_win_model(ctx.params, league)}_walk_forward",
             "modelVersion": version,
             "modelTrainedThrough": pd.Timestamp(rec.train_cutoff).strftime("%Y-%m-%d"),
         })
     return boards
 
 
-def _published_history(run: hm.LeagueRun) -> pd.DataFrame:
+def _published_history(run: hm.LeagueRun, *, include_no_picks: bool = False) -> pd.DataFrame:
     """Walk-forward predictions users may see: published seasons only (warm-up seasons
     tuned the hyper-parameters and only seed the calibrator / sigma), and only games
-    the model actually picked (a probability of exactly 0.5 is no pick)."""
+    the model actually picked: within hm.NO_PICK_BAND of 0.5 the board would read
+    50% / 50%, so it is no pick and gets no history board (include_no_picks keeps
+    them, for Brier / log-loss over every published game)."""
     if run.history.empty or "p_home" not in run.history.columns:
         return pd.DataFrame()
     hist = run.history.dropna(subset=["p_home", "home_win"])
     if "published" in hist.columns:
         hist = hist.loc[hist["published"].astype(bool)]
-    return hist.loc[(hist["p_home"] - 0.5).abs() > 1e-9]
+    return hist if include_no_picks else hist.loc[hm.is_pick(hist["p_home"].to_numpy(float))]
 
 
 class _RowView:
@@ -789,49 +845,112 @@ def live_model_line_accuracy(graded: list[dict[str, Any]]) -> dict[str, Any]:
     return out
 
 
-def build_model_record(ctx: ExportContext, graded: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    """Per league/season honest record with baselines, for the app's track-record copy."""
-    metrics_path = DIV_ROOT / "sports" / "basketball" / "walk_forward_metrics.json"
-    offline = {}
-    if metrics_path.exists():
-        try:
-            offline = json.loads(metrics_path.read_text()).get("leagues", {})
-        except Exception:
-            offline = {}
+OFFLINE_METRICS_PATH = DIV_ROOT / "sports" / "basketball" / "walk_forward_metrics.json"
+SEASON_TYPE_ALL = "all competitive games (regular season, cup, play-in, playoffs)"
+
+
+def _r4(value: Any) -> float | None:
+    number = _safe_float(value)
+    return round(number, 4) if number is not None and np.isfinite(number) else None
+
+
+def _metric_block(m: dict[str, Any] | None, games: int | None = None) -> dict[str, Any] | None:
+    """{games, picks, accuracy, brier, logLoss} from hm.win_metrics / evaluator output.
+    accuracy is over `picks` (games outside the no-pick band); Brier and log-loss over
+    all `games`."""
+    if not m or not m.get("n"):
+        return None
+    return {"games": int(games if games is not None else m["n"]), "picks": m.get("n_picks"),
+            "accuracy": _r4(m.get("accuracy")), "brier": _r4(m.get("brier")), "logLoss": _r4(m.get("log_loss"))}
+
+
+def _load_offline_metrics(path: Path = OFFLINE_METRICS_PATH) -> dict[str, Any]:
+    try:
+        return json.loads(path.read_text()) if path.exists() else {}
+    except Exception:
+        logger.exception("Could not read %s", path)
+        return {}
+
+
+def season_record(league: str, season: str, g: pd.DataFrame, params: dict[str, Any],
+                  offline: dict[str, Any] | None = None) -> dict[str, Any]:
+    """One league-season of the simulated record, every baseline on the same games.
+
+    Top level (`games`): every published walk-forward game of the season: served model,
+    Elo-MOV alone and always-home. `market` / `marketMatched`: the subset with a de-vigged
+    closing moneyline, from the offline QA run (walk_forward_metrics.json; aggregates
+    only, the lines are not licensed for display), where model, Elo, always-home and the
+    market are all scored on those same `games`."""
+    y = g["home_win"].to_numpy(float)
+    n = int(len(g))
+    model = hm.win_metrics(y, g["p_home"].to_numpy(float))
+    elo = hm.win_metrics(y, g["p_elo"].to_numpy(float))
+    offline = offline or {}
+    mm = ((((offline.get("leagues") or {}).get(league) or {}).get("winner") or {}).get(str(season)) or {}).get("market_matched")
+    market = matched = None
+    if mm and mm.get("n"):
+        k = int(mm["n"])
+        market = _metric_block(mm.get("market"), k)
+        matched = {
+            "games": k,
+            "model": _metric_block(mm.get("model"), k),
+            "elo": _metric_block(mm.get("elo"), k),
+            "alwaysHome": {"games": k, "accuracy": _r4(mm.get("always_home_accuracy"))},
+            "market": market,
+            "modelMinusMarketBrier": mm.get("model_minus_market_brier"),
+            "asOf": offline.get("as_of"),
+            "evaluatedModelVersion": offline.get("model_version"),
+            "source": "closing moneyline, de-vigged (offline QA; aggregate only, no lines shown)",
+        }
+    return {
+        "league": league,
+        "season": str(season),
+        "seasonType": SEASON_TYPE_ALL,
+        "recordBasis": "simulated",
+        "servedModel": hm.served_win_model(params, league),
+        "games": n,
+        "firstGame": str(pd.Timestamp(g["local_date"].min()).date()),
+        "lastGame": str(pd.Timestamp(g["local_date"].max()).date()),
+        "model": _metric_block(model, n),
+        "elo": _metric_block(elo, n),
+        "alwaysHome": {"games": n, "accuracy": _r4(float(np.mean(y == 1))) if n else None},
+        "market": market,
+        "marketMatched": matched,
+    }
+
+
+def build_model_record(ctx: ExportContext, graded: list[dict[str, Any]] | None = None,
+                       offline: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Per league/season honest record with baselines, for the app's track-record copy.
+
+    `records` is the flat list the BFF reads (one row per league-season, see
+    season_record); `leagues.<league>.seasons` holds the same rows keyed by season plus
+    the league's serving details. Only publishable leagues are built here; the exporter
+    carries a degraded league's previous rows over (merge_previous_record)."""
+    offline = _load_offline_metrics() if offline is None else offline
     out: dict[str, Any] = {"modelVersion": hm.model_version(ctx.params), "generatedAt": ctx.published_at,
                            "recordBasis": "simulated",
+                           "noPickBand": hm.NO_PICK_BAND,
                            "method": ("14-day walk-forward: each game graded with a model (and calibrator) fitted only on "
-                                      "games from earlier dates. A probability of exactly 0.5 is no pick."),
-                           "leagues": {}}
-    for league, run in ctx.runs.items():
-        hist = _published_history(run)
-        seasons = {}
-        for season, g in hist.groupby("season"):
-            y = g["home_win"].to_numpy(float)
-            model = hm.win_metrics(y, g["p_home"].to_numpy(float))
-            elo = hm.win_metrics(y, g["p_elo"].to_numpy(float))
-            offline_market = (((offline.get(league) or {}).get("winner") or {}).get(str(season)) or {}).get("market_matched")
-            seasons[str(season)] = {
-                "recordBasis": "simulated",
-                "n": model.get("n"),
-                "nPicks": model.get("n_picks"),
-                "accuracy": round(model.get("accuracy", float("nan")), 4),
-                "brier": round(model.get("brier", float("nan")), 4),
-                "logLoss": round(model.get("log_loss", float("nan")), 4),
-                "baselines": {
-                    "alwaysHomeAccuracy": round(float(np.mean(y == 1)), 4),
-                    "eloAccuracy": round(elo.get("accuracy", float("nan")), 4),
-                    "eloBrier": round(elo.get("brier", float("nan")), 4),
-                    "closingMarket": ({"n": offline_market["n"], "accuracy": offline_market["market"]["accuracy"],
-                                       "brier": offline_market["market"]["brier"],
-                                       "source": "closing moneyline, de-vigged (offline QA; aggregate only, no lines shown)"}
-                                      if offline_market else None),
-                },
-                "firstGame": str(g["local_date"].min().date()),
-                "lastGame": str(g["local_date"].max().date()),
-            }
+                                      f"games from earlier dates. A probability within {hm.NO_PICK_BAND} of 0.5 is no pick: "
+                                      "left out of accuracy (picks), kept in Brier and log-loss (games)."),
+                           "records": [], "leagues": {},
+                           "dataGuard": {lg: {**(ctx.coverage.get(lg) or {}), "published": "fresh" if ctx.publishable(lg)
+                                              else "withheld"} for lg in LEAGUES}}
+    for league in LEAGUES:
+        run = ctx.runs.get(league)
+        if run is None or not ctx.publishable(league):
+            continue
+        hist = _published_history(run, include_no_picks=True)
+        seasons: dict[str, Any] = {}
+        for season, g in (hist.groupby("season") if not hist.empty else []):
+            rec = season_record(league, str(season), g, ctx.params, offline)
+            out["records"].append(rec)
+            seasons[str(season)] = rec
         out["leagues"][league] = {"trainedThrough": str(run.trained_through.date()) if run.trained_through is not None else None,
+                                  "servedModel": hm.served_win_model(ctx.params, league),
                                   "walkForwardLines": _walk_forward_line_accuracy(run),
+                                  "postseasonMarketsSuppressed": list(POSTSEASON_SUPPRESSED_MARKETS),
                                   "sigmas": {k: round(v, 2) for k, v in run.sigmas.items()},
                                   "calibration": run.calibration, "seasons": seasons}
     out["liveModelLines"] = {"recordBasis": "live, logged at publish",
@@ -839,21 +958,87 @@ def build_model_record(ctx: ExportContext, graded: list[dict[str, Any]] | None =
     return out
 
 
+def _line_block(g: pd.DataFrame) -> dict[str, Any]:
+    return {
+        "n": int(len(g)),
+        "marginMae": round(float((g["margin"] - g["margin_pred"]).abs().mean()), 2),
+        "totalMae": round(float((g["total"] - g["total_pred"]).abs().mean()), 2),
+        "totalBias": round(float((g["total"] - g["total_pred"]).mean()), 2),
+        "marginCoverage80": round(hm.interval_coverage(g["resid_margin"], g["sigma_margin"]).get("cov80", float("nan")), 3),
+        "totalCoverage80": round(hm.interval_coverage(g["resid_total"], g["sigma_total"]).get("cov80", float("nan")), 3),
+    }
+
+
 def _walk_forward_line_accuracy(run: hm.LeagueRun) -> dict[str, Any]:
-    """Simulated (walk-forward) margin / total MAE and 80% interval coverage per season."""
+    """Simulated (walk-forward) margin / total MAE, total bias and 80% interval coverage
+    per season, plus the pooled play-in + playoff games (whose totals are not published)."""
     hist = run.history
     if hist.empty or "margin_pred" not in hist.columns:
         return {}
     hist = hist.loc[hist["published"].astype(bool)] if "published" in hist.columns else hist
-    out: dict[str, Any] = {}
-    for season, g in hist.dropna(subset=["margin_pred", "total_pred"]).groupby("season"):
-        out[str(season)] = {
-            "n": int(len(g)),
-            "marginMae": round(float((g["margin"] - g["margin_pred"]).abs().mean()), 2),
-            "totalMae": round(float((g["total"] - g["total_pred"]).abs().mean()), 2),
-            "marginCoverage80": round(hm.interval_coverage(g["resid_margin"], g["sigma_margin"]).get("cov80", float("nan")), 3),
-            "totalCoverage80": round(hm.interval_coverage(g["resid_total"], g["sigma_total"]).get("cov80", float("nan")), 3),
-        }
+    hist = hist.dropna(subset=["margin_pred", "total_pred"])
+    out: dict[str, Any] = {str(season): _line_block(g) for season, g in hist.groupby("season")}
+    if "kind" in run.design.columns and not hist.empty:
+        kinds = hist["game_id"].map(run.design.drop_duplicates("game_id").set_index("game_id")["kind"])
+        post = hist.loc[kinds.isin(POSTSEASON_KINDS).to_numpy()]
+        if len(post):
+            out["postseason"] = _line_block(post)
+    return out
+
+
+def _league_of_board(board: dict[str, Any]) -> str | None:
+    """'basketball-<league>-<gameId>' (history tournamentId / upcoming id) -> league."""
+    ident = str(board.get("tournamentId") or board.get("id") or "")
+    parts = ident.split("-")
+    return parts[1] if len(parts) >= 3 and parts[0] == "basketball" else None
+
+
+def _read_previous(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text()) if path.exists() else None
+    except Exception:
+        logger.exception("Could not read the previous %s", path.name)
+        return None
+
+
+def merge_previous_boards(fresh: list[dict[str, Any]], previous: list[dict[str, Any]] | None,
+                          degraded: set[str]) -> list[dict[str, Any]] | None:
+    """History boards to write: fresh boards of the healthy leagues plus the PREVIOUS
+    boards of each degraded league. None = do not write the file (a degraded league
+    has no previous file to carry over here, e.g. a cold RunPod worker: leaving the
+    file unwritten keeps the published S3 copy, since only rewritten files upload)."""
+    if not degraded:
+        return fresh
+    if previous is None or not isinstance(previous, list):
+        return None
+    kept = [b for b in previous if _league_of_board(b) in degraded]
+    merged = [b for b in fresh if _league_of_board(b) not in degraded] + kept
+    merged.sort(key=lambda b: (b.get("scheduledDate") or 0, str(b.get("gameId") or "")), reverse=True)
+    return merged
+
+
+def merge_previous_record(fresh: dict[str, Any], previous: dict[str, Any] | None,
+                          degraded: set[str]) -> dict[str, Any] | None:
+    """Model record to write: fresh rows of the healthy leagues plus the previous rows
+    (records + leagues entry) of each degraded league. None = do not write."""
+    if not degraded:
+        return fresh
+    if not isinstance(previous, dict):
+        return None
+    out = dict(fresh)
+    out["records"] = [r for r in fresh.get("records", []) if r.get("league") not in degraded]
+    out["leagues"] = {k: v for k, v in (fresh.get("leagues") or {}).items() if k not in degraded}
+    for league in sorted(degraded):
+        out["records"] += [r for r in previous.get("records", []) if r.get("league") == league]
+        if league in (previous.get("leagues") or {}):
+            out["leagues"][league] = {**previous["leagues"][league],
+                                      "keptFromGeneratedAt": previous.get("generatedAt"),
+                                      "keptFromModelVersion": previous.get("modelVersion")}
+        guard = (out.get("dataGuard") or {}).get(league)
+        if isinstance(guard, dict):
+            out["dataGuard"] = {**out["dataGuard"], league: {**guard, "published": "kept previous",
+                                                             "keptFromGeneratedAt": previous.get("generatedAt")}}
+    out["records"].sort(key=lambda r: (str(r.get("league")), str(r.get("season"))))
     return out
 
 
@@ -898,11 +1083,17 @@ def export_basketball_frontend_data() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
     ctx = build_context(with_history=True)
     FRONTEND_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    degraded = {lg for lg in LEAGUES if not ctx.publishable(lg)}
     backtests = build_history_boards(ctx)
-    if backtests:
-        _write_json(FRONTEND_DATA_DIR / "basketball_historical_backtests.json", backtests, compact=True)
+    history_path = FRONTEND_DATA_DIR / HISTORY_FILE
+    merged = merge_previous_boards(backtests, _read_previous(history_path) if degraded else None, degraded)
+    if degraded and (merged is None or degraded >= set(LEAGUES)):
+        logger.error("Basketball history NOT rewritten (degraded: %s): the published %s stays as it is",
+                     sorted(degraded), HISTORY_FILE)
+    elif merged:
+        _write_json(history_path, merged, compact=True)
     upcoming, _, _ = build_upcoming(ctx)
-    _write_json(FRONTEND_DATA_DIR / "basketball_upcoming_tournaments.json", upcoming)
+    _write_json(FRONTEND_DATA_DIR / UPCOMING_FILE, upcoming)
     graded: list[dict[str, Any]] = []
     try:
         graded, history, summary = log_and_grade_markets(ctx, upcoming)
@@ -910,8 +1101,16 @@ def export_basketball_frontend_data() -> None:
         _write_json(FRONTEND_DATA_DIR / f"{MARKET_SPORT_KEY}_market_summary.json", summary)
     except Exception:
         logger.exception("Basketball market log / grading failed")
-    _write_json(FRONTEND_DATA_DIR / "basketball_model_record.json", build_model_record(ctx, graded))
-    print(f"Exported {len(backtests)} Basketball historical boards (walk-forward)")
+    record_path = FRONTEND_DATA_DIR / MODEL_RECORD_FILE
+    record = merge_previous_record(build_model_record(ctx, graded),
+                                   _read_previous(record_path) if degraded else None, degraded)
+    if degraded and (record is None or degraded >= set(LEAGUES)):
+        logger.error("Basketball model record NOT rewritten (degraded: %s): the published %s stays as it is",
+                     sorted(degraded), MODEL_RECORD_FILE)
+    else:
+        _write_json(record_path, record)
+    print(f"Exported {len(backtests)} Basketball historical boards (walk-forward)"
+          + (f"; degraded, previous record kept: {sorted(degraded)}" if degraded else ""))
     print(f"Exported {len(upcoming)} Basketball upcoming boards")
 
 

@@ -72,8 +72,8 @@
 }
 
 .sport-tab.active {
-  color: var(--brand-blue);
-  border-bottom-color: var(--brand-blue);
+  color: var(--brand-blue, var(--accent));
+  border-bottom-color: var(--brand-blue, var(--accent));
 }
 
 .sport-tab.disabled-tab {
@@ -151,7 +151,7 @@
 
 .tournament-dropdown:focus {
   outline: none;
-  border-color: var(--brand-blue);
+  border-color: var(--brand-blue, var(--accent));
 }
 
 .tournament-dropdown option,
@@ -282,7 +282,7 @@
 .prob-value {
   width: 50px;
   font-weight: 600;
-  color: var(--brand-blue);
+  color: var(--brand-blue, var(--accent));
   text-align: right;
 }
 
@@ -296,7 +296,7 @@
 
 .prob-bar-fill {
   height: 100%;
-  background-color: var(--brand-blue);
+  background-color: var(--brand-blue, var(--accent));
   border-radius: 4px;
   transition: width 1s ease-out;
 }
@@ -439,7 +439,7 @@
 
 .details-toggle {
   font-size: 0.85rem;
-  color: var(--brand-blue);
+  color: var(--brand-blue, var(--accent));
   background: none;
   border: none;
   cursor: pointer;
@@ -505,7 +505,7 @@
 
 .dp-prob {
   font-weight: 600;
-  color: var(--brand-blue);
+  color: var(--brand-blue, var(--accent));
   margin-left: auto;
 }
 
@@ -526,7 +526,7 @@
   border-radius: 999px;
   border: 1px solid rgba(77, 153, 255, 0.22);
   background: rgba(77, 153, 255, 0.1);
-  color: #d9f7ff;
+  color: var(--text-main);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
@@ -576,7 +576,7 @@
   align-items: center;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
-  color: #d9f7ff;
+  color: var(--text-main);
   background: rgba(77, 153, 255, 0.12);
   border: 1px solid rgba(77, 153, 255, 0.18);
   font-size: 0.76rem;
@@ -591,8 +591,8 @@
 }
 
 .mlb-matchup-card {
-  background: linear-gradient(180deg, rgba(15, 23, 39, 0.96), rgba(10, 17, 29, 0.92));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--sports-card-bg);
+  border: 1px solid var(--sports-border);
   border-radius: 22px;
   padding: 1.4rem;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
@@ -723,7 +723,7 @@
 .mlb-edge-pill {
   padding: 0.55rem 0.8rem;
   border-radius: 999px;
-  color: #dffcf6;
+  color: var(--text-main);
   border: 1px solid rgba(36, 211, 185, 0.22);
   background: rgba(36, 211, 185, 0.1);
   font-size: 0.82rem;
@@ -1051,7 +1051,7 @@
 
 .sports-search-input:focus {
   outline: none;
-  border-color: var(--brand-blue);
+  border-color: var(--brand-blue, var(--accent));
 }
 
 .sports-filter-dropdown {

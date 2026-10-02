@@ -4,6 +4,12 @@ import ResponsibleGamingNote from '../../components/ResponsibleGamingNote';
 import TeamLogo from '../../components/sports/TeamLogo';
 import StarterRadarChart from '../../components/sports/StarterRadarChart';
 import PlayerProfileCard from '../../components/sports/PlayerProfileCard';
+import MarketsSection, {
+  BacktestBasisCaption,
+  HistoryMarketBadges,
+  MarketFinalScore,
+  MarketRecord,
+} from '../../components/sports/MarketsSection';
 import {
   sports,
   type SportsBoardCollection,
@@ -448,6 +454,7 @@ function SportsDashboard() {
   const currentUpcoming = sportData.upcoming ?? [];
   const currentBacktests = sportData.backtests ?? [];
   const currentSeasonSummary = sportData.seasonSummary ?? null;
+  const currentMarketSummary = sportData.marketSummary ?? [];
   const currentTrackRecordTitle = useMemo(() => trackRecordTitle(currentBacktests), [currentBacktests]);
 
   // Distinct soccer competitions (Premier League, La Liga, ...) present in the
@@ -911,6 +918,8 @@ function SportsDashboard() {
             </div>
           )}
 
+          <MarketsSection key={activeEvent.id} markets={activeEvent.markets} />
+
           {renderEventDetail(activeEvent)}
         </div>
       </div>
@@ -1020,7 +1029,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1062,6 +1071,8 @@ function SportsDashboard() {
                       ) : null}
                     </div>
                   </div>
+
+                  <MarketsSection markets={board.markets} />
 
                   {expanded && (
                     <div className="mlb-expanded-panel">
@@ -1272,7 +1283,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1314,6 +1325,8 @@ function SportsDashboard() {
                       ) : null}
                     </div>
                   </div>
+
+                  <MarketsSection markets={board.markets} />
 
                   {expanded && (
                     <div className="mlb-expanded-panel">
@@ -1504,7 +1517,7 @@ function SportsDashboard() {
                     </div>
 
                     <div className="mlb-matchup-middle">
-                      <div className="mlb-edge-pill">Model edge: {predictedTeam || 'TBD'}</div>
+                      <div className="mlb-edge-pill">Model pick: {predictedTeam || 'TBD'}</div>
                       <div className="mlb-vs-marker">vs</div>
                       <div className="mlb-middle-notes">
                         <span>{board.homeTeamDetails?.venue || board.course}</span>
@@ -1546,6 +1559,8 @@ function SportsDashboard() {
                       ) : null}
                     </div>
                   </div>
+
+                  <MarketsSection markets={board.markets} />
 
                   {expanded && (
                     <div className="mlb-expanded-panel">
@@ -1662,7 +1677,7 @@ function SportsDashboard() {
           <div>
             <h1>Sports Prediction Boards</h1>
             <p className="subtitle">
-              Scan live boards and past results across golf, tennis, Basketball, Baseball, and Football without any betting or trading layer.
+              Scan live boards and past results across golf, tennis, Basketball, Baseball, and Football. Analytics only: no wagering, no sportsbook links.
             </p>
           </div>
           {sportUpdatedAt && (
@@ -1757,6 +1772,7 @@ function SportsDashboard() {
                             : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
                       </p>
                       <SeasonSummaryCards summary={currentSeasonSummary} isTeamSport={isTeamSport} />
+                      <MarketRecord summaries={currentMarketSummary} />
                     </div>
                     <div className="backtest-filters">
                       {activeSport === 'Tennis' && (
@@ -1826,6 +1842,8 @@ function SportsDashboard() {
                     </div>
                   </div>
 
+                  <BacktestBasisCaption label={sportData.backtestLabel} />
+
                   {filteredBacktests.length === 0 ? (
                     <div className="no-results-message">No historical results found matching your filters.</div>
                   ) : (
@@ -1845,6 +1863,7 @@ function SportsDashboard() {
                             <div className="tournament-info-col">
                               <strong>{backtest.tournament}</strong>
                               <div className="tour-label">{isTeamSport ? backtest.venue : backtest.tour}</div>
+                              <MarketFinalScore awayScore={backtest.awayScore} homeScore={backtest.homeScore} />
                             </div>
                             <div className="top-picks-col">
                               {isTeamSport ? (
@@ -1867,6 +1886,7 @@ function SportsDashboard() {
                             <button className="btn-text details-toggle" onClick={() => toggleBacktestDetails(idx)}>
                               {expandedBacktest === idx ? 'Hide Board' : 'View Board'}
                             </button>
+                            <HistoryMarketBadges markets={backtest.markets} />
                           </div>
 
                           {expandedBacktest === idx && (

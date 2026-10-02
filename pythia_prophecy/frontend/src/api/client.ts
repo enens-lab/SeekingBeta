@@ -449,6 +449,63 @@ export interface SportsOlympicDiscipline {
   medalists: SportsMedalist[];
 }
 
+// ---- Markets beyond the win probability (spread, total, handicap, ...) ----
+// Mirrors SportsMarketPrice / SportsMarketPick / SportsMarketSummary in
+// pythia_prophecy/api/models.py. Decoded leniently by decodeSportsMarketPicks /
+// decodeSportsMarketSummaries: `type`, `side`, `result`, `basis`, `period` and
+// `confidenceTier` stay plain strings (an unknown value must never break the
+// sports screen), and everything except modelProbability is optional. The
+// server's `edge` field is deliberately not decoded: it is never rendered.
+export interface SportsMarketPrice {
+  line?: number;
+  americanOdds?: number;
+  decimalOdds?: number;
+  impliedProbability?: number;
+  source?: string;
+  capturedAt?: string;
+}
+
+export interface SportsMarketPick {
+  marketId?: string;
+  type?: string;
+  period?: string;
+  label?: string;
+  side?: string;
+  line?: number;
+  modelLine?: number;
+  modelProbability: number;
+  pushProbability?: number;
+  outcomeProbabilities?: Record<string, number>;
+  market?: SportsMarketPrice;
+  basis?: string;
+  modelVersion?: string;
+  attribution?: string;
+  confidenceTier?: string;
+  publishedAt?: string;
+  // history only
+  result?: string;
+  unitReturn?: number;
+  closingLine?: number;
+}
+
+export interface SportsMarketSummary {
+  type?: string;
+  season?: string;
+  graded?: number;
+  wins?: number;
+  losses?: number;
+  pushes?: number;
+  voids?: number;
+  ungradable?: number;
+  winRateExPush?: number | null;
+  breakEvenRate?: number | null;
+  unitsAtStatedPrice?: number | null;
+  roi?: number | null;
+  marketBaselineWinRate?: number | null;
+  brier?: number | null;
+  marketBrier?: number | null;
+}
+
 export interface SportsUpcomingBoard {
   id: string;
   name: string;
@@ -493,6 +550,8 @@ export interface SportsUpcomingBoard {
   teamHistory?: SportsTeamHistory[];
   rosters?: SportsTeamRoster[];
   disciplines?: SportsOlympicDiscipline[];
+  // Additive; empty/absent for boards that do not publish markets.
+  markets?: SportsMarketPick[];
 }
 
 export interface SportsHistoricalBoard {
@@ -529,6 +588,10 @@ export interface SportsHistoricalBoard {
   homeLineup?: SportsLineupPlayer[];
   awayFeaturedPlayer?: SportsLineupPlayer;
   homeFeaturedPlayer?: SportsLineupPlayer;
+  // Graded market picks as published before the game, plus the final score.
+  markets?: SportsMarketPick[];
+  homeScore?: number;
+  awayScore?: number;
 }
 
 export interface SportsBoardCollection {
@@ -539,6 +602,10 @@ export interface SportsBoardCollection {
   selectedDate?: string;
   availableDates?: SportsBoardDateOption[];
   seasonSummary?: SportsBoardSeasonSummary | null;
+  // Live graded record per market type and season; empty until picks are graded.
+  marketSummary?: SportsMarketSummary[];
+  // How to read `backtests` (a simulated record), shown as a caption.
+  backtestLabel?: string;
 }
 
 export interface SportsBoardsResponse {
@@ -712,6 +779,155 @@ function normalizePredictionPayload(raw: any, ticker: string, fallbackHorizon: s
       new Date().toISOString(),
     attribution: raw?.attribution ?? null,
   };
+}
+
+// ----------------------------------------------------------------------------
+// Sports markets: lenient decoding
+// ----------------------------------------------------------------------------
+// The markets fields are additive and optional. Anything malformed is dropped
+// field-by-field (or element-by-element for arrays) so one bad market never
+// takes the whole sports response down.
+
+type JsonObject = Record<string, unknown>;
+
+function isJsonObject(raw: unknown): raw is JsonObject {
+  return typeof raw === 'object' && raw !== null && !Array.isArray(raw);
+}
+
+function optionalNumber(raw: unknown): number | undefined {
+  return toFiniteNumber(raw) ?? undefined;
+}
+
+function optionalString(raw: unknown): string | undefined {
+  return typeof raw === 'string' ? raw : undefined;
+}
+
+function decodeSportsMarketPrice(raw: unknown): SportsMarketPrice | undefined {
+  if (!isJsonObject(raw)) return undefined;
+  return {
+    line: optionalNumber(raw.line),
+    americanOdds: optionalNumber(raw.americanOdds),
+    decimalOdds: optionalNumber(raw.decimalOdds),
+    impliedProbability: optionalNumber(raw.impliedProbability),
+    source: optionalString(raw.source),
+    capturedAt: optionalString(raw.capturedAt),
+  };
+}
+
+function decodeOutcomeProbabilities(raw: unknown): Record<string, number> | undefined {
+  if (!isJsonObject(raw)) return undefined;
+  const decoded: Record<string, number> = {};
+  Object.entries(raw).forEach(([outcome, probability]) => {
+    const parsed = toFiniteNumber(probability);
+    if (parsed !== null) decoded[outcome] = parsed;
+  });
+  return decoded;
+}
+
+/** One market pick, or null when it cannot be used (no numeric modelProbability). */
+export function decodeSportsMarketPick(raw: unknown): SportsMarketPick | null {
+  if (!isJsonObject(raw)) return null;
+  const modelProbability = toFiniteNumber(raw.modelProbability);
+  if (modelProbability === null) return null;
+  return {
+    marketId: optionalString(raw.marketId),
+    type: optionalString(raw.type),
+    period: optionalString(raw.period),
+    label: optionalString(raw.label),
+    side: optionalString(raw.side),
+    line: optionalNumber(raw.line),
+    modelLine: optionalNumber(raw.modelLine),
+    modelProbability,
+    pushProbability: optionalNumber(raw.pushProbability),
+    outcomeProbabilities: decodeOutcomeProbabilities(raw.outcomeProbabilities),
+    market: decodeSportsMarketPrice(raw.market),
+    basis: optionalString(raw.basis),
+    modelVersion: optionalString(raw.modelVersion),
+    attribution: optionalString(raw.attribution),
+    confidenceTier: optionalString(raw.confidenceTier),
+    publishedAt: optionalString(raw.publishedAt),
+    result: optionalString(raw.result),
+    unitReturn: optionalNumber(raw.unitReturn),
+    closingLine: optionalNumber(raw.closingLine),
+  };
+}
+
+/** Lossy list decode: a missing list is empty, a bad element is skipped. */
+export function decodeSportsMarketPicks(raw: unknown): SportsMarketPick[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => decodeSportsMarketPick(item))
+    .filter((pick): pick is SportsMarketPick => pick !== null);
+}
+
+export function decodeSportsMarketSummary(raw: unknown): SportsMarketSummary | null {
+  if (!isJsonObject(raw)) return null;
+  return {
+    type: optionalString(raw.type),
+    season: optionalString(raw.season),
+    graded: optionalNumber(raw.graded),
+    wins: optionalNumber(raw.wins),
+    losses: optionalNumber(raw.losses),
+    pushes: optionalNumber(raw.pushes),
+    voids: optionalNumber(raw.voids),
+    ungradable: optionalNumber(raw.ungradable),
+    winRateExPush: toFiniteNumber(raw.winRateExPush),
+    breakEvenRate: toFiniteNumber(raw.breakEvenRate),
+    unitsAtStatedPrice: toFiniteNumber(raw.unitsAtStatedPrice),
+    roi: toFiniteNumber(raw.roi),
+    marketBaselineWinRate: toFiniteNumber(raw.marketBaselineWinRate),
+    brier: toFiniteNumber(raw.brier),
+    marketBrier: toFiniteNumber(raw.marketBrier),
+  };
+}
+
+export function decodeSportsMarketSummaries(raw: unknown): SportsMarketSummary[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => decodeSportsMarketSummary(item))
+    .filter((row): row is SportsMarketSummary => row !== null);
+}
+
+function normalizeSportsBoardCollection(raw: unknown): unknown {
+  if (!isJsonObject(raw)) return raw;
+  const upcoming = Array.isArray(raw.upcoming)
+    ? raw.upcoming.map((board) =>
+        isJsonObject(board) ? { ...board, markets: decodeSportsMarketPicks(board.markets) } : board
+      )
+    : raw.upcoming;
+  const backtests = Array.isArray(raw.backtests)
+    ? raw.backtests.map((board) =>
+        isJsonObject(board)
+          ? {
+              ...board,
+              markets: decodeSportsMarketPicks(board.markets),
+              homeScore: optionalNumber(board.homeScore),
+              awayScore: optionalNumber(board.awayScore),
+            }
+          : board
+      )
+    : raw.backtests;
+  return {
+    ...raw,
+    upcoming,
+    backtests,
+    marketSummary: decodeSportsMarketSummaries(raw.marketSummary),
+    backtestLabel: optionalString(raw.backtestLabel),
+  };
+}
+
+/**
+ * Applies the lenient markets decoding to every sport in a boards payload.
+ * Only the markets-related fields are touched; everything else passes through
+ * exactly as the server sent it.
+ */
+export function normalizeSportsBoardsResponse(raw: unknown): SportsBoardsResponse {
+  if (!isJsonObject(raw)) return raw as SportsBoardsResponse;
+  const normalized: JsonObject = {};
+  Object.entries(raw).forEach(([sport, collection]) => {
+    normalized[sport] = normalizeSportsBoardCollection(collection);
+  });
+  return normalized as unknown as SportsBoardsResponse;
 }
 
 // ============================================================================
@@ -949,6 +1165,7 @@ export const sports = {
     }
     const query = params.toString();
     const path = query ? `/api/sports/boards?${query}` : '/api/sports/boards';
-    return request(path, options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {});
+    return request<unknown>(path, options?.timeoutMs ? { timeoutMs: options.timeoutMs } : {})
+      .then(normalizeSportsBoardsResponse);
   },
 };

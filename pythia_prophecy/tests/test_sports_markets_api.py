@@ -143,7 +143,7 @@ def test_season_summary_scope_and_labels():
         bb = s._sport_season_summary("basketball", bb_rows)
         check(bb["label"] and bb["label"].startswith("WNBA") and bb["sampleSize"] in (0, 2), f"latest league only: {bb}")
         nfl = s._sport_season_summary("football", [row(20260913, "Top Pick", "Football")])
-        check(nfl["basis"] == "market" and nfl["label"].startswith("NFL ") and "not our model" in nfl["baselineNote"], f"{nfl}")
+        check(nfl["basis"] == "market" and nfl["label"].startswith("NFL ") and nfl["baselineNote"] is None, f"{nfl}")
         golf = s._sport_season_summary("golf", [{**row(20260301, "Miss", "PGA"), "rankingFavoriteWon": True},
                                                 {**row(20260308, "Top Pick", "PGA"), "rankingFavoriteWon": False}])
         if datetime.now(timezone.utc).year == 2026:

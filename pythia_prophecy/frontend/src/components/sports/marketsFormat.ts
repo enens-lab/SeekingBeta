@@ -118,7 +118,10 @@ export function marketRowTitle(pick: SportsMarketPick): string {
 export function marketSecondaryLine(pick: SportsMarketPick): string {
   const parts: string[] = [];
   if (typeof pick.modelLine === 'number') {
-    const differs = typeof pick.line !== 'number' || Math.abs(pick.modelLine - pick.line) > 1e-9;
+    // Lines are quoted in halves (quarters for Asian handicaps): a fair line closer than
+    // one step to the posted line adds nothing ("Fair -4.4" next to "-4.5").
+    const step = pick.type?.trim().toLowerCase() === 'asian_handicap' ? 0.25 : 0.5;
+    const differs = typeof pick.line !== 'number' || Math.abs(pick.modelLine - pick.line) >= step - 1e-9;
     if (differs) parts.push(`Fair ${formatLine(pick.type, pick.modelLine)}`);
   }
   if (typeof pick.pushProbability === 'number' && pick.pushProbability >= 0.01 && pick.pushProbability <= 1) {

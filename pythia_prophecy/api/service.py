@@ -1858,10 +1858,9 @@ def _sport_season_summary(sport: str | None, rows: list[dict[str, Any]]) -> dict
     if sport == "football":
         summary["label"] = f"NFL {season}"
         summary["basis"] = "market"
-        summary["baselineNote"] = (
-            "Scores the closing betting favourite (de-vigged nflverse line), not our model; "
-            "games without a posted line use our model"
-        )
+        # No baseline line: the clients label a market-basis summary as the closing
+        # favourite ("not our model") and baselineNote renders as "Same games: ...".
+        summary["baselineNote"] = None
     elif sport == "mlb":
         summary["label"] = f"MLB {season}"
         summary["baselineNote"] = _mlb_baseline_note(record, year)
@@ -1872,7 +1871,7 @@ def _sport_season_summary(sport: str | None, rows: list[dict[str, Any]]) -> dict
         summary["label"] = f"{league} {season}"
         summary["baselineNote"] = _basketball_baseline_note(record, league, season)
     elif sport in ("tennis", "golf"):
-        summary["label"] = f"{season} season"
+        summary["label"] = season   # clients append " Season Accuracy" / " so far"
         target = [r for r in rows if _safe_int(r.get("year")) == year]
         summary["baselineNote"] = _ranking_favourite_note(target)
     return summary

@@ -221,3 +221,11 @@ test('basis labels: market, market-implied, model view', () => {
   assert.equal(m.marketBasisLabel('model'), 'Model view');
   assert.equal(m.marketBasisLabel(undefined), 'Model view');
 });
+
+test('fair line within one quoting step of the posted line is hidden', () => {
+  const near = { marketId: 'x', type: 'spread', label: 'ATL -4.5', side: 'home', line: -4.5, modelLine: -4.4, modelProbability: 0.5, basis: 'model' };
+  assert.equal(m.marketSecondaryLine(near), 'Model view');
+  assert.equal(m.marketSecondaryLine({ ...near, modelLine: -4 }), 'Fair -4 · Model view');
+  const ah = { ...near, type: 'asian_handicap', line: -0.25, modelLine: -0.5 };
+  assert.equal(m.marketSecondaryLine(ah), 'Fair -0.5 · Model view');
+});

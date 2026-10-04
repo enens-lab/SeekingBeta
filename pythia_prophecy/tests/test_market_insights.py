@@ -37,7 +37,7 @@ def test_basketball_rows_use_the_shown_league_and_season():
     check(heads == ["Our fair spread was off by 10.3 points per game on average",
                     "Our fair total was off by 14.9 points per game on average",
                     "The final margin landed inside our 80% range in 80% of games"], f"{heads}")
-    check(all(r["detail"] == "WNBA 2026 · 341 games · simulated" and r["basis"] == "simulated" for r in rows), f"{rows}")
+    check(all(r["detail"] == "WNBA 2026 · 341 games" and r["basis"] == "simulated" for r in rows), f"{rows}")
     check(rows[2]["comparison"] == "A well-sized range lands close to 80%", "range explained in words")
     # unknown season falls back to the latest regular season, never the postseason
     rows = mi.build_market_insights("basketball", summary=[], record=BASKETBALL, league="WNBA", season="2027")
@@ -53,7 +53,7 @@ def test_soccer_rows_compare_in_words():
     check(rows["Exact score"]["headline"] == "The real score was one of our top 3 in 30% of matches"
           and rows["Exact score"]["comparison"] == "Always guessing 1-0, 1-1 and 2-1: 26%", f"{rows['Exact score']}")
     check(rows["Goals per match"]["headline"] == "We expected 2.8 goals per match; there were 3.0", "goals")
-    check(rows["Exact score"]["detail"] == "Top 5 leagues 2026-27 · 250 matches · simulated", "detail")
+    check(rows["Exact score"]["detail"] == "Top 5 leagues 2026-27 · 250 matches", "detail")
     worse = mi._closeness(0.70, 0.69, 0.66)
     check(worse == "Our probabilities were not closer to the results than the league average, but not as close as the betting market", worse)
 
@@ -73,10 +73,10 @@ def test_live_rows_compare_expected_with_actual_and_hide_small_samples():
     by = {r["title"]: r for r in rows}
     check(by["Total (over/under)"]["headline"] == "Our probabilities said about 23 of 49 would win; 25 did", by["Total (over/under)"]["headline"])
     check(by["Point spread"]["headline"] == "Our probabilities said about 24 of 49 would win; 25 did", "pushes excluded from the count")
-    check(by["Total (over/under)"]["detail"] == "2026 · 49 graded (early) · live", by["Total (over/under)"]["detail"])
+    check(by["Total (over/under)"]["detail"] == "2026 · 49 graded (early)", by["Total (over/under)"]["detail"])
     check(by["Moneyline"]["headline"] == "Won 66 of 120" and by["Moneyline"]["comparison"] == "55.0% won; 52.4% needed to break even at these prices",
           f"{by['Moneyline']}")
-    check(by["Moneyline"]["detail"] == "2026 · 120 graded · live", "no early tag at 100+")
+    check(by["Moneyline"]["detail"] == "2026 · 120 graded", "no early tag at 100+")
 
 
 def test_no_jargon_anywhere():

@@ -229,3 +229,18 @@ test('fair line within one quoting step of the posted line is hidden', () => {
   const ah = { ...near, type: 'asian_handicap', line: -0.25, modelLine: -0.5 };
   assert.equal(m.marketSecondaryLine(ah), 'Fair -0.5 · Model view');
 });
+
+test('market insights decode leniently and keep the server wording', () => {
+  const rows = m.decodeSportsMarketInsights([
+    { title: 'Point spread', headline: 'Our fair spread was off by 10.3 points per game on average', detail: 'WNBA 2026 · 341 games', basis: 'simulated' },
+    { title: '', headline: 'dropped' },
+    null,
+    'x',
+    { title: 'Total (over/under)', headline: 'Our probabilities said about 23 of 49 would win; 25 did', basis: 'live', comparison: 5 },
+  ]);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].headline, 'Our fair spread was off by 10.3 points per game on average');
+  assert.equal(rows[1].basis, 'live');
+  assert.equal(rows[1].comparison, undefined);
+  assert.deepEqual(m.decodeSportsMarketInsights('bad'), []);
+});

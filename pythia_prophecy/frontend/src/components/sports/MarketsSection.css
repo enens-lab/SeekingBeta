@@ -188,3 +188,77 @@
     gap: 0.6rem;
   }
 }
+
+.market-insights {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: var(--sports-card-bg);
+  border: 1px solid var(--sports-border);
+}
+
+.market-insights-title {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.market-insights-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.market-insights-row {
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--sports-border);
+}
+
+.market-insights-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.market-insights-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.market-insights-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.market-insights-tag {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--sports-surface);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.market-insights-tag.live {
+  color: var(--accent);
+}
+
+.market-insights-headline {
+  margin: 0.25rem 0 0;
+  color: var(--text-main);
+  font-size: 0.95rem;
+}
+
+.market-insights-comparison,
+.market-insights-detail,
+.market-insights-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.market-insights-note {
+  margin-top: 0.6rem;
+}

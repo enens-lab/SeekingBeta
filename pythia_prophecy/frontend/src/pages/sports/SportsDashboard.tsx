@@ -8,6 +8,7 @@ import MarketsSection, {
   BacktestBasisCaption,
   HistoryMarketBadges,
   MarketFinalScore,
+  MarketInsights,
   MarketRecord,
 } from '../../components/sports/MarketsSection';
 import {
@@ -1786,6 +1787,7 @@ function SportsDashboard() {
                             : "See how often the board's highest-ranked names landed the eventual winner, Top 3, or Top 5."}
                       </p>
                       <SeasonSummaryCards summary={currentSeasonSummary} isTeamSport={isTeamSport} />
+                      <MarketInsights rows={sportData.marketInsights} note={sportData.marketInsightsNote} />
                       <MarketRecord summaries={currentMarketSummary} />
                     </div>
                     <div className="backtest-filters">

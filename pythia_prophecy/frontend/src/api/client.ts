@@ -617,6 +617,18 @@ export interface SportsBoardCollection {
   marketSummary?: SportsMarketSummary[];
   // How to read `backtests` (a simulated record), shown as a caption.
   backtestLabel?: string;
+  // Plain-language market checks for the History tab (server-written sentences).
+  marketInsights?: SportsMarketInsight[];
+  marketInsightsNote?: string;
+}
+
+/** One "how our market numbers held up" row; basis is "simulated" or "live". */
+export interface SportsMarketInsight {
+  title: string;
+  headline: string;
+  comparison?: string;
+  detail?: string;
+  basis?: string;
 }
 
 export interface SportsBoardsResponse {
@@ -899,6 +911,26 @@ export function decodeSportsMarketSummaries(raw: unknown): SportsMarketSummary[]
     .filter((row): row is SportsMarketSummary => row !== null);
 }
 
+/** Lenient: rows without a title or headline are dropped; a bad list becomes []. */
+export function decodeSportsMarketInsights(raw: unknown): SportsMarketInsight[] {
+  if (!Array.isArray(raw)) return [];
+  const rows: SportsMarketInsight[] = [];
+  for (const item of raw) {
+    if (!isJsonObject(item)) continue;
+    const title = optionalString(item.title);
+    const headline = optionalString(item.headline);
+    if (!title || !headline) continue;
+    rows.push({
+      title,
+      headline,
+      comparison: optionalString(item.comparison),
+      detail: optionalString(item.detail),
+      basis: optionalString(item.basis),
+    });
+  }
+  return rows;
+}
+
 function normalizeSportsBoardCollection(raw: unknown): unknown {
   if (!isJsonObject(raw)) return raw;
   const upcoming = Array.isArray(raw.upcoming)
@@ -924,6 +956,8 @@ function normalizeSportsBoardCollection(raw: unknown): unknown {
     backtests,
     marketSummary: decodeSportsMarketSummaries(raw.marketSummary),
     backtestLabel: optionalString(raw.backtestLabel),
+    marketInsights: decodeSportsMarketInsights(raw.marketInsights),
+    marketInsightsNote: optionalString(raw.marketInsightsNote),
   };
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { SportsMarketPick, SportsMarketSummary } from '../../api/client';
+import type { SportsMarketPick, SportsMarketSummary, SportsMarketInsight } from '../../api/client';
 import {
   MARKETS_COLLAPSED_COUNT,
   MARKETS_DISCLAIMER,
@@ -111,6 +111,38 @@ export function MarketRecord({ summaries }: MarketRecordProps) {
       </ul>
       <p className="market-record-caption">{MARKET_RECORD_CAPTION}</p>
     </div>
+  );
+}
+
+type MarketInsightsProps = {
+  rows?: SportsMarketInsight[];
+  note?: string;
+};
+
+/** "How our market numbers held up": plain-language rows, each tagged Simulated or Live. */
+export function MarketInsights({ rows, note }: MarketInsightsProps) {
+  if (!rows?.length) return null;
+  return (
+    <section className="market-insights" aria-label="How our market numbers held up">
+      <h4 className="market-insights-title">How our market numbers held up</h4>
+      <ul className="market-insights-list">
+        {rows.map((row, index) => {
+          const live = row.basis?.toLowerCase() === 'live';
+          return (
+            <li key={`${row.title}-${index}`} className="market-insights-row">
+              <div className="market-insights-head">
+                <span className="market-insights-name">{row.title}</span>
+                <span className={`market-insights-tag${live ? ' live' : ''}`}>{live ? 'Live' : 'Simulated'}</span>
+              </div>
+              <p className="market-insights-headline">{row.headline}</p>
+              {row.comparison ? <p className="market-insights-comparison">{row.comparison}</p> : null}
+              {row.detail ? <p className="market-insights-detail">{row.detail}</p> : null}
+            </li>
+          );
+        })}
+      </ul>
+      {note ? <p className="market-insights-note">{note}</p> : null}
+    </section>
   );
 }
 

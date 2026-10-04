@@ -2,8 +2,8 @@
 
 The server writes the finished sentences so web, iOS and Android show identical,
 jargon-free wording (no log-loss, Brier, calibration or MAE) and the wording can be
-tuned without an app release. Every row says whether it is a simulated backtest or
-the live record, and how many games it rests on.
+tuned without an app release. Every row carries basis "simulated" or "live" (shown as
+a tag) and how many games it rests on.
 
 Honesty rules (MARKET_ROADMAP.md §2e):
 - No win rate for two-sided or fixed-side markets: those land near 50% (or at the
@@ -98,7 +98,7 @@ def basketball_rows(record: Any, league: Optional[str], season: Optional[str]) -
         return []
     season_key = season if season in regular else sorted(regular)[-1]
     row = regular[season_key]
-    detail = f"{key.upper()} {season_key} · {_games(row.get('n'))} · simulated"
+    detail = f"{key.upper()} {season_key} · {_games(row.get('n'))}"
     out = []
     margin = _num(row.get("marginMae"))
     if margin is not None:
@@ -121,7 +121,7 @@ def soccer_rows(record: Any, season: Optional[str]) -> list[dict[str, Any]]:
     if not isinstance(rows, list) or not rows:
         return []
     row = next((r for r in rows if str(r.get("season")) == str(season)), None) or rows[-1]
-    detail = f"Top 5 leagues {row.get('season')} · {_matches(row.get('n'))} · simulated"
+    detail = f"Top 5 leagues {row.get('season')} · {_matches(row.get('n'))}"
     out = []
     ou = row.get("overUnder25") or {}
     text = _closeness(ou.get("modelLogLoss"), ou.get("baseRateLogLoss"), ou.get("marketLogLoss"))
@@ -160,7 +160,7 @@ def live_rows(summary: Any, season: Optional[str]) -> list[dict[str, Any]]:
             continue
         decided = graded - int(_num(r.get("pushes")) or 0)
         early = " (early)" if graded < LIVE_EARLY_GRADED else ""
-        detail = f"{r.get('season')} · {graded:,} graded{early} · live"
+        detail = f"{r.get('season')} · {graded:,} graded{early}"
         if r.get("recordKind") == "record" and _num(r.get("wins")) is not None:
             wins, losses = _num(r.get("wins")) or 0, _num(r.get("losses")) or 0
             headline = f"Won {wins:g} of {wins + losses:g}"

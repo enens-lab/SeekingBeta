@@ -725,6 +725,17 @@ class SportsMarketSummary(BaseModel):
     baseRateBrier: Optional[float] = None
 
 
+class SportsMarketInsight(BaseModel):
+    """One plain-language row of "how our market numbers held up" (History tab).
+    The server writes the sentences (api/market_insights.py) so every client shows
+    the same jargon-free wording. basis: "simulated" (backtest) or "live" (pick log)."""
+    title: str
+    headline: str
+    comparison: Optional[str] = None
+    detail: Optional[str] = None
+    basis: Optional[str] = None
+
+
 class SportsUpcomingBoard(BaseModel):
     id: str
     name: str
@@ -861,6 +872,9 @@ class SportsBoardCollection(BaseModel):
     seasonSummary: Optional[SportsBoardSeasonSummary] = None
     # Per market type and sport season; empty until enough picks are graded.
     marketSummary: List[SportsMarketSummary] = []
+    # Plain-language market checks for the History tab, simulated and live.
+    marketInsights: List[SportsMarketInsight] = []
+    marketInsightsNote: Optional[str] = None
     # How to read `backtests`: they are a SIMULATED record (the model re-run on past
     # games it was not trained on), not a log of what was published. Market history
     # (markets[].result) is the live record, graded against the line shown at publish.

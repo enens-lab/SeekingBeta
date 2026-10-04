@@ -150,6 +150,26 @@ def test_season_summary_scope_and_labels():
             check(golf["baselineNote"] == "Ranking favourite won 1/2 (50.0%)", f"{golf}")
 
 
+def test_market_insights_attached_for_the_shown_season():
+    with tempfile.TemporaryDirectory() as d:
+        data = Path(d)
+        s.SPORTS_DATA_SOURCE_DIR = data
+        s.SPORTS_FRONTEND_SOURCE_DIR = data
+        s._SPORTS_MARKET_FILES_CACHE.clear()
+        (data / "basketball_model_record.json").write_text(json.dumps({"leagues": {"wnba": {"walkForwardLines": {
+            "2026": {"n": 341, "marginMae": 10.29, "totalMae": 14.95, "marginCoverage80": 0.798}}}}}))
+        coll = m.SportsBoardCollection(
+            backtests=[m.SportsHistoricalBoard(year=2026, tournament="A at B", tour="Women's Basketball", hitStatus="Miss")],
+            updated_at=datetime.now(timezone.utc), source="t",
+            seasonSummary=m.SportsBoardSeasonSummary(year=2026, sampleSize=1, topPickHits=0, label="WNBA 2026"))
+        out = s._attach_sports_markets("basketball", coll)
+        check(len(out.marketInsights) == 3 and out.marketInsights[0].title == "Point spread"
+              and out.marketInsights[0].detail.startswith("WNBA 2026"), f"{out.marketInsights}")
+        check(out.marketInsightsNote and "Simulated rows" in out.marketInsightsNote, "note attached")
+        golf = s._attach_sports_markets("golf", coll.model_copy(update={"marketInsights": []}))
+        check(golf.marketInsights == [] and golf.marketInsightsNote is None, "no rows for sports without market data")
+
+
 def test_current_files_unchanged_for_other_sports():
     """hitStatus and seasonSummary on the repo's current board files must be
     identical to the pre-markets code path for sports without a season change."""

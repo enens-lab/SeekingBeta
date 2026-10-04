@@ -90,6 +90,7 @@ from .models import (
     SportsBoardCollection,
     SportsMarketPick,
     SportsMarketSummary,
+    SportsMarketInsight,
     BillingCheckoutSessionRequest,
     BillingCheckoutSessionResponse,
     BillingPortalSessionResponse,
@@ -195,6 +196,7 @@ from .social_auth import (
 from .email_service import send_verification_email, send_welcome_email, send_password_reset_email
 from .performance import get_track_record, get_track_record_curve
 from .stock_predictions_store import STORE as STOCK_PREDICTIONS
+from .market_insights import INSIGHTS_NOTE, build_market_insights
 from .models import UserInDB
 
 
@@ -6561,11 +6563,30 @@ def _history_badge_picks(picks: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(best.values(), key=lambda pick: order[id(pick)])
 
 
+def _market_insights(sport: str, coll: SportsBoardCollection, summary: Any) -> list[SportsMarketInsight]:
+    """Plain-language market checks scoped to the season the History tab shows."""
+    label = (coll.seasonSummary.label if coll.seasonSummary else None) or ""
+    parts = label.split()
+    season = parts[-1] if parts else None
+    league = parts[0] if sport == "basketball" and len(parts) > 1 else None
+    record = _load_market_file(_SEASON_RECORD_FILES[sport]) if sport in _SEASON_RECORD_FILES else None
+    rows = []
+    for row in build_market_insights(sport, summary=summary, record=record, league=league, season=season):
+        try:
+            rows.append(SportsMarketInsight(**row))
+        except Exception:
+            continue
+    return rows
+
+
 def _attach_sports_markets(sport: str, coll: SportsBoardCollection) -> SportsBoardCollection:
     if coll.backtests and not coll.backtestLabel:
         coll = coll.model_copy(update={"backtestLabel": SPORTS_BACKTEST_LABELS.get(sport, SPORTS_BACKTEST_LABEL)})
     summary = _load_market_file(f"{sport}_market_summary.json")
     history = _load_market_file(f"{sport}_market_history.json")
+    insights = _market_insights(sport, coll, summary)
+    if insights:
+        coll = coll.model_copy(update={"marketInsights": insights, "marketInsightsNote": INSIGHTS_NOTE})
     if not summary and not history and not any(bt.markets for bt in coll.backtests):
         return coll
     update: dict[str, Any] = {}

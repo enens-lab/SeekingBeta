@@ -29,6 +29,25 @@ ETF_TICKERS = {
 ADR_EXCHANGES = {"PNK", "OTC"}
 
 
+def _fetch_news_items(yf_ticker, ticker: str) -> list:
+    """Ticker.news, falling back to Yahoo's search endpoint (yf.Search).
+
+    Since ~mid-2026 Ticker.news raises "YAHOO! FINANCE IS CURRENTLY DOWN!" while the
+    search endpoint still returns fresh items (old flat shape: uuid/title/publisher/
+    link/providerPublishTime/relatedTickers). Search matches loosely, so keep only
+    items Yahoo tags with this ticker.
+    """
+    try:
+        items = yf_ticker.news
+        if items:
+            return items
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"Ticker.news failed for {ticker}, trying search: {exc}")
+    symbol = ticker.upper()
+    items = yf.Search(symbol, news_count=25, max_results=0).news or []
+    return [it for it in items if symbol in [str(t).upper() for t in (it.get("relatedTickers") or [])]]
+
+
 def determine_asset_type(ticker: str, info: dict) -> str:
     """Classify a ticker as stock, etf, or adr."""
     if ticker.upper() in ETF_TICKERS:
@@ -116,7 +135,7 @@ def fetch_and_store_stock_info(ticker: str, include_news: bool = True) -> dict:
     # Fetch and store news
     if include_news:
         try:
-            news = yf_ticker.news
+            news = _fetch_news_items(yf_ticker, ticker)
             if news:
                 articles = []
                 for item in news:

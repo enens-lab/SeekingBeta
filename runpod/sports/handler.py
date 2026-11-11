@@ -49,7 +49,7 @@ import runpod
 # Bump on every worker-affecting change: the RunPod GitHub build is invisible from
 # the box, so ops polls {"type":"health"} until "build" reports the expected tag
 # before trusting a re-export to carry new code.
-HANDLER_BUILD = "2026-10-02.4"
+HANDLER_BUILD = "2026-11-10.1"
 
 REPO = Path(os.getenv("PYTHIA_REPO", "/work"))
 DIV = REPO / "pythia_divination"
@@ -488,7 +488,7 @@ def _stock_predictions(payload):
         except Exception as exc:  # noqa: BLE001
             summary = {"parse_error": str(exc)}
     try:
-        boards = _upload_boards(start, failed=last_rc != 0)
+        boards = _upload_boards(start, failed=rc != 0)
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "exit_code": rc, "summary": summary, "boards": [],
                 "error": f"upload failed: {exc}", "log_tail": log[-1500:]}

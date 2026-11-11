@@ -45,7 +45,15 @@ def _fetch_news_items(yf_ticker, ticker: str) -> list:
         logger.debug(f"Ticker.news failed for {ticker}, trying search: {exc}")
     symbol = ticker.upper()
     items = yf.Search(symbol, news_count=25, max_results=0).news or []
-    return [it for it in items if symbol in [str(t).upper() for t in (it.get("relatedTickers") or [])]]
+
+    def tagged(it: dict) -> bool:
+        for t in (str(x).upper() for x in (it.get("relatedTickers") or [])):
+            # exact, or a share-class sibling (Yahoo tags Alphabet news GOOGM, not GOOGL)
+            if t == symbol or (len(symbol) >= 4 and len(t) >= 4 and t[:4] == symbol[:4]):
+                return True
+        return False
+
+    return [it for it in items if tagged(it)]
 
 
 def determine_asset_type(ticker: str, info: dict) -> str:

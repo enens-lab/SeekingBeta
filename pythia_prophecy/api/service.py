@@ -3183,11 +3183,21 @@ def _company_news_is_stale(news_rows: list[dict]) -> bool:
     return (datetime.now(timezone.utc) - newest).total_seconds() > COMPANY_NEWS_REFRESH_HOURS * 3600
 
 
-def _maybe_refresh_company_in_background(ticker: str) -> None:
+def _company_refresh_due(ticker: str) -> bool:
+    """Throttle per-ticker refreshes; records the attempt when one is due. A ticker never
+    tried is always due (time.monotonic() can start near 0 in a fresh process, so a 0.0
+    default would block every refresh for the first interval)."""
     now = time.monotonic()
-    if now - _company_refresh_attempts.get(ticker, 0.0) < _COMPANY_REFRESH_MIN_INTERVAL_S:
-        return
+    last = _company_refresh_attempts.get(ticker)
+    if last is not None and now - last < _COMPANY_REFRESH_MIN_INTERVAL_S:
+        return False
     _company_refresh_attempts[ticker] = now
+    return True
+
+
+def _maybe_refresh_company_in_background(ticker: str) -> None:
+    if not _company_refresh_due(ticker):
+        return
 
     async def _refresh() -> None:
         try:
@@ -7562,6 +7572,35 @@ async def get_company_news_endpoint(ticker: str, limit: int = 50):
         )
         for n in news_rows
     ]
+
+
+@app.get("/api/companies/{ticker}/headlines")
+async def get_company_headlines_endpoint(ticker: str, k: int = Query(3, ge=1, le=5)):
+    """The few recent headlines that best explain the stock, for the board cards
+    (web flip side; iOS/Android can call it the same way). Reranked by Voyage AI via
+    the MongoDB Atlas model API; falls back to newest-first (`ranked: false`)."""
+    from .news_ranker import top_headlines
+
+    normalized = _normalize_ticker(ticker)
+    if not normalized:
+        raise HTTPException(400, detail="Invalid ticker")
+    company = get_company(normalized)
+    if not company and normalized not in UNIVERSE_UPPER:
+        raise HTTPException(404, detail=f"Company '{normalized}' not found")
+
+    news_rows = get_company_news(normalized, limit=50)
+    if _company_news_is_stale(news_rows):
+        # Refresh inline (bounded) so a first flip shows today's news, not last week's.
+        if _company_refresh_due(normalized):
+            try:
+                from .stock_info import fetch_and_store_stock_info
+                await asyncio.wait_for(asyncio.to_thread(fetch_and_store_stock_info, normalized, True), timeout=8.0)
+                news_rows = get_company_news(normalized, limit=50)
+            except Exception as exc:  # noqa: BLE001 - serve what we have
+                logger.warning("Inline news refresh failed for %s: %s", normalized, exc)
+
+    result = await top_headlines(normalized, (company or {}).get("name"), news_rows, k=k)
+    return JSONResponse(result, headers={"Cache-Control": "public, max-age=900"})
 
 
 # ============================================================

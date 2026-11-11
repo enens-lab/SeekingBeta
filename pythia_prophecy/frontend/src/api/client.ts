@@ -187,6 +187,23 @@ export interface NewsItem {
   published: string;
 }
 
+export interface Headline {
+  title: string;
+  publisher: string | null;
+  link: string | null;
+  published_at: string;
+  score: number | null;
+}
+
+/** /api/companies/{ticker}/headlines: recent news reranked by relevance to the stock. */
+export interface HeadlinesResponse {
+  ticker: string;
+  ranked: boolean;
+  model: string | null;
+  max_age_days: number;
+  items: Headline[];
+}
+
 export interface AnalysisResult {
   ticker: string;
   last_close: number | null;
@@ -1115,6 +1132,8 @@ export const companies = {
   get: (ticker: string): Promise<Company> => request(`/api/companies/${ticker}`),
   getNews: (ticker: string, limit = 50): Promise<NewsItem[]> =>
     request(`/api/companies/${ticker}/news?limit=${limit}`),
+  getHeadlines: (ticker: string, k = 3): Promise<HeadlinesResponse> =>
+    request(`/api/companies/${encodeURIComponent(ticker)}/headlines?k=${k}`),
 };
 
 export const analysis = {

@@ -1,5 +1,5 @@
 import { KeyboardEvent, MouseEvent, useEffect, useMemo, useState } from 'react';
-import { Prediction, PredictionAttribution, predictions } from '../api/client';
+import { companies, HeadlinesResponse, Prediction, PredictionAttribution, predictions } from '../api/client';
 import { trackEvent } from '../lib/analytics';
 
 interface PredictionCardProps {
@@ -120,6 +120,18 @@ function safeNumber(value: unknown): number | null {
   return value;
 }
 
+const CARD_HEADLINES = 2;
+
+function formatAgo(iso: string): string {
+  const then = Date.parse(iso);
+  if (!Number.isFinite(then)) return '';
+  const hours = Math.max(0, (Date.now() - then) / 3_600_000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${Math.floor(hours)}h ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
+
 function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps) {
   const { ticker, signal, prob_up, last_close, horizon } = prediction as any;
   const [isFlipped, setIsFlipped] = useState(false);
@@ -129,6 +141,8 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
   );
   const [attributionLoading, setAttributionLoading] = useState(false);
   const [attributionError, setAttributionError] = useState<string | null>(null);
+  const [headlines, setHeadlines] = useState<HeadlinesResponse | null>(null);
+  const [headlinesLoading, setHeadlinesLoading] = useState(false);
 
   const resolvedModelName = useMemo(
     () => normalizeLstmModelName(modelName ?? (prediction as any).model),
@@ -140,6 +154,10 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
     setAttributionLoading(false);
     setAttributionError(null);
   }, [prediction]);
+
+  useEffect(() => {
+    setHeadlines(null);
+  }, [ticker]);
 
   const signalClass = formatSignalClass(signal);
   const signalLabel = formatSignalLabel(signal);
@@ -169,6 +187,14 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
     });
     setIsFlipped((prev) => {
       const next = !prev;
+      if (next && !headlines && !headlinesLoading && ticker) {
+        setHeadlinesLoading(true);
+        companies
+          .getHeadlines(ticker, CARD_HEADLINES)
+          .then((response) => setHeadlines(response))
+          .catch(() => setHeadlines(null))
+          .finally(() => setHeadlinesLoading(false));
+      }
       if (next && !attribution && !attributionLoading && resolvedModelName && ticker) {
         setAttributionLoading(true);
         setAttributionError(null);
@@ -288,6 +314,42 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
             <span className="prediction-ticker">{ticker}</span>
             <span className="prediction-back-title">Why the board leans this way</span>
           </div>
+          {headlinesLoading && <div className="prediction-drivers-loading">Checking this week's news...</div>}
+          {!!headlines?.items.length && (
+            <div className="prediction-headlines">
+              <span className="prediction-headlines-title">In the news this week</span>
+              <ul>
+                {headlines.items.slice(0, CARD_HEADLINES).map((item, index) => (
+                  <li key={`${ticker}-headline-${index}`}>
+                    {item.link ? (
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          trackEvent('headline_click', {
+                            ticker,
+                            model: resolvedModelName ?? 'unknown',
+                            rank: index + 1,
+                            ranked: headlines.ranked,
+                          });
+                        }}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        {item.title}
+                      </a>
+                    ) : (
+                      <span className="prediction-headline-text">{item.title}</span>
+                    )}
+                    <span className="prediction-headline-meta">
+                      {[item.publisher, formatAgo(item.published_at)].filter(Boolean).join(' · ')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <ul className="prediction-drivers-list">
             {topDrivers.map((driver, index) => (
               <li key={`${ticker}-driver-${index}`}>{driver}</li>
@@ -296,7 +358,7 @@ function PredictionCard({ prediction, modelName, onClick }: PredictionCardProps)
           {attributionLoading && (
             <div className="prediction-drivers-loading">Pulling the latest factor summary...</div>
           )}
-          {attributionError && (
+          {attributionError && !headlines?.items.length && (
             <div className="prediction-drivers-loading">Using a fallback summary for now.</div>
           )}
 
